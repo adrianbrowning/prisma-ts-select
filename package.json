@@ -16,7 +16,8 @@
     "base-pullv2-teal": "REPORT_DATE=$(date +%Y%m%d%H%M) ts-node ./scripts/base_pullv2__teal_only.js",
     "base-retry": "RETRY_ERRORS=true ts-node ./scripts/base_pullv2.js",
     "prisma-upgrade": "pnpm i --save-dev prisma@latest && pnpm i @prisma/client@latest",
-    "lint:ts": "tsc --noEmit",
+    "lint:ts": "tsc --noEmit -p tsconfig.json",
+    "lint:tsw": "pnpm tsc -w",
     "lint": "tsc --noEmit ; eslint \"scripts/**/*.{j,t}s{,x}\" --cache --max-warnings=0",
     "lint:s": "eslint --config .eslintrc.style.json \"scripts/**/*.{j,t}s{,x}\" --cache --max-warnings=0",
     "lint:fix": "eslint --config .eslintrc.style.json \"scripts/**/*.{j,t}s{,x}\" --cache --max-warnings=0 --fix",
@@ -26,16 +27,18 @@
     "p:update": "pnpm add -D prisma@latest && pnpm add @prisma/client@latest",
     "test": "find ./tests -name '*.spec.ts' -exec node --import tsx --test --test-reporter spec --watch {} \\;",
     "test:coverage": "find ./tests -name '*.spec.ts' -exec node --loader tsx --test --experimental-test-coverage --test-reporter=lcov {} \\;",
-    "test:w": "pnpm test --watch"
+    "test:w": "pnpm test --watch",
+    "test:ts": "tsc --noEmit -p tests/tsconfig.json",
+    "test:tsw": "pnpm test:ts"
   },
   "dependencies": {
-    "@prisma/client": "^5.11.0"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "authorName": "Adrian Elton-Browning",
   "devDependencies": {
+    "@prisma/client": "^5.11.0",
     "@stylistic/eslint-plugin": "^1.5.4",
     "@total-typescript/ts-reset": "^0.5.1",
     "@types/better-sqlite3": "^7.6.8",

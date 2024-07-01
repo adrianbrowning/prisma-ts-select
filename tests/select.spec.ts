@@ -1,7 +1,7 @@
 import { describe, it, before } from "node:test"
 import assert from "node:assert"
 
-import {PrismaClient} from "@prisma/client";
+import { PrismaClient } from "@prisma/client";
 import { DbSelect } from "../src/db-select.js"
 import type { Equal, Expect} from "./utils.js";
 import { typeCheck} from "./utils.js";
@@ -58,7 +58,7 @@ describe("basic select with join", () => {
     });
     function createQuery(){
         return db.from("User")
-            .join("Post", "authorId", "id")
+            .join("Post", "authorId", "User.id")
             .select("*");
     }
 
