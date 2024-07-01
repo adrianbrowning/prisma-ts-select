@@ -23,7 +23,10 @@
     "p:gen": "pnpm exec prisma generate",
     "p:dbp": "pnpm exec prisma db push",
     "p:migrate": "pnpm exec prisma migrate dev",
-    "p:update": "pnpm add -D prisma@latest && pnpm add @prisma/client@latest"
+    "p:update": "pnpm add -D prisma@latest && pnpm add @prisma/client@latest",
+    "test": "find ./tests -name '*.spec.ts' -exec node --import tsx --test --test-reporter spec --watch {} \\;",
+    "test:coverage": "find ./tests -name '*.spec.ts' -exec node --loader tsx --test --experimental-test-coverage --test-reporter=lcov {} \\;",
+    "test:w": "pnpm test --watch"
   },
   "dependencies": {
     "@prisma/client": "^5.11.0"
@@ -57,7 +60,7 @@
     "prisma-docs-generator": "^0.8.0",
     "prisma-erd-generator": "^1.11.0",
     "progress-string": "^1.2.2",
-    "ts-node": "^10.9.1",
+    "tsx": "^4.16.0",
     "typescript": "^5.5.2"
   },
   "engines": {

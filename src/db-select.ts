@@ -118,18 +118,21 @@ class _fRun<TDBBase extends TTables> {
                     groupBy?: Array<string>;
                     orderBy?: Array<`${string}} ${"DESC" | "ASC"}`>;
                 }) {
-        this.values.limit = typeof this.values.limit === "number" ? this.values.limit : 0;
-        this.values.offset = typeof this.values.offset === "number" ? this.values.offset : 0;
+        this.values.limit = typeof this.values.limit === "number" ? this.values.limit : undefined;
+        this.values.offset = typeof this.values.offset === "number" ? this.values.offset : undefined;
     }
 
     run() {
-        return this.db.$executeRawUnsafe(
-            [
-                `select ${this.values.selects.join(', ')}`,
-                `from ${this.values.database}`,
-                this.values.limit === undefined ? "" : `limit ${this.values.limit}`,
-                this.values.offset === undefined ? "" : `offset ${this.values.offset}`].join(" ")
+        return this.db.$queryRawUnsafe(
+            this.getSQL()
         ) as unknown as Prisma.PrismaPromise<Array<Extract<DATABASE, { table: TDBBase }>["fields"]>>;
+    }
+    getSQL() {
+        return [
+            `select ${this.values.selects.join(', ')}`,
+            `from ${this.values.database}`,
+            this.values.limit === undefined ? "" : `limit ${this.values.limit}`,
+            this.values.offset === undefined ? "" : `offset ${this.values.offset}`].join(" ").trim()+ ";";
     }
 }
 
