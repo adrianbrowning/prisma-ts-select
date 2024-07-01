@@ -1,0 +1,96 @@
+{
+  "name": "prisma-ts-select",
+  "version": "1.0.1",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "build": "pnpm p:gen; pnpm build:ts",
+    "build:ts": "tsc -p tsconfig.json",
+    "deploy": "pnpm build; pnpm exec prisma migrate deploy",
+    "cleardb": "node build/dbScripts/clearDB.js",
+    "reset": "rm -rf prisma/migrations/ && prisma migrate dev --name init  && prisma generate",
+    "start": "ts-node scripts/db_script_iq.ts",
+    "studio": "prisma studio",
+    "dev-base-pullv2": "node ./scripts/base_pullv2.js",
+    "base-pullv2": "REPORT_DATE=$(date +%Y%m%d%H%M) ts-node ./scripts/base_pullv2.js",
+    "base-pullv2-teal": "REPORT_DATE=$(date +%Y%m%d%H%M) ts-node ./scripts/base_pullv2__teal_only.js",
+    "base-retry": "RETRY_ERRORS=true ts-node ./scripts/base_pullv2.js",
+    "prisma-upgrade": "pnpm i --save-dev prisma@latest && pnpm i @prisma/client@latest",
+    "lint:ts": "tsc --noEmit",
+    "lint": "tsc --noEmit ; eslint \"scripts/**/*.{j,t}s{,x}\" --cache --max-warnings=0",
+    "lint:s": "eslint --config .eslintrc.style.json \"scripts/**/*.{j,t}s{,x}\" --cache --max-warnings=0",
+    "lint:fix": "eslint --config .eslintrc.style.json \"scripts/**/*.{j,t}s{,x}\" --cache --max-warnings=0 --fix",
+    "p:gen": "pnpm exec prisma generate",
+    "p:dbp": "pnpm exec prisma db push",
+    "p:migrate": "pnpm exec prisma migrate dev",
+    "p:update": "pnpm add -D prisma@latest && pnpm add @prisma/client@latest"
+  },
+  "dependencies": {
+    "@prisma/client": "^5.11.0"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "authorName": "Adrian Elton-Browning",
+  "devDependencies": {
+    "@stylistic/eslint-plugin": "^1.5.4",
+    "@total-typescript/ts-reset": "^0.5.1",
+    "@types/better-sqlite3": "^7.6.8",
+    "@types/humanize-duration": "^3.27.2",
+    "@types/klaw-sync": "^6.0.1",
+    "@types/lodash": "^4.14.197",
+    "@types/node": "20.11.30",
+    "@types/object-hash": "^3.0.4",
+    "@typescript-eslint/eslint-plugin": "^6.19.1",
+    "@typescript-eslint/parser": "^6.19.1",
+    "eslint": "^8.47.0",
+    "eslint-plugin-node": "^11.1.0",
+    "eslint-plugin-promise": "^6.1.1",
+    "eslint-plugin-simple-import-sort": "^9.0.0",
+    "eslint-plugin-unused-imports": "^3.0.0",
+    "humanize-duration": "^3.30.0",
+    "klaw-sync": "^6.0.0",
+    "knip": "^5.9.4",
+    "log-with-statusbar": "^1.2.0",
+    "prisma": "^5.11.0",
+    "prisma-dbml-generator": "^0.10.0",
+    "prisma-docs-generator": "^0.8.0",
+    "prisma-erd-generator": "^1.11.0",
+    "progress-string": "^1.2.2",
+    "ts-node": "^10.9.1",
+    "typescript": "^5.5.2"
+  },
+  "engines": {
+    "node": ">=18.17",
+    "pnom": ">= 8.6.12"
+  },
+  "target": "node",
+  "knip": {
+    "entry": [
+      "scripts/**/*.{js,ts}"
+    ],
+    "project": [
+      "**/*.{js,ts}"
+    ],
+    "ignoreBinaries": [
+      "date"
+    ],
+    "ignoreDependencies": [
+      "prisma-.+"
+    ]
+  },
+  "pnpm": {
+    "overrides": {
+      "undici@<5.19.1": ">=5.19.1",
+      "undici@>=2.0.0 <5.19.1": ">=5.19.1",
+      "undici@<5.26.2": ">=5.26.2",
+      "es5-ext@>=0.10.0 <0.10.63": ">=0.10.63",
+      "undici@<=5.28.2": ">=5.28.3",
+      "follow-redirects@<=1.15.5": ">=1.15.6",
+      "undici@<5.28.4": ">=5.28.4",
+      "puppeteer@<=19.11.1": ">=19.11.2",
+      "uuid@<=3.4.0": ">=3.4.1",
+      "querystring": "npm:url@0.11.3"
+    }
+  }
+}
