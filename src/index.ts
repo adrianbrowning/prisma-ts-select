@@ -1,6 +1,5 @@
 import {PrismaClient} from "@prisma/client";
 import { DbSelect } from "./db-select.js"
-import {groupBy} from "lodash";
 
 const prisma = new PrismaClient({
     log: ['query']
