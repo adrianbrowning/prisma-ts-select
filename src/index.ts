@@ -1,0 +1,123 @@
+import {PrismaClient} from "@prisma/client";
+import { DbSelect } from "./db-select.js"
+import {groupBy} from "lodash";
+
+const prisma = new PrismaClient({
+    log: ['query']
+})
+
+const db = new DbSelect(prisma);
+async function main() {
+
+    console.log("prisma.user.findMany",await prisma.user.findMany());
+    // const r = await prisma.$queryRaw`SELECT * FROM user`;
+
+    //Region Able to join on anything
+
+    const r1 = await db.from("User")
+        .joinUnsafeAllFields("Posts", "id", "")
+        .select("*")
+        .run();
+    console.log(r1)
+
+    const r2 = await db.from("User")
+        .joinUnsafeAllFields("Posts", "authorId", "")
+        .joinUnsafeAllFields("PostsImages", "id", "")
+        .select("*")
+        .run();
+
+    console.log(r2)
+
+    //Region Able to on same types
+
+    const r3 = await db.from("User")
+        .joinUnsafe("Posts", "id", "id")
+        .select("*")
+        .run();
+    console.log(r3)
+
+    const r4 = await db.from("User")
+        .joinUnsafe("Posts", "authorId", "id")
+        .joinUnsafe("PostsImages", "id", "Posts.id")
+        .select("*")
+        .run();
+
+    console.log(r4)
+
+    //Region Joins are only allowed based on defined foreign keys
+    const r5 = await db.from("User")
+        .join("Posts", "authorId", "id")
+        .select("*")
+        .run();
+    console.log(r5)
+
+    const r6 = await db.from("User")
+        .join("Posts", "lastModifiedBy", "id")
+        .join("LikedPosts", "postId", "Posts.id")
+        .select("*")
+        .run();
+
+    console.log(r6)
+
+    const r7 = await db.from("User")
+        .join("Posts", "lastModifiedBy", "id")
+        .join("LikedPosts", "postId", "Posts.id")
+        .groupBy()
+        .having()
+        .select("*")
+        .run();
+
+    console.log(r7)
+
+    // const r = await db.from("platform_Snapshot_CDH")
+    //     .join("platform_AccountProfile pAP", "platform_Snapshot_CDH.accountProfileId","pAP.id")
+    //     .join("_platform_Actions_CDHToplatform_Snapshot_CDH pACTSC", "platform_Snapshot_CDH.id", "pACTSC.B")
+    //     .join("platform_Actions_CDH pA", "pACTSC.A", "pA.id")
+    //     .join("platform_Connectors_CDH pC", "pA.connectorId", "pC.id")
+    //     .where("pAP.account", "=", "")
+    //     .where("pAP.profile", "=", "")
+    //     // .selectAllBut(["pAP.password"])
+    //     .selectDistinct()
+    //     .select("pC.uid", "connectorId")
+    //     .select("pA.uid", "actionId")
+    //     .select("pA.source", "type")
+    //     .select("IFNULL",
+    //         (tables) =>
+    //             db(tables)
+    //                 .from("platform_Audiences_CDH")
+    //                 .where("pA.audienceId", "=", "platform_Audiences_CDH.id")
+    //                 .select("uid"),
+    //         (tables) =>
+    //             db(tables)
+    //                 .from("platform_EventFeeds_CDH")
+    //                 .where("pA.feedId", "=", "platform_EventFeeds_CDH.id")
+    //                 .select("uid"),
+    //         "typeId")
+    //     .run();
+    //
+    //
+    //
+    // const r7 = db.from("View_Platform_Profile vp")
+    //     .innerJoin("platform_Snapshot snap", "snap.accountProfileId", "vp.snapshot_accountProfileId")
+    //     // .innerJoin("_platform_EventsToplatform_Snapshot events_snap", "snap.id", "events_snap.B")
+    //     .innerJoin("platform_Events_StdData events_std", "events.stdDataId", "events_std.id")
+    //     .select("vp.account")
+    //     .select("vp.profile")
+    //     .select("events_std.eventType eventType")
+    //     .select("COUNT(*) event_count_per_type")
+    //     .groupBy("vp.account", "vp.profile", "events_std.eventType")
+    //     .orderBy("event_type", "event_count_per_type DESC", "vp.account", "vp.profile")
+    // console.log("SELECT * FROM user",r);
+
+
+}
+
+main()
+    .then(async () => {
+        await prisma.$disconnect()
+    })
+    .catch(async (e) => {
+        console.error(e)
+        await prisma.$disconnect()
+        process.exit(1)
+    })
