@@ -29,7 +29,8 @@ const DB = {
                 "authorId": ["id"],
                 "lastModifiedBy": ["id"]
             },
-            "PostsImages": {"id": ["postId"]}
+            "PostsImages": {"id": ["postId"]},
+            "LikedPosts": {"id": ["postId"]},
         },
     },
     "PostsImages": {
@@ -283,7 +284,7 @@ type IterateFields<TDBBase extends TTables, F extends string> = `${TDBBase}.${F}
 
 type Relations<Table extends TTables> = Extract<DATABASE, { table: Table }>["relations"];
 
-type SafeJoins<TNewJoin extends TTables, TJoins extends Array<TTables>, TRelations = Relations<TNewJoin>> =
+export type SafeJoins<TNewJoin extends TTables, TJoins extends Array<TTables>, TRelations = Relations<TNewJoin>> =
     {[k in keyof TRelations as Filter<k,TJoins[number]>]: TRelations[k]};
 
 type ArrayToString<A extends string, T extends string> = A extends string ? `${T}.${A}` : never;
@@ -293,7 +294,7 @@ type ArrayToString<A extends string, T extends string> = A extends string ? `${T
  *  //returns ["userId", "User.id"] | ["postId", "Posts.id"]
  *  GetUnionOfRelations<SafeJoins<"LikedPosts", ["User", "Posts"]>>;
  */
-type GetUnionOfRelations<TSafe> = {
+export type GetUnionOfRelations<TSafe> = {
     [ T in keyof TSafe] : {
         [TLocal in keyof TSafe[T]]:
         [
@@ -303,9 +304,9 @@ type GetUnionOfRelations<TSafe> = {
     }[keyof TSafe[T]];
 }[keyof TSafe]
 
-type find<T extends [string, string], toFind extends string> = T extends [infer col1, infer col2] ? col1 extends toFind ? col2 : never : never;
+export type find<T extends [string, string], toFind extends string> = T extends [infer col1, infer col2] ? col1 extends toFind ? col2 : never : never;
 
-type CleanUpFromNames<TFromTable extends TTables, TCols extends string> = TCols extends `${TFromTable}.${infer Col}` ? Col : TCols;
+// type CleanUpFromNames<TFromTable extends TTables, TCols extends string> = TCols extends `${TFromTable}.${infer Col}` ? Col : TCols;
 
 type RemoveNullable<T extends string> = T extends `?${infer R}` ? R : T;
 
@@ -339,8 +340,8 @@ type FieldsByTypeByTable = Prettify<{
 type GetColumnType<Table extends TTables, Col1 extends keyof _db[Table]["fields"]> = RemoveNullChar<IsString<_db[Table]["fields"][Col1]>>
 
 type GetJoinOnColsType<Type extends string, TDBBase extends TTables, TJoins extends Array<TTables>> =
-    GetColsFromTableType<TDBBase, Type>
-    | GetJoinColsType<TJoins[number],Type>;
+    // GetColsFromTableType<TDBBase, Type>
+    GetJoinColsType<[TDBBase,...TJoins][number],Type>;
 
 type GetColsFromTableType<TDBBase extends TTables, Type extends string> =
     //@ts-expect-error Try and come back to
@@ -352,6 +353,18 @@ type GetJoinColsType<TDBBase extends TTables, Type extends string> = IterateFiel
 
 
 class _fJoin<TDBBase extends TTables, TJoins extends Array<TTables> = []> extends _fWhere<TDBBase> {
+
+    join<Table extends TTables,
+        //@ts-expect-error this does work TODO comeback to
+        TJoinCols extends [string, string] = GetUnionOfRelations<SafeJoins<Table, [TDBBase, ...TJoins]>>,
+        TCol1 extends TJoinCols[0] = never
+    >(table: Table, field: TCol1, reference: find<TJoinCols, TCol1> ) { //CleanUpFromNames<TDBBase, find<TJoinCols, TCol1>>
+        return new _fJoin<TDBBase, [...TJoins, Table]>(this.db, {
+            ...this.values,
+            tables: [...this.values.tables || [], `join ${table} ${String(field)} on ${this.values.database}.${String(reference)}`]
+        });
+    }
+
 
     joinUnsafe<Table extends TTables,
         TCol1 extends GetColsFromTable<Table>,
@@ -374,16 +387,6 @@ class _fJoin<TDBBase extends TTables, TJoins extends Array<TTables> = []> extend
         });
     }
 
-    join<Table extends TTables,
-        //@ts-expect-error this does work TODO comeback to
-        TJoinCols extends [string, string] = GetUnionOfRelations<SafeJoins<Table, [TDBBase, ...TJoins]>>,
-        TCol1 extends TJoinCols[0] = never
-    >(table: Table, field: TCol1, reference: CleanUpFromNames<TDBBase, find<TJoinCols, TCol1>> ) {
-        return new _fJoin<TDBBase, [...TJoins, Table]>(this.db, {
-            ...this.values,
-            tables: [...this.values.tables || [], `join ${table} ${String(field)} on ${this.values.database}.${String(reference)}`]
-        });
-    }
 
     // innerJoin(table: TTables, col1:string, col2:string){
     //     return new _fJoin<TDBBase>(this.db, {...this.values, tables: [...this.values.tables || [], table]});

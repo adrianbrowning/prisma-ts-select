@@ -19,11 +19,10 @@ overrides:
 importers:
 
   .:
-    dependencies:
+    devDependencies:
       '@prisma/client':
         specifier: ^5.11.0
         version: 5.14.0(prisma@5.14.0)
-    devDependencies:
       '@stylistic/eslint-plugin':
         specifier: ^1.5.4
         version: 1.8.1(eslint@8.57.0)(typescript@5.5.2)
