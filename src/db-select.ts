@@ -10,11 +10,11 @@ const DB = {
         },
         //safeJoin
         relations: {
-            "Posts": {id: ["authorId", "lastModifiedBy"]},//[["id", "authorId"], ["id", "lastModifiedBy"]]
+            "Post": {id: ["authorId", "lastModifiedBy"]},//[["id", "authorId"], ["id", "lastModifiedBy"]]
             "LikedPosts": {id: ["userId"]}
         },
     },
-    "Posts": {
+    "Post": {
         fields: {
             id: "number",
             title: "string",
@@ -40,7 +40,7 @@ const DB = {
         },
         //safeJoin
         relations: {
-            "Posts": {"postId": ["id"]}
+            "Post": {"postId": ["id"]}
         },
     },
     "LikedPosts": {
@@ -50,7 +50,7 @@ const DB = {
             userId: "number",
         },
         relations: {
-            "Posts": {"postId": ["id"]},
+            "Post": {"postId": ["id"]},
             "User": {"userId": ["id"]}
         }
     }
@@ -131,6 +131,7 @@ class _fRun<TDBBase extends TTables> {
         return [
             `select ${this.values.selects.join(', ')}`,
             `from ${this.values.database}`,
+            this.values.tables?.join(" ") ?? "",
             this.values.limit === undefined ? "" : `limit ${this.values.limit}`,
             this.values.offset === undefined ? "" : `offset ${this.values.offset}`].join(" ").trim()+ ";";
     }
@@ -380,7 +381,7 @@ class _fJoin<TDBBase extends TTables, TJoins extends Array<TTables> = []> extend
     >(table: Table, field: TCol1, reference: CleanUpFromNames<TDBBase, find<TJoinCols, TCol1>> ) {
         return new _fJoin<TDBBase, [...TJoins, Table]>(this.db, {
             ...this.values,
-            tables: [...this.values.tables || [], `join ${table} ${table}.${String(field)} on ${String(reference)}`]
+            tables: [...this.values.tables || [], `join ${table} ${String(field)} on ${this.values.database}.${String(reference)}`]
         });
     }
 
