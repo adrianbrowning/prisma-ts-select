@@ -2,9 +2,9 @@ TODO
 
 - [ ] Select all but `.selectAllOmit(["User.password"])`
 - [ ] Join variants - left/right/cross/inner/full (where supported)
-- [ ] `[*]join` vs `[*]joinUnsafe` 
-- [ ] `joins` should only allow same type
-- [ ] selectDistinct
+- [x] `[*]join` vs `[*]joinUnsafe` 
+- [x] `joins` should only allow same type
+- [x] selectDistinct
 - [ ] where ? is not NULL, remove null from union
 - [x] having should only be allowed when groupBy has been called.
 
