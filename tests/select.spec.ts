@@ -47,9 +47,49 @@ describe("basic select", () => {
 
     it("SQL: select * from ", () => {
         const sql = createQuery().getSQL();
-        assert.strictEqual(sql, `select * from User;`)
+        assert.deepStrictEqual(sql, `select * from User;`)
+    });
+});
+
+describe("basic select with join", () => {
+
+    before(()=> {
+        /*TODO insert data into DB*/
+    });
+    function createQuery(){
+        return db.from("User")
+            .join("Post", "authorId", "id")
+            .select("*");
+    }
+
+    it("should run", async () =>  {
+        const result =  await createQuery().run();
+
+        typeCheck({} as Expect<Equal<typeof result, Array<{
+            id: number;
+            email: string;
+            name: string | null;
+            title: string;
+            content: string;
+            published: boolean;
+            authorId: number;
+        }>>>);
+
+
+        assert.deepStrictEqual(result,  [
+            { id: 1, email: 'johndoe@example.com', name: 'John Doe', title: 'Blog 1', content: 'Something', published: false, authorId: 1 },
+            { id: 2, email: 'johndoe@example.com', name: 'John Doe', title: 'blog 2', content: 'sql', published: false, authorId: 1 },
+            { id: 1, email: 'smith@example.com', name: 'John Smith', title: 'Blog 1', content: 'Something', published: false, authorId: 1 },
+            { id: 2, email: 'smith@example.com', name: 'John Smith', title: 'blog 2', content: 'sql', published: false, authorId: 1 } ]);
+
+    });
+
+    it("should match SQL", () => {
+        const sql = createQuery().getSQL();
+        assert.strictEqual(sql, `select * from User join Post authorId on User.id;`)
     });
 })
+
 // describe("basic select with join", () => {
 //
 //     before(()=> {
