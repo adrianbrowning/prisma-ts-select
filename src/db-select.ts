@@ -10,7 +10,8 @@ const DB = {
         },
         //safeJoin
         relations: {
-            "Posts": {id: ["authorId", "lastModifiedBy"]}//[["id", "authorId"], ["id", "lastModifiedBy"]]
+            "Posts": {id: ["authorId", "lastModifiedBy"]},//[["id", "authorId"], ["id", "lastModifiedBy"]]
+            "LikedPosts": {id: ["userId"]}
         },
     },
     "Posts": {
@@ -272,9 +273,6 @@ OFFSET -
 */
 
 
-// type GetJoinOnCols<TDBBase extends TTables, TJoins extends Array<TTables>> =
-//     GetColsFromTable<TDBBase>
-//     | GetJoinCols<TJoins[number]>;
 type GetColsFromTable<TDBBase extends TTables> = keyof Extract<DATABASE, { table: TDBBase }>["fields"];
 type GetJoinCols<TDBBase extends TTables> = TDBBase extends any ? IterateFields<TDBBase, IsString<GetColsFromTable<TDBBase>>> : never;
 type IterateFields<TDBBase extends TTables, F extends string> = `${TDBBase}.${F}`;
@@ -286,7 +284,12 @@ type SafeJoins<TNewJoin extends TTables, TJoins extends Array<TTables>, TRelatio
 
 type ArrayToString<A extends string, T extends string> = A extends string ? `${T}.${A}` : never;
 
-type join21<TSafe> = {
+/**
+ * @example
+ *  //returns ["userId", "User.id"] | ["postId", "Posts.id"]
+ *  GetUnionOfRelations<SafeJoins<"LikedPosts", ["User", "Posts"]>>;
+ */
+type GetUnionOfRelations<TSafe> = {
     [ T in keyof TSafe] : {
         [TLocal in keyof TSafe[T]]:
         [
@@ -343,15 +346,13 @@ type Loop<Keys extends string, Type extends string>=  Keys extends Type ? Type :
 
 type GetJoinColsType<TDBBase extends TTables, Type extends string> = IterateFields<TDBBase, IsString<GetColsFromTableType<TDBBase, Type>>>;//, Type];
 
-type cols = GetJoinCols< [...[], "Posts", "User"][number]>
-//   ^?
 
 class _fJoin<TDBBase extends TTables, TJoins extends Array<TTables> = []> extends _fWhere<TDBBase> {
 
     joinUnsafe<Table extends TTables,
         TCol1 extends GetColsFromTable<Table>,
         TCol2 extends  GetJoinOnColsType<
-            //@ts-expect-error come back too
+            //@ts-expect-error TODO come back too
             GetColumnType<Table, TCol1>
             , TDBBase, [...TJoins, Table]>
         >(table: Table, field: TCol1, reference: TCol2) {
@@ -370,8 +371,8 @@ class _fJoin<TDBBase extends TTables, TJoins extends Array<TTables> = []> extend
     }
 
     join<Table extends TTables,
-        //@ts-expect-error this does work
-        TJoinCols extends [string, string] = join21<SafeJoins<Table, [TDBBase, ...TJoins]>>,
+        //@ts-expect-error this does work TODO comeback to
+        TJoinCols extends [string, string] = GetUnionOfRelations<SafeJoins<Table, [TDBBase, ...TJoins]>>,
         TCol1 extends TJoinCols[0] = never
     >(table: Table, field: TCol1, reference: CleanUpFromNames<TDBBase, find<TJoinCols, TCol1>> ) {
         return new _fJoin<TDBBase, [...TJoins, Table]>(this.db, {
@@ -399,6 +400,8 @@ class _fJoin<TDBBase extends TTables, TJoins extends Array<TTables> = []> extend
     //     return new _fJoin<TDBBase>(this.db, {...this.values, tables: [...this.values.tables || [], table]});
     // }
 }
+
+
 
 /* ALL
 FROM - tables are joined to get the base data.
