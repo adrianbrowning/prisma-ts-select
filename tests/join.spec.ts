@@ -42,7 +42,8 @@ describe("join", () => {
             //TS2345: Argument of type "Posts" is not assignable to parameter of type
             // "User" | "Post" | "LikedPosts" | "PostsImages"
             //@ts-expect-error
-         .join("Posts", "", "")
+         .join("Posts", "", "");
+
 
 
         type safeJoins = SafeJoins<"Post", ["LikedPosts"]>;
@@ -94,7 +95,7 @@ describe("join", () => {
             .joinUnsafe("Post", "id", "User.id");
 
         db.from("User")
-            .joinUnsafe("Post", "authorId", "Post.lastModifiedBy")
+            .joinUnsafe("Post", "authorId", "Post.lastModifiedById")
             .joinUnsafe("PostsImages", "id", "Post.id");
 
 
