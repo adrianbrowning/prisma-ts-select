@@ -50,7 +50,7 @@ describe("basic select *", () => {
 
     it("should match SQL", () => {
         const sql = createQuery().getSQL();
-        assert.deepStrictEqual(sql, `select * from User;`)
+        assert.deepStrictEqual(sql, `SELECT * FROM User;`)
     });
 });
 
@@ -121,7 +121,7 @@ describe("basic select * with join", () => {
 
     it("should match SQL", () => {
         const sql = createQuery().getSQL();
-        assert.strictEqual(sql, `select * from User JOIN Post ON authorId = User.id;`)
+        assert.strictEqual(sql, `SELECT * FROM User JOIN Post ON authorId = User.id;`)
     });
 })
 
@@ -135,7 +135,7 @@ describe("select distinct", () => {
 
     it("sql", async () => {
         const sql = createQuery().getSQL();
-        assert.deepStrictEqual(sql, `select DISTINCT * from User;`)
+        assert.deepStrictEqual(sql, `SELECT DISTINCT * FROM User;`)
     });
     it("sql", async () => {
         const result = await createQuery().run();
@@ -214,7 +214,7 @@ describe("basic selectAll", () => {
 
     it("should match SQL", () => {
         const sql = createQuery().getSQL();
-        assert.deepStrictEqual(sql, `select id, email, name from User;`)
+        assert.deepStrictEqual(sql, `SELECT id, email, name FROM User;`)
     });
 });
 
@@ -285,6 +285,98 @@ describe("basic selectAll with join", () => {
 
     it("should match SQL", () => {
         const sql = createQuery().getSQL();
-        assert.strictEqual(sql, `select User.id AS \`User.id\`, User.email AS \`User.email\`, User.name AS \`User.name\`, Post.id AS \`Post.id\`, Post.title AS \`Post.title\`, Post.content AS \`Post.content\`, Post.published AS \`Post.published\`, Post.authorId AS \`Post.authorId\`, Post.lastModifiedById AS \`Post.lastModifiedById\` from User JOIN Post ON authorId = User.id;`)
+        assert.strictEqual(sql, `SELECT User.id AS \`User.id\`, User.email AS \`User.email\`, User.name AS \`User.name\`, Post.id AS \`Post.id\`, Post.title AS \`Post.title\`, Post.content AS \`Post.content\`, Post.published AS \`Post.published\`, Post.authorId AS \`Post.authorId\`, Post.lastModifiedById AS \`Post.lastModifiedById\` FROM User JOIN Post ON authorId = User.id;`)
+    });
+})
+
+describe("basic select email, name", () => {
+
+    before(() => {
+        /*TODO insert data into DB */
+    });
+
+    function createQuery() {
+        return db.from("User")
+            .select("email")
+            .select("name");
+    }
+
+    it("should RUN", async () => {
+        const result = await createQuery().run();
+
+        type TExpected = Array<{
+            email: string;
+            name: string | null;
+        }>;
+
+        typeCheck({} as Expect<Equal<typeof result, TExpected>>);
+
+
+        const expected: TExpected = [
+            {
+                email: 'johndoe@example.com',
+                name: 'John Doe',
+            },
+            {
+                email: 'smith@example.com',
+                name: 'John Smith',
+            }
+        ];
+        assert.deepEqual(result, expected);
+
+    });
+
+    it("should match SQL", () => {
+        const sql = createQuery().getSQL();
+        assert.deepStrictEqual(sql, `SELECT email, name FROM User;`)
+    });
+});
+
+describe("basic select email, name, Post.title with join", () => {
+
+    before(() => {
+        /*TODO insert data into DB*/
+    });
+
+    function createQuery() {
+        return db.from("User")
+            .join("Post", "authorId", "User.id")
+            .select("email")
+            .select("name")
+            .select("Post.title");
+    }
+
+    it("should run", async () => {
+        const result = await createQuery().run();
+
+        type TExpected = Array<{
+            email: string;
+            name: string | null;
+            title: string;
+        }>;
+
+        typeCheck({} as Expect<Equal<typeof result, TExpected>>);
+
+        const expected: TExpected = [{
+            email: 'johndoe@example.com',
+            name: 'John Doe',
+            title: 'Blog 1',
+        }, {
+            email: 'johndoe@example.com',
+            name: 'John Doe',
+            title: 'blog 2',
+        }, {
+            email: 'smith@example.com',
+            name: 'John Smith',
+            title: 'blog 3',
+        }];
+
+        assert.deepStrictEqual(result, expected);
+
+    });
+
+    it("should match SQL", () => {
+        const sql = createQuery().getSQL();
+        assert.strictEqual(sql, `SELECT email, name, Post.title FROM User JOIN Post ON authorId = User.id;`)
     });
 })

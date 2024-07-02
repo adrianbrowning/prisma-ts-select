@@ -87,7 +87,12 @@ type GetTSType<str extends string> = str extends `string` ? string
                 : "Unknown type";
 
 
-type ValidSelect = "*" ; // TODO
+type ValidSelect<Tables extends Array<TTables>> = "*" | GetOtherColumns<Tables> ;// | GetColsFromTable<Tables[number]>; // TODO
+
+type GetOtherColumns<Tables extends Array<TTables>> = Tables extends [infer T extends TTables, ...infer R extends Array<TTables>]
+    ? GetColsFromTable<T> | GetJoinCols<R[number]>
+    : never
+
 
 type TTables = DATABASE["table"];
 
@@ -138,11 +143,11 @@ class _fRun<TDBBase extends TTables, TJoins extends Array<TTables> = [], TSelect
     getSQL() {
 
         return [
-            "select " + (this.values.selectDistinct === true ? "DISTINCT " : "") + this.values.selects.join(', '),
-            `from ${this.values.database}`,
+            "SELECT " + (this.values.selectDistinct === true ? "DISTINCT " : "") + this.values.selects.join(', '),
+            `FROM ${this.values.database}`,
             this.values.tables?.map(({table, local, remote}) => `JOIN ${table} ON ${local} = ${remote}`).join(" ") ?? "",
-            this.values.limit === undefined ? "" : `limit ${this.values.limit}`,
-            this.values.offset === undefined ? "" : `offset ${this.values.offset}`].join(" ").trim()+ ";";
+            this.values.limit === undefined ? "" : `LIMIT ${this.values.limit}`,
+            this.values.offset === undefined ? "" : `OFFSET ${this.values.offset}`].join(" ").trim()+ ";";
     }
 }
 
@@ -203,7 +208,17 @@ run
 //     : acc;
 
 
-type MergeItems<T, Tables extends Array<TTables>, IncTName extends boolean = false> = T extends "*" ? Prettify<IterateTables<Tables, IncTName>> : never;
+type MergeItems<Field, Tables extends Array<TTables>, IncTName extends boolean = false> = Field extends "*"
+    ? Prettify<IterateTables<Tables, IncTName>>
+
+    : Field extends `${infer T extends TTables}.${infer F extends string}`
+        //@ts-expect-error F is part of T, but can't tell TS that
+        ? Pick<GetFieldsFromTable<T>, F>
+        //@ts-expect-error Field is part of the from, but can't tell TS that.
+        : Pick<GetFieldsFromTable<Tables[0]>, Field>
+    ;
+
+
 type IterateTables<Tables extends Array<TTables>, IncTName extends boolean, acc extends Record<string, any> = {}> =
     Tables extends [infer T extends TTables, ...infer Rest extends Array<TTables>]
         ? [IncTName] extends [false]
@@ -216,12 +231,8 @@ type IterateFieldsOfTable<T extends TTables, Fields = Extract<DATABASE, { table:
 }
 
 class _fSelect<TDBBase extends TTables, TJoins extends Array<TTables> = [], TSelectRT extends Record<string, any> = {}> extends _fOrderBy<TDBBase,TJoins,TSelectRT> {
-    select<TSelect extends ValidSelect>(select: TSelect) {
-        /*TODO
-            if "", omit any previous with same name, add new ones
-        */
-
-        return new _fSelect<TDBBase,TJoins,TSelectRT & MergeItems<TSelect,[TDBBase, ...TJoins]>>(this.db, {...this.values, selects:  [...this.values.selects, select] });
+    select<TSelect extends ValidSelect<[TDBBase, ...TJoins]>>(select: TSelect) {
+        return new _fSelect<TDBBase,TJoins,Prettify<TSelectRT & MergeItems<TSelect,[TDBBase, ...TJoins]>>>(this.db, {...this.values, selects:  [...this.values.selects, select] });
     }
 }
 
@@ -334,7 +345,7 @@ OFFSET -
 
 
 type GetFieldsFromTable<TDBBase extends TTables> =  Extract<DATABASE, { table: TDBBase }>["fields"];
-type GetColsFromTable<TDBBase extends TTables> = keyof GetFieldsFromTable<TDBBase>;
+type GetColsFromTable<TDBBase extends TTables> = TDBBase extends any ? keyof GetFieldsFromTable<TDBBase> : never;
 type GetJoinCols<TDBBase extends TTables> = TDBBase extends any ? IterateFields<TDBBase, IsString<GetColsFromTable<TDBBase>>> : never;
 type IterateFields<TDBBase extends TTables, F extends string> = `${TDBBase}.${F}`;
 
