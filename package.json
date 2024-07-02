@@ -27,9 +27,9 @@
     "p:update": "pnpm add -D prisma@latest && pnpm add @prisma/client@latest",
     "test": "find ./tests -name '*.spec.ts' -exec node --import tsx --test --test-reporter spec --watch {} \\;",
     "test:coverage": "find ./tests -name '*.spec.ts' -exec node --loader tsx --test --experimental-test-coverage --test-reporter=lcov {} \\;",
-    "test:w": "pnpm test --watch",
+    "test:w": "find ./tests -name '*.spec.ts' -exec node --watch --import tsx --test --test-reporter spec --watch {} \\;",
     "test:ts": "tsc --noEmit -p tests/tsconfig.json",
-    "test:tsw": "pnpm test:ts"
+    "test:tsw": "pnpm test:ts --watch"
   },
   "dependencies": {
   },
