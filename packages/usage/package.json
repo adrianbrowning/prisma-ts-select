@@ -1,0 +1,22 @@
+{
+  "name": "usage",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "license": "MIT",
+  "scripts": {
+    "gen": "pnpm exec prisma generate",
+    "test": "find ./tests -name '*.spec.ts' -exec node --import tsx --test --test-reporter spec --watch {} \\;",
+    "test:coverage": "find ./tests -name '*.spec.ts' -exec node --loader tsx --test --experimental-test-coverage --test-reporter=lcov {} \\;",
+    "test:w": "find ./tests -name '*.spec.ts' -exec node --watch --import tsx --test --test-reporter spec --watch {} \\;",
+    "test:ts": "tsc --noEmit -p tests/tsconfig.json",
+    "test:tsw": "pnpm test:ts --watch"
+  },
+  "devDependencies": {
+    "@prisma/client": "5.16.1",
+    "@types/node": "~20.14.10",
+    "prisma": "5.16.1",
+    "prisma-ts-select": "workspace:*",
+    "typescript": "^5.5.3"
+  }
+}

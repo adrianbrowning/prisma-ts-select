@@ -1,17 +1,19 @@
-import {describe, it, before, test} from "node:test"
+// import {describe, it, before, test} from "node:test"
 import assert from "node:assert/strict"
-
-import {PrismaClient} from "@prisma/client";
-import {DbSelect} from "../src/db-select.js"
-import type {Equal, Expect} from "./utils.js";
-import {typeCheck} from "./utils.js";
-
-
-const prisma = new PrismaClient({
-    log: ['query']
-})
 //
-const db = new DbSelect(prisma);
+// import {PrismaClient} from "@prisma/client";
+// import {DbSelect} from "../src/db-select.js"
+// import type {Equal, Expect} from "./utils.js";
+// import {typeCheck} from "./utils.js";
+
+
+import { describe, test, before } from "node:test"
+import tsSelectExtend from 'prisma-ts-select/extend'
+import type {Equal, Expect} from "./utils.js";
+import { typeCheck} from "./utils.js";
+import {PrismaClient} from "@prisma/client";
+
+const prisma = new PrismaClient({}).$extends(tsSelectExtend);
 
 type TUserExpected = Array<{ id: number; email: string; name: string | null }>;
 
@@ -22,7 +24,7 @@ describe("basic select *", () => {
     });
 
     function createQuery() {
-        return db.from("User")
+        return prisma.$from("User")
             .select("*");
     }
 
@@ -61,7 +63,7 @@ describe("basic select * with join", () => {
     });
 
     function createQuery() {
-        return db.from("User")
+        return prisma.$from("User")
             .join("Post", "authorId", "User.id")
             .select("*");
     }
@@ -128,7 +130,7 @@ describe("basic select * with join", () => {
 
 describe("select distinct", () => {
     function createQuery() {
-        return db.from("User")
+        return prisma.$from("User")
             .selectDistinct()
             .select("*");
     }
@@ -165,11 +167,11 @@ describe("order of operations", () => {
 
     })
     test("selectDistinct should always be first", () => {
-        db.from("User")
+        prisma.$from("User")
             .selectDistinct()
             .select("*")
         try {
-            db.from("User")
+            prisma.$from("User")
                 .select("*")
                 //@ts-expect-error this is correct, selectDistinct should only be called before select
                 .selectDistinct();
@@ -186,7 +188,7 @@ describe("basic selectAll", () => {
     });
 
     function createQuery() {
-        return db.from("User")
+        return prisma.$from("User")
             .selectAll();
     }
 
@@ -225,7 +227,7 @@ describe("basic selectAll with join", () => {
     });
 
     function createQuery() {
-        return db.from("User")
+        return prisma.$from("User")
             .join("Post", "authorId", "User.id")
             .selectAll();
     }
@@ -296,7 +298,7 @@ describe("basic select email, name", () => {
     });
 
     function createQuery() {
-        return db.from("User")
+        return prisma.$from("User")
             .select("email")
             .select("name");
     }
@@ -339,7 +341,7 @@ describe("basic select email, name, Post.title with join", () => {
     });
 
     function createQuery() {
-        return db.from("User")
+        return prisma.$from("User")
             .join("Post", "authorId", "User.id")
             .select("email")
             .select("name")
