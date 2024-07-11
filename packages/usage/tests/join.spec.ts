@@ -1,18 +1,13 @@
 import { describe, test, before } from "node:test"
-
-import {DbSelect} from "../src/db-select.js"
-import type {GetUnionOfRelations, SafeJoins} from "../src/db-select.js"
-import type {Equal, Expect, TestUnion} from "./utils.js";
+import tsSelectExtend from 'prisma-ts-select/extend'
+import type {SafeJoins} from 'prisma-ts-select/extend'
+import type {Equal, Expect, GetUnionOfRelations, Prettify, TestUnion} from "./utils.js";
 import { typeCheck} from "./utils.js";
 import {PrismaClient} from "@prisma/client";
 
+// import type {GetUnionOfRelations, SafeJoins} from "prisma-ts-select/dist/extend/extend.js";
 
-const prisma = new PrismaClient({
-    log: ['query']
-})
-//
-const db = new DbSelect(prisma);
-
+const prisma = new PrismaClient({}).$extends(tsSelectExtend);
 
 describe("join", () => {
 
@@ -22,23 +17,23 @@ describe("join", () => {
 
     test("TS join Checks", async () =>  {
 
-        db.from("User")
+        prisma.$from("User")
             .join("Post", "authorId", "User.id")
 
-        db.from("LikedPosts")
-            .join("User", "id", "LikedPosts.userId")
+        prisma.$from("LikedPosts")
+            .join("User", "id", "LikedPosts.authorId")
             .join("Post", "authorId", "User.id")
 
-        db.from("LikedPosts")
+        prisma.$from("LikedPosts")
             //@ts-expect-error TS2345: Argument of type string is not assignable to parameter of type never
             .join("Post", "authorId", "User.id")
-            .join("User", "id", "LikedPosts.userId")
+            .join("User", "id", "LikedPosts.authorId")
 
-        db.from("LikedPosts")
+        prisma.$from("LikedPosts")
             .join("Post", "id", "LikedPosts.postId")
             .join("User", "id", "Post.authorId")
 
-        db.from("User")
+        prisma.$from("User")
             //TS2345: Argument of type "Posts" is not assignable to parameter of type
             // "User" | "Post" | "LikedPosts" | "PostsImages"
             //@ts-expect-error
@@ -46,7 +41,7 @@ describe("join", () => {
 
 
 
-        type safeJoins = SafeJoins<"Post", ["LikedPosts"]>;
+        type safeJoins = Prettify<SafeJoins<"Post", ["LikedPosts"]>>;
         //    ^?
         typeCheck({} as Expect<Equal<safeJoins, {LikedPosts: {id: ["postId"]}}>>);
 
@@ -59,15 +54,19 @@ describe("join", () => {
 
         type safeJoins2 = SafeJoins<"Post", ["LikedPosts", "User"]>;
         //    ^?
+
+
         typeCheck({} as Expect<Equal<safeJoins2, {
-            LikedPosts: {id: ["postId"]},
-            User: {
-                authorId: ["id"]
-                lastModifiedBy: ["id"]
+             LikedPosts: {
+                 id: ["postId"]
+             },
+             User: {
+                 authorId: ["id"]
+                 lastModifiedById: ["id"]
             }
         }>>);
 
-        type unionOf_Post_LikedPosts_User = ["id", "LikedPosts.postId"] | ["authorId", "User.id"] | ["lastModifiedBy", "User.id"];
+        type unionOf_Post_LikedPosts_User = ["id", "LikedPosts.postId"] | ["authorId", "User.id"] | ["lastModifiedById", "User.id"];
         type unionOfRelations2 = GetUnionOfRelations<safeJoins2>
         //        ^?
         typeCheck( {} as Expect<TestUnion<unionOfRelations2, unionOf_Post_LikedPosts_User>>);
@@ -75,14 +74,17 @@ describe("join", () => {
 
         type safeJoins3 = SafeJoins<"User", ["LikedPosts", "Post"]>;
         //    ^?
+
         typeCheck({} as Expect<Equal<safeJoins3, {
-            LikedPosts: {id: ["userId"]},
+            LikedPosts: {
+                id: ["authorId"]
+            },
             Post: {
-                id: ["authorId", "lastModifiedBy"]
+                id: ["authorId", "lastModifiedById"]
             }
         }>>);
 
-        type unionOf_User_LikedPosts_Post = ["id", "LikedPosts.postId"] | ["authorId", "User.id"] | ["lastModifiedBy", "User.id"];
+        type unionOf_User_LikedPosts_Post = ["id", "LikedPosts.postId"] | ["authorId", "User.id"] | ["lastModifiedById", "User.id"];
         type unionOfRelations3 = GetUnionOfRelations<safeJoins2>
         //        ^?
         typeCheck( {} as Expect<TestUnion<unionOfRelations3, unionOf_User_LikedPosts_Post>>);
@@ -91,15 +93,15 @@ describe("join", () => {
 
     test("TS joinUnsafe Checks", async () =>  {
 
-        db.from("User")
-            .joinUnsafe("Post", "id", "User.id");
+        prisma.$from("User")
+            .joinUnsafeTypeEnforced("Post", "id", "User.id");
 
-        db.from("User")
-            .joinUnsafe("Post", "authorId", "Post.lastModifiedById")
-            .joinUnsafe("PostsImages", "id", "Post.id");
+        prisma.$from("User")
+            .joinUnsafeTypeEnforced("Post", "authorId", "Post.lastModifiedById")
+            .joinUnsafeTypeEnforced("PostsImages", "id", "Post.id");
 
 
-        db.from("User")
+        prisma.$from("User")
             //@ts-expect-error "User.name" is string so shouldn't be allowed
             .joinUnsafe("Post", "id", "User.name");
 
@@ -107,12 +109,12 @@ describe("join", () => {
 
     test("TS joinUnsafeAllFields Checks", async () =>  {
 
-    db.from("User")
-        .joinUnsafeAllFields("Post", "id", "User.email");
+    prisma.$from("User")
+        .joinUnsafeIgnoreType("Post", "id", "User.email");
 
-    db.from("User")
-        .joinUnsafeAllFields("Post", "authorId", "User.email")
-        .joinUnsafeAllFields("PostsImages", "id", "Post.published");
+    prisma.$from("User")
+        .joinUnsafeIgnoreType("Post", "authorId", "User.email")
+        .joinUnsafeIgnoreType("PostsImages", "id", "Post.published");
     });
 });
 

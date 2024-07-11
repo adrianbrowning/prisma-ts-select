@@ -1,7 +1,14 @@
 node_modules
 # Keep environment variables out of version control
 .env
-prisma/data.db
-.idea
+**/prisma/data.db
+**/.idea
 buid/
 **/tsconfig.tsbuildinfo
+dist
+yarn-error.log
+build
+pnpm-debug.log
+.env*
+**/built
+**/coverage

@@ -1,68 +1,13 @@
-import type {PrismaClient} from "@prisma/client";
 import {Prisma} from "@prisma/client/extension";
+import type {PrismaClient} from "@prisma/client";
 
-const DB = {
-    "User": {
-        fields: {
-            id: "number",
-            email: "string",
-            name: "?string"
-        },
-        //safeJoin
-        relations: {
-            "Post": {id: ["authorId", "lastModifiedBy"]},//[["id", "authorId"], ["id", "lastModifiedBy"]]
-            "LikedPosts": {id: ["userId"]}
-        },
-    },
-    "Post": {
-        fields: {
-            id: "number",
-            title: "string",
-            content: "?string",
-            published: "boolean",
-            authorId: "number",
-            lastModifiedById: "number",
-        },
-        //safeJoin
-        relations: {
-            "User": {
-                "authorId": ["id"],
-                "lastModifiedBy": ["id"]
-            },
-            "PostsImages": {"id": ["postId"]},
-            "LikedPosts": {"id": ["postId"]},
-        },
-    },
-    "PostsImages": {
-        fields: {
-            id: "number",
-            url: "string",
-            postId: "number",
-        },
-        //safeJoin
-        relations: {
-            "Post": {"postId": ["id"]}
-        },
-    },
-    "LikedPosts": {
-        fields: {
-            id: "number",
-            postId: "number",
-            userId: "number",
-        },
-        relations: {
-            "Post": {"postId": ["id"]},
-            "User": {"userId": ["id"]}
-        }
-    }
-} as const satisfies Record<string, {
-    fields: Record<string, string>;
-    relations: Record<string, Record<string, Array<string>>>
-}>;
+
+const DB: DBType = {} as const satisfies DBType;
+type TDB = typeof DB;
 
 type DeepWriteable<T> = { -readonly [P in keyof T]: DeepWriteable<T[P]> };
 
-type _db = DeepWriteable<typeof DB>;
+type _db = DeepWriteable<TDB>;
 
 type DATABASE = {
     [k in keyof _db]: {
@@ -72,19 +17,41 @@ type DATABASE = {
         },
         relations: _db[k]["relations"]
     }
-}[keyof typeof DB];
+}[keyof TDB];
 
+export type JSONPrimitive = string | number | boolean | null;
+export type JSONValue = JSONPrimitive | JSONObject | JSONArray;
+export type JSONObject = { [member: string]: JSONValue; };
+export type JSONArray = Array<JSONValue>;
+
+type StrTypeToTSType<str> = str extends string ? (GetTSType<RemoveNullChar<str>> | IsNullable<str>) : never;
+type GetTSType<str extends string> =
+    str extends `String` ? string
+        : str extends `BigInt` ? BigInt
+        : str extends `Int` ? number
+        : str extends `Float` ? number
+        : str extends `Decimal` ? number
+            : str extends `Boolean` ? boolean
+                : str extends `DateTime` ? Date
+                : str extends `Bytes` ? Buffer
+                : str extends `Json` ? JSONValue
+                    : "Unknown type";
+
+type IsNullable<str extends string> = str extends `?${string}` ? null : never;
+
+
+
+export type RemoveNullChar<str extends string> = str extends `?${infer s}` ? s : str;
+
+export type DBType = Record<string, {
+    fields: Record<string, string>;
+    relations: Record<string, Record<string, Array<string>>>
+}>;
 
 type Filter<a, b> = a extends b ? a : never;
-type StrTypeToTSType<str> = str extends string ? (GetTSType<RemoveNullChar<str>> | IsNullable<str>) : never;
-type RemoveNullChar<str extends string> = str extends `?${infer s}` ? s : str;
-type IsNullable<str extends string> = str extends `?${string}` ? null : never;
+
 type IsString <T> = T extends string ? T : never;
-type GetTSType<str extends string> = str extends `string` ? string
-    : str extends `number` ? number
-        : str extends `boolean` ? boolean
-            : str extends `date` ? Date
-                : "Unknown type";
+
 
 
 type ValidSelect<Tables extends Array<TTables>> = "*" | GetOtherColumns<Tables> ;// | GetColsFromTable<Tables[number]>; // TODO
@@ -94,12 +61,12 @@ type GetOtherColumns<Tables extends Array<TTables>> = Tables extends [infer T ex
     : never
 
 
-type TTables = DATABASE["table"];
+export type TTables = DATABASE["table"];
 
 
-export class DbSelect {
+class DbSelect {
 
-    constructor(private db: PrismaClient) {
+    constructor(public db: PrismaClient) {
     }
 
     from<TDBBase extends TTables>(database: TDBBase) {
@@ -212,7 +179,7 @@ type MergeItems<Field, Tables extends Array<TTables>, IncTName extends boolean =
     ? Prettify<IterateTables<Tables, IncTName>>
 
     : Field extends `${infer T extends TTables}.${infer F extends string}`
-        //@ts-expect-error F is part of T, but can't tell TS that
+        //@-ts-expect-error F is part of T, but can't tell TS that
         ? Pick<GetFieldsFromTable<T>, F>
         //@ts-expect-error Field is part of the from, but can't tell TS that.
         : Pick<GetFieldsFromTable<Tables[0]>, Field>
@@ -250,14 +217,18 @@ class _fSelectDistinct<TDBBase extends TTables, TJoins extends Array<TTables> = 
         const selects = (function(values: Values){
             if (values.tables && values.tables.length > 0) {
                 return [values.database, ...values.tables.map(t => t.table)].reduce<Array<string>>((acc, table): Array<string> => {
-                    return acc.concat(Object.keys(DB[table].fields).map((field) => `${table}.${field} AS \`${table}.${field}\``))
+                    //TODO review `!`
+                    return acc.concat(Object.keys(DB[table]!.fields).map((field) => `${table}.${field} AS \`${table}.${field}\``))
                 }, []);
             }
-
-            return Object.keys(DB[values.database].fields);
+            //TODO review `!`
+            return Object.keys(DB[values.database]!.fields);
         }(this.values))
 
         return new _fOrderBy<TDBBase,TJoins,MergeItems<"*", [TDBBase, ...TJoins] ,TJoins extends [TTables,...Array<TTables> ] ? true: false>>(this.db, {...this.values, selects });
+    }
+    selectAllOmit() {
+        throw new Error("Not implemented yet")
     }
 }
 
@@ -367,7 +338,7 @@ export type GetUnionOfRelations<TSafe> = {
         [
             TLocal,
             T extends string ? TSafe[T][TLocal] extends Array<string> ? ArrayToString<TSafe[T][TLocal][number], T> : never : never
-    ]
+        ]
     }[keyof TSafe[T]];
 }[keyof TSafe];
 
@@ -409,11 +380,11 @@ type FieldsByTypeByTable = Prettify<{
 type GetColumnType<Table extends TTables, Col1 extends keyof _db[Table]["fields"]> = RemoveNullChar<IsString<_db[Table]["fields"][Col1]>>
 
 type GetJoinOnColsType<Type extends string, TDBBase extends TTables, TJoins extends Array<TTables>> =
-    // GetColsFromTableType<TDBBase, Type>
+// GetColsFromTableType<TDBBase, Type>
     GetJoinColsType<[TDBBase, ...TJoins][number],Type>;
 
 type GetColsFromTableType<TDBBase extends TTables, Type extends string> =
-    //@ts-expect-error Try and come back to
+//@ts-expect-error Try and come back to
     FieldsByTypeByTable[Loop<keyof FieldsByTypeByTable, Type>][TDBBase];
 type Loop<Keys extends string, Type extends string>=  Keys extends Type ? Type : never;
 
@@ -433,20 +404,20 @@ class _fJoin<TDBBase extends TTables, TJoins extends Array<TTables> = []> extend
         });
     }
 
-    joinUnsafe<Table extends TTables,
+    joinUnsafeTypeEnforced<Table extends TTables,
         TCol1 extends GetColsFromTable<Table>,
         TCol2 extends  GetJoinOnColsType<
-            //@ts-expect-error TODO come back too
+            //@-ts-expect-error TODO come back too
             GetColumnType<Table, TCol1>
             , TDBBase, [...TJoins, Table]>
-        >(table: Table, field: TCol1, reference: TCol2) {
+    >(table: Table, field: TCol1, reference: TCol2) {
         return new _fJoin<TDBBase, [...TJoins, Table]>(this.db, {
             ...this.values,
             tables: [...this.values.tables || [], {table, local: `${table}.${String(field)}`, remote: reference} ]
         });
     }
 
-    joinUnsafeAllFields<Table extends TTables,
+    joinUnsafeIgnoreType<Table extends TTables,
         TCol2 extends GetJoinCols< [...TJoins, TDBBase][number]> >(table: Table, field: GetColsFromTable<Table>, reference: TCol2) {
         return new _fJoin<TDBBase, [...TJoins, Table]>(this.db, {
             ...this.values,
@@ -489,19 +460,15 @@ OFFSET -
  */
 
 
+export default {
+    client: {
+        $from<T extends TTables>(table: T) {
+            const client =  Prisma.getExtensionContext(this) as unknown as PrismaClient;
 
-
-
-
-
-
-
-
-
-
-
-
-
-
+            return new DbSelect(client)
+                .from(table)
+        },
+    },
+};
 
 

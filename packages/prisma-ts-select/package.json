@@ -1,0 +1,157 @@
+{
+  "name": "prisma-ts-select",
+  "version": "1.0.32",
+  "type": "module",
+  "bin": {
+    "prisma-ts-select": "dist/bin.cjs"
+  },
+  "main": "./dist/generator.cjs",
+  "module": "./dist/generator.js",
+  "types": "./dist/generator.d.cts",
+  "exports": {
+    "./extend": {
+      "import": {
+        "import": "./built/extend.js",
+        "require": "./built/extend.js",
+        "default": "./built/extend.js",
+        "types": "./built/extend.d.ts"
+      },
+      "require": {
+        "import": "./built/extend.cjs",
+        "require": "./built/extend.cjs",
+        "default": "./built/extend.cjs",
+        "types": "./built/extend.d.cts"
+      }
+    },
+    ".": {
+      "import": {
+        "import": "./dist/generator.mjs",
+        "default": "./dist/generator.mjs",
+        "types": "./dist/generator.d.mts"
+      },
+      "require": {
+        "import": "./dist/generator.js",
+        "require": "./dist/generator.js",
+        "default": "./dist/generator.js",
+        "types": "./dist/generator.d.ts"
+      }
+    }
+  },
+  "scripts": {
+    "bp": "tsup && pnpm version patch && pnpm pack",
+    "reset": "rm -rf prisma/migrations/ && prisma migrate dev --name init  && prisma generate",
+    "start": "tsx src/index.ts",
+    "prisma-upgrade": "pnpm i --save-dev prisma@latest && pnpm i @prisma/client@latest",
+    "lint:ts": "tsc --noEmit -p tsconfig.json",
+    "lint:tsw": "pnpm tsc -w",
+    "lint": "tsc --noEmit ; eslint \"scripts/**/*.{j,t}s{,x}\" --cache --max-warnings=0",
+    "lint:s": "eslint --config .eslintrc.style.json \"scripts/**/*.{j,t}s{,x}\" --cache --max-warnings=0",
+    "lint:fix": "eslint --config .eslintrc.style.json \"scripts/**/*.{j,t}s{,x}\" --cache --max-warnings=0 --fix",
+    "p:gen": "pnpm exec prisma generate",
+    "p:dbp": "pnpm exec prisma db push",
+    "p:migrate": "pnpm exec prisma migrate dev",
+    "p:update": "pnpm add -D prisma@latest && pnpm add @prisma/client@latest",
+    "test": "echo 'TODO call package/usage'",
+    "test:jest": "jest",
+    "2postinstall": "node src/scripts/postinstall.js"
+  },
+  "dependencies": {
+    "@prisma/generator-helper": "5.16.2",
+    "@prisma/internals": "5.16.2"
+  },
+  "license": "MIT",
+  "authorName": "Adrian Elton-Browning <gingacodemonkey@gmail.com>",
+  "homepage": "Link to homepage or github readme here",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/adrianbrowning/prisma-ts-select"
+  },
+  "devDependencies": {
+    "@prisma/client": "5.16.1",
+    "@stylistic/eslint-plugin": "^1.5.4",
+    "@total-typescript/ts-reset": "^0.5.1",
+    "@types/better-sqlite3": "^7.6.8",
+    "@types/humanize-duration": "^3.27.2",
+    "@types/klaw-sync": "^6.0.1",
+    "@types/lodash": "^4.14.197",
+    "@types/node": "20.11.30",
+    "@types/object-hash": "^3.0.4",
+    "@typescript-eslint/eslint-plugin": "^6.19.1",
+    "@typescript-eslint/parser": "^6.19.1",
+    "eslint": "^8.47.0",
+    "eslint-plugin-node": "^11.1.0",
+    "eslint-plugin-promise": "^6.1.1",
+    "eslint-plugin-simple-import-sort": "^9.0.0",
+    "eslint-plugin-unused-imports": "^3.0.0",
+    "humanize-duration": "^3.30.0",
+    "klaw-sync": "^6.0.0",
+    "knip": "^5.9.4",
+    "log-with-statusbar": "^1.2.0",
+    "prisma-dbml-generator": "^0.10.0",
+    "prisma-docs-generator": "^0.8.0",
+    "prisma-erd-generator": "^1.11.0",
+    "progress-string": "^1.2.2",
+    "tsx": "^4.16.0",
+    "typescript": "^5.5.3",
+    "@types/jest": "27.0.3",
+    "@types/prettier": "2.4.2",
+    "jest": "27.4.7",
+    "prisma": "5.16.1",
+    "ts-jest": "27.1.4",
+    "@semantic-release/changelog": "^6.0.1",
+    "@semantic-release/git": "^10.0.1",
+    "semantic-release": "^18.0.1",
+    "tsup": "^8.1.0"
+  },
+  "keywords": [
+    "prisma",
+    "generator",
+    "SQL"
+  ],
+  "engines": {
+    "node": ">=18.17",
+    "pnom": ">= 8.6.12"
+  },
+  "target": "node",
+  "knip": {
+    "entry": [
+      "scripts/**/*.{js,ts}"
+    ],
+    "project": [
+      "**/*.{js,ts}"
+    ],
+    "ignoreBinaries": [
+      "date"
+    ],
+    "ignoreDependencies": [
+      "prisma-.+"
+    ]
+  },
+  "release": {
+    "branches": [
+      "main"
+    ],
+    "plugins": [
+      "@semantic-release/commit-analyzer",
+      "@semantic-release/release-notes-generator",
+      [
+        "@semantic-release/changelog",
+        {
+          "changelogFile": "CHANGELOG.md"
+        }
+      ],
+      "@semantic-release/npm",
+      "@semantic-release/github",
+      [
+        "@semantic-release/git",
+        {
+          "assets": [
+            "CHANGELOG.md",
+            "package.json"
+          ],
+          "message": "chore(release): set `package.json` to ${nextRelease.version} [skip ci]\n\n${nextRelease.notes}"
+        }
+      ]
+    ]
+  }
+}
