@@ -94,11 +94,11 @@ describe("join", () => {
     test("TS joinUnsafe Checks", async () =>  {
 
         prisma.$from("User")
-            .joinUnsafe("Post", "id", "User.id");
+            .joinUnsafeTypeEnforced("Post", "id", "User.id");
 
         prisma.$from("User")
-            .joinUnsafe("Post", "authorId", "Post.lastModifiedById")
-            .joinUnsafe("PostsImages", "id", "Post.id");
+            .joinUnsafeTypeEnforced("Post", "authorId", "Post.lastModifiedById")
+            .joinUnsafeTypeEnforced("PostsImages", "id", "Post.id");
 
 
         prisma.$from("User")
@@ -110,11 +110,11 @@ describe("join", () => {
     test("TS joinUnsafeAllFields Checks", async () =>  {
 
     prisma.$from("User")
-        .joinUnsafeAllFields("Post", "id", "User.email");
+        .joinUnsafeIgnoreType("Post", "id", "User.email");
 
     prisma.$from("User")
-        .joinUnsafeAllFields("Post", "authorId", "User.email")
-        .joinUnsafeAllFields("PostsImages", "id", "Post.published");
+        .joinUnsafeIgnoreType("Post", "authorId", "User.email")
+        .joinUnsafeIgnoreType("PostsImages", "id", "Post.published");
     });
 });
 

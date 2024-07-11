@@ -11,4 +11,4 @@ build
 pnpm-debug.log
 .env*
 **/built
-
+**/coverage

@@ -1,6 +1,6 @@
 import { generatorHandler } from '@prisma/generator-helper'
 import type { GeneratorOptions } from '@prisma/generator-helper'
-import { logger } from '@prisma/sdk'
+import { logger } from '@prisma/internals'
 import path from 'node:path'
 import { GENERATOR_NAME } from './constants.js'
 import { writeFileSafely } from './utils/writeFileSafely.js'

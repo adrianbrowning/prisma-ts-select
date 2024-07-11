@@ -463,9 +463,8 @@ OFFSET -
 export default {
     client: {
         $from<T extends TTables>(table: T) {
-            const client =  Prisma.getExtensionContext(this);
+            const client =  Prisma.getExtensionContext(this) as unknown as PrismaClient;
 
-            //@ts-expect-error todo come back to this
             return new DbSelect(client)
                 .from(table)
         },

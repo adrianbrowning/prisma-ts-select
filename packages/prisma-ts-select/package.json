@@ -56,10 +56,8 @@
     "2postinstall": "node src/scripts/postinstall.js"
   },
   "dependencies": {
-    "@prisma/client": "5.16.1",
-    "@prisma/generator-helper": "5.16.1",
-    "@prisma/sdk": "4.0.0",
-    "prettier": "2.5.1"
+    "@prisma/generator-helper": "5.16.2",
+    "@prisma/internals": "5.16.2"
   },
   "license": "MIT",
   "authorName": "Adrian Elton-Browning <gingacodemonkey@gmail.com>",
@@ -69,6 +67,7 @@
     "url": "https://github.com/adrianbrowning/prisma-ts-select"
   },
   "devDependencies": {
+    "@prisma/client": "5.16.1",
     "@stylistic/eslint-plugin": "^1.5.4",
     "@total-typescript/ts-reset": "^0.5.1",
     "@types/better-sqlite3": "^7.6.8",
