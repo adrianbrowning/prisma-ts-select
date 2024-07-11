@@ -17,7 +17,7 @@ datasource db {
 }
 
 model User {
-  id                BigInt       @id @default(autoincrement())
+  id                Int          @id @default(autoincrement())
   email             String       @unique
   name              String?
   Posts             Post[]       @relation("author")
@@ -31,9 +31,9 @@ model Post {
   content          String?
   published        Boolean       @default(false)
   author           User          @relation(fields: [authorId], references: [id], name: "author")
-  authorId         BigInt
+  authorId         Int
   LastModifiedBy   User          @relation(fields: [lastModifiedById], references: [id], name: "lastModifiedBy")
-  lastModifiedById BigInt
+  lastModifiedById Int
   Images           PostsImages[]
   LikedPosts       LikedPosts[]
 }
@@ -46,9 +46,9 @@ model PostsImages {
 }
 
 model LikedPosts {
-  id       Int    @id @default(autoincrement())
+  id       Int  @id @default(autoincrement())
   postId   Int
-  Post     Post   @relation(fields: [postId], references: [id])
-  Author   User   @relation(fields: [authorId], references: [id])
-  authorId BigInt
+  Post     Post @relation(fields: [postId], references: [id])
+  Author   User @relation(fields: [authorId], references: [id])
+  authorId Int
 }
