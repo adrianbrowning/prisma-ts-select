@@ -6,8 +6,11 @@
   "license": "MIT",
   "scripts": {
     "gen": "pnpm exec prisma generate",
-    "test": "find ./tests -name '*.spec.ts' -exec node --import tsx --test --test-reporter spec {} \\;",
-    "test:w": "find ./tests -name '*.spec.ts' -exec node --import tsx --test --test-reporter spec --watch {} \\;",
+    "b": "pushd ../prisma-ts-select; pnpm build; popd;",
+    "b&g": "pnpm b && pnpm gen;",
+    "p:r": "pnpm exec prisma migrate reset --force",
+    "test": "pnpm p:r && find ./tests -name '*.spec.ts' -exec node --import tsx --test --test-reporter spec {} \\;",
+    "test:w": "pnpm p:r &&  find ./tests -name '*.spec.ts' -exec node --import tsx --test --test-reporter spec --watch {} \\;",
     "test:coverage": "find ./tests -name '*.spec.ts' -exec node --loader tsx --test --experimental-test-coverage --test-reporter=lcov {} \\;",
     "test:ts": "tsc --noEmit -p tsconfig.json",
     "test:tsw": "pnpm test:ts --watch"

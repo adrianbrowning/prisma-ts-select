@@ -38,7 +38,8 @@
     }
   },
   "scripts": {
-    "bp": "tsup && pnpm version patch && pnpm pack",
+    "bp": "pnpm build && pnpm version patch && pnpm pack",
+    "build": "pnpm exec rimraf dist && tsup",
     "reset": "rm -rf prisma/migrations/ && prisma migrate dev --name init  && prisma generate",
     "start": "tsx src/index.ts",
     "prisma-upgrade": "pnpm i --save-dev prisma@latest && pnpm i @prisma/client@latest",
@@ -101,7 +102,8 @@
     "@semantic-release/changelog": "^6.0.1",
     "@semantic-release/git": "^10.0.1",
     "semantic-release": "^18.0.1",
-    "tsup": "^8.1.0"
+    "tsup": "^8.1.0",
+    "rimraf": "^6.0.1"
   },
   "keywords": [
     "prisma",

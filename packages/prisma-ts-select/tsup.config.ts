@@ -8,21 +8,13 @@ import { defineConfig } from 'tsup';
 
 export default defineConfig((options) => [
     {
-        // entry: {
-        //     bin: 'bin-src/register.js',
-        //     node: 'node-src/index.ts',
-        // },
         entry: ["src/bin.ts", "src/generator.ts"],
         splitting: true,
-        minify: true,
+        minify: false,
         format: ['cjs', "esm"],
-        // dts: {
-        //     entry: { node: 'node-src/index.ts' },
-        //     resolve: true,
-        // },
         dts: true,
         treeshake: true,
-        sourcemap: true,
+        sourcemap: false,
         clean: false,
         outDir: "dist",
         platform: 'node',
@@ -43,17 +35,4 @@ export default defineConfig((options) => [
         // platform: 'node',
         // target: 'node20', // Sync with `runs.using` in action.yml
     },
-    /*{
-        entry: ['src/generator-build/db.ts'],
-        outDir: 'dist/generator-build/',
-        splitting: false,
-        minify: false,
-        format: ['cjs', "esm"],
-        treeshake: true,
-        sourcemap: false,
-        clean: false,
-        dts: true,
-        // platform: 'node',
-        // target: 'node20', // Sync with `runs.using` in action.yml
-    },*/
 ]);

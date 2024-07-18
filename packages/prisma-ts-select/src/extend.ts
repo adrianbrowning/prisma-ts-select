@@ -1,7 +1,6 @@
 import {Prisma} from "@prisma/client/extension";
 import type {PrismaClient} from "@prisma/client";
 
-
 const DB: DBType = {} as const satisfies DBType;
 type TDB = typeof DB;
 
@@ -322,6 +321,33 @@ type IterateFields<TDBBase extends TTables, F extends string> = `${TDBBase}.${F}
 
 type Relations<Table extends TTables> = Extract<DATABASE, { table: Table }>["relations"];
 
+// type UnionToIntersection<U> =
+//     (U extends any ? (k: U) => void : never) extends (k: infer I) => void ? I : never;
+//
+// type LastOf<T> =
+//     UnionToIntersection<T extends any ? (x: T) => void : never> extends (x: infer Last) => void ? Last : never;
+//
+// type Push<T extends any[], V> = [...T, V];
+//
+// type UnionToTuple<T, L = LastOf<T>, N = [T] extends [never] ? true : false> =
+//     true extends N ? [] : Push<UnionToTuple<Exclude<T, L>>, L>;
+//
+// type a = "1" | "2";
+// type b = UnionToTuple<a>; // ["1", "2"]
+//
+// type c = UnionToTuple<keyof Relations<"LikedPosts">>
+// //   ^?
+
+
+
+type AvailableJoins<Tables extends Array<TTables>, acc extends TTables = never> =
+    Tables extends [infer T extends TTables, ...infer Rest extends Array<TTables>]
+        ? AvailableJoins<Rest,
+            //@ts-expect-error todo come back to
+            acc | keyof Relations<T> >
+        : acc;
+
+
 export type SafeJoins<TNewJoin extends TTables, TJoins extends Array<TTables>, TRelations = Relations<TNewJoin>> =
     {[k in keyof TRelations as Filter<k,TJoins[number]>]: TRelations[k]};
 
@@ -394,17 +420,17 @@ type GetJoinColsType<TDBBase extends TTables, Type extends string> = IterateFiel
 
 class _fJoin<TDBBase extends TTables, TJoins extends Array<TTables> = []> extends _fWhere<TDBBase, TJoins> {
 
-    join<Table extends TTables,
+    join<Table extends AvailableJoins<[TDBBase, ...TJoins]>,
         TJoinCols extends [string, string] = ValidStringTuple<GetUnionOfRelations<SafeJoins<Table, [TDBBase, ...TJoins]>>>,
         TCol1 extends TJoinCols[0] = never
     >(table: Table, field: TCol1, reference: find<TJoinCols, TCol1> ) { //CleanUpFromNames<TDBBase, find<TJoinCols, TCol1>>
         return new _fJoin<TDBBase, [...TJoins, Table]>(this.db, {
             ...this.values,
-            tables: [...this.values.tables || [], {table, local: field, remote: reference}]
+            tables: [...this.values.tables || [], {table: table as TTables, local: field, remote: reference}]
         });
     }
 
-    joinUnsafeTypeEnforced<Table extends TTables,
+    joinUnsafeTypeEnforced<Table extends  AvailableJoins<[TDBBase, ...TJoins]>,
         TCol1 extends GetColsFromTable<Table>,
         TCol2 extends  GetJoinOnColsType<
             //@-ts-expect-error TODO come back too
@@ -413,15 +439,15 @@ class _fJoin<TDBBase extends TTables, TJoins extends Array<TTables> = []> extend
     >(table: Table, field: TCol1, reference: TCol2) {
         return new _fJoin<TDBBase, [...TJoins, Table]>(this.db, {
             ...this.values,
-            tables: [...this.values.tables || [], {table, local: `${table}.${String(field)}`, remote: reference} ]
+            tables: [...this.values.tables || [], {table: table as TTables, local: `${String(table)}.${String(field)}`, remote: reference} ]
         });
     }
 
-    joinUnsafeIgnoreType<Table extends TTables,
+    joinUnsafeIgnoreType<Table extends  AvailableJoins<[TDBBase, ...TJoins]>,
         TCol2 extends GetJoinCols< [...TJoins, TDBBase][number]> >(table: Table, field: GetColsFromTable<Table>, reference: TCol2) {
         return new _fJoin<TDBBase, [...TJoins, Table]>(this.db, {
             ...this.values,
-            tables: [...this.values.tables || [], {table, local: `${table}.${String(field)}`, remote: reference} ]
+            tables: [...this.values.tables || [], {table: table as TTables, local: `${String(table)}.${String(field)}`, remote: reference} ]
         });
     }
 

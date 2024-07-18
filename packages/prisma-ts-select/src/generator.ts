@@ -1,4 +1,4 @@
-import { generatorHandler } from '@prisma/generator-helper'
+import {DMMF, generatorHandler} from '@prisma/generator-helper'
 import type { GeneratorOptions } from '@prisma/generator-helper'
 import { logger } from '@prisma/internals'
 import path from 'node:path'
@@ -20,7 +20,7 @@ generatorHandler({
   },
   onGenerate: async (options: GeneratorOptions) => {
     logger.info(`Starting Generation`);
-    const modelToId:Record<string, string> = {};
+    const modelToId:Record<string, [string, string]> = {};
 
     type InnerOutType ={
       fields: Record<string, string>;
@@ -29,48 +29,135 @@ generatorHandler({
     type OutType = Record<string, InnerOutType>;
 
     const models = options.dmmf.datamodel.models.reduce<OutType>((acc, model) => {
-      const modelObj = acc[model.name] = acc[model.name] ?? ({} as InnerOutType);
+      const modelObj = acc[model.name] = acc[model.name] ?? ({
+        fields: {},
+        relations: {},
+      } as InnerOutType);
+
+      // if (model.name === "MFId_Post") debugger;
+
+      for (const field of model.fields) {
+        if (field.kind !== "object") {
+          if (field.isId) modelToId[model.name] = [field.name, field.type];
+          modelObj.fields = modelObj.fields ?? {};
+          modelObj.fields[field.name] = (!field.isRequired ? "?" : "") + field.type;
+        }
+        else {
+          if ((field.relationFromFields && field.relationFromFields.length > 0) && (field.relationToFields && field.relationToFields.length > 0)) {
+
+            const fieldObj = modelObj.relations[field.type] = modelObj.relations[field.type] ?? {};
+            field.relationFromFields.forEach((relationFromField, i) => {
+              if (!field.relationToFields) return;
+              const relationToField = field.relationToFields[i];
+              if (!relationToField) return;
+
+              fieldObj[relationFromField] = fieldObj[relationFromField] || [];
+              fieldObj[relationFromField].push(relationToField);
+
+              const accModel = acc[field.type] = acc[field.type] ?? ({} as InnerOutType);
+              const accModelRelations = accModel.relations = accModel.relations ?? {};
+              const accModelRelationToModel = accModelRelations[model.name] = accModelRelations[model.name] ?? {};
+              const relationFromFieldList = accModelRelationToModel[relationToField] = accModelRelationToModel[relationToField] ?? [];
+              relationFromFieldList.push(relationFromField);
+            })
+          }
+          else {
+
+            if (!isManyToManyRelationShip(field)) continue;
+
+            debugger;
+            const joinTableName = "_"+field.relationName;
+
+            const joinTableModel = acc[joinTableName] = acc[joinTableName] ?? ({
+              fields: {
+                "A": "",
+                "B": "",
+              },
+              relations: {},
+            } as InnerOutType);
 
 
+            const abJoin = [field.type, model.name].toSorted().indexOf(model.name) === 0 ? "A" : "B";
 
-      modelObj.fields = model.fields.reduce<Record<string, string>>((acc2, field) => {
-        if (field.kind === "object") return acc2;
-        if (field.isId) modelToId[model.name] = field.name;
-        acc2[field.name] = (!field.isRequired ? "?" : "") + field.type;
-        return acc2;
-      }, {});
-      modelObj.relations = model.fields.reduce<Record<string, Record<string, Array<string>>>>((acc2, field) => {
-        if (field.kind !== "object") return acc2;
-        if (!field.relationFromFields) return acc2;
-        if (!field.relationToFields) return acc2;
+            const [idName, idType] =  getModelId(model.name);
 
-        const fieldObj = acc2[field.type] = acc2[field.type]  ?? {};
-        field.relationFromFields.forEach((rFF, i) => {
-          if (!field.relationToFields) return;
-          const rTF = field.relationToFields[i];
-          if (!rTF) return;
-
-          fieldObj[rFF] = fieldObj[rFF] || [];
-          fieldObj[rFF].push(rTF);
-
-          //acc[field.type] = acc[field.type] ?? {};
-          //acc[field.type].relations = acc[field.type].relations ?? {};
-          // acc[field.type].relations[model.name] = acc[field.type].relations[model.name] ?? {};
-          // acc[field.type].relations[model.name][rTF] = acc[field.type].relations[rTF] ?? [];
-          // acc[field.type].relations[model.name][rTF].push(rFF);
+            joinTableModel.fields[abJoin] = idType;
 
 
+            {
+              const mr = joinTableModel.relations[model.name] = joinTableModel.relations[model.name] ?? {};
+              const mrt = mr[abJoin] = mr[abJoin] ?? [];
+              mrt.push(idName);
+            }
 
-          const m = acc[field.type] = acc[field.type] ?? ({} as InnerOutType);
-          const r = m.relations = m.relations ?? {};
-          const rm = r[model.name] = r[model.name] ?? {};
-          const rmf = rm[rTF] = rm[rTF] ?? [];
-          rmf.push(rFF);
-        })
-        return acc2;
-      }, {})
+
+            const m = modelObj.relations[joinTableName] = modelObj.relations[joinTableName] ?? {};
+            const mf = m[idName] = m[idName] ?? [];
+            mf.push(abJoin);
+
+            // TODO
+            // const fieldObj = modelObj.relations[joinTableName] = modelObj.relations[joinTableName] ?? {};
+            //
+            // fieldObj[relationFromField] = fieldObj[relationFromField] || [];
+            // fieldObj[relationFromField].push(relationToField);
+            //
+            // const accModel = acc[field.type] = acc[field.type] ?? ({} as InnerOutType);
+            // const accModelRelations = accModel.relations = accModel.relations ?? {};
+            // const accModelRelationToModel = accModelRelations[model.name] = accModelRelations[model.name] ?? {};
+            // const relationFromFieldList = accModelRelationToModel[relationToField] = accModelRelationToModel[relationToField] ?? [];
+            // relationFromFieldList.push(relationFromField);
+
+            // if(model.name === "User") debugger;
+
+            /*let relationString = "";
+            if (!modelToId[model.name]) {
+              for (const f of model.fields) {
+                if (f.isId) {
+                  modelToId[model.name] = f.name;
+                  break;
+                }
+              }
+            }
+            const localId = modelToId[model.name];
+            if (!localId) {
+              logger.info(`Skipping MF: ${model.name}.${field.name} [${field.relationName}]`);
+              continue;
+            }
+            if (!localId) throw new Error(`Local: Unable to find @id field for model, ${model.name}`);
+            // relationString += localId + ".";
+            const abJoin = [field.type.toLowerCase(), model.name.toLowerCase()].sort().indexOf(field.type.toLowerCase()) === 0 ? "A" : "B";
+            relationString +=  abJoin + "._" + field.relationName + "." + (abJoin === "A" ? "B" : "A") + ".";
+
+            if (!modelToId[field.type]) {
+              for (const m of options.dmmf.datamodel.models) {
+                if (m.name !== field.type) continue;
+                for (const f of m.fields) {
+                  if (f.isId) {
+                    modelToId[m.name] = f.name;
+                    break;
+                  }
+                }
+              }
+            }
+            const remoteId = modelToId[field.type];
+            if (!remoteId) {
+              logger.info(`Skipping FM:  ${model.name}.${field.name} > ${field.type}  [${field.relationName}] -> ${relationString}`);
+              continue;
+            }
+            if (!remoteId) throw new Error(`Remote: Unable to find @id field for model, ${field.type}`);
+            relationString += remoteId;
+
+            const fieldObj = modelObj.relations[field.type] = modelObj.relations[field.type] ?? {};
+            fieldObj[localId] = fieldObj[localId] || [];
+            fieldObj[localId].push(relationString);*/
+          }
+
+        }
+      }
+
       return acc;
-    }, {})
+    }, {});
+
 
     const pTSSelPath = path.dirname(require.resolve('prisma-ts-select'));
     logger.info("pTSSelPath", pTSSelPath);
@@ -120,7 +207,31 @@ generatorHandler({
               .replace("declare const DB: DBType;",declaration)
       );
     }
+    function isManyToManyRelationShip(field: DMMF.Field): boolean {
+      if (!(field.kind === "object" && field.isList)) return false;
+      const {type, relationName} = field;
+      const typeModel = options.dmmf.datamodel.models.find(m => m.name === type);
+      if (!typeModel) return false;
+      if (!typeModel.fields.find(f => f.kind === "object" && f.isList && f.relationName === relationName)) return false;
+      return true;
+    }
 
+    function getModelId(name: string) {
+      if (!modelToId[name]) {
+        for (const m of options.dmmf.datamodel.models) {
+          if (m.name !== name) continue;
+          for (const f of m.fields) {
+            if (f.isId) {
+              modelToId[m.name] = [f.name, f.type];
+              break;
+            }
+          }
+        }
+      }
+      const remoteId = modelToId[name];
+      if (!remoteId) throw new Error(`Remote: Unable to find @id field for model, ${name}`);
+      return remoteId;
+    }
   },
 })
 

@@ -47,3 +47,73 @@ model LikedPosts {
   Author   User @relation(fields: [authorId], references: [id])
   authorId Int
 }
+
+// Region Mutli-field Id
+model MFId_Category {
+  id                Int                 @id
+  name              String
+  MFId_CategoryPost MFId_CategoryPost[]
+}
+
+model MFId_CategoryPost {
+  categoryId Int
+  postId     Int
+  category   MFId_Category @relation(fields: [categoryId], references: [id])
+  post       MFId_Post     @relation(fields: [postId], references: [id])
+
+  @@id([categoryId, postId])
+}
+
+model MFId_Post {
+  id                Int                 @id
+  title             String
+  MFId_CategoryPost MFId_CategoryPost[]
+}
+
+// Region M2M name change
+
+model M2M_Post {
+  id    Int            @id
+  title String
+  cat1  M2M_Category[]
+}
+
+model M2M_Category {
+  id     Int        @id
+  name   String
+  posts1 M2M_Post[]
+}
+
+// Region END M2M
+
+// Region M2M name change
+model M2M_NC_Category {
+  id     Int           @id
+  name   String
+  posts1 M2M_NC_Post[] @relation("M2M_NC")
+}
+
+model M2M_NC_Post {
+  id    Int               @id
+  title String
+  cat1  M2M_NC_Category[] @relation("M2M_NC")
+}
+
+// Region END M2M
+
+// Region Multi M2M
+model MMM_Category {
+  id     Int        @id
+  name   String
+  posts1 MMM_Post[] @relation("M2M_NC_M1")
+  posts2 MMM_Post[] @relation("M2M_NC_M2")
+}
+
+model MMM_Post {
+  id    Int            @id
+  title String
+  cat1  MMM_Category[] @relation("M2M_NC_M1")
+  cat2  MMM_Category[] @relation("M2M_NC_M2")
+}
+
+// Region END Multi M2M
