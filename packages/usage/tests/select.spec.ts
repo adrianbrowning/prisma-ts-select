@@ -109,9 +109,6 @@ function runTests() {
 
         describe("basic select * with join", () => {
 
-            before(() => {
-                /*TODO insert data into DB*/
-            });
 
             function createQuery() {
                 return prisma.$from("User")
@@ -234,10 +231,6 @@ function runTests() {
 
         describe("basic selectAll", () => {
 
-            before(() => {
-                /*TODO insert data into DB*/
-            });
-
             function createQuery() {
                 return prisma.$from("User")
                     .selectAll();
@@ -273,9 +266,6 @@ function runTests() {
 
         describe("basic selectAll with join", () => {
 
-            before(() => {
-                /*TODO insert data into DB*/
-            });
 
             function createQuery() {
                 return prisma.$from("User")
@@ -344,9 +334,6 @@ function runTests() {
 
         describe("basic select email, name", () => {
 
-            before(() => {
-                /*TODO insert data into DB */
-            });
 
             function createQuery() {
                 return prisma.$from("User")
@@ -387,9 +374,6 @@ function runTests() {
 
         describe("basic select email, name, Post.title with join", () => {
 
-            before(() => {
-                /*TODO insert data into DB*/
-            });
 
             function createQuery() {
                 prisma.user.findMany({

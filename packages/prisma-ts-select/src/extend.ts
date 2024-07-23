@@ -2,6 +2,295 @@ import {Prisma} from "@prisma/client/extension";
 import type {PrismaClient} from "@prisma/client";
 
 const DB: DBType = {} as const satisfies DBType;
+/*const DB=  {
+    "User": {
+        "fields": {
+            "id": "Int",
+            "email": "String",
+            "name": "?String"
+        },
+        "relations": {
+            "Post": {
+                "id": [
+                    "authorId",
+                    "lastModifiedById"
+                ]
+            },
+            "LikedPosts": {
+                "id": [
+                    "authorId"
+                ]
+            }
+        }
+    },
+    "Post": {
+        "fields": {
+            "id": "Int",
+            "title": "String",
+            "content": "?String",
+            "published": "Boolean",
+            "authorId": "Int",
+            "lastModifiedById": "Int"
+        },
+        "relations": {
+            "User": {
+                "authorId": [
+                    "id"
+                ],
+                "lastModifiedById": [
+                    "id"
+                ]
+            },
+            "PostsImages": {
+                "id": [
+                    "postId"
+                ]
+            },
+            "LikedPosts": {
+                "id": [
+                    "postId"
+                ]
+            }
+        }
+    },
+    "PostsImages": {
+        "fields": {
+            "id": "Int",
+            "url": "String",
+            "postId": "Int"
+        },
+        "relations": {
+            "Post": {
+                "postId": [
+                    "id"
+                ]
+            }
+        }
+    },
+    "LikedPosts": {
+        "fields": {
+            "id": "Int",
+            "postId": "Int",
+            "authorId": "Int"
+        },
+        "relations": {
+            "Post": {
+                "postId": [
+                    "id"
+                ]
+            },
+            "User": {
+                "authorId": [
+                    "id"
+                ]
+            }
+        }
+    },
+    "MFId_Category": {
+        "fields": {
+            "id": "Int",
+            "name": "String"
+        },
+        "relations": {
+            "MFId_CategoryPost": {
+                "id": [
+                    "categoryId"
+                ]
+            }
+        }
+    },
+    "MFId_CategoryPost": {
+        "fields": {
+            "categoryId": "Int",
+            "postId": "Int"
+        },
+        "relations": {
+            "MFId_Category": {
+                "categoryId": [
+                    "id"
+                ]
+            },
+            "MFId_Post": {
+                "postId": [
+                    "id"
+                ]
+            }
+        }
+    },
+    "MFId_Post": {
+        "relations": {
+            "MFId_CategoryPost": {
+                "id": [
+                    "postId"
+                ]
+            }
+        },
+        "fields": {
+            "id": "Int",
+            "title": "String"
+        }
+    },
+    "M2M_Post": {
+        "fields": {
+            "id": "Int",
+            "title": "String"
+        },
+        "relations": {
+            "_M2M_CategoryToM2M_Post": {
+                "id": [
+                    "B"
+                ]
+            }
+        }
+    },
+    "_M2M_CategoryToM2M_Post": {
+        "fields": {
+            "A": "Int",
+            "B": "Int"
+        },
+        "relations": {
+            "M2M_Post": {
+                "B": [
+                    "id"
+                ]
+            },
+            "M2M_Category": {
+                "A": [
+                    "id"
+                ]
+            }
+        }
+    },
+    "M2M_Category": {
+        "fields": {
+            "id": "Int",
+            "name": "String"
+        },
+        "relations": {
+            "_M2M_CategoryToM2M_Post": {
+                "id": [
+                    "A"
+                ]
+            }
+        }
+    },
+    "M2M_NC_Category": {
+        "fields": {
+            "id": "Int",
+            "name": "String"
+        },
+        "relations": {
+            "_M2M_NC": {
+                "id": [
+                    "A"
+                ]
+            }
+        }
+    },
+    "_M2M_NC": {
+        "fields": {
+            "A": "Int",
+            "B": "Int"
+        },
+        "relations": {
+            "M2M_NC_Category": {
+                "A": [
+                    "id"
+                ]
+            },
+            "M2M_NC_Post": {
+                "B": [
+                    "id"
+                ]
+            }
+        }
+    },
+    "M2M_NC_Post": {
+        "fields": {
+            "id": "Int",
+            "title": "String"
+        },
+        "relations": {
+            "_M2M_NC": {
+                "id": [
+                    "B"
+                ]
+            }
+        }
+    },
+    "MMM_Category": {
+        "fields": {
+            "id": "Int",
+            "name": "String"
+        },
+        "relations": {
+            "_M2M_NC_M1": {
+                "id": [
+                    "A"
+                ]
+            },
+            "_M2M_NC_M2": {
+                "id": [
+                    "A"
+                ]
+            }
+        }
+    },
+    "_M2M_NC_M1": {
+        "fields": {
+            "A": "Int",
+            "B": "Int"
+        },
+        "relations": {
+            "MMM_Category": {
+                "A": [
+                    "id"
+                ]
+            },
+            "MMM_Post": {
+                "B": [
+                    "id"
+                ]
+            }
+        }
+    },
+    "_M2M_NC_M2": {
+        "fields": {
+            "A": "Int",
+            "B": "Int"
+        },
+        "relations": {
+            "MMM_Category": {
+                "A": [
+                    "id"
+                ]
+            },
+            "MMM_Post": {
+                "B": [
+                    "id"
+                ]
+            }
+        }
+    },
+    "MMM_Post": {
+        "fields": {
+            "id": "Int",
+            "title": "String"
+        },
+        "relations": {
+            "_M2M_NC_M1": {
+                "id": [
+                    "B"
+                ]
+            },
+            "_M2M_NC_M2": {
+                "id": [
+                    "B"
+                ]
+            }
+        }
+    }
+} as const;*/
 type TDB = typeof DB;
 
 type DeepWriteable<T> = { -readonly [P in keyof T]: DeepWriteable<T[P]> };
@@ -17,6 +306,9 @@ type DATABASE = {
         relations: _db[k]["relations"]
     }
 }[keyof TDB];
+
+
+
 
 export type JSONPrimitive = string | number | boolean | null;
 export type JSONValue = JSONPrimitive | JSONObject | JSONArray;
@@ -61,6 +353,7 @@ type GetOtherColumns<Tables extends Array<TTables>> = Tables extends [infer T ex
 
 
 export type TTables = DATABASE["table"];
+type TArrSources = [TTables,...Array<TTables>];
 
 
 class DbSelect {
@@ -69,7 +362,8 @@ class DbSelect {
     }
 
     from<TDBBase extends TTables>(database: TDBBase) {
-        return new _fJoin<TDBBase>(this.db, {database, selects: []})
+        //@-ts-expect-error remove me
+        return new _fJoin<[TDBBase], Record<TDBBase, GetFieldsFromTable<TDBBase>>>(this.db, {database, selects: []})
     }
 
 }
@@ -81,7 +375,7 @@ type Values = {
     tables?: Array<{table: TTables, local: string, remote: string}>;
     limit?: number;
     offset?: number;
-    where?: Array<{ col: string; operator: string; value: unknown }>;
+    where?: string;//Array<{ col: string; operator: string; value: unknown }>;
     having?: Array<{ col: string; operator: string; value: unknown }>;
     groupBy?: Array<string>;
     orderBy?: Array<`${string}} ${"DESC" | "ASC"}`>;
@@ -90,7 +384,7 @@ type Values = {
 /*
 run
  */
-class _fRun<TDBBase extends TTables, TJoins extends Array<TTables> = [], TSelectRT extends Record<string, any> = {}> {
+class _fRun<TSources extends TArrSources, TFields extends TFieldsType, TSelectRT extends Record<string, any> = {}> {
     constructor(protected db: PrismaClient,
                 protected values: Values) {
         this.values.limit = typeof this.values.limit === "number" ? this.values.limit : undefined;
@@ -104,7 +398,10 @@ class _fRun<TDBBase extends TTables, TJoins extends Array<TTables> = [], TSelect
         //as Prisma.PrismaPromise<Array<Extract<DATABASE, { table: TDBBase }>["fields"]>>;
     }
     getTables(){
-        return {} as [TDBBase, ...TJoins];
+        return {} as TSources;
+    }
+    getFields() {
+        return {} as TFields;
     }
     getSQL() {
 
@@ -112,8 +409,12 @@ class _fRun<TDBBase extends TTables, TJoins extends Array<TTables> = [], TSelect
             "SELECT " + (this.values.selectDistinct === true ? "DISTINCT " : "") + this.values.selects.join(', '),
             `FROM ${this.values.database}`,
             this.values.tables?.map(({table, local, remote}) => `JOIN ${table} ON ${local} = ${remote}`).join(" ") ?? "",
-            this.values.limit === undefined ? "" : `LIMIT ${this.values.limit}`,
-            this.values.offset === undefined ? "" : `OFFSET ${this.values.offset}`].join(" ").trim()+ ";";
+            !this.values.where ? "" : `WHERE ${this.values.where}`,
+            !this.values.limit ? "" : `LIMIT ${this.values.limit}`,
+            !this.values.offset ? "" : `OFFSET ${this.values.offset}`
+        ]
+            .join(" ")
+            .trim()+ ";";
     }
 }
 
@@ -122,9 +423,9 @@ OFFSET -
 run
 */
 
-class _fOffset<TDBBase extends TTables, TJoins extends Array<TTables> = [],TSelectRT extends Record<string, any>={}> extends _fRun<TDBBase, TJoins, TSelectRT> {
+class _fOffset<TSources extends TArrSources, TFields extends TFieldsType,TSelectRT extends Record<string, any>={}> extends _fRun<TSources,TFields, TSelectRT> {
     offset(offset: number) {
-        return new _fRun<TDBBase,TJoins, TSelectRT>(this.db, {...this.values, offset});
+        return new _fRun<TSources,TFields, TSelectRT>(this.db, {...this.values, offset});
     }
 }
 
@@ -134,9 +435,9 @@ OFFSET -
 run
 */
 
-class _fLimit<TDBBase extends TTables, TJoins extends Array<TTables> = [], TSelectRT extends Record<string, any> = {}> extends _fOffset<TDBBase,TJoins, TSelectRT> {
+class _fLimit<TSources extends TArrSources, TFields extends TFieldsType, TSelectRT extends Record<string, any> = {}> extends _fOffset<TSources, TFields, TSelectRT> {
     limit(limit: number) {
-        return new _fRun<TDBBase, TJoins, TSelectRT>(this.db, {...this.values, limit});
+        return new _fRun<TSources, TFields, TSelectRT>(this.db, {...this.values, limit});
     }
 }
 
@@ -147,9 +448,9 @@ LIMIT - the returned data is limited to row count.
 OFFSET -
 run
 */
-class _fOrderBy<TDBBase extends TTables, TJoins extends Array<TTables> = [], TSelectRT extends Record<string, any> = {}> extends _fLimit<TDBBase, TJoins, TSelectRT> {
+class _fOrderBy<TSources extends TArrSources, TFields extends TFieldsType , TSelectRT extends Record<string, any> = {}> extends _fLimit<TSources, TFields, TSelectRT> {
     orderBy(orderBy: Array<`${string}} ${"DESC" | "ASC"}`>) {
-        return new _fLimit<TDBBase, TJoins, TSelectRT>(this.db, {...this.values, orderBy});
+        return new _fLimit<TSources, TFields, TSelectRT>(this.db, {...this.values, orderBy});
     }
 }
 
@@ -162,54 +463,58 @@ OFFSET -
 run
 */
 
-// type MergeItems<T, Tables extends Array<TTables>, IncTName extends boolean = false> = T extends "*" ? Prettify<IterateTables<Tables, IncTName>> : never;
-// type IterateTables<Tables extends Array<TTables>, IncTName extends boolean, acc extends Record<string, any> = {}> =
-//     Tables extends [infer T extends TTables, ...infer Rest extends Array<TTables>]
-//     ? IterateTables<Rest, IncTName, acc & IncTName extends false
-//             ? Extract<DATABASE, { table: T }>["fields"]
-//             : never/*{
-//                [f in keyof Extract<DATABASE, { table: T }>["fields"] as `${T}.${IsString<f>}`]: Extract<DATABASE, { table: T }>["fields"][f]
-//                 }*/
-//             >
-//     : acc;
+type MergeItems<Field extends string, TSources extends TArrSources, TFields extends TFieldsType, IncTName extends boolean = false, TTables = TSources[number]> = Field extends "*"
+    ? Prettify<IterateTables<TSources, TFields, IncTName>>
 
-
-type MergeItems<Field, Tables extends Array<TTables>, IncTName extends boolean = false> = Field extends "*"
-    ? Prettify<IterateTables<Tables, IncTName>>
-
+    //@ts-expect-error T not a string?
     : Field extends `${infer T extends TTables}.${infer F extends string}`
-        //@-ts-expect-error F is part of T, but can't tell TS that
-        ? Pick<GetFieldsFromTable<T>, F>
-        //@ts-expect-error Field is part of the from, but can't tell TS that.
-        : Pick<GetFieldsFromTable<Tables[0]>, Field>
-    ;
+        //@ts-expect-error F is part of T, but can't tell TS that
+        ? Pick<TFields[T], F>
+        //@-ts-expect-error Field is part of the from, but can't tell TS that.
+        : Pick<TFields[TSources[0]], Field>;
 
 
-type IterateTables<Tables extends Array<TTables>, IncTName extends boolean, acc extends Record<string, any> = {}> =
+type IterateTables<Tables extends Array<TTables>, TFields extends TFieldsType, IncTName extends boolean, acc extends Record<string, any> = {}> =
     Tables extends [infer T extends TTables, ...infer Rest extends Array<TTables>]
-        ? [IncTName] extends [false]
-            ? IterateTables<Rest, IncTName, acc &  GetFieldsFromTable<T>>
-            : IterateTables<Rest, IncTName, acc &  IterateFieldsOfTable<T>>
-        : acc;
+         ? [IncTName] extends [false]
+         ?    IterateTables<Rest, TFields, IncTName, acc &  TFields[T]>
+            : IterateTables<Rest, TFields, IncTName, acc &  IterateTablesFromFields<T, TFields[T], IncTName>>
+        // : [T, TFields[T], IncTName]
+            : acc
+        //     ? IterateTables<Rest, TFields, IncTName, acc &  GetFieldsFromTable<T>>
+        //     : IterateTables<Rest, TFields, IncTName, acc &  IterateTablesFromFields<T, TFields[T], IncTName>>
+        // : acc;
 
-type IterateFieldsOfTable<T extends TTables, Fields = Extract<DATABASE, { table: T }>["fields"]> = {
-    [f in keyof Fields as `${T}.${IsString<f>}`]: Fields[f]
-}
+type GenName<T extends string, F extends unknown, IncName extends boolean> = F extends string
+    ? [IncName] extends [false]
+        ? F
+    : `${T}.${F}` : never;
 
-class _fSelect<TDBBase extends TTables, TJoins extends Array<TTables> = [], TSelectRT extends Record<string, any> = {}> extends _fOrderBy<TDBBase,TJoins,TSelectRT> {
-    select<TSelect extends ValidSelect<[TDBBase, ...TJoins]>>(select: TSelect) {
-        return new _fSelect<TDBBase,TJoins,Prettify<TSelectRT & MergeItems<TSelect,[TDBBase, ...TJoins]>>>(this.db, {...this.values, selects:  [...this.values.selects, select] });
+type IterateTablesFromFields<Table extends TTables, TFields extends Record<string, string>, IncTName extends boolean> = {
+        [f in keyof TFields as GenName<Table, f, IncTName>]: TFields[f]
+                // (f extends string
+                //     ? [IncTName] extends [false]
+                //         ? Record<f, TFields[f]>
+                //         : Record<`${Table}.${f}`, TFields[f]> : never)
+    };
+
+
+class _fSelect<TSources extends TArrSources, TFields extends TFieldsType, TSelectRT extends Record<string, any> = {}> extends _fOrderBy<TSources, TFields,TSelectRT> {
+    select<TSelect extends ValidSelect<TSources>>(select: TSelect) {
+        return new _fSelect<TSources, TFields, Prettify<TSelectRT & MergeItems<TSelect,TSources, TFields>>>(this.db, {...this.values, selects:  [...this.values.selects, select] });
     }
 }
 
-class _fSelectDistinct<TDBBase extends TTables, TJoins extends Array<TTables> = [], TSelectRT extends Record<string, any>= {}> extends _fSelect<TDBBase,TJoins,TSelectRT> {
+type CountKeys<T extends Array<string>, acc extends Array<true> = []> = T extends [string, ...infer R extends Array<string>] ? CountKeys<R, [...acc, true]> : acc["length"];
+
+class _fSelectDistinct<TSources extends TArrSources, TFields extends TFieldsType, TSelectRT extends Record<string, any>= {}> extends _fSelect<TSources,TFields,TSelectRT> {
     selectDistinct() {
-        return new _fSelect<TDBBase, TJoins,TSelectRT>(this.db, {...this.values, selectDistinct: true});
+        return new _fSelect<TSources,TFields, TSelectRT>(this.db, {...this.values, selectDistinct: true});
     }
-    selectAll() {
+    selectAll<TableCount  = CountKeys<TSources>>() {
         //TODO
-        //Need to loop through DATABASE object
-        //if 1 table, no prefix
+        // Need to loop through DATABASE object
+        // if 1 table, no prefix
         // if more prefix with table name
 
 
@@ -224,7 +529,7 @@ class _fSelectDistinct<TDBBase extends TTables, TJoins extends Array<TTables> = 
             return Object.keys(DB[values.database]!.fields);
         }(this.values))
 
-        return new _fOrderBy<TDBBase,TJoins,MergeItems<"*", [TDBBase, ...TJoins] ,TJoins extends [TTables,...Array<TTables> ] ? true: false>>(this.db, {...this.values, selects });
+        return new _fOrderBy<TSources, TFields, MergeItems<"*", TSources, TFields, TableCount extends 1 ? false: true>>(this.db, {...this.values, selects });
     }
     selectAllOmit() {
         throw new Error("Not implemented yet")
@@ -240,9 +545,9 @@ LIMIT - the returned data is limited to row count.
 OFFSET -
 */
 
-class _fHaving<TDBBase extends TTables, TJoins extends Array<TTables> = []> extends _fSelectDistinct<TDBBase,TJoins> {
+class _fHaving<TSources extends TArrSources, TFields extends TFieldsType > extends _fSelectDistinct<TSources, TFields> {
     having(col: string, operator: string, value: unknown) {
-        return new _fHaving<TDBBase,TJoins>(this.db, {
+        return new _fHaving<TSources, TFields>(this.db, {
             ...this.values,
             having: [...this.values.having || [], {col, operator, value}]
         });
@@ -258,10 +563,11 @@ LIMIT - the returned data is limited to row count.
 OFFSET -
 */
 
-class _fGroupBy<TDBBase extends TTables, TJoins extends Array<TTables> = []> extends _fHaving<TDBBase,TJoins> {
+class _fGroupBy<TSources extends TArrSources, TFields extends TFieldsType> extends _fHaving<TSources,TFields> {
 
+    //TODO this should only accept columns for tables in play
     groupBy(groupBy: Array<string>) {
-        return new _fHaving<TDBBase,TJoins>(this.db, {...this.values, groupBy: groupBy});
+        return new _fHaving<TSources, TFields>(this.db, {...this.values, groupBy: groupBy});
     }
 
     /**
@@ -284,7 +590,15 @@ LIMIT - the returned data is limited to row count.
 OFFSET -
 */
 
-class _fWhere<TDBBase extends TTables, TJoins extends Array<TTables> = []> extends _fGroupBy<TDBBase, TJoins> {
+/*type LogicalOperator = 'AND' | 'OR';
+
+type WhereCondition<T> = {
+    [K in keyof T]?: T[K] | T[K][];
+};
+
+type WhereCriteria<T> = WhereCondition<T> | { [key in LogicalOperator]?: WhereCriteria<T>[] };*/
+
+class _fWhere<TSources extends TArrSources, TFields extends TFieldsType> extends _fGroupBy<TSources, TFields> {
 
     //TODO
     // Not null - remove null from type
@@ -294,13 +608,51 @@ class _fWhere<TDBBase extends TTables, TJoins extends Array<TTables> = []> exten
     //  Is NULL - remove non-null type
 
 
-    where(col: string, operator: string, value: unknown) {
-        return new _fWhere<TDBBase, TJoins>(this.db, {
+    // where(col: string, operator: string, value: unknown) {
+    //     return new _fWhere<TSources>(this.db, {
+    //         ...this.values,
+    //         where: [...this.values.where || [], {col, operator, value}],
+    //     });
+    // }
+    whereRaw(where: string) {
+        return new _fGroupBy<TSources, TFields>(this.db, {
             ...this.values,
-            where: [...this.values.where || [], {col, operator, value}],
+            where: where,
         });
     }
+
+    // where<T>(whereCondition: WhereCriteria<{}>) {
+    //     return new _fGroupBy<TSources>(this.db, {
+    //         ...this.values,
+    //         where: processCriteria(whereCondition),
+    //     });
+    // }
 }
+
+/*function processCriteria(criteria: WhereCriteria<T>): string {
+    if ('AND' in criteria || 'OR' in criteria) {
+        return Object.keys(criteria).map((operator) => {
+            const subCriteria = (criteria as any)[operator] as WhereCriteria<T>[];
+            const subConditions = subCriteria.map(subCriterion => processCriteria(subCriterion)).join(` ${operator} `);
+            return `(${subConditions})`;
+        }).join(" ");
+    } else {
+        return processCondition(criteria as WhereCondition<T>);
+    }
+}
+function processCondition(condition: WhereCondition<T>): string {
+    return Object.keys(condition).map((key) => {
+        const value = condition[key as keyof T];
+        if (Array.isArray(value)) {
+            const valuesList = value.map((v) => (typeof v === 'string' ? `'${v}'` : v)).join(", ");
+            return `${key} IN (${valuesList})`;
+        } else if (value === null) {
+            return `${key} IS NULL`;
+        } else {
+            return `${key} = ${typeof value === 'string' ? `'${value}'` : value}`;
+        }
+    }).join(" AND ");
+}*/
 
 /*
 JOIN -
@@ -385,67 +737,81 @@ type Prettify<T> = {
     [K in keyof T]: T[K];
 } & {};
 
+
 type FieldsByTableByType = Prettify<{
     [Table in  TTables] : SwapKeysAndValues<_db[Table]["fields"]>;
 }>
-
 type GetTypes = {
     [Type in keyof FieldsByTableByType as keyof FieldsByTableByType[Type]]: {
     };
 };
-
 type FieldsByTypeByTable = Prettify<{
     [Type in keyof GetTypes]: {
         [Table in keyof FieldsByTableByType as [FieldsByTableByType[Table][Filter<keyof FieldsByTableByType[Table], Type>]] extends [never] ? never : Table]:  FieldsByTableByType[Table][Filter<keyof FieldsByTableByType[Table], Type>]
     };
 }>;
-
-
-
-
 type GetColumnType<Table extends TTables, Col1 extends keyof _db[Table]["fields"]> = RemoveNullChar<IsString<_db[Table]["fields"][Col1]>>
 
-type GetJoinOnColsType<Type extends string, TDBBase extends TTables, TJoins extends Array<TTables>> =
+// type FieldsByTableByType<TFields extends TFieldsType> = Prettify<{
+//     [Table in  TTables] : SwapKeysAndValues<TFields[Table]>;
+// }>
+
+// type GetTypes<TFields extends TFieldsType> = {
+//     [Type in keyof FieldsByTableByType<TFields> as keyof FieldsByTableByType<TFields>[Type]]: {
+//     };
+// };
+// type FieldsByTypeByTable<TFields extends TFieldsType> = Prettify<{
+//     [Type in keyof GetTypes<TFields>]: {
+//         [Table in keyof FieldsByTableByType<TFields> as [FieldsByTableByType<TFields>[Table][Filter<keyof FieldsByTableByType<TFields>[Table], Type>]] extends [never] ? never : Table]:  FieldsByTableByType<TFields>[Table][Filter<keyof FieldsByTableByType<TFields>[Table], Type>]
+//     };
+// }>;
+
+//type GetColumnType<Table extends TTables, TFields extends TFieldsType, Col1 extends keyof TFields[Table]> = RemoveNullChar<IsString<TFields[Table][Col1]>>
+
+type GetJoinOnColsType<Type extends string, TSources extends Array<TTables>> =
 // GetColsFromTableType<TDBBase, Type>
-    GetJoinColsType<[TDBBase, ...TJoins][number],Type>;
+    GetJoinColsType<TSources[number],Type>;
 
 type GetColsFromTableType<TDBBase extends TTables, Type extends string> =
 //@ts-expect-error Try and come back to
     FieldsByTypeByTable[Loop<keyof FieldsByTypeByTable, Type>][TDBBase];
+
 type Loop<Keys extends string, Type extends string>=  Keys extends Type ? Type : never;
 
 
 type GetJoinColsType<TDBBase extends TTables, Type extends string> = IterateFields<TDBBase, IsString<GetColsFromTableType<TDBBase, Type>>>;//, Type];
 
+type TFieldsType =  Record<string, Record<string, string>>;
 
-class _fJoin<TDBBase extends TTables, TJoins extends Array<TTables> = []> extends _fWhere<TDBBase, TJoins> {
+class _fJoin<TSources extends TArrSources, TFields extends TFieldsType> extends _fWhere<TSources, TFields> {
 
-    join<Table extends AvailableJoins<[TDBBase, ...TJoins]>,
-        TJoinCols extends [string, string] = ValidStringTuple<GetUnionOfRelations<SafeJoins<Table, [TDBBase, ...TJoins]>>>,
+    join<Table extends AvailableJoins<TSources>,
+        TJoinCols extends [string, string] = ValidStringTuple<GetUnionOfRelations<SafeJoins<Table, TSources>>>,
         TCol1 extends TJoinCols[0] = never
     >(table: Table, field: TCol1, reference: find<TJoinCols, TCol1> ) { //CleanUpFromNames<TDBBase, find<TJoinCols, TCol1>>
-        return new _fJoin<TDBBase, [...TJoins, Table]>(this.db, {
+        return new _fJoin<[...TSources, Table], Prettify<TFields & Record<Table, GetFieldsFromTable<Table>>>>(this.db, {
             ...this.values,
             tables: [...this.values.tables || [], {table: table as TTables, local: field, remote: reference}]
         });
     }
 
-    joinUnsafeTypeEnforced<Table extends  AvailableJoins<[TDBBase, ...TJoins]>,
+    joinUnsafeTypeEnforced<Table extends  AvailableJoins<TSources>,
         TCol1 extends GetColsFromTable<Table>,
         TCol2 extends  GetJoinOnColsType<
             //@-ts-expect-error TODO come back too
             GetColumnType<Table, TCol1>
-            , TDBBase, [...TJoins, Table]>
+            //GetColumnType<Table, Prettify<TFields & Record<Table, GetFieldsFromTable<Table>>>, TCol1>
+            , [...TSources, Table]>
     >(table: Table, field: TCol1, reference: TCol2) {
-        return new _fJoin<TDBBase, [...TJoins, Table]>(this.db, {
+        return new _fJoin<[...TSources, Table], TFields & Record<Table, GetFieldsFromTable<Table>>>(this.db, {
             ...this.values,
             tables: [...this.values.tables || [], {table: table as TTables, local: `${String(table)}.${String(field)}`, remote: reference} ]
         });
     }
 
-    joinUnsafeIgnoreType<Table extends  AvailableJoins<[TDBBase, ...TJoins]>,
-        TCol2 extends GetJoinCols< [...TJoins, TDBBase][number]> >(table: Table, field: GetColsFromTable<Table>, reference: TCol2) {
-        return new _fJoin<TDBBase, [...TJoins, Table]>(this.db, {
+    joinUnsafeIgnoreType<Table extends  AvailableJoins<TSources>,
+        TCol2 extends GetJoinCols< TSources[number]> >(table: Table, field: GetColsFromTable<Table>, reference: TCol2) {
+        return new _fJoin<[...TSources, Table], TFields & Record<Table, GetFieldsFromTable<Table>>>(this.db, {
             ...this.values,
             tables: [...this.values.tables || [], {table: table as TTables, local: `${String(table)}.${String(field)}`, remote: reference} ]
         });
@@ -496,5 +862,3 @@ export default {
         },
     },
 };
-
-
