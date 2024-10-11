@@ -33,6 +33,7 @@ jobs:
         with:
           path: "**/node_modules"
           key: ${{ runner.os }}-modules-${{ hashFiles('**/pnpm-lock.yaml') }}
+#          if: ${{ !env.ACT }}
       - name: Install dependencies
         run: pnpm i --no-frozen-lockfile
       - name: Build prisma-ts-select

@@ -4,34 +4,27 @@ import tsSelectExtend from 'prisma-ts-select/extend'
 import {PrismaClient} from "@prisma/client";
 import {type Equal, type Expect, typeCheck} from "./utils.js";
 
-
 const prisma = new PrismaClient({}).$extends(tsSelectExtend);
 
+console.log(
+    prisma.$from("User")
+        .join("Post", "authorId", "User.id")
+        .having({
+            "User.name": {
+                op: "LIKE",
+                value: "a"
+            }
+        })
+        .limit(1)
+        // .offset(1)
 
 
+        .getSQL(true));
 
-
-    console.log(
-
-        prisma.$from("User")
-            .join("Post", "authorId", "User.id")
-            .having({
-                "User.name": {
-                    op: "LIKE",
-                    value: "a"
-                }
-            })
-            .limit(1)
-            // .offset(1)
-
-
-            .getSQL(true));
-
-/*
 
 describe.skip("where", () => {
 
-    test("Where Criteria Object", async () =>  {
+    test("Where Criteria Object", async () => {
 
         function createQuery() {
             return prisma.$from("User")
@@ -51,8 +44,8 @@ describe.skip("where", () => {
                             }
                         }
                     ],
-                    $NOT:[{
-                        $OR:[{
+                    $NOT: [{
+                        $OR: [{
                             "User.id": 2
                         }]
                     }],
@@ -79,19 +72,16 @@ describe.skip("where", () => {
         function createQuery2() {
 
 
-
             return prisma.$from("User")
                 .join("Post", "authorId", "User.id")
                 .whereNotNull("User.name");
-
-
 
 
         }
 
         it.skip("should run", async () => {
             const result = await createQuery().run();
-
+            createQuery2().getSQL(true)
             type TExpected = Array<{
                 "User.id": number;
                 "User.email": string;
@@ -114,7 +104,7 @@ describe.skip("where", () => {
 
         it("should match SQL", () => {
             const sql = createQuery().getSQL();
-            console.log(sql)
+            console.log(sql);
 
             `WHERE
             (NOT((User.name LIKE 'something' ) OR (User.name LIKE 'something else' )))
@@ -131,7 +121,7 @@ describe.skip("where", () => {
 
     });
 
-    test("Where Raw", async () =>  {
+    test("Where Raw", async () => {
 
         function createQuery() {
             return prisma.$from("User")
@@ -170,7 +160,7 @@ describe.skip("where", () => {
 
     });
 
-    test("Where NULL", async () =>  {
+    test("Where NULL", async () => {
 
         function createQuery() {
             return prisma.$from("User")
@@ -207,7 +197,7 @@ describe.skip("where", () => {
 
 describe.skip("having", () => {
 
-    test("Where Criteria", async () =>  {
+    test("Where Criteria", async () => {
 
         {
             const sql = prisma.$from("User")
@@ -219,13 +209,13 @@ describe.skip("having", () => {
                             "Post.id": 1
                         },
                         {
-                            "Post.title" : "hello"
+                            "Post.title": "hello"
                         },
                         {
                             $OR: [
                                 {
                                     "User.name": "John Doe",
-                                },{
+                                }, {
                                     "User.name": "Frank Jones",
                                 }
                             ]
@@ -250,12 +240,12 @@ describe.skip("having", () => {
             // TODO check sql
             // TODO Return Type
 
-            assert.equal(sql, "SELECT  FROM User JOIN Post ON authorId = User.id;");
+            assert.equal(sql, "FROM User JOIN Post ON authorId = User.id;");
         }
 
     });
 
-    test("Where Raw", async () =>  {
+    test("Where Raw", async () => {
 
         {
             const sql = prisma.$from("User")
@@ -267,13 +257,13 @@ describe.skip("having", () => {
                             "Post.id": 1
                         },
                         {
-                            "Post.title" : "hello"
+                            "Post.title": "hello"
                         },
                         {
                             $OR: [
                                 {
                                     "User.name": "John Doe",
-                                },{
+                                }, {
                                     "User.name": "Frank Jones",
                                 }
                             ]
@@ -298,12 +288,12 @@ describe.skip("having", () => {
             // TODO check sql
             // TODO Return Type
 
-            assert.equal(sql, "SELECT  FROM User JOIN Post ON authorId = User.id;");
+            assert.equal(sql, "FROM User JOIN Post ON authorId = User.id;");
         }
 
     });
 
-    test("Where NULL", async () =>  {
+    test("Where NULL", async () => {
 
         {
             const sql = prisma.$from("User")
@@ -317,53 +307,9 @@ describe.skip("having", () => {
             // TODO Return Type
             //  WHERE ((User.id = 1 AND Post.id = 1 ) AND (Post.title = 'hello' ) AND ((User.name = 'John Doe' ) OR (User.name = 'Frank Jones' ))) AND ((User.id = 2 AND Post.id = 2 ) OR (Post.content IS NOT NULL ));
 
-            assert.equal(sql, "SELECT  FROM User JOIN Post ON authorId = User.id;");
+            assert.equal(sql, "FROM User JOIN Post ON authorId = User.id;");
         }
 
     });
 });
-
-*/
-
-/*
-{ status: 'D' }
-->
-WHERE status = "D"
-*/
-
-/*
-{
-    status: { $in: ['A', 'D'] }
-}
-
--> WHERE status in ("A", "D")
-*/
-
-/*
-
-{
-    status: 'A',
-        qty: { $lt: 30 }
-}
-->
-WHERE status = "A" AND qty < 30
-*/
-
-/*
-
-{
-    $or: [{ status: 'A' }, { qty: { $lt: 30 } }]
-}
-
-WHERE status = "A" OR qty < 30
-*/
-
-/*
-{
-    status: 'A',
-        $or: [{ qty: { $lt: 30 } }, { item: { $regex: '^p' } }]
-}
-->
-WHERE status = "A" AND ( qty < 30 OR item LIKE "p%")
-*/
 

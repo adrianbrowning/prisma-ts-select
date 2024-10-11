@@ -23,7 +23,7 @@ describe("join", () => {
                 .join("Post", "authorId", "User.id")
                 .getSQL();
 
-            assert.equal(sql, "SELECT  FROM User JOIN Post ON authorId = User.id;");
+            assert.equal(sql, "FROM User JOIN Post ON authorId = User.id;");
         }
 
         {
@@ -31,7 +31,7 @@ describe("join", () => {
                 .join("User", "id", "LikedPosts.authorId")
                 .join("Post", "authorId", "User.id")
                 .getSQL();
-            assert.equal(sql, "SELECT  FROM LikedPosts JOIN User ON id = LikedPosts.authorId JOIN Post ON authorId = User.id;");
+            assert.equal(sql, "FROM LikedPosts JOIN User ON id = LikedPosts.authorId JOIN Post ON authorId = User.id;");
         }
 
         prisma.$from("LikedPosts")
@@ -43,7 +43,7 @@ describe("join", () => {
             .join("Post", "id", "LikedPosts.postId")
             .join("User", "id", "Post.authorId")
             .getSQL();
-            assert.equal(sql, "SELECT  FROM LikedPosts JOIN Post ON id = LikedPosts.postId JOIN User ON id = Post.authorId;");
+            assert.equal(sql, "FROM LikedPosts JOIN Post ON id = LikedPosts.postId JOIN User ON id = Post.authorId;");
 
         }
 
@@ -123,7 +123,7 @@ describe("join", () => {
             const sql = prisma.$from("User")
                 .joinUnsafeTypeEnforced("Post", "id", "User.id")
                 .getSQL();
-            assert.equal(sql, "SELECT  FROM User JOIN Post ON Post.id = User.id;");
+            assert.equal(sql, "FROM User JOIN Post ON Post.id = User.id;");
         }
 
         {
@@ -131,7 +131,7 @@ describe("join", () => {
                 .joinUnsafeTypeEnforced("Post", "authorId", "Post.lastModifiedById")
                 .joinUnsafeTypeEnforced("PostsImages", "id", "Post.id")
                 .getSQL();
-            assert.equal(sql, "SELECT  FROM User JOIN Post ON Post.authorId = Post.lastModifiedById JOIN PostsImages ON PostsImages.id = Post.id;");
+            assert.equal(sql, "FROM User JOIN Post ON Post.authorId = Post.lastModifiedById JOIN PostsImages ON PostsImages.id = Post.id;");
         }
 
 
@@ -147,7 +147,7 @@ describe("join", () => {
             const sql = prisma.$from("User")
                 .joinUnsafeIgnoreType("Post", "id", "User.email")
                 .getSQL();
-            assert.equal(sql, "SELECT  FROM User JOIN Post ON Post.id = User.email;");
+            assert.equal(sql, "FROM User JOIN Post ON Post.id = User.email;");
         }
 
         {
@@ -155,7 +155,7 @@ describe("join", () => {
                 .joinUnsafeIgnoreType("Post", "authorId", "User.email")
                 .joinUnsafeIgnoreType("PostsImages", "id", "Post.published")
                 .getSQL();
-            assert.equal(sql, "SELECT  FROM User JOIN Post ON Post.authorId = User.email JOIN PostsImages ON PostsImages.id = Post.published;");
+            assert.equal(sql, "FROM User JOIN Post ON Post.authorId = User.email JOIN PostsImages ON PostsImages.id = Post.published;");
         }
     });
 
@@ -165,7 +165,7 @@ describe("join", () => {
             .join("MFId_Post", "id", "MFId_CategoryPost.postId")
             .getSQL();
 
-        assert.equal(sql, "SELECT  FROM MFId_Category JOIN MFId_CategoryPost ON categoryId = MFId_Category.id JOIN MFId_Post ON id = MFId_CategoryPost.postId;");
+        assert.equal(sql, "FROM MFId_Category JOIN MFId_CategoryPost ON categoryId = MFId_Category.id JOIN MFId_Post ON id = MFId_CategoryPost.postId;");
     });
 
     test("Many To Many Link; Default Name", ()=> {
@@ -173,7 +173,7 @@ describe("join", () => {
             .join("_M2M_CategoryToM2M_Post", "A", "M2M_Category.id" )
             .join("M2M_Post", "id", "_M2M_CategoryToM2M_Post.B" )
             .getSQL();
-        assert.equal(sql, "SELECT  FROM M2M_Category JOIN _M2M_CategoryToM2M_Post ON A = M2M_Category.id JOIN M2M_Post ON id = _M2M_CategoryToM2M_Post.B;");
+        assert.equal(sql, "FROM M2M_Category JOIN _M2M_CategoryToM2M_Post ON A = M2M_Category.id JOIN M2M_Post ON id = _M2M_CategoryToM2M_Post.B;");
     });
 
     test("Many To Many Link; Name Change", ()=> {
@@ -181,7 +181,7 @@ describe("join", () => {
             .join("_M2M_NC", "A", "M2M_NC_Category.id" )
             .join("M2M_NC_Post", "id", "_M2M_NC.B" )
             .getSQL();
-        assert.equal(sql, "SELECT  FROM M2M_NC_Category JOIN _M2M_NC ON A = M2M_NC_Category.id JOIN M2M_NC_Post ON id = _M2M_NC.B;");
+        assert.equal(sql, "FROM M2M_NC_Category JOIN _M2M_NC ON A = M2M_NC_Category.id JOIN M2M_NC_Post ON id = _M2M_NC.B;");
     });
 
     test("2 Many-To-Many Links", ()=> {
@@ -190,7 +190,7 @@ describe("join", () => {
                 .join("_M2M_NC_M1", "A", "MMM_Category.id")
                 .join("MMM_Post", "id", "_M2M_NC_M1.B" )
                 .getSQL();
-            assert.equal(sql, "SELECT  FROM MMM_Category JOIN _M2M_NC_M1 ON A = MMM_Category.id JOIN MMM_Post ON id = _M2M_NC_M1.B;");
+            assert.equal(sql, "FROM MMM_Category JOIN _M2M_NC_M1 ON A = MMM_Category.id JOIN MMM_Post ON id = _M2M_NC_M1.B;");
         }
 
         {
@@ -198,7 +198,7 @@ describe("join", () => {
                 .join("_M2M_NC_M2", "B", "MMM_Post.id")
                 .join("MMM_Category", "id", "_M2M_NC_M2.A" )
                 .getSQL();
-            assert.equal(sql, "SELECT  FROM MMM_Post JOIN _M2M_NC_M2 ON B = MMM_Post.id JOIN MMM_Category ON id = _M2M_NC_M2.A;");
+            assert.equal(sql, "FROM MMM_Post JOIN _M2M_NC_M2 ON B = MMM_Post.id JOIN MMM_Category ON id = _M2M_NC_M2.A;");
         }
     });
 });
