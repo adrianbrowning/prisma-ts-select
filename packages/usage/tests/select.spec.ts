@@ -376,17 +376,6 @@ function runTests() {
 
 
             function createQuery() {
-                prisma.user.findMany({
-                    select: {
-                        email: true,
-                        name: true,
-                        Posts: {
-                            select: {
-                                title: true
-                            }
-                        }
-                    }
-                })
                 return prisma.$from("User")
                     .join("Post", "authorId", "User.id")
                     .select("email")

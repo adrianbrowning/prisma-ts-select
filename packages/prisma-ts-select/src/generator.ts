@@ -1,4 +1,4 @@
-import {DMMF, generatorHandler} from '@prisma/generator-helper'
+import {type ConnectorType, DMMF, generatorHandler} from '@prisma/generator-helper'
 import type { GeneratorOptions } from '@prisma/generator-helper'
 import { logger } from '@prisma/internals'
 import path from 'node:path'
@@ -10,16 +10,37 @@ import fs from "node:fs";
 const require = createRequire(import.meta.url);
 
 
+const SupportedProviders : Record<ConnectorType, boolean> = {
+  sqlite: true,
+  mysql: true,
+  postgresql: true,
+  cockroachdb: false,
+  mongodb: false,
+  postgres: false,
+  sqlserver: false
+};
+
 generatorHandler({
   onManifest() {
-    logger.info(`${GENERATOR_NAME}:Registered`)
+    logger.info(`${GENERATOR_NAME}:Registered`);
     return {
       defaultOutput: '../generated',
       prettyName: GENERATOR_NAME,
     }
   },
   onGenerate: async (options: GeneratorOptions) => {
-    logger.info(`Starting Generation`);
+    const validDS = options
+        .datasources
+        .map(ds => ds.provider)
+        .filter(type => SupportedProviders[type]);
+
+    if (validDS.length === 0) {
+      throw new Error(`${GENERATOR_NAME}: Supported DataSource Providers are: ${Object.entries(SupportedProviders).reduce<Array<string>>((acc, [name, supported]) => {
+        if(!supported) return acc;
+        acc.push(name);
+        return acc;
+      }, []).join(", ")}`)
+    }
     const modelToId:Record<string, [string, string]> = {};
 
     type InnerOutType ={
