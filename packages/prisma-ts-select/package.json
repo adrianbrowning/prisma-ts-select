@@ -1,6 +1,6 @@
 {
   "name": "prisma-ts-select",
-  "version": "1.0.32",
+  "version": "0.0.33",
   "type": "module",
   "bin": {
     "prisma-ts-select": "dist/bin.cjs"
