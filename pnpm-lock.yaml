@@ -142,6 +142,124 @@ importers:
         specifier: ^5.5.3
         version: 5.5.3
 
+  packages/prisma-ts-select/package:
+    dependencies:
+      '@prisma/generator-helper':
+        specifier: 5.16.2
+        version: 5.16.2
+      '@prisma/internals':
+        specifier: 5.16.2
+        version: 5.16.2
+    devDependencies:
+      '@prisma/client':
+        specifier: 5.16.1
+        version: 5.16.1(prisma@5.16.1)
+      '@semantic-release/changelog':
+        specifier: ^6.0.1
+        version: 6.0.3(semantic-release@18.0.1)
+      '@semantic-release/git':
+        specifier: ^10.0.1
+        version: 10.0.1(semantic-release@18.0.1)
+      '@stylistic/eslint-plugin':
+        specifier: ^1.5.4
+        version: 1.8.1(eslint@8.57.0)(typescript@5.5.3)
+      '@total-typescript/ts-reset':
+        specifier: ^0.5.1
+        version: 0.5.1
+      '@types/better-sqlite3':
+        specifier: ^7.6.8
+        version: 7.6.10
+      '@types/humanize-duration':
+        specifier: ^3.27.2
+        version: 3.27.4
+      '@types/jest':
+        specifier: 27.0.3
+        version: 27.0.3
+      '@types/klaw-sync':
+        specifier: ^6.0.1
+        version: 6.0.5
+      '@types/lodash':
+        specifier: ^4.14.197
+        version: 4.17.4
+      '@types/node':
+        specifier: 20.11.30
+        version: 20.11.30
+      '@types/object-hash':
+        specifier: ^3.0.4
+        version: 3.0.6
+      '@types/prettier':
+        specifier: 2.4.2
+        version: 2.4.2
+      '@typescript-eslint/eslint-plugin':
+        specifier: ^6.19.1
+        version: 6.21.0(@typescript-eslint/parser@6.21.0(eslint@8.57.0)(typescript@5.5.3))(eslint@8.57.0)(typescript@5.5.3)
+      '@typescript-eslint/parser':
+        specifier: ^6.19.1
+        version: 6.21.0(eslint@8.57.0)(typescript@5.5.3)
+      eslint:
+        specifier: ^8.47.0
+        version: 8.57.0
+      eslint-plugin-node:
+        specifier: ^11.1.0
+        version: 11.1.0(eslint@8.57.0)
+      eslint-plugin-promise:
+        specifier: ^6.1.1
+        version: 6.2.0(eslint@8.57.0)
+      eslint-plugin-simple-import-sort:
+        specifier: ^9.0.0
+        version: 9.0.0(eslint@8.57.0)
+      eslint-plugin-unused-imports:
+        specifier: ^3.0.0
+        version: 3.2.0(@typescript-eslint/eslint-plugin@6.21.0(@typescript-eslint/parser@6.21.0(eslint@8.57.0)(typescript@5.5.3))(eslint@8.57.0)(typescript@5.5.3))(eslint@8.57.0)
+      humanize-duration:
+        specifier: ^3.30.0
+        version: 3.32.1
+      jest:
+        specifier: 27.4.7
+        version: 27.4.7(ts-node@10.9.2(@types/node@20.11.30)(typescript@5.5.3))
+      klaw-sync:
+        specifier: ^6.0.0
+        version: 6.0.0
+      knip:
+        specifier: ^5.9.4
+        version: 5.17.3(@types/node@20.11.30)(typescript@5.5.3)
+      log-with-statusbar:
+        specifier: ^1.2.0
+        version: 1.2.0
+      prisma:
+        specifier: 5.16.1
+        version: 5.16.1
+      prisma-dbml-generator:
+        specifier: ^0.10.0
+        version: 0.10.0
+      prisma-docs-generator:
+        specifier: ^0.8.0
+        version: 0.8.0
+      prisma-erd-generator:
+        specifier: ^1.11.0
+        version: 1.11.2(@prisma/client@5.16.1(prisma@5.16.1))(typescript@5.5.3)
+      progress-string:
+        specifier: ^1.2.2
+        version: 1.2.2
+      rimraf:
+        specifier: ^6.0.1
+        version: 6.0.1
+      semantic-release:
+        specifier: ^18.0.1
+        version: 18.0.1
+      ts-jest:
+        specifier: 27.1.4
+        version: 27.1.4(@babel/core@7.24.7)(@types/jest@27.0.3)(babel-jest@27.5.1(@babel/core@7.24.7))(esbuild@0.21.5)(jest@27.4.7(ts-node@10.9.2(@types/node@20.11.30)(typescript@5.5.3)))(typescript@5.5.3)
+      tsup:
+        specifier: ^8.1.0
+        version: 8.1.0(ts-node@10.9.2(@types/node@20.11.30)(typescript@5.5.3))(typescript@5.5.3)
+      tsx:
+        specifier: ^4.16.0
+        version: 4.16.2
+      typescript:
+        specifier: ^5.5.3
+        version: 5.5.3
+
   packages/usage:
     devDependencies:
       '@prisma/client':
@@ -157,8 +275,8 @@ importers:
         specifier: 5.16.1
         version: 5.16.1
       prisma-ts-select:
-        specifier: workspace:*
-        version: link:../prisma-ts-select
+        specifier: file://../prisma-ts-select/prisma-ts-select-0.0.33.tgz
+        version: file:packages/prisma-ts-select/prisma-ts-select-0.0.33.tgz
       tsx:
         specifier: ^4.16.2
         version: 4.16.2
@@ -4045,6 +4163,12 @@ packages:
     hasBin: true
     peerDependencies:
       '@prisma/client': ^4.0.0 || ^5.0.0
+
+  prisma-ts-select@file:packages/prisma-ts-select/prisma-ts-select-0.0.33.tgz:
+    resolution: {integrity: sha512-vxhS2U3YRCLC5T4H/ScJjpf0Eoe4bfB7CWqmHQBf9+8n6lcEG/TNyEkr70gCgAdJsDXH4T1nyUyv6qigb0Ejqw==, tarball: file:packages/prisma-ts-select/prisma-ts-select-0.0.33.tgz}
+    version: 0.0.33
+    engines: {node: '>=18.17', pnpm: '>= 8.6.12'}
+    hasBin: true
 
   prisma@5.16.1:
     resolution: {integrity: sha512-Z1Uqodk44diztImxALgJJfNl2Uisl9xDRvqybMKEBYJLNKNhDfAHf+ZIJbZyYiBhLMbKU9cYGdDVG5IIXEnL2Q==}
@@ -9818,6 +9942,12 @@ snapshots:
       - supports-color
       - typescript
       - utf-8-validate
+
+  prisma-ts-select@file:packages/prisma-ts-select/prisma-ts-select-0.0.33.tgz:
+    dependencies:
+      '@prisma/generator-helper': 5.16.2
+      '@prisma/internals': 5.16.2
+      ts-pattern: 5.3.1
 
   prisma@5.16.1:
     dependencies:
