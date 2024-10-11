@@ -54,14 +54,22 @@
     "p:update": "pnpm add -D prisma@latest && pnpm add @prisma/client@latest",
     "test": "echo 'TODO call package/usage'",
     "test:jest": "jest",
-    "2postinstall": "node src/scripts/postinstall.js"
+    "2postinstall": "node src/scripts/postinstall.js",
+    "doc": "pnpm exec markdown-toc -i README.md"
   },
   "dependencies": {
     "@prisma/generator-helper": "5.16.2",
-    "@prisma/internals": "5.16.2"
+    "@prisma/internals": "5.16.2",
+    "ts-pattern": "^5.3.1"
   },
   "license": "MIT",
-  "authorName": "Adrian Elton-Browning <gingacodemonkey@gmail.com>",
+  "author": {
+    "name": "Adrian Elton-Browning",
+    "email": "gingacodemonkey@gmail.com"
+  },
+  "bugs": {
+    "url": "https://github.com/adrianbrowning/prisma-ts-select/issues"
+  },
   "homepage": "Link to homepage or github readme here",
   "repository": {
     "type": "git",
@@ -69,14 +77,18 @@
   },
   "devDependencies": {
     "@prisma/client": "5.16.1",
+    "@semantic-release/changelog": "^6.0.1",
+    "@semantic-release/git": "^10.0.1",
     "@stylistic/eslint-plugin": "^1.5.4",
     "@total-typescript/ts-reset": "^0.5.1",
     "@types/better-sqlite3": "^7.6.8",
     "@types/humanize-duration": "^3.27.2",
+    "@types/jest": "27.0.3",
     "@types/klaw-sync": "^6.0.1",
     "@types/lodash": "^4.14.197",
     "@types/node": "20.11.30",
     "@types/object-hash": "^3.0.4",
+    "@types/prettier": "2.4.2",
     "@typescript-eslint/eslint-plugin": "^6.19.1",
     "@typescript-eslint/parser": "^6.19.1",
     "eslint": "^8.47.0",
@@ -85,34 +97,33 @@
     "eslint-plugin-simple-import-sort": "^9.0.0",
     "eslint-plugin-unused-imports": "^3.0.0",
     "humanize-duration": "^3.30.0",
+    "jest": "27.4.7",
     "klaw-sync": "^6.0.0",
     "knip": "^5.9.4",
     "log-with-statusbar": "^1.2.0",
+    "markdown-toc": "^1.2.0",
+    "prisma": "5.16.1",
     "prisma-dbml-generator": "^0.10.0",
     "prisma-docs-generator": "^0.8.0",
     "prisma-erd-generator": "^1.11.0",
     "progress-string": "^1.2.2",
-    "tsx": "^4.16.0",
-    "typescript": "^5.5.3",
-    "@types/jest": "27.0.3",
-    "@types/prettier": "2.4.2",
-    "jest": "27.4.7",
-    "prisma": "5.16.1",
-    "ts-jest": "27.1.4",
-    "@semantic-release/changelog": "^6.0.1",
-    "@semantic-release/git": "^10.0.1",
+    "rimraf": "^6.0.1",
     "semantic-release": "^18.0.1",
+    "ts-jest": "27.1.4",
     "tsup": "^8.1.0",
-    "rimraf": "^6.0.1"
+    "tsx": "^4.16.0",
+    "typescript": "^5.5.3"
   },
   "keywords": [
     "prisma",
     "generator",
-    "SQL"
+    "SQL",
+    "type-safe",
+    "typescript"
   ],
   "engines": {
     "node": ">=18.17",
-    "pnom": ">= 8.6.12"
+    "pnpm": ">= 8.6.12"
   },
   "target": "node",
   "knip": {

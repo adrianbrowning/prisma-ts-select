@@ -12,15 +12,17 @@
     "test": "pnpm p:r && find ./tests -name '*.spec.ts' -exec node --import tsx --test --test-reporter spec {} \\;",
     "test:w": "pnpm p:r &&  find ./tests -name '*.spec.ts' -exec node --import tsx --test --test-reporter spec --watch {} \\;",
     "test:coverage": "find ./tests -name '*.spec.ts' -exec node --loader tsx --test --experimental-test-coverage --test-reporter=lcov {} \\;",
+    "test:criteria": "node --import tsx --test tests/criteria.spec.ts",
     "test:ts": "tsc --noEmit -p tsconfig.json",
     "test:tsw": "pnpm test:ts --watch"
   },
   "devDependencies": {
     "@prisma/client": "5.16.1",
     "@types/node": "~20.14.10",
+    "exponential-backoff": "^3.1.1",
     "prisma": "5.16.1",
     "prisma-ts-select": "workspace:*",
-    "typescript": "^5.5.3",
-    "tsx": "^4.16.2"
+    "tsx": "^4.16.2",
+    "typescript": "^5.5.3"
   }
 }

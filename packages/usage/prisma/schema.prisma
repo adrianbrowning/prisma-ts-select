@@ -37,7 +37,7 @@ model PostsImages {
   id     Int    @id @default(autoincrement())
   url    String
   postId Int
-  Post   Post   @relation(fields: [postId], references: [id], onDelete: Cascade)
+  Post   Post   @relation(fields: [postId], references: [id])
 }
 
 model LikedPosts {

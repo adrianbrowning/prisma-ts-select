@@ -1,0 +1,152 @@
+-- CreateTable
+CREATE TABLE "User" (
+    "id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+    "email" TEXT NOT NULL,
+    "name" TEXT
+);
+
+-- CreateTable
+CREATE TABLE "Post" (
+    "id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+    "title" TEXT NOT NULL,
+    "content" TEXT,
+    "published" BOOLEAN NOT NULL DEFAULT false,
+    "authorId" INTEGER NOT NULL,
+    "lastModifiedById" INTEGER NOT NULL,
+    CONSTRAINT "Post_authorId_fkey" FOREIGN KEY ("authorId") REFERENCES "User" ("id") ON DELETE CASCADE ON UPDATE CASCADE,
+    CONSTRAINT "Post_lastModifiedById_fkey" FOREIGN KEY ("lastModifiedById") REFERENCES "User" ("id") ON DELETE RESTRICT ON UPDATE CASCADE
+);
+
+-- CreateTable
+CREATE TABLE "PostsImages" (
+    "id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+    "url" TEXT NOT NULL,
+    "postId" INTEGER NOT NULL,
+    CONSTRAINT "PostsImages_postId_fkey" FOREIGN KEY ("postId") REFERENCES "Post" ("id") ON DELETE CASCADE ON UPDATE CASCADE
+);
+
+-- CreateTable
+CREATE TABLE "LikedPosts" (
+    "id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+    "postId" INTEGER NOT NULL,
+    "authorId" INTEGER NOT NULL,
+    CONSTRAINT "LikedPosts_postId_fkey" FOREIGN KEY ("postId") REFERENCES "Post" ("id") ON DELETE CASCADE ON UPDATE CASCADE,
+    CONSTRAINT "LikedPosts_authorId_fkey" FOREIGN KEY ("authorId") REFERENCES "User" ("id") ON DELETE RESTRICT ON UPDATE CASCADE
+);
+
+-- CreateTable
+CREATE TABLE "MFId_Category" (
+    "id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+    "name" TEXT NOT NULL
+);
+
+-- CreateTable
+CREATE TABLE "MFId_CategoryPost" (
+    "categoryId" INTEGER NOT NULL,
+    "postId" INTEGER NOT NULL,
+
+    PRIMARY KEY ("categoryId", "postId"),
+    CONSTRAINT "MFId_CategoryPost_categoryId_fkey" FOREIGN KEY ("categoryId") REFERENCES "MFId_Category" ("id") ON DELETE RESTRICT ON UPDATE CASCADE,
+    CONSTRAINT "MFId_CategoryPost_postId_fkey" FOREIGN KEY ("postId") REFERENCES "MFId_Post" ("id") ON DELETE RESTRICT ON UPDATE CASCADE
+);
+
+-- CreateTable
+CREATE TABLE "MFId_Post" (
+    "id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+    "title" TEXT NOT NULL
+);
+
+-- CreateTable
+CREATE TABLE "M2M_Post" (
+    "id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+    "title" TEXT NOT NULL
+);
+
+-- CreateTable
+CREATE TABLE "M2M_Category" (
+    "id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+    "name" TEXT NOT NULL
+);
+
+-- CreateTable
+CREATE TABLE "M2M_NC_Category" (
+    "id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+    "name" TEXT NOT NULL
+);
+
+-- CreateTable
+CREATE TABLE "M2M_NC_Post" (
+    "id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+    "title" TEXT NOT NULL
+);
+
+-- CreateTable
+CREATE TABLE "MMM_Category" (
+    "id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+    "name" TEXT NOT NULL
+);
+
+-- CreateTable
+CREATE TABLE "MMM_Post" (
+    "id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+    "title" TEXT NOT NULL
+);
+
+-- CreateTable
+CREATE TABLE "_M2M_CategoryToM2M_Post" (
+    "A" INTEGER NOT NULL,
+    "B" INTEGER NOT NULL,
+    CONSTRAINT "_M2M_CategoryToM2M_Post_A_fkey" FOREIGN KEY ("A") REFERENCES "M2M_Category" ("id") ON DELETE CASCADE ON UPDATE CASCADE,
+    CONSTRAINT "_M2M_CategoryToM2M_Post_B_fkey" FOREIGN KEY ("B") REFERENCES "M2M_Post" ("id") ON DELETE CASCADE ON UPDATE CASCADE
+);
+
+-- CreateTable
+CREATE TABLE "_M2M_NC" (
+    "A" INTEGER NOT NULL,
+    "B" INTEGER NOT NULL,
+    CONSTRAINT "_M2M_NC_A_fkey" FOREIGN KEY ("A") REFERENCES "M2M_NC_Category" ("id") ON DELETE CASCADE ON UPDATE CASCADE,
+    CONSTRAINT "_M2M_NC_B_fkey" FOREIGN KEY ("B") REFERENCES "M2M_NC_Post" ("id") ON DELETE CASCADE ON UPDATE CASCADE
+);
+
+-- CreateTable
+CREATE TABLE "_M2M_NC_M1" (
+    "A" INTEGER NOT NULL,
+    "B" INTEGER NOT NULL,
+    CONSTRAINT "_M2M_NC_M1_A_fkey" FOREIGN KEY ("A") REFERENCES "MMM_Category" ("id") ON DELETE CASCADE ON UPDATE CASCADE,
+    CONSTRAINT "_M2M_NC_M1_B_fkey" FOREIGN KEY ("B") REFERENCES "MMM_Post" ("id") ON DELETE CASCADE ON UPDATE CASCADE
+);
+
+-- CreateTable
+CREATE TABLE "_M2M_NC_M2" (
+    "A" INTEGER NOT NULL,
+    "B" INTEGER NOT NULL,
+    CONSTRAINT "_M2M_NC_M2_A_fkey" FOREIGN KEY ("A") REFERENCES "MMM_Category" ("id") ON DELETE CASCADE ON UPDATE CASCADE,
+    CONSTRAINT "_M2M_NC_M2_B_fkey" FOREIGN KEY ("B") REFERENCES "MMM_Post" ("id") ON DELETE CASCADE ON UPDATE CASCADE
+);
+
+-- CreateIndex
+CREATE UNIQUE INDEX "User_email_key" ON "User"("email");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "_M2M_CategoryToM2M_Post_AB_unique" ON "_M2M_CategoryToM2M_Post"("A", "B");
+
+-- CreateIndex
+CREATE INDEX "_M2M_CategoryToM2M_Post_B_index" ON "_M2M_CategoryToM2M_Post"("B");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "_M2M_NC_AB_unique" ON "_M2M_NC"("A", "B");
+
+-- CreateIndex
+CREATE INDEX "_M2M_NC_B_index" ON "_M2M_NC"("B");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "_M2M_NC_M1_AB_unique" ON "_M2M_NC_M1"("A", "B");
+
+-- CreateIndex
+CREATE INDEX "_M2M_NC_M1_B_index" ON "_M2M_NC_M1"("B");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "_M2M_NC_M2_AB_unique" ON "_M2M_NC_M2"("A", "B");
+
+-- CreateIndex
+CREATE INDEX "_M2M_NC_M2_B_index" ON "_M2M_NC_M2"("B");
