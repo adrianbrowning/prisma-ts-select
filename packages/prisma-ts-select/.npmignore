@@ -1,3 +1,11 @@
 prisma-ts-select-*.tgz
 src
 tests
+.idea
+.env
+.npmignore
+tsconfig.json
+node_modules
+prisma
+tsconfig.tsbuildinfo
+tsup.config.ts

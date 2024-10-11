@@ -1,8 +1,8 @@
 # prisma-ts-select
 
 ![npm version](https://img.shields.io/npm/v/prisma-ts-select)
+![build](https://github.com/adrianbrowning/prisma-ts-select/actions/workflows/CI.yml/badge.svg)
 ![license](https://img.shields.io/github/license/adrianbrowning/prisma-ts-select)
-<!--![build](https://github.com/adrianbrowning/prisma-ts-select/actions/workflows/build.yml/badge.svg)-->
 
 <!-- toc -->
 
