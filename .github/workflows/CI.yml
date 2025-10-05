@@ -20,16 +20,16 @@ jobs:
           - ubuntu-latest
 #          - windows-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
       - name: Use Node.js ${{matrix.node-version}}
-        uses: actions/setup-node@v2
+        uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.node-version }}
       - name: Setup PNPM
-        uses: pnpm/action-setup@v2.0.1
+        uses: pnpm/action-setup@v4
         with:
           version: 9.4.0
-      - uses: actions/cache@v2
+      - uses: actions/cache@v4
         with:
           path: "**/node_modules"
           key: ${{ runner.os }}-modules-${{ hashFiles('**/pnpm-lock.yaml') }}
@@ -60,13 +60,13 @@ jobs:
 #      - Test
 #    if: ${{ github.ref == 'refs/heads/main' }}
 #    steps:
-#      - uses: actions/checkout@v2
+#      - uses: actions/checkout@v4
 #      - name: Use Node.js
-#        uses: actions/setup-node@v2
+#        uses: actions/setup-node@v4
 #        with:
 #          node-version: 16.x
 #          registry-url: https://registry.npmjs.org
-#      - uses: actions/cache@v2
+#      - uses: actions/cache@v4
 #        with:
 #          path: "**/node_modules"
 #          key: ${{ runner.os }}-modules-${{ hashFiles('**/pnpm-lock.yaml') }}
