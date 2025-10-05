@@ -134,6 +134,10 @@ class _fRun<TSources extends TArrSources, TFields extends TFieldsType, TSelectRT
         return {} as TFields;
     }
 
+    getResultType() {
+        return {} as Array<TSelectRT>;
+    }
+
     getSQL(formatted: boolean = false) {
 
 

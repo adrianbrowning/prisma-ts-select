@@ -254,17 +254,9 @@ describe("having", () => {
             // This test verifies SQL generation works, but we skip runtime execution
             // See README: "SQLite - Requires you to have either an aggregate function in the SELECT or make use of GROUP BY"
 
-            const sql = createQuery().getSQL();
-            const expectedSQL = `SELECT User.id AS \`User.id\`, 
-                                        User.email AS \`User.email\`, 
-                                        User.name AS \`User.name\`, 
-                                        Post.id AS \`Post.id\`, 
-                                        Post.title AS \`Post.title\`, 
-                                        Post.content AS \`Post.content\`, 
-                                        Post.published AS \`Post.published\`, 
-                                        Post.authorId AS \`Post.authorId\`, 
-                                        Post.lastModifiedById AS \`Post.lastModifiedById\` 
-FROM User JOIN Post ON authorId = User.id HAVING (User.name LIKE 'Stuart%' );`;
+            const sql = createQuery()
+                .getSQL();
+            const expectedSQL = `SELECT User.id AS \`User.id\`, User.email AS \`User.email\`, User.name AS \`User.name\`, Post.id AS \`Post.id\`, Post.title AS \`Post.title\`, Post.content AS \`Post.content\`, Post.published AS \`Post.published\`, Post.authorId AS \`Post.authorId\`, Post.lastModifiedById AS \`Post.lastModifiedById\` FROM User JOIN Post ON authorId = User.id HAVING (User.name LIKE 'Stuart%' );`;
             assert.strictEqual(sql, expectedSQL);
 
             // Verify type is correct even though we don't run it
@@ -280,10 +272,9 @@ FROM User JOIN Post ON authorId = User.id HAVING (User.name LIKE 'Stuart%' );`;
                 "Post.lastModifiedById": number;
             }>;
 
-            const result = await createQuery().run()
+            const fields = createQuery().getResultType();
 
-
-            typeCheck({} as Expect<Equal<typeof result,TExpected>>);
+            typeCheck({} as Expect<Equal<typeof fields,TExpected>>);
 
         });
     });

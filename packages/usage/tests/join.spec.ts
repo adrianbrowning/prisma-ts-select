@@ -8,7 +8,8 @@ import {PrismaClient} from "@prisma/client";
 
 // import type {GetUnionOfRelations, SafeJoins} from "prisma-ts-select/dist/extend/extend.js";
 
-const prisma = new PrismaClient({}).$extends(tsSelectExtend);
+const prisma = new PrismaClient({})
+    .$extends(tsSelectExtend);
 
 describe("join", () => {
 
