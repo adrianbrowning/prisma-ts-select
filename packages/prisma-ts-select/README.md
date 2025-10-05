@@ -515,7 +515,7 @@ JOIN Post ON authorId = User.id
 
 #### `.select`
 
-You can supply either; `*` OR `table.field` and then chain them together.
+You can supply either; `*`, `Table.*` OR `table.field` and then chain them together.
 
 #### Example - `*`
 ```typescript
@@ -528,8 +528,48 @@ The resulting SQL will look like:
 
 ```sql
 SELECT *
-FROM User; 
+FROM User;
 ```
+
+#### Example - `Table.*` (Single Table)
+```typescript
+prisma.$from("User")
+       .select("User.*");
+```
+
+##### SQL
+The resulting SQL will look like:
+
+```sql
+SELECT User.id, User.email, User.name
+FROM User;
+```
+
+#### Example - `Table.*` (With Join)
+```typescript
+prisma.$from("User")
+      .join("Post", "authorId", "User.id")
+      .select("User.*")
+      .select("Post.*");
+```
+
+##### SQL
+The resulting SQL will look like:
+
+```sql
+SELECT User.id AS `User.id`,
+       User.email AS `User.email`,
+       User.name AS `User.name`,
+       Post.id AS `Post.id`,
+       Post.title AS `Post.title`,
+       Post.content AS `Post.content`,
+       Post.published AS `Post.published`
+FROM User
+JOIN Post ON authorId = User.id;
+```
+
+[!NOTE]
+> When using `Table.*` with joins, all columns are automatically aliased with the table name prefix to avoid column name conflicts.
 
 #### Example - Chained
 ```typescript
@@ -543,26 +583,24 @@ The resulting SQL will look like:
 
 ```sql
 SELECT name, email
-FROM User; 
+FROM User;
 ```
 
 #### Example - Join + Chained
 ```typescript
 prisma.$from("User")
-      .join("Post", "authorId", "User.id")        
+      .join("Post", "authorId", "User.id")
       .select("name")
       .select("Post.title");
 ```
-
-[!NOTE]
-> Support for `Table.*` isn't complete yet. This will be tracked [here](https://github.com/adrianbrowning/prisma-ts-select/issues/31).
 
 ##### SQL
 The resulting SQL will look like:
 
 ```sql
-SELECT name, email
-FROM User; 
+SELECT name, Post.title
+FROM User
+JOIN Post ON authorId = User.id;
 ```
 
 ### Having

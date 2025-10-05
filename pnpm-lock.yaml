@@ -157,7 +157,7 @@ importers:
         specifier: 5.16.1
         version: 5.16.1
       prisma-ts-select:
-        specifier: workspace:*
+        specifier: workspace:@gcm/prisma-ts-select@*
         version: link:../prisma-ts-select
       tsx:
         specifier: ^4.16.2

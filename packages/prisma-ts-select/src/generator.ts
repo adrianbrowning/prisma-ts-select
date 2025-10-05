@@ -4,10 +4,10 @@ import { logger } from '@prisma/internals'
 import path from 'node:path'
 import { GENERATOR_NAME } from './constants.js'
 import { writeFileSafely } from './utils/writeFileSafely.js'
-import { createRequire } from "module";
+import { createRequire } from "node:module";
 import type {DBType} from "./utils/types.js";
 import fs from "node:fs";
-const require = createRequire(import.meta.url);
+const _require = createRequire(import.meta.url);
 
 
 const SupportedProviders : Record<ConnectorType, boolean> = {
@@ -180,7 +180,7 @@ generatorHandler({
     }, {});
 
 
-    const pTSSelPath = path.dirname(require.resolve('@gcm/prisma-ts-select'));
+    const pTSSelPath = path.dirname(_require.resolve('@gcm/prisma-ts-select'));
     logger.info("pTSSelPath", pTSSelPath);
 
     const srcDir = path.join(pTSSelPath, "extend");
