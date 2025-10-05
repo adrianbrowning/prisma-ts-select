@@ -65,11 +65,17 @@ type Filter<a, b> = a extends b ? a : never;
 type IsString<T> = T extends string ? T : never;
 
 
-type ValidSelect<Tables extends Array<TTables>> = "*" | GetOtherColumns<Tables>;// | GetColsFromTable<Tables[number]>; // TODO
+type ValidSelect<Tables extends Array<TTables>> = "*" | GetOtherColumns<Tables> | GetTableStar<Tables>;// | GetColsFromTable<Tables[number]>; // TODO
 
 type GetOtherColumns<Tables extends Array<TTables>> = Tables extends [infer T extends TTables, ...Array<TTables>]
     ? GetColsBaseTable<T> | GetJoinCols<Tables[number]>
     : never
+
+type GetTableStar<Tables extends Array<TTables>> = Tables extends [infer T extends TTables, ...Array<TTables>]
+    ? `${T}.*` | GetTableStarJoined<Tables[number]>
+    : never
+
+type GetTableStarJoined<T extends TTables> = T extends any ? `${T}.*` : never
 
 
 export type TTables = DATABASE["table"];
@@ -292,8 +298,8 @@ class _fLimit<TSources extends TArrSources, TFields extends TFieldsType, TSelect
 
 
 
-type OrderBy<Tables extends TArrSources> = Tables extends [infer T extends TTables, ...infer R extends Array<TTables>]
-    ? GetColsBaseTable<T> | GetJoinCols<R[number]>
+type OrderBy<Tables extends TArrSources> = Tables extends [infer T extends TTables, ...Array<TTables>]
+    ? GetColsBaseTable<T> | GetJoinCols<Tables[number]>
     : never;
 
 /*
@@ -302,6 +308,10 @@ LIMIT - the returned data is limited to row count.
 OFFSET -
 run
 */
+
+//Select extends GetOtherColumns<TSources>>(groupBy: Array<TSelect>
+
+
 class _fOrderBy<TSources extends TArrSources, TFields extends TFieldsType, TSelectRT extends Record<string, any> = {}> extends _fLimit<TSources, TFields, TSelectRT> {
     orderBy(orderBy: Array<`${OrderBy<TSources>}${ "" | " DESC" | " ASC"}`>) {
         return new _fLimit<TSources, TFields, TSelectRT>(this.db, {...this.values, orderBy});
@@ -319,13 +329,20 @@ run
 
 type MergeItems<Field extends string, TSources extends TArrSources, TFields extends TFieldsType, IncTName extends boolean = false, TTables = TSources[number]> = Field extends "*"
     ? Prettify<IterateTables<TSources, TFields, IncTName>>
-
-    //@ts-expect-error T not a string?
-    : Field extends `${infer T extends TTables}.${infer F extends string}`
-        //@ts-expect-error F is part of T, but can't tell TS that
-        ? Pick<TFields[T], F>
-        //@-ts-expect-error Field is part of the from, but can't tell TS that.
-        : Pick<TFields[TSources[0]], Field>;
+    : Field extends `${infer T}.*`
+        ? T extends keyof TFields
+            ? [TSources] extends [[T]]
+                // Single table - no prefix
+                ? TFields[T]
+                // Multiple tables - with prefix
+                : T extends string ? IterateTablesFromFields<T, TFields[T], true> : never
+            : never
+        //@ts-expect-error T not a string?
+        : Field extends `${infer T extends TTables}.${infer F extends string}`
+            //@ts-expect-error F is part of T, but can't tell TS that
+            ? Pick<TFields[T], F>
+            //@-ts-expect-error Field is part of the from, but can't tell TS that.
+            : Pick<TFields[TSources[0]], Field>;
 
 
 type IterateTables<Tables extends Array<TTables>, TFields extends TFieldsType, IncTName extends boolean, acc extends Record<string, any> = {}> =
@@ -355,6 +372,31 @@ type IterateTablesFromFields<Table extends TTables, TFields extends Record<strin
 
 class _fSelect<TSources extends TArrSources, TFields extends TFieldsType, TSelectRT extends Record<string, any> = {}> extends _fOrderBy<TSources, TFields, TSelectRT> {
     select<TSelect extends ValidSelect<TSources>>(select: TSelect) {
+        // Check if select is "Table.*" pattern
+        const tableStarMatch = select.match(/^(\w+)\.\*$/);
+        if (tableStarMatch) {
+            const tableName = tableStarMatch[1];
+            // Expand Table.* to all columns from that table
+            const tableFields = DB[tableName as keyof typeof DB];
+            if (!tableFields) {
+                throw new Error(`Table "${tableName}" not found in database schema`);
+            }
+
+            const hasMultipleTables = (this.values.tables && this.values.tables.length > 0) || false;
+
+            const expandedSelects = Object.keys(tableFields.fields).map((field) => {
+                if (hasMultipleTables) {
+                    return `${tableName}.${field} AS \`${tableName}.${field}\``;
+                }
+                return `${tableName}.${field}`;
+            });
+
+            return new _fSelect<TSources, TFields, Prettify<TSelectRT & MergeItems<TSelect, TSources, TFields>>>(this.db, {
+                ...this.values,
+                selects: [...this.values.selects, ...expandedSelects]
+            });
+        }
+
         return new _fSelect<TSources, TFields, Prettify<TSelectRT & MergeItems<TSelect, TSources, TFields>>>(this.db, {
             ...this.values,
             selects: [...this.values.selects, select]
