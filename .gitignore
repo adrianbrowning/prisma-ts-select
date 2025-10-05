@@ -12,3 +12,4 @@ pnpm-debug.log
 .env*
 **/built
 **/coverage
+.idea

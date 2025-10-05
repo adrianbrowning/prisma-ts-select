@@ -142,124 +142,6 @@ importers:
         specifier: ^5.5.3
         version: 5.5.3
 
-  packages/prisma-ts-select/package:
-    dependencies:
-      '@prisma/generator-helper':
-        specifier: 5.16.2
-        version: 5.16.2
-      '@prisma/internals':
-        specifier: 5.16.2
-        version: 5.16.2
-    devDependencies:
-      '@prisma/client':
-        specifier: 5.16.1
-        version: 5.16.1(prisma@5.16.1)
-      '@semantic-release/changelog':
-        specifier: ^6.0.1
-        version: 6.0.3(semantic-release@18.0.1)
-      '@semantic-release/git':
-        specifier: ^10.0.1
-        version: 10.0.1(semantic-release@18.0.1)
-      '@stylistic/eslint-plugin':
-        specifier: ^1.5.4
-        version: 1.8.1(eslint@8.57.0)(typescript@5.5.3)
-      '@total-typescript/ts-reset':
-        specifier: ^0.5.1
-        version: 0.5.1
-      '@types/better-sqlite3':
-        specifier: ^7.6.8
-        version: 7.6.10
-      '@types/humanize-duration':
-        specifier: ^3.27.2
-        version: 3.27.4
-      '@types/jest':
-        specifier: 27.0.3
-        version: 27.0.3
-      '@types/klaw-sync':
-        specifier: ^6.0.1
-        version: 6.0.5
-      '@types/lodash':
-        specifier: ^4.14.197
-        version: 4.17.4
-      '@types/node':
-        specifier: 20.11.30
-        version: 20.11.30
-      '@types/object-hash':
-        specifier: ^3.0.4
-        version: 3.0.6
-      '@types/prettier':
-        specifier: 2.4.2
-        version: 2.4.2
-      '@typescript-eslint/eslint-plugin':
-        specifier: ^6.19.1
-        version: 6.21.0(@typescript-eslint/parser@6.21.0(eslint@8.57.0)(typescript@5.5.3))(eslint@8.57.0)(typescript@5.5.3)
-      '@typescript-eslint/parser':
-        specifier: ^6.19.1
-        version: 6.21.0(eslint@8.57.0)(typescript@5.5.3)
-      eslint:
-        specifier: ^8.47.0
-        version: 8.57.0
-      eslint-plugin-node:
-        specifier: ^11.1.0
-        version: 11.1.0(eslint@8.57.0)
-      eslint-plugin-promise:
-        specifier: ^6.1.1
-        version: 6.2.0(eslint@8.57.0)
-      eslint-plugin-simple-import-sort:
-        specifier: ^9.0.0
-        version: 9.0.0(eslint@8.57.0)
-      eslint-plugin-unused-imports:
-        specifier: ^3.0.0
-        version: 3.2.0(@typescript-eslint/eslint-plugin@6.21.0(@typescript-eslint/parser@6.21.0(eslint@8.57.0)(typescript@5.5.3))(eslint@8.57.0)(typescript@5.5.3))(eslint@8.57.0)
-      humanize-duration:
-        specifier: ^3.30.0
-        version: 3.32.1
-      jest:
-        specifier: 27.4.7
-        version: 27.4.7(ts-node@10.9.2(@types/node@20.11.30)(typescript@5.5.3))
-      klaw-sync:
-        specifier: ^6.0.0
-        version: 6.0.0
-      knip:
-        specifier: ^5.9.4
-        version: 5.17.3(@types/node@20.11.30)(typescript@5.5.3)
-      log-with-statusbar:
-        specifier: ^1.2.0
-        version: 1.2.0
-      prisma:
-        specifier: 5.16.1
-        version: 5.16.1
-      prisma-dbml-generator:
-        specifier: ^0.10.0
-        version: 0.10.0
-      prisma-docs-generator:
-        specifier: ^0.8.0
-        version: 0.8.0
-      prisma-erd-generator:
-        specifier: ^1.11.0
-        version: 1.11.2(@prisma/client@5.16.1(prisma@5.16.1))(typescript@5.5.3)
-      progress-string:
-        specifier: ^1.2.2
-        version: 1.2.2
-      rimraf:
-        specifier: ^6.0.1
-        version: 6.0.1
-      semantic-release:
-        specifier: ^18.0.1
-        version: 18.0.1
-      ts-jest:
-        specifier: 27.1.4
-        version: 27.1.4(@babel/core@7.24.7)(@types/jest@27.0.3)(babel-jest@27.5.1(@babel/core@7.24.7))(esbuild@0.21.5)(jest@27.4.7(ts-node@10.9.2(@types/node@20.11.30)(typescript@5.5.3)))(typescript@5.5.3)
-      tsup:
-        specifier: ^8.1.0
-        version: 8.1.0(ts-node@10.9.2(@types/node@20.11.30)(typescript@5.5.3))(typescript@5.5.3)
-      tsx:
-        specifier: ^4.16.0
-        version: 4.16.2
-      typescript:
-        specifier: ^5.5.3
-        version: 5.5.3
-
   packages/usage:
     devDependencies:
       '@prisma/client':
@@ -275,8 +157,8 @@ importers:
         specifier: 5.16.1
         version: 5.16.1
       prisma-ts-select:
-        specifier: file://../prisma-ts-select/prisma-ts-select-0.0.33.tgz
-        version: file:packages/prisma-ts-select/prisma-ts-select-0.0.33.tgz
+        specifier: workspace:*
+        version: link:../prisma-ts-select
       tsx:
         specifier: ^4.16.2
         version: 4.16.2
@@ -550,6 +432,7 @@ packages:
   '@ericcornelissen/bash-parser@0.5.2':
     resolution: {integrity: sha512-4pIMTa1nEFfMXitv7oaNEWOdM+zpOZavesa5GaiWTgda6Zk32CFGxjUp/iIaN0PwgUW1yTq/fztSjbpE8SLGZQ==}
     engines: {node: '>=4'}
+    deprecated: Support for this package will stop 2025-12-31
 
   '@esbuild/aix-ppc64@0.21.5':
     resolution: {integrity: sha512-1SDgH6ZSPTlggy1yI6+Dbkiz8xzpHJEVAlF/AM1tHPLsf5STom9rwtjE4hKAF20FfXXNTFqEYXyJNWh1GiZedQ==}
@@ -800,6 +683,9 @@ packages:
 
   '@jridgewell/sourcemap-codec@1.4.15':
     resolution: {integrity: sha512-eF2rxCRulEKXHTRiDrDy6erMYWqNw4LPdQ8UQA4huuxaQsVeRPFl2oM8oDGxMFhJUWZf9McpLtJasDDZb/Bpeg==}
+
+  '@jridgewell/sourcemap-codec@1.5.5':
+    resolution: {integrity: sha512-cYQ9310grqxueWbl+WuIUIaiUaDcj7WOq5fVhEljNVgRfOUhY9fy2zTvfoqWsnebh8Sl70VScFbICvJnLKB0Og==}
 
   '@jridgewell/trace-mapping@0.3.25':
     resolution: {integrity: sha512-vNk6aEwybGtawWmy/PzwnGDOjCkLWSD2wqvjGGAgOAwCGWySYXfYoxt00IJkTF+8Lb57DwOb3Aa0o9CApepiYQ==}
@@ -1291,6 +1177,9 @@ packages:
   '@types/node@20.14.10':
     resolution: {integrity: sha512-MdiXf+nDuMvY0gJKxyfZ7/6UFsETO7mGKF54MVD/ekJS6HdFtpZFBgrh6Pseu64XTb2MLyFPlbW6hj8HYRQNOQ==}
 
+  '@types/node@24.6.2':
+    resolution: {integrity: sha512-d2L25Y4j+W3ZlNAeMKcy7yDsK425ibcAOO2t7aPTz6gNMH0z2GThtwENCDc0d/Pw9wgyRqE5Px1wkV7naz8ang==}
+
   '@types/normalize-package-data@2.4.4':
     resolution: {integrity: sha512-37i+OaWTh9qeK4LSHPsyRC7NahnGotNuZvjLSgcPzblpHB3rrCJxAOgI5gCdKm7coonsaX1Of0ILiTcnZjbfxA==}
 
@@ -1409,8 +1298,8 @@ packages:
     resolution: {integrity: sha512-OPdCF6GsMIP+Az+aWfAAOEt2/+iVDKE7oy6lJ098aoe59oAmK76qV6Gw60SbZ8jHuG2wH058GF4pLFbYamYrVA==}
     engines: {node: '>=0.4.0'}
 
-  acorn-walk@8.3.3:
-    resolution: {integrity: sha512-MxXdReSRhGO7VlFe1bRG/oI7/mdLV9B9JJT0N8vZOhF7gFRR5l3M8W9G8JxmKV+JC5mGqJ0QvqfSOLsCPa4nUw==}
+  acorn-walk@8.3.4:
+    resolution: {integrity: sha512-ueEepnujpqee2o5aIYnvHU6C0A42MNdsIDeqy5BydrkuC5R1ZuUFnm27EeFJGoEHJQgn3uleRvmTXaJgfXbt4g==}
     engines: {node: '>=0.4.0'}
 
   acorn@7.4.1:
@@ -1420,6 +1309,11 @@ packages:
 
   acorn@8.11.3:
     resolution: {integrity: sha512-Y9rRfJG5jcKOE0CLisYbojUjIrIEE7AGMzA/Sm4BslANhbS+cDMpgBdcPT91oJ7OuJ9hYJBx59RjbhxVnrF8Xg==}
+    engines: {node: '>=0.4.0'}
+    hasBin: true
+
+  acorn@8.15.0:
+    resolution: {integrity: sha512-NZyJarBfL7nWwIq+FDL6Zp/yHEhePMNnnJ0y3qfieCrmNvYct8uvtiV41UvlSe6apAfk0fY1FbWx+NwfmpvtTg==}
     engines: {node: '>=0.4.0'}
     hasBin: true
 
@@ -2336,6 +2230,10 @@ packages:
     resolution: {integrity: sha512-ErCHMCae19vR8vQGe50xIsVomy19rg6gFu3+r3jkEO46suLMWBksvVyoGgQV+jOfl84ZSOSlmv6Gxa89PmTGmA==}
     engines: {node: '>=6'}
 
+  escalade@3.2.0:
+    resolution: {integrity: sha512-WUj2qlxaQtO4g6Pq5c29GTcWGDyd8itL8zTlipgECz3JesAiiOKotd8JU6otB3PACgG6xkJUyVhboMS+bje/jA==}
+    engines: {node: '>=6'}
+
   escape-html@1.0.3:
     resolution: {integrity: sha512-NiSupZ4OeuGwr68lGIeym/ksIZMJodUGOSCZ/FSnTxcrekbvqrgdUxlJOMpijaKZVjAJrWrGs/6Jy8OMuyj9ow==}
 
@@ -2412,6 +2310,7 @@ packages:
   eslint@8.57.0:
     resolution: {integrity: sha512-dZ6+mexnaTIbSBZWgou51U6OmzIhYM2VcNdtiTtI7qPNZm35Akpr0f6vtw3w1Kmn5PYo+tZVfh13WrhpS6oLqQ==}
     engines: {node: ^12.22.0 || ^14.17.0 || >=16.0.0}
+    deprecated: This version is no longer supported. Please see https://eslint.org/version-support for other options.
     hasBin: true
 
   esniff@2.0.1:
@@ -2879,6 +2778,10 @@ packages:
 
   import-fresh@3.3.0:
     resolution: {integrity: sha512-veYYhQa+D1QBKznvhUHxb8faxlrwUnxseDAbAp457E0wLNio2bOSKnjYDhMj+YiAq61xrMGhQk9iXVk5FzgQMw==}
+    engines: {node: '>=6'}
+
+  import-fresh@3.3.1:
+    resolution: {integrity: sha512-TR3KfrTZTYLPB6jUjfx6MF9WcWrHL9su5TObK4ZkYgBdWKPOFoSoQIdEuTuR82pmtxH2spWG9h6etwfr1pLBqQ==}
     engines: {node: '>=6'}
 
   import-from@4.0.0:
@@ -3448,6 +3351,7 @@ packages:
 
   lodash.template@4.5.0:
     resolution: {integrity: sha512-84vYFxIkmidUiFxidA/KjjH9pAycqW+h980j7Fuz5qxRtO9pgB7MDFTdys1N7A5mcucRiDyEq4fusljItR1T/A==}
+    deprecated: This package is deprecated. Use https://socket.dev/npm/package/eta instead.
 
   lodash.templatesettings@4.2.0:
     resolution: {integrity: sha512-stgLz+i3Aa9mZgnjr/O+v9ruKZsPsndy7qPZOchbqk2cnTU1ZaldKK+v7m54WoKIyxiuMZTKT2H81F8BeAc3ZQ==}
@@ -4142,12 +4046,6 @@ packages:
     peerDependencies:
       '@prisma/client': ^4.0.0 || ^5.0.0
 
-  prisma-ts-select@file:packages/prisma-ts-select/prisma-ts-select-0.0.33.tgz:
-    resolution: {integrity: sha512-vxhS2U3YRCLC5T4H/ScJjpf0Eoe4bfB7CWqmHQBf9+8n6lcEG/TNyEkr70gCgAdJsDXH4T1nyUyv6qigb0Ejqw==, tarball: file:packages/prisma-ts-select/prisma-ts-select-0.0.33.tgz}
-    version: 0.0.33
-    engines: {node: '>=18.17', pnpm: '>= 8.6.12'}
-    hasBin: true
-
   prisma@5.16.1:
     resolution: {integrity: sha512-Z1Uqodk44diztImxALgJJfNl2Uisl9xDRvqybMKEBYJLNKNhDfAHf+ZIJbZyYiBhLMbKU9cYGdDVG5IIXEnL2Q==}
     engines: {node: '>=16.13'}
@@ -4199,7 +4097,7 @@ packages:
 
   puppeteer@19.11.1:
     resolution: {integrity: sha512-39olGaX2djYUdhaQQHDZ0T0GwEp+5f9UB9HmEP0qHfdQHIq0xGQZuAZ5TLnJIc/88SrPLpEflPC+xUqOTv3c5g==}
-    deprecated: < 22.6.4 is no longer supported
+    deprecated: < 24.15.0 is no longer supported
 
   q@1.5.1:
     resolution: {integrity: sha512-kV/CThkXo6xyFEZUugw/+pIOywXcDbFYgSct5cT3gqlbkBE1SJdwy6UQoZvodiWF/ckQLZyDE/Bu1M6gVu5lVw==}
@@ -4499,6 +4397,7 @@ packages:
   source-map@0.8.0-beta.0:
     resolution: {integrity: sha512-2ymg6oRBpebeZi9UUNsgQ89bhx01TcTkmNTGnNO88imTmbSgy4nfujrgVEFKWpMTEGA11EDkTt7mqObTPdigIA==}
     engines: {node: '>= 8'}
+    deprecated: The work that was done in this beta branch won't be included in future versions
 
   spawn-error-forwarder@1.0.0:
     resolution: {integrity: sha512-gRjMgK5uFjbCvdibeGJuy3I5OYz6VLoVdsOJdA6wV0WlfQVLFueoqMxwwYD9RODdgb6oUIvlRlsyFSiQkMKu0g==}
@@ -4898,8 +4797,8 @@ packages:
   typedarray@0.0.6:
     resolution: {integrity: sha512-/aCDEGatGvZ2BIk+HmLf4ifCJFwvKFNb9/JeZPMulfgFracn9QFcAf5GO8B/mweUjSoblS5In0cWhqpfs/5PQA==}
 
-  typescript@4.6.2:
-    resolution: {integrity: sha512-HM/hFigTBHZhLXshn9sN37H085+hQGeJHJ/X7LpBWLID/fbc2acUMfU+lGD98X81sKP+pFa9f0DZmCwB9GnbAg==}
+  typescript@4.9.5:
+    resolution: {integrity: sha512-1FXk9E2Hm+QzZQ7z+McJiHL4NW1F2EzMu9Nq9i3zAaGqibafqYwCVU6WyWAuyQRRzOlxou8xZSyXLEN8oKj24g==}
     engines: {node: '>=4.2.0'}
     hasBin: true
 
@@ -4918,6 +4817,9 @@ packages:
 
   undici-types@5.26.5:
     resolution: {integrity: sha512-JlCMO+ehdEIKqlFxk6IfVoAUVmgz7cU7zD/h9XZ0qzeosSHmUJVOzSQvvYSYWXkFXC+IfLKSIffhv0sVZup6pA==}
+
+  undici-types@7.13.0:
+    resolution: {integrity: sha512-Ov2Rr9Sx+fRgagJ5AX0qvItZG/JKKoBRAVITs1zk7IqZGTJUwgUr7qoYBpWwakpWilTZFM98rG/AFRocu10iIQ==}
 
   undici@5.11.0:
     resolution: {integrity: sha512-oWjWJHzFet0Ow4YZBkyiJwiK5vWqEYoH7BINzJAJOLedZ++JpAlCbUktW2GQ2DS2FpKmxD/JMtWUUWl1BtghGw==}
@@ -5470,13 +5372,13 @@ snapshots:
       '@commitlint/execute-rule': 16.2.1
       '@commitlint/resolve-extends': 16.2.1
       '@commitlint/types': 16.2.1
-      '@types/node': 20.14.10
+      '@types/node': 24.6.2
       chalk: 4.1.2
       cosmiconfig: 7.1.0
-      cosmiconfig-typescript-loader: 2.0.2(@types/node@20.14.10)(cosmiconfig@7.1.0)(typescript@4.6.2)
+      cosmiconfig-typescript-loader: 2.0.2(@types/node@24.6.2)(cosmiconfig@7.1.0)(typescript@4.9.5)
       lodash: 4.17.21
       resolve-from: 5.0.0
-      typescript: 4.6.2
+      typescript: 4.9.5
     transitivePeerDependencies:
       - '@swc/core'
       - '@swc/wasm'
@@ -5500,7 +5402,7 @@ snapshots:
     dependencies:
       '@commitlint/config-validator': 16.2.1
       '@commitlint/types': 16.2.1
-      import-fresh: 3.3.0
+      import-fresh: 3.3.1
       lodash: 4.17.21
       resolve-from: 5.0.0
       resolve-global: 1.0.0
@@ -5832,6 +5734,8 @@ snapshots:
 
   '@jridgewell/sourcemap-codec@1.4.15': {}
 
+  '@jridgewell/sourcemap-codec@1.5.5': {}
+
   '@jridgewell/trace-mapping@0.3.25':
     dependencies:
       '@jridgewell/resolve-uri': 3.1.2
@@ -5840,7 +5744,7 @@ snapshots:
   '@jridgewell/trace-mapping@0.3.9':
     dependencies:
       '@jridgewell/resolve-uri': 3.1.2
-      '@jridgewell/sourcemap-codec': 1.4.15
+      '@jridgewell/sourcemap-codec': 1.5.5
 
   '@mermaid-js/mermaid-cli@10.9.1(typescript@5.5.3)':
     dependencies:
@@ -6531,7 +6435,7 @@ snapshots:
 
   '@types/cross-spawn@6.0.2':
     dependencies:
-      '@types/node': 20.14.10
+      '@types/node': 20.11.30
 
   '@types/d3-scale-chromatic@3.0.3': {}
 
@@ -6605,6 +6509,10 @@ snapshots:
     dependencies:
       undici-types: 5.26.5
 
+  '@types/node@24.6.2':
+    dependencies:
+      undici-types: 7.13.0
+
   '@types/normalize-package-data@2.4.4': {}
 
   '@types/object-hash@3.0.6': {}
@@ -6629,7 +6537,7 @@ snapshots:
 
   '@types/yauzl@2.10.3':
     dependencies:
-      '@types/node': 20.14.10
+      '@types/node': 20.11.30
     optional: true
 
   '@typescript-eslint/eslint-plugin@6.21.0(@typescript-eslint/parser@6.21.0(eslint@8.57.0)(typescript@5.5.3))(eslint@8.57.0)(typescript@5.5.3)':
@@ -6743,13 +6651,15 @@ snapshots:
 
   acorn-walk@7.2.0: {}
 
-  acorn-walk@8.3.3:
+  acorn-walk@8.3.4:
     dependencies:
-      acorn: 8.11.3
+      acorn: 8.15.0
 
   acorn@7.4.1: {}
 
   acorn@8.11.3: {}
+
+  acorn@8.15.0: {}
 
   agent-base@6.0.2:
     dependencies:
@@ -7291,12 +7201,12 @@ snapshots:
     dependencies:
       layout-base: 1.0.2
 
-  cosmiconfig-typescript-loader@2.0.2(@types/node@20.14.10)(cosmiconfig@7.1.0)(typescript@4.6.2):
+  cosmiconfig-typescript-loader@2.0.2(@types/node@24.6.2)(cosmiconfig@7.1.0)(typescript@4.9.5):
     dependencies:
-      '@types/node': 20.14.10
+      '@types/node': 24.6.2
       cosmiconfig: 7.1.0
-      ts-node: 10.9.2(@types/node@20.14.10)(typescript@4.6.2)
-      typescript: 4.6.2
+      ts-node: 10.9.2(@types/node@24.6.2)(typescript@4.9.5)
+      typescript: 4.9.5
     transitivePeerDependencies:
       - '@swc/core'
       - '@swc/wasm'
@@ -7311,7 +7221,7 @@ snapshots:
 
   cosmiconfig@8.1.3:
     dependencies:
-      import-fresh: 3.3.0
+      import-fresh: 3.3.1
       js-yaml: 4.1.0
       parse-json: 5.2.0
       path-type: 4.0.0
@@ -7765,6 +7675,8 @@ snapshots:
       '@esbuild/win32-x64': 0.21.5
 
   escalade@3.1.2: {}
+
+  escalade@3.2.0: {}
 
   escape-html@1.0.3: {}
 
@@ -8434,6 +8346,11 @@ snapshots:
   ignore@5.3.1: {}
 
   import-fresh@3.3.0:
+    dependencies:
+      parent-module: 1.0.1
+      resolve-from: 4.0.0
+
+  import-fresh@3.3.1:
     dependencies:
       parent-module: 1.0.1
       resolve-from: 4.0.0
@@ -9902,12 +9819,6 @@ snapshots:
       - typescript
       - utf-8-validate
 
-  prisma-ts-select@file:packages/prisma-ts-select/prisma-ts-select-0.0.33.tgz:
-    dependencies:
-      '@prisma/generator-helper': 5.16.2
-      '@prisma/internals': 5.16.2
-      ts-pattern: 5.3.1
-
   prisma@5.16.1:
     dependencies:
       '@prisma/engines': 5.16.1
@@ -10628,8 +10539,8 @@ snapshots:
       '@tsconfig/node14': 1.0.3
       '@tsconfig/node16': 1.0.4
       '@types/node': 20.11.30
-      acorn: 8.11.3
-      acorn-walk: 8.3.3
+      acorn: 8.15.0
+      acorn-walk: 8.3.4
       arg: 4.1.3
       create-require: 1.1.1
       diff: 4.0.2
@@ -10639,21 +10550,21 @@ snapshots:
       yn: 3.1.1
     optional: true
 
-  ts-node@10.9.2(@types/node@20.14.10)(typescript@4.6.2):
+  ts-node@10.9.2(@types/node@24.6.2)(typescript@4.9.5):
     dependencies:
       '@cspotcode/source-map-support': 0.8.1
       '@tsconfig/node10': 1.0.11
       '@tsconfig/node12': 1.0.11
       '@tsconfig/node14': 1.0.3
       '@tsconfig/node16': 1.0.4
-      '@types/node': 20.14.10
-      acorn: 8.11.3
-      acorn-walk: 8.3.3
+      '@types/node': 24.6.2
+      acorn: 8.15.0
+      acorn-walk: 8.3.4
       arg: 4.1.3
       create-require: 1.1.1
       diff: 4.0.2
       make-error: 1.3.6
-      typescript: 4.6.2
+      typescript: 4.9.5
       v8-compile-cache-lib: 3.0.1
       yn: 3.1.1
 
@@ -10730,7 +10641,7 @@ snapshots:
 
   typedarray@0.0.6: {}
 
-  typescript@4.6.2: {}
+  typescript@4.9.5: {}
 
   typescript@5.5.3: {}
 
@@ -10743,6 +10654,8 @@ snapshots:
       through: 2.3.8
 
   undici-types@5.26.5: {}
+
+  undici-types@7.13.0: {}
 
   undici@5.11.0:
     dependencies:
@@ -10771,7 +10684,7 @@ snapshots:
   update-browserslist-db@1.1.0(browserslist@4.23.1):
     dependencies:
       browserslist: 4.23.1
-      escalade: 3.1.2
+      escalade: 3.2.0
       picocolors: 1.0.1
 
   uri-js@4.4.1:
@@ -10952,7 +10865,7 @@ snapshots:
   yargs@17.7.1:
     dependencies:
       cliui: 8.0.1
-      escalade: 3.1.2
+      escalade: 3.2.0
       get-caller-file: 2.0.5
       require-directory: 2.1.1
       string-width: 4.2.3
@@ -10962,7 +10875,7 @@ snapshots:
   yargs@17.7.2:
     dependencies:
       cliui: 8.0.1
-      escalade: 3.1.2
+      escalade: 3.2.0
       get-caller-file: 2.0.5
       require-directory: 2.1.1
       string-width: 4.2.3
