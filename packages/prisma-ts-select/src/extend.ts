@@ -67,8 +67,8 @@ type IsString<T> = T extends string ? T : never;
 
 type ValidSelect<Tables extends Array<TTables>> = "*" | GetOtherColumns<Tables>;// | GetColsFromTable<Tables[number]>; // TODO
 
-type GetOtherColumns<Tables extends Array<TTables>> = Tables extends [infer T extends TTables, ...infer R extends Array<TTables>]
-    ? GetColsBaseTable<T> | GetJoinCols<R[number]>
+type GetOtherColumns<Tables extends Array<TTables>> = Tables extends [infer T extends TTables, ...Array<TTables>]
+    ? GetColsBaseTable<T> | GetJoinCols<Tables[number]>
     : never
 
 
