@@ -1,5 +1,5 @@
 {
-  "name": "prisma-ts-select",
+  "name": "@gcm/prisma-ts-select",
   "version": "0.0.33",
   "type": "module",
   "bin": {

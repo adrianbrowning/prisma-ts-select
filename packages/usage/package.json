@@ -1,12 +1,12 @@
 {
-  "name": "usage",
+  "name": "@gcm/usage",
   "private": true,
   "version": "1.0.0",
   "type": "module",
   "license": "MIT",
   "scripts": {
     "gen": "pnpm exec prisma generate",
-    "b": "pushd ../prisma-ts-select; pnpm build; popd;",
+    "b": "pnpm --filter prisma-ts-select build",
     "b&g": "pnpm b && pnpm gen;",
     "p:r": "pnpm exec prisma migrate reset --force",
     "test": "pnpm p:r && find ./tests -name '*.spec.ts' -exec node --import tsx --test --test-reporter spec {} \\;",

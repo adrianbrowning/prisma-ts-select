@@ -1,30 +1,23 @@
 import assert from "node:assert/strict"
-import {describe, it, test} from "node:test"
+import {describe, it, before} from "node:test"
 import tsSelectExtend from 'prisma-ts-select/extend'
 import {PrismaClient} from "@prisma/client";
 import {type Equal, type Expect, typeCheck} from "./utils.js";
 
 const prisma = new PrismaClient({}).$extends(tsSelectExtend);
 
-console.log(
-    prisma.$from("User")
-        .join("Post", "authorId", "User.id")
-        .having({
-            "User.name": {
-                op: "LIKE",
-                value: "a"
-            }
-        })
-        .limit(1)
-        // .offset(1)
+runTests();
 
+function runTests() {
+describe("where", () => {
 
-        .getSQL(true));
+    before(async function(){
+        // Delete in correct order due to foreign key constraints
+        await prisma.post.deleteMany({});
+        await prisma.user.deleteMany({});
+    });
 
-
-describe.skip("where", () => {
-
-    test("Where Criteria Object", async () => {
+    describe("Where Criteria Object", () => {
 
         function createQuery() {
             return prisma.$from("User")
@@ -79,7 +72,7 @@ describe.skip("where", () => {
 
         }
 
-        it.skip("should run", async () => {
+        it("should run", async () => {
             const result = await createQuery().run();
             createQuery2().getSQL(true)
             type TExpected = Array<{
@@ -104,24 +97,16 @@ describe.skip("where", () => {
 
         it("should match SQL", () => {
             const sql = createQuery().getSQL();
-            console.log(sql);
 
-            `WHERE
-            (NOT((User.name LIKE 'something' ) OR (User.name LIKE 'something else' )))
-            AND
-            (NOT((User.id = 2 )))
-            AND
-            ((User.id = 1 AND Post.id = 1 ) AND (User.id = 1 AND Post.id = 1 ))
-            AND
-            ((User.id = 2 ) OR (Post.content IS NOT NULL ));`
+            const expectedSQL = `SELECT User.id AS \`User.id\`, User.email AS \`User.email\`, User.name AS \`User.name\`, Post.id AS \`Post.id\`, Post.title AS \`Post.title\`, Post.content AS \`Post.content\`, Post.published AS \`Post.published\`, Post.authorId AS \`Post.authorId\`, Post.lastModifiedById AS \`Post.lastModifiedById\` FROM User JOIN Post ON authorId = User.id WHERE (NOT((User.name LIKE 'something' ) OR (User.name LIKE 'something else' ))) AND (NOT(((User.id = 2 )))) AND ((User.id = 1 AND  Post.id = 1 ) AND (User.id = 1 AND  Post.id = 1 )) AND ((User.id = 2 ) OR (Post.content IS NOT NULL ));`;
 
-            assert.strictEqual(sql, `SELECT email, name, Post.title FROM User JOIN Post ON authorId = User.id;`)
+            assert.strictEqual(sql, expectedSQL);
         });
 
 
     });
 
-    test("Where Raw", async () => {
+    describe("Where Raw", () => {
 
         function createQuery() {
             return prisma.$from("User")
@@ -155,12 +140,13 @@ describe.skip("where", () => {
 
         it("should match SQL", () => {
             const sql = createQuery().getSQL();
-            assert.strictEqual(sql, `SELECT email, name, Post.title FROM User JOIN Post ON authorId = User.id WHERE (User.id = 1 AND Post.id = 1) OR (User.id = 2 OR Post.content IS NOT NULL);`)
+            const expectedSQL = `SELECT User.id AS \`User.id\`, User.email AS \`User.email\`, User.name AS \`User.name\`, Post.id AS \`Post.id\`, Post.title AS \`Post.title\`, Post.content AS \`Post.content\`, Post.published AS \`Post.published\`, Post.authorId AS \`Post.authorId\`, Post.lastModifiedById AS \`Post.lastModifiedById\` FROM User JOIN Post ON authorId = User.id WHERE (User.id = 1 AND Post.id = 1) OR (User.id = 2 OR Post.content IS NOT NULL);`;
+            assert.strictEqual(sql, expectedSQL);
         });
 
     });
 
-    test("Where NULL", async () => {
+    describe("Where NULL - Type Narrowing", () => {
 
         function createQuery() {
             return prisma.$from("User")
@@ -189,127 +175,176 @@ describe.skip("where", () => {
 
         it("should match SQL", () => {
             const sql = createQuery().getSQL();
-            assert.strictEqual(sql, `SELECT email, name, Post.title FROM User JOIN Post ON authorId = User.id WHERE (User.id = 1 AND Post.id = 1) OR (User.id = 2 OR Post.content IS NOT NULL);`)
+            const expectedSQL = `SELECT name, Post.content FROM User JOIN Post ON authorId = User.id WHERE ((Post.content IS NOT NULL )) AND ((User.name IS NULL ));`;
+            assert.strictEqual(sql, expectedSQL);
         });
 
     });
 });
 
-describe.skip("having", () => {
+describe("having", () => {
 
-    test("Where Criteria", async () => {
+    before(async function(){
+        // Delete in correct order due to foreign key constraints
+        await prisma.post.deleteMany({});
+        await prisma.user.deleteMany({});
+    });
 
-        {
-            const sql = prisma.$from("User")
+    describe("HAVING with GROUP BY", () => {
+
+        function createQuery() {
+            return prisma.$from("User")
                 .join("Post", "authorId", "User.id")
-                .where({
+                .groupBy(["User.name"])
+                .having({
+                    "User.name": {
+                        op: "LIKE",
+                        value: "John%"
+                    }
+                })
+                .selectAll();
+        }
+
+        it("should run", async () => {
+            const result = await createQuery().run();
+
+            type TExpected = Array<{
+                "User.id": number;
+                "User.email": string;
+                "User.name": string | null;
+                "Post.id": number;
+                "Post.title": string;
+                "Post.content": string | null;
+                "Post.published": boolean;
+                "Post.authorId": number;
+                "Post.lastModifiedById": number;
+            }>;
+
+            typeCheck({} as Expect<Equal<typeof result, TExpected>>);
+
+            const expected: TExpected = [];
+
+            assert.deepStrictEqual(result, expected);
+        });
+
+        it("should match SQL", () => {
+            const sql = createQuery().getSQL();
+            const expectedSQL = `SELECT User.id AS \`User.id\`, User.email AS \`User.email\`, User.name AS \`User.name\`, Post.id AS \`Post.id\`, Post.title AS \`Post.title\`, Post.content AS \`Post.content\`, Post.published AS \`Post.published\`, Post.authorId AS \`Post.authorId\`, Post.lastModifiedById AS \`Post.lastModifiedById\` FROM User JOIN Post ON authorId = User.id GROUP BY User.name HAVING (User.name LIKE 'John%' );`;
+            assert.strictEqual(sql, expectedSQL);
+        });
+
+    });
+
+    describe("HAVING without GROUP BY", () => {
+
+        function createQuery() {
+            return prisma.$from("User")
+                .join("Post", "authorId", "User.id")
+                .having({
+                    "User.name": {
+                        op: "LIKE",
+                        value: "Stuart%"
+                    }
+                })
+                .selectAll();
+        }
+
+        it("should generate SQL (runtime skipped - SQLite limitation)", async () => {
+            // NOTE: SQLite requires either GROUP BY or aggregate functions with HAVING
+            // This test verifies SQL generation works, but we skip runtime execution
+            // See README: "SQLite - Requires you to have either an aggregate function in the SELECT or make use of GROUP BY"
+
+            const sql = createQuery().getSQL();
+            const expectedSQL = `SELECT User.id AS \`User.id\`, 
+                                        User.email AS \`User.email\`, 
+                                        User.name AS \`User.name\`, 
+                                        Post.id AS \`Post.id\`, 
+                                        Post.title AS \`Post.title\`, 
+                                        Post.content AS \`Post.content\`, 
+                                        Post.published AS \`Post.published\`, 
+                                        Post.authorId AS \`Post.authorId\`, 
+                                        Post.lastModifiedById AS \`Post.lastModifiedById\` 
+FROM User JOIN Post ON authorId = User.id HAVING (User.name LIKE 'Stuart%' );`;
+            assert.strictEqual(sql, expectedSQL);
+
+            // Verify type is correct even though we don't run it
+            type TExpected = Array<{
+                "User.id": number;
+                "User.email": string;
+                "User.name": string | null;
+                "Post.id": number;
+                "Post.title": string;
+                "Post.content": string | null;
+                "Post.published": boolean;
+                "Post.authorId": number;
+                "Post.lastModifiedById": number;
+            }>;
+
+            const result = await createQuery().run()
+
+
+            typeCheck({} as Expect<Equal<typeof result,TExpected>>);
+
+        });
+    });
+
+    describe("HAVING with complex criteria", () => {
+
+        function createQuery() {
+            return prisma.$from("User")
+                .join("Post", "authorId", "User.id")
+                .groupBy(["User.id", "User.name"])
+                .having({
                     $AND: [
                         {
-                            "User.id": 1,
-                            "Post.id": 1
-                        },
-                        {
-                            "Post.title": "hello"
-                        },
-                        {
-                            $OR: [
-                                {
-                                    "User.name": "John Doe",
-                                }, {
-                                    "User.name": "Frank Jones",
-                                }
-                            ]
+                            "User.name": {
+                                op: "LIKE",
+                                value: "J%"
+                            }
                         }
                     ],
                     $OR: [
                         {
-                            "User.id": 2,
-                            "Post.id": 2
-                        },
-                        {
-                            "Post.content": {
-                                op: "IS NOT NULL"
-                            }
-                        }
-                    ]
-                })
-                .getSQL();
-            console.log(sql)
-            //  WHERE ((User.id = 1 AND Post.id = 1 ) AND (Post.title = 'hello' ) AND ((User.name = 'John Doe' ) OR (User.name = 'Frank Jones' ))) AND ((User.id = 2 AND Post.id = 2 ) OR (Post.content IS NOT NULL ));
-
-            // TODO check sql
-            // TODO Return Type
-
-            assert.equal(sql, "FROM User JOIN Post ON authorId = User.id;");
-        }
-
-    });
-
-    test("Where Raw", async () => {
-
-        {
-            const sql = prisma.$from("User")
-                .join("Post", "authorId", "User.id")
-                .where({
-                    $AND: [
-                        {
                             "User.id": 1,
-                            "Post.id": 1
                         },
-                        {
-                            "Post.title": "hello"
-                        },
-                        {
-                            $OR: [
-                                {
-                                    "User.name": "John Doe",
-                                }, {
-                                    "User.name": "Frank Jones",
-                                }
-                            ]
-                        }
-                    ],
-                    $OR: [
                         {
                             "User.id": 2,
-                            "Post.id": 2
-                        },
-                        {
-                            "Post.content": {
-                                op: "IS NOT NULL"
-                            }
                         }
                     ]
                 })
-                .getSQL();
-            console.log(sql)
-            //  WHERE ((User.id = 1 AND Post.id = 1 ) AND (Post.title = 'hello' ) AND ((User.name = 'John Doe' ) OR (User.name = 'Frank Jones' ))) AND ((User.id = 2 AND Post.id = 2 ) OR (Post.content IS NOT NULL ));
-
-            // TODO check sql
-            // TODO Return Type
-
-            assert.equal(sql, "FROM User JOIN Post ON authorId = User.id;");
+                .selectAll();
         }
 
-    });
+        it("should run", async () => {
+            const result = await createQuery().run();
 
-    test("Where NULL", async () => {
+            type TExpected = Array<{
+                "User.id": number;
+                "User.email": string;
+                "User.name": string | null;
+                "Post.id": number;
+                "Post.title": string;
+                "Post.content": string | null;
+                "Post.published": boolean;
+                "Post.authorId": number;
+                "Post.lastModifiedById": number;
+            }>;
 
-        {
-            const sql = prisma.$from("User")
-                .join("Post", "authorId", "User.id")
-                .whereNotNull("Post.content")
-                .whereIsNull("User.name")
-                .select("name")
-                .select("Post.content")
-                .run();
-            // TODO check sql
-            // TODO Return Type
-            //  WHERE ((User.id = 1 AND Post.id = 1 ) AND (Post.title = 'hello' ) AND ((User.name = 'John Doe' ) OR (User.name = 'Frank Jones' ))) AND ((User.id = 2 AND Post.id = 2 ) OR (Post.content IS NOT NULL ));
+            typeCheck({} as Expect<Equal<typeof result, TExpected>>);
 
-            assert.equal(sql, "FROM User JOIN Post ON authorId = User.id;");
-        }
+            const expected: TExpected = [];
 
+            assert.deepStrictEqual(result, expected);
+        });
+
+        it("should match SQL", () => {
+            const sql = createQuery().getSQL();
+            // Should have both GROUP BY and HAVING
+            assert.ok(sql.includes("GROUP BY"));
+            assert.ok(sql.includes("HAVING"));
+            assert.ok(sql.includes("User.name LIKE 'J%'"));
+        });
     });
 });
+}
 

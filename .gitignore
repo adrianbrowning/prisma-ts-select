@@ -12,3 +12,5 @@ pnpm-debug.log
 .env*
 **/built
 **/coverage
+.idea
+**/.DS_Store
