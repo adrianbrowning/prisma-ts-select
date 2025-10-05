@@ -13,3 +13,4 @@ pnpm-debug.log
 **/built
 **/coverage
 .idea
+**/.DS_Store
