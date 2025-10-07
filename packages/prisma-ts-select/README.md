@@ -603,6 +603,58 @@ FROM User
 JOIN Post ON authorId = User.id;
 ```
 
+#### Example - Column Aliases
+```typescript
+// Basic alias
+prisma.$from("User")
+      .select("User.name", "username");
+
+// Multiple aliases
+prisma.$from("User")
+      .select("User.id", "userId")
+      .select("User.email", "emailAddress");
+
+// Mixing aliased and non-aliased columns
+prisma.$from("User")
+      .select("User.id")
+      .select("User.name", "username")
+      .select("User.email");
+```
+
+##### SQL
+The resulting SQL will look like:
+
+```sql
+-- Basic alias
+SELECT User.name AS `username` FROM User;
+
+-- Multiple aliases
+SELECT User.id AS `userId`, User.email AS `emailAddress` FROM User;
+
+-- Mixed
+SELECT User.id, User.name AS `username`, User.email FROM User;
+```
+
+#### Example - Aliases with Joins
+```typescript
+prisma.$from("User")
+      .join("Post", "authorId", "User.id")
+      .select("User.name", "authorName")
+      .select("Post.title", "postTitle");
+```
+
+##### SQL
+The resulting SQL will look like:
+
+```sql
+SELECT User.name AS `authorName`, Post.title AS `postTitle`
+FROM User
+JOIN Post ON authorId = User.id;
+```
+
+[!NOTE]
+> When using column aliases, you can reference the alias in `ORDER BY` clauses. The returned type will use the alias names instead of the original column names.
+
 ### Having
 
 `.having` uses the same syntax as [`.where`](#where). Please see the previous section for details.

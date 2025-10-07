@@ -2,7 +2,7 @@ import {describe, test} from "node:test";
 import assert from "node:assert/strict";
 import tsSelectExtend from 'prisma-ts-select/extend';
 import {PrismaClient} from "@prisma/client";
-import {type Equal, type Expect, typeCheck} from "./utils.js";
+import {type Equal, type Expect, typeCheck} from "./utils.ts";
 
 const prisma = new PrismaClient({})
     .$extends(tsSelectExtend);
@@ -21,6 +21,7 @@ describe("Column Alias Support", () => {
         });
 
         test("should return aliased column name in type", async () => {
+            //    _?
             const result = await prisma.$from("User")
                 .select("User.name", "username")
                 .run();
@@ -182,26 +183,26 @@ describe("Column Alias Support", () => {
     describe("Aliases with GROUP BY and HAVING", () => {
         test("should use alias in GROUP BY", async () => {
             const query = prisma.$from("User")
+                .groupBy(["User.name"])
                 .select("User.name", "userName")
-                .groupBy(["userName"])
                 .getSQL();
 
             assert.strictEqual(
                 query,
-                "SELECT User.name AS `userName` FROM User GROUP BY userName;"
+                "SELECT User.name AS `userName` FROM User GROUP BY User.name;"
             );
         });
 
         test("should use alias in HAVING clause", async () => {
             const query = prisma.$from("Post")
+                .groupBy(["Post.authorId"])
+                .having({"Post.authorId": {op: ">", value: 1}})
                 .select("Post.authorId", "author")
-                .groupBy(["author"])
-                .having({"author": {op: ">", value: 1}})
                 .getSQL();
 
             assert.strictEqual(
                 query,
-                "SELECT Post.authorId AS `author` FROM Post GROUP BY author HAVING (author > 1 );"
+                "SELECT Post.authorId AS `author` FROM Post GROUP BY Post.authorId HAVING (Post.authorId > 1 );"
             );
         });
     });
