@@ -77,6 +77,20 @@ type GetTableStar<Tables extends Array<TTables>> = Tables extends [infer T exten
 
 type GetTableStarJoined<T extends TTables> = T extends any ? `${T}.*` : never
 
+// Helper type to extract column type for aliasing
+type ExtractColumnType<
+    Column extends string,
+    TSources extends TArrSources,
+    TFields extends TFieldsType
+> = Column extends `${infer T}.${infer F}`
+    ? T extends keyof TFields
+        ? F extends keyof TFields[T]
+            ? TFields[T][F]
+            : never
+        : never
+    : Column extends keyof TFields[TSources[0]]
+        ? TFields[TSources[0]][Column]
+        : never;
 
 export type TTables = DATABASE["table"];
 type TArrSources = [TTables, ...Array<TTables>];
@@ -257,7 +271,13 @@ class _fRun<TSources extends TArrSources, TFields extends TFieldsType, TSelectRT
         const havingClause = this.values.having !== undefined ? processCriteria(this.values.having,  "AND", formatted) : undefined;
 
         return [
-            this.values.selects.length === 0 ? "" : ("SELECT " + (this.values.selectDistinct === true ? "DISTINCT " : "") + this.values.selects.join(', ')),
+            this.values.selects.length === 0
+                ? ""
+                : ("SELECT " +
+                    (this.values.selectDistinct === true
+                        ? "DISTINCT "
+                        : "")
+                    + this.values.selects.join(', ')),
             `FROM ${this.values.database}`,
             this.values.tables?.map(({
                                          table,
@@ -302,8 +322,8 @@ class _fLimit<TSources extends TArrSources, TFields extends TFieldsType, TSelect
 
 
 
-type OrderBy<Tables extends TArrSources> = Tables extends [infer T extends TTables, ...Array<TTables>]
-    ? GetColsBaseTable<T> | GetJoinCols<Tables[number]>
+type OrderBy<Tables extends TArrSources, TSelectRT extends Record<string, any> = {}> = Tables extends [infer T extends TTables, ...Array<TTables>]
+    ? GetColsBaseTable<T> | GetJoinCols<Tables[number]> | (keyof TSelectRT & string)
     : never;
 
 /*
@@ -317,7 +337,7 @@ run
 
 
 class _fOrderBy<TSources extends TArrSources, TFields extends TFieldsType, TSelectRT extends Record<string, any> = {}> extends _fLimit<TSources, TFields, TSelectRT> {
-    orderBy(orderBy: Array<`${OrderBy<TSources>}${ "" | " DESC" | " ASC"}`>) {
+    orderBy(orderBy: Array<`${OrderBy<TSources, TSelectRT>}${ "" | " DESC" | " ASC"}`>) {
         return new _fLimit<TSources, TFields, TSelectRT>(this.db, {...this.values, orderBy});
     }
 }
@@ -375,7 +395,13 @@ type IterateTablesFromFields<Table extends TTables, TFields extends Record<strin
 
 
 class _fSelect<TSources extends TArrSources, TFields extends TFieldsType, TSelectRT extends Record<string, any> = {}> extends _fOrderBy<TSources, TFields, TSelectRT> {
-    select<TSelect extends ValidSelect<TSources>>(select: TSelect) {
+    select<TSelect extends ValidSelect<TSources>, TAlias extends string = never>(
+        select: TSelect,
+        alias?: TAlias
+    ): [TAlias] extends [never]
+        ? _fSelect<TSources, TFields, Prettify<TSelectRT & MergeItems<TSelect, TSources, TFields>>>
+        : _fSelect<TSources, TFields, Prettify<TSelectRT & Record<TAlias, ExtractColumnType<TSelect, TSources, TFields>>>> {
+
         // Check if select is "Table.*" pattern
         const tableStarMatch = select.match(/^(\w+)\.\*$/);
         if (tableStarMatch) {
@@ -398,13 +424,21 @@ class _fSelect<TSources extends TArrSources, TFields extends TFieldsType, TSelec
             return new _fSelect<TSources, TFields, Prettify<TSelectRT & MergeItems<TSelect, TSources, TFields>>>(this.db, {
                 ...this.values,
                 selects: [...this.values.selects, ...expandedSelects]
-            });
+            }) as any;
+        }
+
+        // Check if alias is provided
+        if (alias !== undefined) {
+            return new _fSelect(this.db, {
+                ...this.values,
+                selects: [...this.values.selects, `${select} AS \`${alias}\``]
+            }) as any;
         }
 
         return new _fSelect<TSources, TFields, Prettify<TSelectRT & MergeItems<TSelect, TSources, TFields>>>(this.db, {
             ...this.values,
             selects: [...this.values.selects, select]
-        });
+        }) as any;
     }
 }
 

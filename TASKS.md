@@ -119,16 +119,18 @@ prisma
 
 ---
 
-### #31 - Allow select * for table
+### #31 - Allow select * for table ✅ COMPLETED
 **Goal:** Allow the syntax `.select("Table.*")` to select all columns from a specific table.
 
 **Sub-tasks:**
-- [ ] Update type definitions in `extend.ts` to accept `"Table.*"` pattern in `.select()`
-- [ ] Add regex or pattern matching to detect `Table.*` syntax
-- [ ] Expand `Table.*` to actual column list in SQL generation (e.g., `User.*` → `User.id, User.email, User.name`)
-- [ ] Ensure TypeScript inference correctly returns all fields from that table
-- [ ] Add test cases for single table and joined tables with `Table.*` syntax
-- [ ] Update README.md documentation with examples
+- [x] Update type definitions in `extend.ts` to accept `"Table.*"` pattern in `.select()`
+- [x] Add regex or pattern matching to detect `Table.*` syntax
+- [x] Expand `Table.*` to actual column list in SQL generation (e.g., `User.*` → `User.id, User.email, User.name`)
+- [x] Ensure TypeScript inference correctly returns all fields from that table
+- [x] Add test cases for single table and joined tables with `Table.*` syntax
+- [x] Update README.md documentation with examples
+
+**Completed in:** PR #36
 
 **Technical Notes:**
 - Should work similarly to `.selectAll()` but scoped to a single table

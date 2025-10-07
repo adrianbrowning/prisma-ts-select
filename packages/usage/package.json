@@ -23,6 +23,6 @@
     "prisma": "5.16.1",
     "prisma-ts-select": "workspace:@gcm/prisma-ts-select@*",
     "tsx": "^4.16.2",
-    "typescript": "^5.5.3"
+    "typescript": "^5.9.3"
   }
 }
