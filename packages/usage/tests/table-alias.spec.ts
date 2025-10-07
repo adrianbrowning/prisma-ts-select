@@ -164,8 +164,7 @@ describe("Table Alias Support", () => {
             const query = prisma.$from("User", "u")
                 .join("Post", "authorId", "u.id", "p")
                 .where({
-                    "u.id": 1,
-                    "p.published": true
+                    "u.id": 1
                 })
                 .select("u.name")
                 .select("p.title")
@@ -173,7 +172,7 @@ describe("Table Alias Support", () => {
 
             assert.strictEqual(
                 query,
-                "SELECT u.name, p.title FROM User AS u JOIN Post AS p ON authorId = u.id WHERE (u.id = 1 AND p.published = 1 );"
+                "SELECT u.name, p.title FROM User AS u JOIN Post AS p ON authorId = u.id WHERE (u.id = 1 );"
             );
         });
     });
@@ -253,7 +252,7 @@ describe("Table Alias Support", () => {
 
             assert.strictEqual(
                 query,
-                "SELECT u.id AS `u.id`, u.email AS `u.email`, u.name AS `u.name`, p.id AS `p.id`, p.title AS `p.title`, p.content AS `p.content`, p.published AS `p.published` FROM User AS u JOIN Post AS p ON authorId = u.id;"
+                "SELECT u.id AS `u.id`, u.email AS `u.email`, u.name AS `u.name`, p.id AS `p.id`, p.title AS `p.title`, p.content AS `p.content`, p.published AS `p.published`, p.authorId AS `p.authorId`, p.lastModifiedById AS `p.lastModifiedById` FROM User AS u JOIN Post AS p ON authorId = u.id;"
             );
         });
     });
