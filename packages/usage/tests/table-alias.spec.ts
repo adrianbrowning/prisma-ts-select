@@ -66,9 +66,22 @@ describe("Table Alias Support", () => {
     });
 
     describe("Table aliases with joins", () => {
-        test("should alias both tables in a join", async () => {
+        test("should alias both tables in a join (positional syntax)", async () => {
             const query = prisma.$from("User", "u")
                 .join("Post", "authorId", "u.id", "p")
+                .select("u.name")
+                .select("p.title")
+                .getSQL();
+
+            assert.strictEqual(
+                query,
+                "SELECT u.name, p.title FROM User AS u JOIN Post AS p ON authorId = u.id;"
+            );
+        });
+
+        test("should alias both tables in a join (object syntax)", async () => {
+            const query = prisma.$from("User", "u")
+                .join({table: "Post", src: "authorId", on: "u.id", alias: "p"})
                 .select("u.name")
                 .select("p.title")
                 .getSQL();
@@ -102,6 +115,19 @@ describe("Table Alias Support", () => {
             assert.strictEqual(
                 query,
                 "SELECT User.name, p.title FROM User JOIN Post AS p ON authorId = User.id;"
+            );
+        });
+
+        test("should support object syntax without alias", async () => {
+            const query = prisma.$from("User")
+                .join({table: "Post", src: "authorId", on: "User.id"})
+                .select("User.name")
+                .select("Post.title")
+                .getSQL();
+
+            assert.strictEqual(
+                query,
+                "SELECT User.name, Post.title FROM User JOIN Post ON authorId = User.id;"
             );
         });
 
