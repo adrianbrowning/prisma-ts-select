@@ -101,12 +101,16 @@ class DbSelect {
     constructor(public db: PrismaClient) {
     }
 
-    from<TDBBase extends TTables>(database: TDBBase, alias?: string) {
-        //@-ts-expect-error remove me
-        return new _fJoin<[TDBBase], Record<TDBBase, GetFieldsFromTable<TDBBase>>>(this.db, {
-            database,
-            databaseAlias: alias,
-            selects: []
+    from<TDBBase extends TTables, TAlias extends string = NoInfer<TDBBase>>(
+        baseTable: TDBBase,
+        alias?: TAlias
+    ) {
+        return new _fJoin<[TAlias], Record<TAlias, GetFieldsFromTable<TDBBase>>, Record<TAlias, TDBBase>>(this.db, {
+            baseTable,
+            selects: [],
+            tableAliases: {
+                [alias ?? baseTable] : baseTable
+            } as const
         })
     }
 
@@ -115,8 +119,8 @@ class DbSelect {
 type ClauseType = Array<string | WhereCriteria<TArrSources, Record<string, any>>>;
 
 type Values = {
-    database: TTables,
-    databaseAlias?: string;
+    tableAliases: Record<string, TTables>,
+    baseTable: TTables,
     selectDistinct?: true;
     selects: Array<string>;
     tables?: Array<{ table: TTables, local: string, remote: string, alias?: string }>;
@@ -283,13 +287,12 @@ class _fRun<TSources extends TArrSources, TFields extends TFieldsType, TSelectRT
                         ? "DISTINCT "
                         : "")
                     + this.values.selects.join(', ')),
-            `FROM ${this.values.database}${this.values.databaseAlias ? ` AS ${this.values.databaseAlias}` : ''}`,
+            `FROM ${this.values.baseTable}`,
             this.values.tables?.map(({
                                          table,
                                          local,
-                                         remote,
-                                         alias
-                                     }) => `JOIN ${table}${alias ? ` AS ${alias}` : ''} ON ${local} = ${remote}`).join(formatted ? "\n" : " ") ?? "",
+                                         remote
+                                     }) => `JOIN ${table} ON ${local} = ${remote}`).join(formatted ? "\n" : " ") ?? "",
             !whereClause ? "" : `WHERE ${whereClause}`,
             !this.values.groupBy?.length ? "" : `GROUP BY ${this.values.groupBy.join(', ')}`,
             !havingClause ? "" : `HAVING ${havingClause}`,
@@ -408,43 +411,24 @@ class _fSelect<TSources extends TArrSources, TFields extends TFieldsType, TSelec
         ? _fSelect<TSources, TFields, Prettify<TSelectRT & MergeItems<TSelect, TSources, TFields>>>
         : _fSelect<TSources, TFields, Prettify<TSelectRT & Record<TAlias, ExtractColumnType<TSelect, TSources, TFields>>>> {
 
-        // Check if select is "Table.*" or "alias.*" pattern
+
+        // Check if select is "Table.*" pattern
         const tableStarMatch = select.match(/^(\w+)\.\*$/);
         if (tableStarMatch) {
-            const tableOrAlias = tableStarMatch[1];
-
-            // Check if it's an alias - look in database alias or joined tables
-            let actualTableName = tableOrAlias;
-            let useAlias = tableOrAlias;
-
-            // Check if it's the base table alias
-            if (this.values.databaseAlias === tableOrAlias) {
-                actualTableName = this.values.database;
-            } else {
-                // Check if it's a joined table alias
-                const joinedTable = this.values.tables?.find(t => t.alias === tableOrAlias);
-                if (joinedTable) {
-                    actualTableName = joinedTable.table;
-                } else {
-                    // It's not an alias, so it should be an actual table name
-                    actualTableName = tableOrAlias;
-                    useAlias = tableOrAlias;
-                }
-            }
-
+            const tableName = tableStarMatch[1];
             // Expand Table.* to all columns from that table
-            const tableFields = DB[actualTableName as keyof typeof DB];
+            const tableFields = DB[tableName as keyof typeof DB];
             if (!tableFields) {
-                throw new Error(`Table "${actualTableName}" not found in database schema`);
+                throw new Error(`Table "${tableName}" not found in database schema`);
             }
 
             const hasMultipleTables = (this.values.tables && this.values.tables.length > 0) || false;
 
             const expandedSelects = Object.keys(tableFields.fields).map((field) => {
                 if (hasMultipleTables) {
-                    return `${useAlias}.${field} AS \`${useAlias}.${field}\``;
+                    return `${tableName}.${field} AS \`${tableName}.${field}\``;
                 }
-                return `${useAlias}.${field}`;
+                return `${tableName}.${field}`;
             });
 
             return new _fSelect<TSources, TFields, Prettify<TSelectRT & MergeItems<TSelect, TSources, TFields>>>(this.db, {
@@ -484,13 +468,13 @@ class _fSelectDistinct<TSources extends TArrSources, TFields extends TFieldsType
 
         const selects = (function (values: Values) {
             if (values.tables && values.tables.length > 0) {
-                return [values.database, ...values.tables.map(t => t.table)].reduce<Array<string>>((acc, table): Array<string> => {
+                return [values.baseTable, ...values.tables.map(t => t.table)].reduce<Array<string>>((acc, table): Array<string> => {
                     //TODO review `!`
                     return acc.concat(Object.keys(DB[table]!.fields).map((field) => `${table}.${field} AS \`${table}.${field}\``))
                 }, []);
             }
             //TODO review `!`
-            return Object.keys(DB[values.database]!.fields);
+            return Object.keys(DB[values.baseTable]!.fields);
         }(this.values))
 
         return new _fOrderBy<TSources, TFields, MergeItems<"*", TSources, TFields, TableCount extends 1 ? false : true>>(this.db, {
@@ -770,8 +754,16 @@ type AvailableJoins<Tables extends Array<TTables>, acc extends TTables = never> 
         : acc;
 
 
-export type SafeJoins<TNewJoin extends TTables, TJoins extends Array<TTables>, TRelations = Relations<TNewJoin>> =
-    { [k in keyof TRelations as Filter<k, TJoins[number]>]: TRelations[k] };
+type MapAliasToTable<
+    TAliasMap extends TTableAliases,
+    Join extends TArrSources
+> = Join[number] extends string ? [`${TAliasMap[Join[number]]}`] : [`${TAliasMap[Join[number]]}`]
+
+export type SafeJoins<TNewJoin extends TTables,
+    TJoins extends Array<TTables>,
+    // TAliasMap extends TTableAliases,
+    TRelations = Relations<TNewJoin>
+> = { [k in keyof TRelations as Filter<k, TJoins[number]>]: TRelations[k] };
 
 type CombineToString<A extends unknown, T extends unknown> = A extends string
     ? T extends string
@@ -855,30 +847,40 @@ type Loop<Keys extends string, Type extends string> = Keys extends Type ? Type :
 type GetJoinColsType<TDBBase extends TTables, Type extends string> = IterateFields<TDBBase, IsString<GetColsFromTableType<TDBBase, Type>>>;//, Type];
 
 type TFieldsType = Record<string, Record<string, any>>;
+type TTableAliases = Record<TTables, string>;
 
-class _fJoin<TSources extends TArrSources, TFields extends TFieldsType> extends _fWhere<TSources, TFields> {
+class _fJoin<
+    TSources extends TArrSources,
+    TFields extends TFieldsType,
+    TAliasMap extends TTableAliases
+> extends _fWhere<TSources, TFields> {
 
     // Overload 1: Object syntax
-    join<Table extends AvailableJoins<TSources>,
-        TJoinCols extends [string, string] = ValidStringTuple<GetUnionOfRelations<SafeJoins<Table, TSources>>>,
-        TCol1 extends TJoinCols[0] = never
+    join<const Table extends AvailableJoins<TSources>,
+        TJoinCols extends [string, string] = ValidStringTuple<GetUnionOfRelations<SafeJoins<Table, MapAliasToTable<TAliasMap, TSources>>>>,
+        TCol1 extends TJoinCols[0] = never,
+        TAlias extends string = NoInfer<Table>,
+        test = MapAliasToTable<TAliasMap, TSources>
     >(options: {
         table: Table,
         src: TCol1,
         on: find<TJoinCols, TCol1>,
-        alias?: string
-    }): _fJoin<[...TSources, Table], Prettify<TFields & Record<Table, GetFieldsFromTable<Table>>>>;
+        alias?: TAlias
+    }): _fJoin<[...TSources, TAlias], Prettify<TFields & Record<TAlias, GetFieldsFromTable<Table>>>, Prettify<TAliasMap &  Record<TAlias, Table>>>;
 
     // Overload 2: Positional syntax with optional alias
-    join<Table extends AvailableJoins<TSources>,
-        TJoinCols extends [string, string] = ValidStringTuple<GetUnionOfRelations<SafeJoins<Table, TSources>>>,
-        TCol1 extends TJoinCols[0] = never
-    >(table: Table, field: TCol1, reference: find<TJoinCols, TCol1>, alias?: string): _fJoin<[...TSources, Table], Prettify<TFields & Record<Table, GetFieldsFromTable<Table>>>>;
+    join<const Table extends AvailableJoins<MapAliasToTable<TAliasMap, TSources>>,
+        TJoinCols extends [string, string] = ValidStringTuple<GetUnionOfRelations<SafeJoins<Table, MapAliasToTable<TAliasMap, TSources>>>>,
+        TCol1 extends TJoinCols[0] = never,
+        TAlias extends string = NoInfer<Table>,
+        test = MapAliasToTable<TAliasMap, TSources>
+    >(table: Table, field: TCol1, reference: find<TJoinCols, TCol1>, alias?: TAlias): _fJoin<[...TSources, TAlias], Prettify<TFields & Record<TAlias, GetFieldsFromTable<Table>>>, Prettify<TAliasMap &  Record<TAlias, Table>>>;
 
     // Implementation
-    join<Table extends AvailableJoins<TSources>,
+    join<const Table extends AvailableJoins<TSources>,
         TJoinCols extends [string, string] = ValidStringTuple<GetUnionOfRelations<SafeJoins<Table, TSources>>>,
-        TCol1 extends TJoinCols[0] = never
+        TCol1 extends TJoinCols[0] = never,
+        TAlias extends string = NoInfer<Table>
     >(
         tableOrOptions: Table | {table: Table, src: TCol1, on: find<TJoinCols, TCol1>, alias?: string},
         field?: TCol1,
@@ -888,26 +890,28 @@ class _fJoin<TSources extends TArrSources, TFields extends TFieldsType> extends 
         let table: Table;
         let local: string;
         let remote: string;
-        let tableAlias: string | undefined;
+        let tableAlias: string;
 
         if (typeof tableOrOptions === 'object' && 'table' in tableOrOptions) {
             // Object syntax
             table = tableOrOptions.table;
             local = tableOrOptions.src;
             remote = tableOrOptions.on;
-            tableAlias = tableOrOptions.alias;
+            tableAlias = tableOrOptions.alias || tableOrOptions.table;
         } else {
             // Positional syntax
             table = tableOrOptions;
             local = field!;
             remote = reference!;
-            tableAlias = alias;
+            tableAlias = alias || tableOrOptions;
         }
 
-        return new _fJoin<[...TSources, Table], Prettify<TFields & Record<Table, GetFieldsFromTable<Table>>>>(this.db, {
+        // type NewUseAliases = TUseAliases extends true ? true : (typeof tableAlias extends string ? true : false);
+
+        return new _fJoin<[...TSources, TAlias], Prettify<TFields & Record<TAlias, GetFieldsFromTable<Table>>>, Prettify<TAliasMap &  Record<TAlias, Table>>>(this.db, {
             ...this.values,
             tables: [...this.values.tables || [], {
-                table: table as TTables,
+                table: table,
                 local,
                 remote,
                 alias: tableAlias
@@ -915,36 +919,41 @@ class _fJoin<TSources extends TArrSources, TFields extends TFieldsType> extends 
         });
     }
 
-    joinUnsafeTypeEnforced<Table extends AvailableJoins<TSources>,
+    joinUnsafeTypeEnforced<const Table extends AvailableJoins<TSources>,
         TCol1 extends GetColsBaseTable<Table>,
         TCol2 extends GetJoinOnColsType<
             //@-ts-expect-error TODO come back too
             GetColumnType<Table, TCol1>
             //GetColumnType<Table, Prettify<TFields & Record<Table, GetFieldsFromTable<Table>>>, TCol1>
-            , [...TSources, Table]>
-    >(table: Table, field: TCol1, reference: TCol2, alias?: string) {
-        return new _fJoin<[...TSources, Table], TFields & Record<Table, GetFieldsFromTable<Table>>>(this.db, {
+            , [...TSources, Table]>,
+        TAlias extends string = NoInfer<Table>
+    >(table: Table, field: TCol1, reference: TCol2, alias?: TAlias) {
+        // type NewUseAliases = TUseAliases extends true ? true : (TAlias extends string ? true : false);
+        return new _fJoin<[...TSources, TAlias], TFields & Record<TAlias, GetFieldsFromTable<Table>>, Prettify<TAliasMap &  Record<TAlias, Table>>>(this.db, {
             ...this.values,
             tables: [...this.values.tables || [], {
-                table: table as TTables,
+                table: table,
                 local: `${String(table)}.${String(field)}`,
                 remote: reference,
                 alias
             }]
-        });
+        }) as any;
     }
 
-    joinUnsafeIgnoreType<Table extends AvailableJoins<TSources>,
-        TCol2 extends GetJoinCols<TSources[number]>>(table: Table, field: GetColsBaseTable<Table>, reference: TCol2, alias?: string) {
-        return new _fJoin<[...TSources, Table], TFields & Record<Table, GetFieldsFromTable<Table>>>(this.db, {
+    joinUnsafeIgnoreType<const Table extends AvailableJoins<TSources>,
+        TCol2 extends GetJoinCols<TSources[number]>,
+        TAlias extends string = NoInfer<Table>
+    >(table: Table, field: GetColsBaseTable<Table>, reference: TCol2, alias?: TAlias) {
+        // type NewUseAliases = TUseAliases extends true ? true : (TAlias extends string ? true : false);
+        return new _fJoin<[...TSources, TAlias], TFields & Record<TAlias, GetFieldsFromTable<Table>>, Prettify<TAliasMap &  Record<TAlias, Table>>>(this.db, {
             ...this.values,
             tables: [...this.values.tables || [], {
-                table: table as TTables,
+                table: table,
                 local: `${String(table)}.${String(field)}`,
                 remote: reference,
                 alias
             }]
-        });
+        }) as any;
     }
 
     // innerJoin(table: TTables, col1:string, col2:string){
@@ -983,7 +992,7 @@ OFFSET -
 
 export default {
     client: {
-        $from<T extends TTables>(table: T, alias?: string) {
+        $from<const T extends TTables>(table: T, alias?: string) {
             const client = Prisma.getExtensionContext(this) as unknown as PrismaClient;
 
             return new DbSelect(client)
