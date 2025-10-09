@@ -68,6 +68,7 @@ describe("Table Alias Support", () => {
     describe("Table aliases with joins", () => {
         test("should alias both tables in a join (positional syntax)", async () => {
             const query = prisma.$from("User", "u")
+                // _?
                 .join("Post", "authorId", "u.id", "p")
                 .select("u.name")
                 .select("p.title")
