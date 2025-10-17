@@ -64,6 +64,8 @@ type Filter<a, b> = a extends b ? a : never;
 
 type IsString<T> = T extends string ? T : never;
 
+type Whitespace = '\n' | ' ';
+type Trim<T> = T extends `${Whitespace}${infer U}` ? Trim<U> : T extends `${infer U}${Whitespace}` ? Trim<U> : T;
 
 type ValidSelect<Tables extends TArrSources> =
     |"*"
@@ -921,14 +923,14 @@ class _fJoin<
         TCol1 extends TJoinCols[0] = never,
         TAlias extends string = never
     >(options: {
-        table: Table,
+        table: Trim<Table>,
         src: TCol1,
         on: find<TJoinCols, TCol1>,
-        alias?: TAlias
+        alias?: Trim<TAlias>
     }): _fJoin<[...TSources, [TAlias] extends [undefined] ? Table : [Table, TAlias]], Prettify<TFields & Record<Table, GetFieldsFromTable<Table>>>>;
 
     // Overload 2: Positional syntax with inline alias (e.g., "User u")
-    join<const TableInput extends `${AvailableJoins<TSources>}` | `${AvailableJoins<TSources>} ${string}`,
+    join<const TableInput extends Trim<`${AvailableJoins<TSources>}` | `${AvailableJoins<TSources>} ${string}`>,
         Table extends AvailableJoins<TSources> = ExtractTableName<TableInput> & AvailableJoins<TSources>,
         TAlias extends string | never = ExtractAlias<TableInput>,
         TJoinCols extends [string, string] = ValidStringTuple<GetUnionOfRelations<MapJoinsToKnownTables<SafeJoins<Table, TSources>, TSources>>>,
@@ -953,10 +955,10 @@ class _fJoin<
 
         if (typeof tableOrOptions === 'object' && 'table' in tableOrOptions) {
             // Object syntax
-            table = tableOrOptions.table;
+            table = tableOrOptions.table.trim();
             local = tableOrOptions.src;
             remote = tableOrOptions.on;
-            tableAlias = tableOrOptions.alias || tableOrOptions.table;
+            tableAlias = (tableOrOptions.alias || tableOrOptions.table).trim();
         } else {
             // Positional syntax with inline alias (e.g., "User u")
             const parts = tableOrOptions.split(' ');
@@ -977,39 +979,124 @@ class _fJoin<
         });
     }
 
+    // Overload 1: Object syntax
     joinUnsafeTypeEnforced<const Table extends AvailableJoins<TSources>,
         TCol1 extends GetColsBaseTable<Table>,
-        TCol2 extends GetJoinOnColsType<
-            //@-ts-expect-error TODO come back too
-            GetColumnType<Table, TCol1>
-            //GetColumnType<Table, Prettify<TFields & Record<Table, GetFieldsFromTable<Table>>>, TCol1>
-            , [...TSources, Table]>,
+        TCol2 extends GetJoinOnColsType<GetColumnType<Table, TCol1>, [...TSources, Table]>,
         TAlias extends string = never
-    >(table: Table, field: TCol1, reference: TCol2, alias?: TAlias) {
-        // type NewUseAliases = TUseAliases extends true ? true : (TAlias extends string ? true : false);
-        return new _fJoin<[...TSources, [TAlias] extends [undefined] ? Table : [Table, TAlias]], TFields & Record<Table, GetFieldsFromTable<Table>>>(this.db, {
+    >(options: {
+        table: Table,
+        src: TCol1,
+        on: TCol2,
+        alias?: TAlias
+    }): _fJoin<[...TSources, [TAlias] extends [never] ? Table : [Table, TAlias]], TFields & Record<Table, GetFieldsFromTable<Table>>>;
+
+    // Overload 2: Positional syntax with inline alias (e.g., "User u2")
+    joinUnsafeTypeEnforced<const TableInput extends `${AvailableJoins<TSources>}` | `${AvailableJoins<TSources>} ${string}`,
+        Table extends AvailableJoins<TSources> = ExtractTableName<TableInput> & AvailableJoins<TSources>,
+        TAlias extends string | never = ExtractAlias<TableInput>,
+        TCol1 extends GetColsBaseTable<Table> = GetColsBaseTable<Table>,
+        TCol2 extends GetJoinOnColsType<GetColumnType<Table, TCol1>, [...TSources, Table]> = GetJoinOnColsType<GetColumnType<Table, TCol1>, [...TSources, Table]>
+    >(table: TableInput, field: TCol1, reference: TCol2): _fJoin<[...TSources, [TAlias] extends [never] ? Table : [Table, TAlias]], TFields & Record<Table, GetFieldsFromTable<Table>>>;
+
+    // Implementation
+    joinUnsafeTypeEnforced<const TableInput extends `${AvailableJoins<TSources>}` | `${AvailableJoins<TSources>} ${string}`,
+        Table extends AvailableJoins<TSources> = ExtractTableName<TableInput> & AvailableJoins<TSources>,
+        TCol1 extends GetColsBaseTable<Table> = GetColsBaseTable<Table>,
+        TCol2 extends GetJoinOnColsType<GetColumnType<Table, TCol1>, [...TSources, Table]> = GetJoinOnColsType<GetColumnType<Table, TCol1>, [...TSources, Table]>
+    >(
+        tableOrOptions: TableInput | {table: TableInput, src: TCol1, on: TCol2, alias?: string},
+        field?: TCol1,
+        reference?: TCol2
+    ) {
+        let table: string;
+        let local: string;
+        let remote: string;
+        let tableAlias: string | undefined;
+
+        if (typeof tableOrOptions === 'object' && 'table' in tableOrOptions) {
+            // Object syntax
+            table = tableOrOptions.table;
+            local = `${table}.${tableOrOptions.src}`;
+            remote = tableOrOptions.on;
+            tableAlias = tableOrOptions.alias || tableOrOptions.table;
+        } else {
+            // Positional syntax with inline alias (e.g., "User u2")
+            const parts = tableOrOptions.split(' ');
+            table = parts[0]!;
+            tableAlias = parts[1] || table;
+            local = `${table}.${field!}`;
+            remote = reference!;
+        }
+
+        return new _fJoin(this.db, {
             ...this.values,
             tables: [...this.values.tables || [], {
                 table: table,
-                local: `${String(table)}.${String(field)}`,
-                remote: reference,
-                alias
+                local,
+                remote,
+                alias: tableAlias
             }]
         });
     }
 
+    // Overload 1: Object syntax
     joinUnsafeIgnoreType<const Table extends AvailableJoins<TSources>,
+        TCol1 extends GetColsBaseTable<Table>,
         TCol2 extends GetJoinCols<TSources[number]>,
         TAlias extends string = never
-    >(table: Table, field: GetColsBaseTable<Table>, reference: TCol2, alias?: TAlias) {
-        // type NewUseAliases = TUseAliases extends true ? true : (TAlias extends string ? true : false);
-        return new _fJoin<[...TSources, [TAlias] extends [undefined] ? Table : [Table, TAlias]], TFields & Record<Table, GetFieldsFromTable<Table>>>(this.db, {
+    >(options: {
+        table: Table,
+        src: TCol1,
+        on: TCol2,
+        alias?: TAlias
+    }): _fJoin<[...TSources, [TAlias] extends [never] ? Table : [Table, TAlias]], TFields & Record<Table, GetFieldsFromTable<Table>>>;
+
+    // Overload 2: Positional syntax with inline alias (e.g., "User u2")
+    joinUnsafeIgnoreType<const TableInput extends `${AvailableJoins<TSources>}` | `${AvailableJoins<TSources>} ${string}`,
+        Table extends AvailableJoins<TSources> = ExtractTableName<TableInput> & AvailableJoins<TSources>,
+        TAlias extends string | never = ExtractAlias<TableInput>,
+        TCol1 extends GetColsBaseTable<Table> = GetColsBaseTable<Table>,
+        TCol2 extends GetJoinCols<TSources[number]> = GetJoinCols<TSources[number]>
+    >(table: TableInput, field: TCol1, reference: TCol2): _fJoin<[...TSources, [TAlias] extends [never] ? Table : [Table, TAlias]], TFields & Record<Table, GetFieldsFromTable<Table>>>;
+
+    // Implementation
+    joinUnsafeIgnoreType<const TableInput extends `${AvailableJoins<TSources>}` | `${AvailableJoins<TSources>} ${string}`,
+        Table extends AvailableJoins<TSources> = ExtractTableName<TableInput> & AvailableJoins<TSources>,
+        TCol1 extends GetColsBaseTable<Table> = GetColsBaseTable<Table>,
+        TCol2 extends GetJoinCols<TSources[number]> = GetJoinCols<TSources[number]>
+    >(
+        tableOrOptions: TableInput | {table: TableInput, src: TCol1, on: TCol2, alias?: string},
+        field?: TCol1,
+        reference?: TCol2
+    ) {
+        let table: string;
+        let local: string;
+        let remote: string;
+        let tableAlias: string | undefined;
+
+        if (typeof tableOrOptions === 'object' && 'table' in tableOrOptions) {
+            // Object syntax
+            table = tableOrOptions.table;
+            local = `${table}.${tableOrOptions.src}`;
+            remote = tableOrOptions.on;
+            tableAlias = tableOrOptions.alias || tableOrOptions.table;
+        } else {
+            // Positional syntax with inline alias (e.g., "User u2")
+            const parts = tableOrOptions.split(' ');
+            table = parts[0]!;
+            tableAlias = parts[1] || table;
+            local = `${table}.${field!}`;
+            remote = reference!;
+        }
+
+        return new _fJoin(this.db, {
             ...this.values,
             tables: [...this.values.tables || [], {
                 table: table,
-                local: `${String(table)}.${String(field)}`,
-                remote: reference,
-                alias
+                local,
+                remote,
+                alias: tableAlias
             }]
         });
     }
@@ -1052,8 +1139,8 @@ OFFSET -
 export default {
     client: {
         $from<const T extends TTables | `${TTables} ${string}`,
-            Table extends TTables = ExtractTableName<T>,
-            TAlias extends string | never = ExtractAlias<T>,
+            Table extends TTables = Trim<ExtractTableName<T>>,
+            TAlias extends string | never = Trim<ExtractAlias<T>>,
         >(table: T) {
             const client = Prisma.getExtensionContext(this) as unknown as PrismaClient;
 
@@ -1061,7 +1148,7 @@ export default {
 
 
             return new DbSelect(client)
-                .from(base as Table, (aliases.join() || undefined) as TAlias)
+                .from(base!.trim() as Table, (aliases.join().trim() || undefined) as TAlias)
         },
     },
 };
