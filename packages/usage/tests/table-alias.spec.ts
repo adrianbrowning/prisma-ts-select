@@ -10,7 +10,7 @@ const prisma = new PrismaClient({})
 describe("Table Alias Support", () => {
     describe("Single table alias with FROM", () => {
         test("should alias a table with two-parameter syntax", async () => {
-            const query = prisma.$from("User", "u")
+            const query = prisma.$from("User u")
                 .select("u.name")
                 .getSQL();
 
@@ -21,7 +21,7 @@ describe("Table Alias Support", () => {
         });
 
         test("should allow using alias in WHERE clause", async () => {
-            const query = prisma.$from("User", "u")
+            const query = prisma.$from("User u")
                 .where({"u.id": 1})
                 .select("u.name")
                 .getSQL();
@@ -44,7 +44,7 @@ describe("Table Alias Support", () => {
         });
 
         test("should support mixing aliased table with ORDER BY", async () => {
-            const query = prisma.$from("User", "u")
+            const query = prisma.$from("User u")
                 .select("u.name")
                 .orderBy(["u.name DESC"])
                 .getSQL();
@@ -57,7 +57,7 @@ describe("Table Alias Support", () => {
 
         test("should return correct types with alias", async () => {
             //     _?
-            const result = await prisma.$from("User", "u")
+            const result = await prisma.$from("User u")
                 .select("name")
                 .run();
 
@@ -67,7 +67,7 @@ describe("Table Alias Support", () => {
 
         test("should return correct types with alias", async () => {
             //     _?
-            const result = await prisma.$from("User", "u")
+            const result = await prisma.$from("User u")
                 .select("u.name")
                 .run();
 
@@ -79,9 +79,9 @@ describe("Table Alias Support", () => {
 
     describe("Table aliases with joins", () => {
         test("should alias both tables in a join (positional syntax)", async () => {
-            const query = prisma.$from("User", "u")
+            const query = prisma.$from("User u")
                 // _?
-                .join("Post", "authorId", "u.id", "p")
+                .join("Post p", "authorId", "u.id")
                 .select("u.name")
                 .select("p.title")
                 .getSQL();
@@ -93,7 +93,7 @@ describe("Table Alias Support", () => {
         });
 
         test("should alias both tables in a join (object syntax)", async () => {
-            const query = prisma.$from("User", "u")
+            const query = prisma.$from("User u")
                 .join({table: "Post", src: "authorId", on: "u.id", alias: "p"})
                 .select("u.name")
                 .select("p.title")
@@ -106,7 +106,7 @@ describe("Table Alias Support", () => {
         });
 
         test("should handle alias in base table only", async () => {
-            const query = prisma.$from("User", "u")
+            const query = prisma.$from("User u")
                 .join("Post", "authorId", "u.id")
                 .select("u.name")
                 .select("Post.title")
@@ -120,7 +120,7 @@ describe("Table Alias Support", () => {
 
         test("should handle alias in joined table only", async () => {
             const query = prisma.$from("User")
-                .join("Post", "authorId", "User.id", "p")
+                .join("Post p", "authorId", "User.id")
                 .select("User.name")
                 .select("p.title")
                 .getSQL();
@@ -145,8 +145,8 @@ describe("Table Alias Support", () => {
         });
 
         test("should support self-join with different aliases", async () => {
-            const query = prisma.$from("User", "u1")
-                .joinUnsafeTypeEnforced("User", "id", "u1.id", "u2")
+            const query = prisma.$from("User u1")
+                .joinUnsafeTypeEnforced("User u2", "id", "u1.id")
                 .select("u1.name", "user1Name")
                 .select("u2.name", "user2Name")
                 .getSQL();
@@ -158,8 +158,8 @@ describe("Table Alias Support", () => {
         });
 
         test("should return correct types with aliased joins", async () => {
-            const result = await prisma.$from("User", "u")
-                .join("Post", "authorId", "u.id", "p")
+            const result = await prisma.$from("User u")
+                .join("Post p", "authorId", "u.id")
                 .select("u.name")
                 .select("p.title")
                 .run();
@@ -174,8 +174,8 @@ describe("Table Alias Support", () => {
 
     describe("Table aliases with WHERE on joins", () => {
         test("should use aliases in WHERE clause with joins", async () => {
-            const query = prisma.$from("User", "u")
-                .join("Post", "authorId", "u.id", "p")
+            const query = prisma.$from("User u")
+                .join("Post p", "authorId", "u.id")
                 .where({
                     "u.id": 1
                 })
@@ -192,7 +192,7 @@ describe("Table Alias Support", () => {
 
     describe("Table aliases with GROUP BY and HAVING", () => {
         test("should use aliases in GROUP BY", async () => {
-            const query = prisma.$from("Post", "p")
+            const query = prisma.$from("Post p")
                 .groupBy(["p.authorId"])
                 .select("p.authorId")
                 .getSQL();
@@ -204,7 +204,7 @@ describe("Table Alias Support", () => {
         });
 
         test("should use aliases in HAVING clause", async () => {
-            const query = prisma.$from("Post", "p")
+            const query = prisma.$from("Post p")
                 .groupBy(["p.authorId"])
                 .having({"p.authorId": {op: ">", value: 1}})
                 .select("p.authorId")
@@ -219,7 +219,7 @@ describe("Table Alias Support", () => {
 
     describe("Table aliases with LIMIT and OFFSET", () => {
         test("should work with LIMIT", async () => {
-            const query = prisma.$from("User", "u")
+            const query = prisma.$from("User u")
                 .select("u.name")
                 .limit(10)
                 .getSQL();
@@ -231,7 +231,7 @@ describe("Table Alias Support", () => {
         });
 
         test("should work with LIMIT and OFFSET", async () => {
-            const query = prisma.$from("User", "u")
+            const query = prisma.$from("User u")
                 .select("u.email")
                 .limit(10)
                 .offset(5)
@@ -246,7 +246,7 @@ describe("Table Alias Support", () => {
 
     describe("Table.* with aliases", () => {
         test("should expand Table.* using alias", async () => {
-            const query = prisma.$from("User", "u")
+            const query = prisma.$from("User u")
                 .select("u.*")
                 .getSQL();
 
@@ -257,8 +257,8 @@ describe("Table Alias Support", () => {
         });
 
         test("should expand multiple Table.* with aliases in joins", async () => {
-            const query = prisma.$from("User", "u")
-                .join("Post", "authorId", "u.id", "p")
+            const query = prisma.$from("User u")
+                .join("Post p", "authorId", "u.id")
                 .select("u.*")
                 .select("p.*")
                 .getSQL();
@@ -272,7 +272,7 @@ describe("Table Alias Support", () => {
 
     describe("Edge cases", () => {
         test("should handle aliases with column aliases", async () => {
-            const query = prisma.$from("User", "u")
+            const query = prisma.$from("User u")
                 .select("u.name", "userName")
                 .getSQL();
 
@@ -283,7 +283,7 @@ describe("Table Alias Support", () => {
         });
 
         test("should preserve data types with aliases", async () => {
-            const result = await prisma.$from("User", "u")
+            const result = await prisma.$from("User u")
                 .select("u.id")
                 .select("u.email")
                 .run();
@@ -296,7 +296,7 @@ describe("Table Alias Support", () => {
         });
 
         test("should handle nullable fields correctly with aliases", async () => {
-            const result = await prisma.$from("User", "u")
+            const result = await prisma.$from("User u")
                 .select("u.name")
                 .run();
 

@@ -109,8 +109,8 @@ class DbSelect {
     }
 
     from<const TDBBase extends TTables,
-        const TAlias extends string | undefined = undefined,
-        TRT extends TArrSources = [TAlias] extends [string] ? [[TDBBase, TAlias]] : [TDBBase]>(
+        const TAlias extends string = never,
+        TRT extends TArrSources = [TAlias] extends [never]  ? [TDBBase] : [[TDBBase, TAlias]]>(
         baseTable: TDBBase,
         alias?: TAlias
     ) {
@@ -927,30 +927,29 @@ class _fJoin<
         alias?: TAlias
     }): _fJoin<[...TSources, [TAlias] extends [undefined] ? Table : [Table, TAlias]], Prettify<TFields & Record<Table, GetFieldsFromTable<Table>>>>;
 
-    // Overload 2: Positional syntax with optional alias
-    join<const Table extends AvailableJoins< TSources>,
-
-        //TODO Wrap safe join in a translate for the table name
-        TJoinCols extends [string, string] = ValidStringTuple<GetUnionOfRelations<MapJoinsToKnownTables<SafeJoins<Table,  TSources>,TSources>>>,
-        TCol1 extends TJoinCols[0] = never,
-        TAlias extends string = never
-    >(table: Table, field: TCol1, reference: find<TJoinCols, TCol1>, alias?: TAlias): _fJoin<[...TSources, [TAlias] extends [undefined] ? Table : [Table, TAlias]], Prettify<TFields & Record<Table, GetFieldsFromTable<Table>>>>;
+    // Overload 2: Positional syntax with inline alias (e.g., "User u")
+    join<const TableInput extends `${AvailableJoins<TSources>}` | `${AvailableJoins<TSources>} ${string}`,
+        Table extends AvailableJoins<TSources> = ExtractTableName<TableInput> & AvailableJoins<TSources>,
+        TAlias extends string | never = ExtractAlias<TableInput>,
+        TJoinCols extends [string, string] = ValidStringTuple<GetUnionOfRelations<MapJoinsToKnownTables<SafeJoins<Table, TSources>, TSources>>>,
+        TCol1 extends TJoinCols[0] = never
+    >(table: TableInput, field: TCol1, reference: find<TJoinCols, TCol1>): _fJoin<[...TSources, [TAlias] extends [never] ? Table : [Table, TAlias]], Prettify<TFields & Record<Table, GetFieldsFromTable<Table>>>>;
 
     // Implementation
-    join<const Table extends AvailableJoins<TSources>,
+    join<const TableInput extends `${AvailableJoins<TSources>}` | `${AvailableJoins<TSources>} ${string}`,
+        Table extends AvailableJoins<TSources> = ExtractTableName<TableInput> & AvailableJoins<TSources>,
+        //TAlias extends string | never = ExtractAlias<TableInput>,
         TJoinCols extends [string, string] = ValidStringTuple<GetUnionOfRelations<MapJoinsToKnownTables<SafeJoins<Table, TSources>, TSources>>>,
-        TCol1 extends TJoinCols[0] = never,
-        TAlias extends string = never
+        TCol1 extends TJoinCols[0] = never
     >(
-        tableOrOptions: Table | {table: Table, src: TCol1, on: find<TJoinCols, TCol1>, alias?: string},
+        tableOrOptions: TableInput | {table: TableInput, src: TCol1, on: find<TJoinCols, TCol1>, alias?: string},
         field?: TCol1,
-        reference?: find<TJoinCols, TCol1>,
-        alias?: string
+        reference?: find<TJoinCols, TCol1>
     ) {
-        let table: Table;
+        let table: string;
         let local: string;
         let remote: string;
-        let tableAlias: string;
+        let tableAlias: string | undefined;
 
         if (typeof tableOrOptions === 'object' && 'table' in tableOrOptions) {
             // Object syntax
@@ -959,16 +958,15 @@ class _fJoin<
             remote = tableOrOptions.on;
             tableAlias = tableOrOptions.alias || tableOrOptions.table;
         } else {
-            // Positional syntax
-            table = tableOrOptions;
+            // Positional syntax with inline alias (e.g., "User u")
+            const parts = tableOrOptions.split(' ');
+            table = parts[0]!;
+            tableAlias = parts[1] || table;
             local = field!;
             remote = reference!;
-            tableAlias = alias || tableOrOptions;
         }
 
-        // type NewUseAliases = TUseAliases extends true ? true : (typeof tableAlias extends string ? true : false);
-
-        return new _fJoin<[...TSources, [TAlias] extends [undefined] ? Table : [Table, TAlias]], Prettify<TFields & Record<Table, GetFieldsFromTable<Table>>>>(this.db, {
+        return new _fJoin(this.db, {
             ...this.values,
             tables: [...this.values.tables || [], {
                 table: table,
@@ -1050,13 +1048,20 @@ OFFSET -
  */
 
 
+
 export default {
     client: {
-        $from<const T extends TTables, const TAlias extends string | undefined>(table: T, alias?: TAlias) {
+        $from<const T extends TTables | `${TTables} ${string}`,
+            Table extends TTables = ExtractTableName<T>,
+            TAlias extends string | never = ExtractAlias<T>,
+        >(table: T) {
             const client = Prisma.getExtensionContext(this) as unknown as PrismaClient;
 
+            const [base, ...aliases] = table.split(' ');
+
+
             return new DbSelect(client)
-                .from(table, alias)
+                .from(base as Table, (aliases.join() || undefined) as TAlias)
         },
     },
 };
