@@ -56,13 +56,25 @@ describe("Table Alias Support", () => {
         });
 
         test("should return correct types with alias", async () => {
+            //     _?
             const result = await prisma.$from("User", "u")
-                .select("u.name")
+                .select("name")
                 .run();
 
             typeCheck({} as Expect<Equal<typeof result, Array<{ name: string | null }>>>);
             assert.ok(Array.isArray(result));
         });
+
+        test("should return correct types with alias", async () => {
+            //     _?
+            const result = await prisma.$from("User", "u")
+                .select("u.name")
+                .run();
+
+            typeCheck({} as Expect<Equal<typeof result, Array<{ "u.name": string | null }>>>);
+            assert.ok(Array.isArray(result));
+        });
+
     });
 
     describe("Table aliases with joins", () => {
