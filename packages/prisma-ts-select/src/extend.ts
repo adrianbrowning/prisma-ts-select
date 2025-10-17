@@ -65,20 +65,23 @@ type Filter<a, b> = a extends b ? a : never;
 type IsString<T> = T extends string ? T : never;
 
 
-type ValidSelect<Tables extends Array<TTableSources>> = "*" | GetOtherColumns<Tables> | GetTableStar<Tables>;// | GetColsFromTable<Tables[number]>; // TODO
+type ValidSelect<Tables extends TArrSources> =
+    |"*"
+    | GetOtherColumns<Tables>
+    | GetTableStar<Tables>;// | GetColsFromTable<Tables[number]>; // TODO
 
-type GetOtherColumns<Tables extends Array<TTableSources>> = Tables extends [infer T extends TTableSources, ...Array<TTableSources>]
+type GetOtherColumns<Tables extends TArrSources> = Tables extends [infer T extends TTableSources, ...Array<TTableSources>]
     ? GetColsBaseTable<T> | GetJoinCols<Tables[number]>
     : never
 
-type GetTableStar<Tables extends Array<TTableSources>> = Tables extends [infer T extends TTableSources, ...Array<TTableSources>]
+type GetTableStar<Tables extends TArrSources> = Tables extends [infer T extends TTableSources, ...Array<TTableSources>]
     ? T extends string
      ? `${T}.*` | GetTableStarJoined<Tables[number]>
-      : `${T[0]}.*` | GetTableStarJoined<Tables[number]>
+      : `${T[1]}.*` | GetTableStarJoined<Tables[number]>
     : never
 
 type GetTableStarJoined<T extends TTableSources> = T extends string ? `${T}.*`
-    : `${T[0]}.*`
+    : `${T[1]}.*`
 
 // Helper type to extract column type for aliasing
 type ExtractColumnType<
@@ -105,12 +108,14 @@ class DbSelect {
     constructor(public db: PrismaClient) {
     }
 
-    from<TDBBase extends TTables, TAlias extends string | undefined = undefined, TRT extends TArrSources = [TAlias] extends [string] ? [TDBBase, TAlias] : [TDBBase]>(
+    from<const TDBBase extends TTables,
+        const TAlias extends string | undefined = undefined,
+        TRT extends TArrSources = [TAlias] extends [string] ? [[TDBBase, TAlias]] : [TDBBase]>(
         baseTable: TDBBase,
         alias?: TAlias
     ) {
         return new _fJoin<TRT,
-            Record<TDBBase, GetFieldsFromTable<TDBBase>>>(this.db, {
+            Record<TRT[0] extends [string] ? TRT[0][0] : TRT[0][1], GetFieldsFromTable<TDBBase>>>(this.db, {
             baseTable,
             baseTableAlias: alias,
             selects: []
@@ -361,10 +366,17 @@ LIMIT - the returned data is limited to row count.
 OFFSET -
 run
 */
-
-type MergeItems<Field extends string, TSources extends TArrSources, TFields extends TFieldsType, IncTName extends boolean = false, TTableSources = TSources[number]> = Field extends "*"
-    ? Prettify<IterateTables<TSources, TFields, IncTName>>
-    : Field extends `${infer T}.*`
+/**
+ * Field - call from select * | Table.* | Table.col | col
+ * TSources - ["Table", ['Table2', 'alias']]
+ * TFields - Record<Table, Record<col, type>>
+ */
+type MergeItems<Field extends string, TSources extends TArrSources,
+    TFields extends TFieldsType,
+    IncTName extends boolean = false> =
+    Field extends "*"
+      ? Prettify<IterateTables<TSources, TFields, IncTName>>
+      : Field extends `${infer T}.*`
         ? T extends keyof TFields
             ? [TSources] extends [[T]]
                 // Single table - no prefix
@@ -372,24 +384,21 @@ type MergeItems<Field extends string, TSources extends TArrSources, TFields exte
                 // Multiple tables - with prefix
                 : T extends string ? IterateTablesFromFields<T, TFields[T], true> : never
             : never
-        //@ts-expect-error T not a string?
-        : Field extends `${infer T extends TTableSources}.${infer F extends string}`
-            //@ts-expect-error F is part of T, but can't tell TS that
-            ? Pick<TFields[T], F>
-            //@-ts-expect-error Field is part of the from, but can't tell TS that.
-            : Pick<TFields[TSources[0] extends string ? TSources[0] : `Come back to 3`], Field>;
 
+        : Field extends `${infer T extends string}.${infer F extends string}`
+            ? Record<`${T}.${F}`, Pick<TFields[T], F>[F] >
+                : Field extends string
+                    ? Pick<TFields[TSources[0] extends string
+                      ? TSources[0]
+                      : TSources[0][1]], Field>
+                    : never;
 
 type IterateTables<Tables extends Array<TTableSources>, TFields extends TFieldsType, IncTName extends boolean, acc extends Record<string, any> = {}> =
     Tables extends [infer T extends TTableSources, ...infer Rest extends Array<TTableSources>]
         ? [IncTName] extends [false]
-            ? IterateTables<Rest, TFields, IncTName, acc & TFields[T extends string ? T : `Come back to 4`]>
-            : IterateTables<Rest, TFields, IncTName, acc & IterateTablesFromFields<T, TFields[T extends string ? T : `Come back to 5`], IncTName>>
-        // : [T, TFields[T], IncTName]
-        : acc
-//     ? IterateTables<Rest, TFields, IncTName, acc &  GetFieldsFromTable<T>>
-//     : IterateTables<Rest, TFields, IncTName, acc &  IterateTablesFromFields<T, TFields[T], IncTName>>
-// : acc;
+            ? IterateTables<Rest, TFields, IncTName, acc & TFields[T extends string ? T : T[1]]>
+            : IterateTables<Rest, TFields, IncTName, acc & IterateTablesFromFields<T, TFields[T extends string ? T : T[1]], IncTName>>
+        : acc;
 
 type GenName<T extends string, F extends unknown, IncName extends boolean> = F extends string
     ? [IncName] extends [false]
@@ -606,13 +615,13 @@ type WhereCriteria<
 type WhereCriteria_Fields<T extends Array<TTableSources>, TFields extends TFieldsType, acc = {}> =
     T extends readonly [infer HEAD, ...infer Rest]
         ? HEAD extends string
-            ? Rest extends Array<string>
+            ? Rest extends Array<TTableSources>
                 ? WhereCriteria_Fields<Rest, TFields, OptionalObject<acc & (TableFieldType<HEAD, TFields[HEAD]> | SQLCondition<TableFieldType<HEAD, TFields[HEAD]>>)>>
                 : WhereCriteria_Fields<[], TFields, OptionalObject<acc & (TableFieldType<HEAD, TFields[HEAD]> | SQLCondition<TableFieldType<HEAD, TFields[HEAD]>>)>>
-            : HEAD extends [infer R_NAME extends string, string]
-                ? Rest extends Array<string>
-                    ? WhereCriteria_Fields<Rest, TFields, OptionalObject<acc & (TableFieldType<R_NAME, TFields[R_NAME]> | SQLCondition<TableFieldType<R_NAME, TFields[R_NAME]>>)>>
-                    : WhereCriteria_Fields<[], TFields, OptionalObject<acc & (TableFieldType<R_NAME, TFields[R_NAME]> | SQLCondition<TableFieldType<R_NAME, TFields[R_NAME]>>)>>
+            : HEAD extends [infer R_NAME extends string, infer A_NAME extends string]
+                ? Rest extends Array<TTableSources>
+                    ? WhereCriteria_Fields<Rest, TFields, OptionalObject<acc & (TableFieldType<A_NAME, TFields[R_NAME]> | SQLCondition<TableFieldType<A_NAME, TFields[R_NAME]>>)>>
+                    : WhereCriteria_Fields<[], TFields, OptionalObject<acc & (TableFieldType<A_NAME, TFields[R_NAME]> | SQLCondition<TableFieldType<A_NAME, TFields[R_NAME]>>)>>
 : never
         : acc;
 
@@ -728,9 +737,13 @@ OFFSET -
 
 
 type GetFieldsFromTable<TDBBase extends TTableSources> = Extract<DATABASE, { table: TDBBase extends string ? TDBBase : TDBBase[0] }>["fields"];
-type GetColsBaseTable<TDBBase extends TTableSources> = TDBBase extends string ? keyof GetFieldsFromTable<TDBBase> : keyof GetFieldsFromTable<TDBBase[0]>;
-type GetJoinCols<TDBBase extends TTableSources> = TDBBase extends string ? IterateFields<TDBBase, IsString<GetColsBaseTable<TDBBase>>> : IterateFields<TDBBase, IsString<GetColsBaseTable<TDBBase[0]>>>;
-type IterateFields<TDBBase extends TTableSources, F extends string> = `${TDBBase extends string ? TDBBase : TDBBase[0]}.${F}`; //TODO Alias
+type GetColsBaseTable<TDBBase extends TTableSources> = TDBBase extends string
+    ? keyof GetFieldsFromTable<TDBBase>
+    : keyof GetFieldsFromTable<TDBBase[0]>;
+type GetJoinCols<TDBBase extends TTableSources> = TDBBase extends string
+    ? IterateFields<TDBBase, IsString<GetColsBaseTable<TDBBase>>>
+    : IterateFields<TDBBase[1], IsString<GetColsBaseTable<TDBBase[0]>>>;
+type IterateFields<TDBBase extends TTableSources, F extends string> = `${TDBBase extends string ? TDBBase : TDBBase[1]}.${F}`;
 
 type Relations<Table extends TTableSources> = Extract<DATABASE, { table: GetRealTableNames<Table> }>["relations"];
 
@@ -771,11 +784,32 @@ type GetRealTableNames<Tables extends TTableSources> = Tables extends any
         : Tables[0]
     : never;
 
+type GetAliasTableNames<Tables extends TTableSources> = Tables extends any
+    ? Tables extends string
+        ? Tables
+        : Tables[1]
+    : never;
+
+/*
+
+returns {
+  <Table>: {
+        //eg readonly authorId: ["id"];
+        readonly remoteCol: ["localCol"];
+    }>;
+}
+}
+ */
 export type SafeJoins<TNewJoin extends TTables,
-    TJoins extends Array<TTableSources>,
-    // TAliasMap extends TTableAliases,
+    TJoins extends TArrSources,
     TRelations = Relations<TNewJoin>
 > = { [k in keyof TRelations as Filter<k,GetRealTableNames<TJoins[number]>>]: TRelations[k] };
+
+type ToUnion<TJoins extends TArrSources> = TJoins[number];
+
+export type MapJoinsToKnownTables<TSafeJoins extends Record<string, unknown>, TJoins extends TArrSources> = {
+    [k in ToUnion<TJoins> as GetAliasTableNames<k> ]: TSafeJoins[GetRealTableNames<k>]
+};
 
 type CombineToString<A extends unknown, T extends unknown> = A extends string
     ? T extends string
@@ -793,14 +827,23 @@ export type GetUnionOfRelations<TSafe> = {
         [TLocal in keyof TSafe[T]]:
         [
             TLocal,
-            T extends string ? TSafe[T][TLocal] extends Array<string> ? CombineToString<TSafe[T][TLocal][number], T> : never : never
+            T extends string
+                ? TSafe[T][TLocal] extends Array<string>
+                    ? CombineToString<TSafe[T][TLocal][number], T>
+                    : never
+                : never
         ]
     }[keyof TSafe[T]];
 }[keyof TSafe];
 
 type ValidStringTuple<T> = T extends [string, string] ? T : never;
 
-type find<T extends [string, string], toFind extends string> = T extends [infer col1, infer col2] ? col1 extends toFind ? col2 : never : never;
+type find<TJoinCols extends [string, string], toFind extends string> =
+    TJoinCols extends [infer col1, infer col2]
+        ? col1 extends toFind
+            ? col2
+            : never
+        : never;
 
 // type CleanUpFromNames<TFromTable extends TTableSources, TCols extends string> = TCols extends `${TFromTable}.${infer Col}` ? Col : TCols;
 
@@ -814,6 +857,13 @@ type SwapKeysAndValues<T extends Record<string, any>> = {
 type Prettify<T> = {
     [K in keyof T]: T[K];
 } & {};
+
+// Type helpers for parsing inline table aliases (e.g., "User u")
+type ExtractTableName<T extends string> =
+    T extends `${infer Table} ${string}` ? Table : T;
+
+type ExtractAlias<T extends string> =
+    T extends `${string} ${infer Alias}` ? Alias : never;
 
 
 type FieldsByTableByType = Prettify<{
@@ -867,7 +917,7 @@ class _fJoin<
 
     // Overload 1: Object syntax
     join<const Table extends AvailableJoins<TSources>,
-        TJoinCols extends [string, string] = ValidStringTuple<GetUnionOfRelations<SafeJoins<Table,  TSources>>>,
+        TJoinCols extends [string, string] = ValidStringTuple<GetUnionOfRelations<MapJoinsToKnownTables<SafeJoins<Table,  TSources>,TSources>>>,
         TCol1 extends TJoinCols[0] = never,
         TAlias extends string = never
     >(options: {
@@ -879,14 +929,16 @@ class _fJoin<
 
     // Overload 2: Positional syntax with optional alias
     join<const Table extends AvailableJoins< TSources>,
-        TJoinCols extends [string, string] = ValidStringTuple<GetUnionOfRelations<SafeJoins<Table,  TSources>>>,
+
+        //TODO Wrap safe join in a translate for the table name
+        TJoinCols extends [string, string] = ValidStringTuple<GetUnionOfRelations<MapJoinsToKnownTables<SafeJoins<Table,  TSources>,TSources>>>,
         TCol1 extends TJoinCols[0] = never,
         TAlias extends string = never
     >(table: Table, field: TCol1, reference: find<TJoinCols, TCol1>, alias?: TAlias): _fJoin<[...TSources, [TAlias] extends [undefined] ? Table : [Table, TAlias]], Prettify<TFields & Record<Table, GetFieldsFromTable<Table>>>>;
 
     // Implementation
     join<const Table extends AvailableJoins<TSources>,
-        TJoinCols extends [string, string] = ValidStringTuple<GetUnionOfRelations<SafeJoins<Table, TSources>>>,
+        TJoinCols extends [string, string] = ValidStringTuple<GetUnionOfRelations<MapJoinsToKnownTables<SafeJoins<Table, TSources>, TSources>>>,
         TCol1 extends TJoinCols[0] = never,
         TAlias extends string = never
     >(
@@ -1000,7 +1052,7 @@ OFFSET -
 
 export default {
     client: {
-        $from<const T extends TTables, TAlias extends string | undefined>(table: T, alias?: TAlias) {
+        $from<const T extends TTables, const TAlias extends string | undefined>(table: T, alias?: TAlias) {
             const client = Prisma.getExtensionContext(this) as unknown as PrismaClient;
 
             return new DbSelect(client)
