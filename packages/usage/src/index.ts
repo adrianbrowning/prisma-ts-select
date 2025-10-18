@@ -8,7 +8,7 @@ console.log(prisma.$from("User")
     .where({
         "User.name": {
             "op": "IN",
-            values: ["A", 1]
+            values: ["A"]
         },
         "Post.published": true,
         OR: [{
