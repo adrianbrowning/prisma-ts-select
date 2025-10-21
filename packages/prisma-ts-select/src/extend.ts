@@ -34,6 +34,19 @@ type DeepWriteable<T> = { -readonly [P in keyof T]: DeepWriteable<T[P]> };
 
 type _db = DeepWriteable<TDB>;
 
+/**
+ * Core database schema type that transforms the generated DB type into a structured format.
+ * Maps each table to its fields (with TypeScript types) and relations (foreign keys).
+ * This is the foundation type used throughout the query builder to provide type safety.
+ *
+ * @template k - Table name from the database schema
+ * @returns Union of objects with table, fields, and relations properties
+ *
+ * @example
+ * // For a database with User and Post tables:
+ * // DATABASE = { table: "User", fields: { id: number, name: string }, relations: { ... } }
+ * //          | { table: "Post", fields: { id: number, title: string }, relations: { ... } }
+ */
 type DATABASE = {
     [k in keyof _db]: {
         table: k,
@@ -291,7 +304,38 @@ type ExtractColumnType<
 
 
 export type TTables = DATABASE["table"];
+
+/**
+ * Valid table source formats for query building.
+ * Can be either a simple table name string or a tuple with table name and alias.
+ * Aliases are used in SQL queries and for referencing columns in multi-table queries.
+ *
+ * @example
+ * // Simple table name:
+ * type Source1 = TTableSources; // "User" | "Post" | "Comment"
+ *
+ * @example
+ * // Table with alias:
+ * type Source2 = TTableSources; // ["User", "u"] | ["Post", "p"] | ...
+ *
+ * @example
+ * // Usage in query builder:
+ * db.$from("User", "u") // Uses ["User", "u"] format internally
+ * db.$from("Post")      // Uses "Post" format internally
+ */
 export type TTableSources = DATABASE["table"] | [table: DATABASE["table"], alias: string];
+
+/**
+ * Type constraint for arrays of table sources with at least one element.
+ * Ensures query builder has a base table to work from. The first element is always
+ * the base table, and subsequent elements are joined tables.
+ *
+ * @example
+ * type Valid1 = TArrSources; // ["User"]
+ * type Valid2 = TArrSources; // ["User", "Post"]
+ * type Valid3 = TArrSources; // [["User", "u"], ["Post", "p"]]
+ * type Invalid = TArrSources; // [] - NOT ALLOWED
+ */
 type TArrSources = [TTableSources, ...Array<TTableSources>];
 
 
@@ -318,8 +362,47 @@ class DbSelect {
 
 }
 
+/**
+ * Type for WHERE and HAVING clause arrays, supporting both raw SQL strings and structured criteria objects.
+ *
+ * @template TArrSources - Array of table sources in the query
+ * @template Record<string, any> - Field types for the tables
+ *
+ * @example
+ * // Array can contain:
+ * // 1. Raw SQL strings: "age > 18"
+ * // 2. Structured criteria: { "User.age": { op: '>', value: 18 } }
+ */
 type ClauseType = Array<string | WhereCriteria<TArrSources, Record<string, any>>>;
 
+/**
+ * Internal query builder state containing all query components.
+ * Tracks tables, selections, filters, grouping, ordering, and pagination.
+ * This object is passed through the method chain and accumulated as methods are called.
+ *
+ * @property selectDistinct - Flag to use SELECT DISTINCT
+ * @property selects - Array of column selections (raw SQL strings like "id" or "User.name AS `User.name`")
+ * @property tables - Base table + joined tables with their join conditions and optional aliases
+ * @property limit - LIMIT clause value
+ * @property offset - OFFSET clause value (requires LIMIT)
+ * @property where - WHERE clause conditions
+ * @property having - HAVING clause conditions (requires GROUP BY)
+ * @property groupBy - GROUP BY column list
+ * @property orderBy - ORDER BY clauses with optional ASC/DESC
+ *
+ * @example
+ * // Example Values object after chaining:
+ * {
+ *   selects: ["User.id AS `User.id`", "User.name AS `User.name`"],
+ *   tables: [
+ *     { table: "User", alias: "u" },
+ *     { table: "Post", local: "authorId", remote: "id", alias: "p" }
+ *   ],
+ *   where: [{ "User.age": { op: '>', value: 18 } }],
+ *   limit: 10,
+ *   offset: 0
+ * }
+ */
 type Values = {
     //baseTable: TTables,
     //baseTableAlias?: string;
@@ -751,22 +834,71 @@ type IterateTablesFromFields<Table extends TTableSources, TFields extends Record
 };
 
 
+/**
+ * Extracts alias or table names from an array of table sources.
+ * Used to get the names that will be used in queries (aliases take precedence over table names).
+ * Recursively processes the array using an accumulator pattern.
+ *
+ * @template TSources - Array of table sources to process
+ * @template acc - Accumulator for building the name array (default: [])
+ * @returns Array of string names (aliases where provided, table names otherwise)
+ *
+ * @example
+ * TablesArray2Name<["User", ["Post", "p"]]> // ["User", "p"]
+ * TablesArray2Name<[["User", "u"], ["Post", "p"]]> // ["u", "p"]
+ * TablesArray2Name<["User"]> // ["User"]
+ */
 type TablesArray2Name<TSources extends Array<TTableSources>, acc extends Array<string> = []> =
     TSources extends [infer T extends TTableSources, ...infer Rest extends Array<TTableSources>]
     ? TablesArray2Name<Rest, [...acc, GetAliasTableNames<T>]>
     : acc;
 
 
-// Helper to get column names from a single table (unqualified)
+/**
+ * Extracts unqualified column names from a single table source.
+ * Returns the keys of the table's fields object, handling both simple table names and aliased sources.
+ *
+ * @template TDBBase - Table source (table name string or [table, alias] tuple)
+ * @returns Union of column names for the table
+ *
+ * @example
+ * GetColumnNamesFromTable<"User"> // "id" | "name" | "email"
+ * GetColumnNamesFromTable<["Post", "p"]> // "id" | "title" | "authorId"
+ */
 type GetColumnNamesFromTable<TDBBase extends TTableSources> = keyof GetFieldsFromTable<GetRealTableNames<TDBBase>>;
 
-// Get all column names from an array of tables
+/**
+ * Recursively collects all column names from an array of table sources.
+ * Returns a union of all unqualified column names across all tables in the query.
+ *
+ * @template Tables - Array of table sources to extract columns from
+ * @returns Union of all column names from all tables
+ *
+ * @example
+ * GetColumnsFromTables<["User", "Post"]>
+ * // Returns: "id" | "name" | "email" | "title" | "authorId" | ...
+ */
 type GetColumnsFromTables<Tables extends Array<TTableSources>> =
     Tables extends [infer T extends TTableSources, ...infer Rest extends Array<TTableSources>]
         ? GetColumnNamesFromTable<T> | GetColumnsFromTables<Rest>
         : never;
 
-// Find columns that appear in multiple tables via pairwise intersection
+/**
+ * Finds column names that appear in multiple tables via pairwise intersection.
+ * Used to identify ambiguous columns that require table qualification in SELECT clauses.
+ * Checks each pair of tables for overlapping column names.
+ *
+ * @template Tables - Array of table sources to check for duplicate columns
+ * @returns Union of column names that appear in more than one table
+ *
+ * @example
+ * // Given User has "id", "name" and Post has "id", "title":
+ * GetDuplicateColumnsPairwise<["User", "Post"]> // "id"
+ *
+ * @example
+ * // Given all three have "id":
+ * GetDuplicateColumnsPairwise<["User", "Post", "Comment"]> // "id"
+ */
 type GetDuplicateColumnsPairwise<Tables extends TArrSources> =
     Tables extends [infer T1 extends TTableSources, infer T2 extends TTableSources, ...infer Rest extends Array<TTableSources>]
         ? (GetColumnNamesFromTable<T1> & GetColumnNamesFromTable<T2>)
@@ -774,7 +906,18 @@ type GetDuplicateColumnsPairwise<Tables extends TArrSources> =
         | GetDuplicateColumnsPairwise<[T2, ...Rest]>
         : never;
 
-// Check if a column name is unique across all tables
+/**
+ * Checks if a column name is unique across all tables in the query.
+ * Returns true if the column appears in only one table, false if it appears in multiple tables.
+ *
+ * @template Col - Column name to check
+ * @template Tables - Array of table sources in the query
+ * @returns Boolean literal type: true if unique, false if duplicate
+ *
+ * @example
+ * IsColumnUnique<"name", ["User", "Post"]> // true (only User has "name")
+ * IsColumnUnique<"id", ["User", "Post"]> // false (both have "id")
+ */
 type IsColumnUnique<Col extends string, Tables extends TArrSources> =
     Col extends GetDuplicateColumnsPairwise<Tables> ? false : true;
 
