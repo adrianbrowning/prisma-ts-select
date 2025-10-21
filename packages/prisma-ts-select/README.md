@@ -180,6 +180,141 @@ The way the methods are chained, are heavily inspired by [Dr Milan Milanović](h
 ### `.$from`
 This takes the `base` table to work from.
 
+#### Example
+```typescript
+prisma.$from("User")
+```
+
+#### Example - With Table Alias
+```typescript
+prisma.$from("User", "u")
+```
+
+##### SQL
+```sql
+FROM User AS u
+```
+
+**Note:** Table aliases are particularly useful for self-joins where you need to join a table to itself with different aliases.
+
+#### Example - Inline Alias Syntax
+```typescript
+prisma.$from("User u")
+```
+##### SQL
+```sql
+FROM User AS u
+```
+**Note:** Alias can be inline (space-separated) or as second parameter.
+
+### Table Aliases
+
+Table aliases allow you to give tables shorter or more meaningful names in your queries. This is especially useful for:
+- Self-joins (joining a table to itself)
+- Long table names
+- Clearer query readability
+
+#### Table Alias Syntax Options
+
+Multiple syntaxes supported:
+- **Inline in .$from()**: `prisma.$from("User u")``
+- **Inline in .join()**: `.join("Post p", "authorId", "User.id")`
+- **Object syntax**: `.join({table: "Post", src: "authorId", on: "User.id", alias: "p"})`
+
+#### Basic Table Alias
+
+```typescript
+prisma.$from("User", "u")
+  .select("u.name")
+  .select("u.email")
+  .run();
+```
+
+##### SQL
+```sql
+SELECT name, email FROM User AS u;
+```
+
+#### Table Aliases with Joins
+
+##### Inline Alias Syntax
+```typescript
+prisma.$from("User u")
+  .join("Post p", "authorId", "u.id")
+  .select("u.name")
+  .select("p.title")
+  .run();
+```
+
+##### Object Syntax
+```typescript
+prisma.$from("User", "u")
+  .join({table: "Post", src: "authorId", on: "u.id", alias: "p"})
+  .select("u.name")
+  .select("p.title")
+  .run();
+```
+
+##### SQL
+```sql
+SELECT name, title
+FROM User AS u
+JOIN Post AS p ON authorId = u.id;
+```
+
+**Note:** The object syntax provides a foundation for future enhancements like multiple join conditions and complex WHERE-style conditions in joins.
+
+#### Self-Joins with Aliases
+
+Self-joins require aliases to distinguish between the different "instances" of the same table:
+
+```typescript
+prisma.$from("User", "u1")
+  .joinUnsafeTypeEnforced("User", "id", "u1.id", "u2")
+  .select("u1.name", "user1Name")
+  .select("u2.name", "user2Name")
+  .run();
+```
+
+##### SQL
+```sql
+SELECT u1.name AS `user1Name`, u2.name AS `user2Name`
+FROM User AS u1
+JOIN User AS u2 ON User.id = u1.id;
+```
+
+#### Table.* with Aliases
+
+You can use the `alias.*` syntax to select all columns from an aliased table:
+
+```typescript
+prisma.$from("User", "u")
+  .select("u.*")
+  .run();
+```
+
+##### SQL
+```sql
+SELECT u.id, u.email, u.name FROM User AS u;
+```
+
+With joins:
+```typescript
+prisma.$from("User", "u")
+  .join("Post", "authorId", "u.id", "p")
+  .select("u.*")
+  .select("p.*")
+  .run();
+```
+
+##### SQL
+```sql
+SELECT u.id AS `u.id`, u.email AS `u.email`, u.name AS `u.name`,
+       p.id AS `p.id`, p.title AS `p.title`, p.content AS `p.content`
+FROM User AS u
+JOIN Post AS p ON authorId = u.id;
+```
+
 ### Joins
 #### `.join`
 
@@ -203,11 +338,25 @@ JOIN Post ON authorId = User.id;
 ```
 
 ##### Parameters
-| column      | Description                                                                                                                          |
-|-------------|--------------------------------------------------------------------------------------------------------------------------------------|
-| `table`     | The table to join on. <br/>TS autocomplete will show tables that can join with previously defined tables on.                         | 
-| `field`     | Column on table. <br/>TS autocomplete will show known columns that this table, can join with previously defined tables on.           | 
-| `reference` | `Table.Column` to a previously defined table (either the base, or another join), with a FK that is defined in the schema definition. | 
+| column      | Description                                                                                                                                                    |
+|-------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `table`     | The table to join on (supports inline alias: `"Post p"` or `"Post", "p"`). <br/>TS autocomplete will show tables that can join with previously defined tables on. |
+| `field`     | Column on table. <br/>TS autocomplete will show known columns that this table, can join with previously defined tables on.                                     |
+| `reference` | `Table.Column` to a previously defined table (either the base, or another join), with a FK that is defined in the schema definition.                           |
+
+**Alternative Syntaxes:**
+```typescript
+// Inline alias
+.join("Post p", "authorId", "User.id")
+    
+// Object syntax
+.join({
+  table: "Post",
+  src: "authorId",
+  on: "User.id",
+  alias: "p"  // optional
+})
+``` 
 
 #### `.joinUnsafeTypeEnforced`
 
@@ -229,11 +378,11 @@ JOIN Post ON Post.title = User.name;
 ```
 
 ##### Parameters
-| column      | Description                                                                                                                |
-|-------------|----------------------------------------------------------------------------------------------------------------------------|
-| `table`     | The table to join on. <br/>TS autocomplete will show tables that can join with previously defined tables on.               | 
-| `field`     | Column on table. <br/>TS autocomplete will show known columns that this table, can join with previously defined tables on. | 
-| `reference` | `Table.Column` to a previously defined table (either the base, or another join), with a column that is of the same type.   |
+| column      | Description                                                                                                                                                    |
+|-------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `table`     | The table to join on (supports inline alias: `"Post p"` or `"Post", "p"`). <br/>TS autocomplete will show tables that can join with previously defined tables on. |
+| `field`     | Column on table. <br/>TS autocomplete will show known columns that this table, can join with previously defined tables on.                                     |
+| `reference` | `Table.Column` to a previously defined table (either the base, or another join), with a column that is of the same type.                                       |
 
 #### `.joinUnsafeIgnoreType`
 
@@ -255,11 +404,11 @@ JOIN Post ON Post.id = User.name
 ```
 
 ##### Parameters
-| column      | Description                                                                                                                |
-|-------------|----------------------------------------------------------------------------------------------------------------------------|
-| `table`     | The table to join on. <br/>TS autocomplete will show tables that can join with previously defined tables on.               | 
-| `field`     | Column on table. <br/>TS autocomplete will show known columns that this table, can join with previously defined tables on. | 
-| `reference` | `Table.Column` to a previously defined table (either the base, or another join). Referencing any column, of any type.      |
+| column      | Description                                                                                                                                                    |
+|-------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `table`     | The table to join on (supports inline alias: `"Post p"` or `"Post", "p"`). <br/>TS autocomplete will show tables that can join with previously defined tables on. |
+| `field`     | Column on table. <br/>TS autocomplete will show known columns that this table, can join with previously defined tables on.                                     |
+| `reference` | `Table.Column` to a previously defined table (either the base, or another join). Referencing any column, of any type.                                          |
 
 ### Where
 

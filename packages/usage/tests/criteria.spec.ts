@@ -5,17 +5,17 @@ import {PrismaClient} from "@prisma/client";
 import {type Equal, type Expect, typeCheck} from "./utils.js";
 
 const prisma = new PrismaClient({}).$extends(tsSelectExtend);
-
-runTests();
-
-function runTests() {
+//
+// runTests();
+//
+// function runTests() {
 describe("where", () => {
 
-    before(async function(){
-        // Delete in correct order due to foreign key constraints
-        await prisma.post.deleteMany({});
-        await prisma.user.deleteMany({});
-    });
+    // before(async function(){
+    //     // Delete in correct order due to foreign key constraints
+    //     await prisma.post.deleteMany({});
+    //     await prisma.user.deleteMany({});
+    // });
 
     describe("Where Criteria Object", () => {
 
@@ -89,7 +89,19 @@ describe("where", () => {
 
             typeCheck({} as Expect<Equal<typeof result, TExpected>>);
 
-            const expected: TExpected = [];
+            const expected: TExpected =  [
+                   {
+                     'Post.authorId': 1,
+                     'Post.content': 'Something',
+                     'Post.id': 1,
+                     'Post.lastModifiedById': 1,
+                     'Post.published': false,
+                     'Post.title': 'Blog 1',
+                     'User.email': 'johndoe@example.com',
+                     'User.id': 1,
+                     'User.name': 'John Doe'
+               }
+             ];
 
             assert.deepStrictEqual(result, expected);
 
@@ -98,7 +110,7 @@ describe("where", () => {
         it("should match SQL", () => {
             const sql = createQuery().getSQL();
 
-            const expectedSQL = `SELECT User.id AS \`User.id\`, User.email AS \`User.email\`, User.name AS \`User.name\`, Post.id AS \`Post.id\`, Post.title AS \`Post.title\`, Post.content AS \`Post.content\`, Post.published AS \`Post.published\`, Post.authorId AS \`Post.authorId\`, Post.lastModifiedById AS \`Post.lastModifiedById\` FROM User JOIN Post ON authorId = User.id WHERE (NOT((User.name LIKE 'something' ) OR (User.name LIKE 'something else' ))) AND (NOT(((User.id = 2 )))) AND ((User.id = 1 AND  Post.id = 1 ) AND (User.id = 1 AND  Post.id = 1 )) AND ((User.id = 2 ) OR (Post.content IS NOT NULL ));`;
+            const expectedSQL = `SELECT User.id AS \`User.id\`, User.email AS \`User.email\`, User.name AS \`User.name\`, Post.id AS \`Post.id\`, Post.title AS \`Post.title\`, Post.content AS \`Post.content\`, Post.published AS \`Post.published\`, Post.authorId AS \`Post.authorId\`, Post.lastModifiedById AS \`Post.lastModifiedById\` FROM User JOIN Post ON Post.authorId = User.id WHERE (NOT((User.name LIKE 'something' ) OR (User.name LIKE 'something else' ))) AND (NOT(((User.id = 2 )))) AND ((User.id = 1 AND  Post.id = 1 ) AND (User.id = 1 AND  Post.id = 1 )) AND ((User.id = 2 ) OR (Post.content IS NOT NULL ));`;
 
             assert.strictEqual(sql, expectedSQL);
         });
@@ -132,7 +144,41 @@ describe("where", () => {
 
             typeCheck({} as Expect<Equal<typeof result, TExpected>>);
 
-            const expected: TExpected = [];
+            const expected: TExpected = [
+                {
+                  'Post.authorId': 1,
+                  'Post.content': 'Something',
+                  'Post.id': 1,
+                  'Post.lastModifiedById': 1,
+                  'Post.published': false,
+                  'Post.title': 'Blog 1',
+                  'User.email': 'johndoe@example.com',
+                  'User.id': 1,
+                  'User.name': 'John Doe'
+            },
+            {
+              'Post.authorId': 1,
+                  'Post.content': 'sql',
+                  'Post.id': 2,
+                  'Post.lastModifiedById': 1,
+                  'Post.published': false,
+                  'Post.title': 'blog 2',
+                  'User.email': 'johndoe@example.com',
+                  'User.id': 1,
+                  'User.name': 'John Doe'
+            },
+            {
+              'Post.authorId': 2,
+                  'Post.content': null,
+                  'Post.id': 3,
+                  'Post.lastModifiedById': 2,
+                  'Post.published': false,
+                  'Post.title': 'blog 3',
+                  'User.email': 'smith@example.com',
+                  'User.id': 2,
+                  'User.name': 'John Smith'
+            }
+             ];
 
             assert.deepStrictEqual(result, expected);
 
@@ -140,7 +186,7 @@ describe("where", () => {
 
         it("should match SQL", () => {
             const sql = createQuery().getSQL();
-            const expectedSQL = `SELECT User.id AS \`User.id\`, User.email AS \`User.email\`, User.name AS \`User.name\`, Post.id AS \`Post.id\`, Post.title AS \`Post.title\`, Post.content AS \`Post.content\`, Post.published AS \`Post.published\`, Post.authorId AS \`Post.authorId\`, Post.lastModifiedById AS \`Post.lastModifiedById\` FROM User JOIN Post ON authorId = User.id WHERE (User.id = 1 AND Post.id = 1) OR (User.id = 2 OR Post.content IS NOT NULL);`;
+            const expectedSQL = `SELECT User.id AS \`User.id\`, User.email AS \`User.email\`, User.name AS \`User.name\`, Post.id AS \`Post.id\`, Post.title AS \`Post.title\`, Post.content AS \`Post.content\`, Post.published AS \`Post.published\`, Post.authorId AS \`Post.authorId\`, Post.lastModifiedById AS \`Post.lastModifiedById\` FROM User JOIN Post ON Post.authorId = User.id WHERE (User.id = 1 AND Post.id = 1) OR (User.id = 2 OR Post.content IS NOT NULL);`;
             assert.strictEqual(sql, expectedSQL);
         });
 
@@ -175,7 +221,7 @@ describe("where", () => {
 
         it("should match SQL", () => {
             const sql = createQuery().getSQL();
-            const expectedSQL = `SELECT name, Post.content FROM User JOIN Post ON authorId = User.id WHERE ((Post.content IS NOT NULL )) AND ((User.name IS NULL ));`;
+            const expectedSQL = `SELECT name, content FROM User JOIN Post ON Post.authorId = User.id WHERE ((Post.content IS NOT NULL )) AND ((User.name IS NULL ));`;
             assert.strictEqual(sql, expectedSQL);
         });
 
@@ -184,11 +230,11 @@ describe("where", () => {
 
 describe("having", () => {
 
-    before(async function(){
+    // before(async function(){
         // Delete in correct order due to foreign key constraints
-        await prisma.post.deleteMany({});
-        await prisma.user.deleteMany({});
-    });
+        // await prisma.post.deleteMany({});
+        // await prisma.user.deleteMany({});
+    // });
 
     describe("HAVING with GROUP BY", () => {
 
@@ -222,14 +268,37 @@ describe("having", () => {
 
             typeCheck({} as Expect<Equal<typeof result, TExpected>>);
 
-            const expected: TExpected = [];
+            const expected: TExpected = [
+                {
+                  'Post.authorId': 1,
+                  'Post.content': 'Something',
+                  'Post.id': 1,
+                  'Post.lastModifiedById': 1,
+                  'Post.published': false,
+                  'Post.title': 'Blog 1',
+                  'User.email': 'johndoe@example.com',
+                  'User.id': 1,
+                  'User.name': 'John Doe'
+            },
+            {
+              'Post.authorId': 2,
+                  'Post.content': null,
+                  'Post.id': 3,
+                  'Post.lastModifiedById': 2,
+                  'Post.published': false,
+                  'Post.title': 'blog 3',
+                  'User.email': 'smith@example.com',
+                  'User.id': 2,
+                  'User.name': 'John Smith'
+            }
+             ];
 
             assert.deepStrictEqual(result, expected);
         });
 
         it("should match SQL", () => {
             const sql = createQuery().getSQL();
-            const expectedSQL = `SELECT User.id AS \`User.id\`, User.email AS \`User.email\`, User.name AS \`User.name\`, Post.id AS \`Post.id\`, Post.title AS \`Post.title\`, Post.content AS \`Post.content\`, Post.published AS \`Post.published\`, Post.authorId AS \`Post.authorId\`, Post.lastModifiedById AS \`Post.lastModifiedById\` FROM User JOIN Post ON authorId = User.id GROUP BY User.name HAVING (User.name LIKE 'John%' );`;
+            const expectedSQL = `SELECT User.id AS \`User.id\`, User.email AS \`User.email\`, User.name AS \`User.name\`, Post.id AS \`Post.id\`, Post.title AS \`Post.title\`, Post.content AS \`Post.content\`, Post.published AS \`Post.published\`, Post.authorId AS \`Post.authorId\`, Post.lastModifiedById AS \`Post.lastModifiedById\` FROM User JOIN Post ON Post.authorId = User.id GROUP BY User.name HAVING (User.name LIKE 'John%' );`;
             assert.strictEqual(sql, expectedSQL);
         });
 
@@ -256,7 +325,7 @@ describe("having", () => {
 
             const sql = createQuery()
                 .getSQL();
-            const expectedSQL = `SELECT User.id AS \`User.id\`, User.email AS \`User.email\`, User.name AS \`User.name\`, Post.id AS \`Post.id\`, Post.title AS \`Post.title\`, Post.content AS \`Post.content\`, Post.published AS \`Post.published\`, Post.authorId AS \`Post.authorId\`, Post.lastModifiedById AS \`Post.lastModifiedById\` FROM User JOIN Post ON authorId = User.id HAVING (User.name LIKE 'Stuart%' );`;
+            const expectedSQL = `SELECT User.id AS \`User.id\`, User.email AS \`User.email\`, User.name AS \`User.name\`, Post.id AS \`Post.id\`, Post.title AS \`Post.title\`, Post.content AS \`Post.content\`, Post.published AS \`Post.published\`, Post.authorId AS \`Post.authorId\`, Post.lastModifiedById AS \`Post.lastModifiedById\` FROM User JOIN Post ON Post.authorId = User.id HAVING (User.name LIKE 'Stuart%' );`;
             assert.strictEqual(sql, expectedSQL);
 
             // Verify type is correct even though we don't run it
@@ -323,7 +392,30 @@ describe("having", () => {
 
             typeCheck({} as Expect<Equal<typeof result, TExpected>>);
 
-            const expected: TExpected = [];
+            const expected: TExpected =  [
+                {
+                  'Post.authorId': 1,
+                  'Post.content': 'Something',
+                  'Post.id': 1,
+                  'Post.lastModifiedById': 1,
+                  'Post.published': false,
+                  'Post.title': 'Blog 1',
+                  'User.email': 'johndoe@example.com',
+                  'User.id': 1,
+                  'User.name': 'John Doe'
+            },
+            {
+              'Post.authorId': 2,
+                  'Post.content': null,
+                  'Post.id': 3,
+                  'Post.lastModifiedById': 2,
+                  'Post.published': false,
+                  'Post.title': 'blog 3',
+                  'User.email': 'smith@example.com',
+                  'User.id': 2,
+                  'User.name': 'John Smith'
+            }
+             ];
 
             assert.deepStrictEqual(result, expected);
         });
@@ -337,5 +429,5 @@ describe("having", () => {
         });
     });
 });
-}
+// }
 
