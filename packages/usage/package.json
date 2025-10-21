@@ -4,6 +4,9 @@
   "version": "1.0.0",
   "type": "module",
   "license": "MIT",
+  "prisma": {
+    "seed": "tsx prisma/seed.ts"
+  },
   "scripts": {
     "gen": "pnpm exec prisma generate",
     "b": "pnpm --filter prisma-ts-select build",

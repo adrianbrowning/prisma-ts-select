@@ -150,3 +150,11 @@ CREATE UNIQUE INDEX "_M2M_NC_M2_AB_unique" ON "_M2M_NC_M2"("A", "B");
 
 -- CreateIndex
 CREATE INDEX "_M2M_NC_M2_B_index" ON "_M2M_NC_M2"("B");
+
+
+CREATE TABLE "Employee" (
+    "id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+    "name" TEXT NOT NULL,
+    "managerId" INTEGER,
+    CONSTRAINT "Employee_managerId_fkey" FOREIGN KEY ("managerId") REFERENCES "Employee" ("id") ON DELETE SET NULL ON UPDATE CASCADE
+);

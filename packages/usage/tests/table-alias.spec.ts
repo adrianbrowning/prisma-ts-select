@@ -11,47 +11,63 @@ describe("Table Alias Support", () => {
     describe("Single table alias with FROM", () => {
         test("should alias a table with two-parameter syntax", async () => {
             const query = prisma.$from("User u")
-                .select("u.name")
-                .getSQL();
+                .select("u.name");
+
+            {
+                const result = await query.run();
+                typeCheck({} as Expect<Equal<typeof result, Array<{ "name": string | null }>>>);
+            }
 
             assert.strictEqual(
-                query,
-                "SELECT u.name FROM User AS u;"
+                query.getSQL(),
+                "SELECT name FROM User AS `u`;"
             );
         });
 
         test("should allow using alias in WHERE clause", async () => {
             const query = prisma.$from("User u")
                 .where({"u.id": 1})
-                .select("u.name")
-                .getSQL();
+                .select("u.name");
+
+            {
+                const result = await query.run();
+                typeCheck({} as Expect<Equal<typeof result, Array<{ "name": string | null }>>>);
+            }
 
             assert.strictEqual(
-                query,
-                "SELECT u.name FROM User AS u WHERE (u.id = 1 );"
+                query.getSQL(),
+                "SELECT name FROM User AS `u` WHERE (u.id = 1 );"
             );
         });
 
         test("should work without alias (backward compatibility)", async () => {
             const query = prisma.$from("User")
-                .select("User.email")
-                .getSQL();
+                .select("User.email");
+
+            {
+                const result = await query.run();
+                typeCheck({} as Expect<Equal<typeof result, Array<{ "email": string }>>>);
+            }
 
             assert.strictEqual(
-                query,
-                "SELECT User.email FROM User;"
+                query.getSQL(),
+                "SELECT email FROM User;"
             );
         });
 
         test("should support mixing aliased table with ORDER BY", async () => {
             const query = prisma.$from("User u")
                 .select("u.name")
-                .orderBy(["u.name DESC"])
-                .getSQL();
+                .orderBy(["u.name DESC"]);
+
+            {
+                const result = await query.run();
+                typeCheck({} as Expect<Equal<typeof result, Array<{ "name": string | null }>>>);
+            }
 
             assert.strictEqual(
-                query,
-                "SELECT u.name FROM User AS u ORDER BY u.name DESC;"
+                query.getSQL(),
+                "SELECT name FROM User AS `u` ORDER BY u.name DESC;"
             );
         });
 
@@ -59,6 +75,7 @@ describe("Table Alias Support", () => {
             //     _?
             const result = await prisma.$from("User u")
                 .select("name")
+                // ^?
                 .run();
 
             typeCheck({} as Expect<Equal<typeof result, Array<{ name: string | null }>>>);
@@ -71,7 +88,7 @@ describe("Table Alias Support", () => {
                 .select("u.name")
                 .run();
 
-            typeCheck({} as Expect<Equal<typeof result, Array<{ "u.name": string | null }>>>);
+            typeCheck({} as Expect<Equal<typeof result, Array<{ "name": string | null }>>>);
             assert.ok(Array.isArray(result));
         });
 
@@ -83,12 +100,16 @@ describe("Table Alias Support", () => {
                 // _?
                 .join("Post p", "authorId", "u.id")
                 .select("u.name")
-                .select("p.title")
-                .getSQL();
+                .select("p.title");
+
+            {
+                const result = await query.run();
+                typeCheck({} as Expect<Equal<typeof result, Array<{ name: string | null; title: string }>>>);
+            }
 
             assert.strictEqual(
-                query,
-                "SELECT u.name, p.title FROM User AS u JOIN Post AS p ON authorId = u.id;"
+                query.getSQL(),
+                "SELECT name, title FROM User AS `u` JOIN Post AS `p` ON p.authorId = u.id;"
             );
         });
 
@@ -96,12 +117,16 @@ describe("Table Alias Support", () => {
             const query = prisma.$from("User u")
                 .join({table: "Post", src: "authorId", on: "u.id", alias: "p"})
                 .select("u.name")
-                .select("p.title")
-                .getSQL();
+                .select("p.title");
+
+            {
+                const result = await query.run();
+                typeCheck({} as Expect<Equal<typeof result, Array<{ name: string | null; title: string }>>>);
+            }
 
             assert.strictEqual(
-                query,
-                "SELECT u.name, p.title FROM User AS u JOIN Post AS p ON authorId = u.id;"
+                query.getSQL(),
+                "SELECT name, title FROM User AS `u` JOIN Post AS `p` ON p.authorId = u.id;"
             );
         });
 
@@ -109,12 +134,16 @@ describe("Table Alias Support", () => {
             const query = prisma.$from("User u")
                 .join("Post", "authorId", "u.id")
                 .select("u.name")
-                .select("Post.title")
-                .getSQL();
+                .select("Post.title");
+
+            {
+                const result = await query.run();
+                typeCheck({} as Expect<Equal<typeof result, Array<{ name: string | null; title: string }>>>);
+            }
 
             assert.strictEqual(
-                query,
-                "SELECT u.name, Post.title FROM User AS u JOIN Post ON authorId = u.id;"
+                query.getSQL(),
+                "SELECT name, title FROM User AS `u` JOIN Post ON Post.authorId = u.id;"
             );
         });
 
@@ -122,12 +151,16 @@ describe("Table Alias Support", () => {
             const query = prisma.$from("User")
                 .join("Post p", "authorId", "User.id")
                 .select("User.name")
-                .select("p.title")
-                .getSQL();
+                .select("p.title");
+
+            {
+                const result = await query.run();
+                typeCheck({} as Expect<Equal<typeof result, Array<{ name: string | null; title: string }>>>);
+            }
 
             assert.strictEqual(
-                query,
-                "SELECT User.name, p.title FROM User JOIN Post AS p ON authorId = User.id;"
+                query.getSQL(),
+                "SELECT name, title FROM User JOIN Post AS `p` ON p.authorId = User.id;"
             );
         });
 
@@ -135,26 +168,58 @@ describe("Table Alias Support", () => {
             const query = prisma.$from("User")
                 .join({table: "Post", src: "authorId", on: "User.id"})
                 .select("User.name")
-                .select("Post.title")
-                .getSQL();
+                .select("Post.title");
+
+            {
+                const result = await query.run();
+                typeCheck({} as Expect<Equal<typeof result, Array<{ name: string | null; title: string }>>>);
+            }
 
             assert.strictEqual(
-                query,
-                "SELECT User.name, Post.title FROM User JOIN Post ON authorId = User.id;"
+                query.getSQL(),
+                "SELECT name, title FROM User JOIN Post ON Post.authorId = User.id;"
             );
         });
 
-        test("should support self-join with different aliases", async () => {
-            const query = prisma.$from("User u1")
-                .joinUnsafeTypeEnforced("User u2", "id", "u1.id")
-                .select("u1.name", "user1Name")
-                .select("u2.name", "user2Name")
-                .getSQL();
+        test("should support self-join with different aliases using .join()", async () => {
+            const query = prisma.$from("Employee e1")
+                .join("Employee e2", "managerId", "e1.id")
+                .select("e1.name", "employeeName")
+                .select("e2.name", "managerName")
+                //.getSQL();
+
+            {
+                const result = await query.run();
+                typeCheck({} as Expect<Equal<typeof result, Array<{ "employeeName": string; "managerName": string }>>>);
+
+            }
+
 
             assert.strictEqual(
-                query,
-                "SELECT u1.name AS `user1Name`, u2.name AS `user2Name` FROM User AS u1 JOIN User AS u2 ON User.id = u1.id;"
+                query.getSQL(),
+                "SELECT e1.name AS `employeeName`, e2.name AS `managerName` FROM Employee AS `e1` JOIN Employee AS `e2` ON e2.managerId = e1.id;"
             );
+        });
+
+        test("should support self-join with different aliases using .joinUnsafeTypeEnforced()", async () => {
+            const query = prisma.$from("Employee e1")
+                .joinUnsafeTypeEnforced("Employee e2", "id", "e1.id")
+                .select("e1.name", "employee1Name")
+                .select("e2.name", "employee2Name");
+
+
+
+            assert.strictEqual(
+                query.getSQL(),
+                "SELECT e1.name AS `employee1Name`, e2.name AS `employee2Name` FROM Employee AS `e1` JOIN Employee AS `e2` ON e2.id = e1.id;"
+            );
+
+            {
+                const result = await query.run();
+                typeCheck({} as Expect<Equal<typeof result, Array<{ "employee1Name": string; "employee2Name": string }>>>);
+            }
+
+
         });
 
         test("should return correct types with aliased joins", async () => {
@@ -180,12 +245,16 @@ describe("Table Alias Support", () => {
                     "u.id": 1
                 })
                 .select("u.name")
-                .select("p.title")
-                .getSQL();
+                .select("p.title");
+
+            {
+                const result = await query.run();
+                typeCheck({} as Expect<Equal<typeof result, Array<{ name: string | null; title: string }>>>);
+            }
 
             assert.strictEqual(
-                query,
-                "SELECT u.name, p.title FROM User AS u JOIN Post AS p ON authorId = u.id WHERE (u.id = 1 );"
+                query.getSQL(),
+                "SELECT name, title FROM User AS `u` JOIN Post AS `p` ON p.authorId = u.id WHERE (u.id = 1 );"
             );
         });
     });
@@ -194,12 +263,16 @@ describe("Table Alias Support", () => {
         test("should use aliases in GROUP BY", async () => {
             const query = prisma.$from("Post p")
                 .groupBy(["p.authorId"])
-                .select("p.authorId")
-                .getSQL();
+                .select("p.authorId");
+
+            {
+                const result = await query.run();
+                typeCheck({} as Expect<Equal<typeof result, Array<{ "authorId": number }>>>);
+            }
 
             assert.strictEqual(
-                query,
-                "SELECT p.authorId FROM Post AS p GROUP BY p.authorId;"
+                query.getSQL(),
+                "SELECT authorId FROM Post AS `p` GROUP BY p.authorId;"
             );
         });
 
@@ -207,12 +280,16 @@ describe("Table Alias Support", () => {
             const query = prisma.$from("Post p")
                 .groupBy(["p.authorId"])
                 .having({"p.authorId": {op: ">", value: 1}})
-                .select("p.authorId")
-                .getSQL();
+                .select("p.authorId");
+
+            {
+                const result = await query.run();
+                typeCheck({} as Expect<Equal<typeof result, Array<{ "authorId": number }>>>);
+            }
 
             assert.strictEqual(
-                query,
-                "SELECT p.authorId FROM Post AS p GROUP BY p.authorId HAVING (p.authorId > 1 );"
+                query.getSQL(),
+                "SELECT authorId FROM Post AS `p` GROUP BY p.authorId HAVING (p.authorId > 1 );"
             );
         });
     });
@@ -221,12 +298,16 @@ describe("Table Alias Support", () => {
         test("should work with LIMIT", async () => {
             const query = prisma.$from("User u")
                 .select("u.name")
-                .limit(10)
-                .getSQL();
+                .limit(10);
+
+            {
+                const result = await query.run();
+                typeCheck({} as Expect<Equal<typeof result, Array<{ "name": string | null }>>>);
+            }
 
             assert.strictEqual(
-                query,
-                "SELECT u.name FROM User AS u LIMIT 10;"
+                query.getSQL(),
+                "SELECT name FROM User AS `u` LIMIT 10;"
             );
         });
 
@@ -234,12 +315,16 @@ describe("Table Alias Support", () => {
             const query = prisma.$from("User u")
                 .select("u.email")
                 .limit(10)
-                .offset(5)
-                .getSQL();
+                .offset(5);
+
+            {
+                const result = await query.run();
+                typeCheck({} as Expect<Equal<typeof result, Array<{ "email": string }>>>);
+            }
 
             assert.strictEqual(
-                query,
-                "SELECT u.email FROM User AS u LIMIT 10 OFFSET 5;"
+                query.getSQL(),
+                "SELECT email FROM User AS `u` LIMIT 10 OFFSET 5;"
             );
         });
     });
@@ -247,12 +332,20 @@ describe("Table Alias Support", () => {
     describe("Table.* with aliases", () => {
         test("should expand Table.* using alias", async () => {
             const query = prisma.$from("User u")
-                .select("u.*")
-                .getSQL();
+                .select("u.*");
+
+            {
+                const result = await query.run();
+                typeCheck({} as Expect<Equal<typeof result, Array<{
+                    "u.id": number;
+                    "u.email": string;
+                    "u.name": string | null
+                }>>>);
+            }
 
             assert.strictEqual(
-                query,
-                "SELECT u.id, u.email, u.name FROM User AS u;"
+                query.getSQL(),
+                "SELECT id, email, name FROM User AS `u`;"
             );
         });
 
@@ -260,25 +353,44 @@ describe("Table Alias Support", () => {
             const query = prisma.$from("User u")
                 .join("Post p", "authorId", "u.id")
                 .select("u.*")
-                .select("p.*")
-                .getSQL();
+                .select("p.*");
+
+
 
             assert.strictEqual(
-                query,
-                "SELECT u.id AS `u.id`, u.email AS `u.email`, u.name AS `u.name`, p.id AS `p.id`, p.title AS `p.title`, p.content AS `p.content`, p.published AS `p.published`, p.authorId AS `p.authorId`, p.lastModifiedById AS `p.lastModifiedById` FROM User AS u JOIN Post AS p ON authorId = u.id;"
+                query.getSQL(),
+                "SELECT u.id AS `u.id`, u.email AS `u.email`, u.name AS `u.name`, p.id AS `p.id`, p.title AS `p.title`, p.content AS `p.content`, p.published AS `p.published`, p.authorId AS `p.authorId`, p.lastModifiedById AS `p.lastModifiedById` FROM User AS `u` JOIN Post AS `p` ON p.authorId = u.id;"
             );
+            {
+                const result = await query.run();
+                typeCheck({} as Expect<Equal<typeof result, Array<{
+                    "u.id": number;
+                    "u.email": string;
+                    "u.name": string | null;
+                    "p.id": number;
+                    "p.title": string;
+                    "p.content": string | null;
+                    "p.published": boolean;
+                    "p.authorId": number;
+                    "p.lastModifiedById": number;
+                }>>>);
+            }
         });
     });
 
     describe("Edge cases", () => {
         test("should handle aliases with column aliases", async () => {
             const query = prisma.$from("User u")
-                .select("u.name", "userName")
-                .getSQL();
+                .select("u.name", "userName");
+
+            {
+                const result = await query.run();
+                typeCheck({} as Expect<Equal<typeof result, Array<{ "userName": string | null }>>>);
+            }
 
             assert.strictEqual(
-                query,
-                "SELECT u.name AS `userName` FROM User AS u;"
+                query.getSQL(),
+                "SELECT u.name AS `userName` FROM User AS `u`;"
             );
         });
 

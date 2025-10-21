@@ -188,6 +188,7 @@ type Whitespace = '\n' | ' ';
  * type Trimmed2 = Trim<"\nhello world\n">; // "hello world"
  * type Trimmed3 = Trim<"  \n  test  \n  ">; // "test"
  */
+//@ts-expect-error will implement in another issue
 type Trim<T> = T extends `${Whitespace}${infer U}` ? Trim<U> : T extends `${infer U}${Whitespace}` ? Trim<U> : T;
 
 /**
@@ -220,7 +221,8 @@ type ValidSelect<Tables extends TArrSources> =
  * GetOtherColumns<["User", "Post"]>
  * // Returns: "id" | "name" | "User.id" | "User.name" | "Post.id" | "Post.title"
  */
-type GetOtherColumns<Tables extends TArrSources> = Tables extends [infer T extends TTableSources, ...Array<TTableSources>]
+//@ts-expect-error using a never version
+type GetOtherColumns_old<Tables extends TArrSources> = Tables extends [infer T extends TTableSources, ...Array<TTableSources>]
     ? GetColsBaseTable<T> | GetJoinCols<Tables[number]>
     : never
 
@@ -287,8 +289,6 @@ type ExtractColumnType<
         ? TFields[TSources[0] extends string ? TSources[0] : `Come back To 2`][Column]
         : never;
 
-//                   _?
-console.log({} as Prettify<ExtractColumnType<'User.id',['User'],{'User': {"id":number}}>>)
 
 export type TTables = DATABASE["table"];
 export type TTableSources = DATABASE["table"] | [table: DATABASE["table"], alias: string];
@@ -308,8 +308,10 @@ class DbSelect {
     ) {
         return new _fJoin<TRT,
             Record<GetAliasTableNames<TRT[0]>, GetFieldsFromTable<TDBBase>>>(this.db, {
-            baseTable,
-            baseTableAlias: alias,
+            tables: [{
+                table:baseTable,
+                alias
+            }],
             selects: []
         })
     }
@@ -319,11 +321,11 @@ class DbSelect {
 type ClauseType = Array<string | WhereCriteria<TArrSources, Record<string, any>>>;
 
 type Values = {
-    baseTable: TTables,
-    baseTableAlias?: string;
+    //baseTable: TTables,
+    //baseTableAlias?: string;
     selectDistinct?: true;
     selects: Array<string>;
-    tables?: Array<{ table: TTables, local: string, remote: string, alias?: string }>;
+    tables: [{ table: TTables, alias?: string }, ...Array<{ table: TTables, local: string, remote: string, alias?: string }>];
     limit?: number;
     offset?: number;
     where?: ClauseType;
@@ -479,6 +481,14 @@ class _fRun<TSources extends TArrSources, TFields extends TFieldsType, TSelectRT
         const whereClause = this.values.where !== undefined ? processCriteria(this.values.where,  "AND", formatted) : undefined;
         const havingClause = this.values.having !== undefined ? processCriteria(this.values.having,  "AND", formatted) : undefined;
 
+        const [base, ...joins] = this.values.tables;
+
+        const baseTable = base.alias
+            ? `${base.table} AS \`${base.alias}\``
+            : base.table;
+
+
+
         return [
             this.values.selects.length === 0
                 ? ""
@@ -487,12 +497,16 @@ class _fRun<TSources extends TArrSources, TFields extends TFieldsType, TSelectRT
                         ? "DISTINCT "
                         : "")
                     + this.values.selects.join(', ')),
-            `FROM ${this.values.baseTable}`,
-            this.values.tables?.map(({
+            `FROM ${baseTable}`,
+            joins.map(({
                                          table,
                                          local,
-                                         remote
-                                     }) => `JOIN ${table} ON ${local} = ${remote}`).join(formatted ? "\n" : " ") ?? "",
+                                         remote,
+                                         alias
+                                     }) => {
+                const tLocal = (alias || table) + "." + local;
+                return `JOIN ${!!alias ? (table + " AS `" + alias + "`") : table} ON ${tLocal} = ${remote}`;
+            }).join(formatted ? "\n" : " ") ?? "",
             !whereClause ? "" : `WHERE ${whereClause}`,
             !this.values.groupBy?.length ? "" : `GROUP BY ${this.values.groupBy.join(', ')}`,
             !havingClause ? "" : `HAVING ${havingClause}`,
@@ -570,6 +584,28 @@ LIMIT - the returned data is limited to row count.
 OFFSET -
 run
 */
+//@ts-expect-error yeah old version for comp
+type MergeItemsOld<Field extends string,
+    TSources extends [TTables,...Array<TTables>],
+    TFields extends TFieldsType,
+    IncTName extends boolean = false,
+    TLTables = TSources[number]> =
+    Field extends "*"
+        ? Prettify<IterateTables<TSources, TFields, IncTName>>
+        : Field extends `${infer T}.*`
+            ? T extends keyof TFields
+                ? [TSources] extends [[T]]
+                    // Single table - no prefix
+                    ? TFields[T]
+                    // Multiple tables - with prefix
+                    : T extends string ? IterateTablesFromFields<T, TFields[T], true> : never
+                : never
+            //@ts-expect-error T not a string?
+            : Field extends `${infer T extends TLTables}.${infer F extends string}`
+                //@ts-expect-error F is part of T, but can't tell TS that
+                ? Pick<TFields[T], F>
+                //@-ts-expect-error Field is part of the from, but can't tell TS that.
+                : Pick<TFields[TSources[0]], Field>;
 
 /**
  * Transforms a field selection pattern into its corresponding TypeScript type structure.
@@ -602,28 +638,45 @@ run
  * MergeItems<"User.id", ["User", "Post"], {...}>
  * // Returns: {"User.id": number}
  */
+
 type MergeItems<Field extends string,
     TSources extends TArrSources,
     TFields extends TFieldsType,
-    IncTName extends boolean = false> =
+    IncTName extends boolean = false,
+    TLTables extends string = TablesArray2Name<TSources>[number]> =
     Field extends "*"
       ? Prettify<IterateTables<TSources, TFields, IncTName>>
       : Field extends `${infer T}.*`
         ? T extends keyof TFields
-            ? [TSources] extends [[T]]
-                // Single table - no prefix
-                ? TFields[T]
-                // Multiple tables - with prefix
-                : T extends string ? IterateTablesFromFields<T, TFields[T], true> : never
+          ? [TSources] extends [[T]]
+            // Single table - no prefix
+            ? TFields[T]
+            // Multiple tables - with prefix
+            : T extends string ? IterateTablesFromFields<T, TFields[T], true> : never
+          : never
+        : Field extends `${infer T extends TLTables}.${infer F extends string}`
+          ? T extends keyof TFields
+            ? F extends keyof TFields[T]
+                    // Check if column is unique across all tables
+              ? IsColumnUnique<F, TSources> extends true
+                        // Unique column: strip table prefix
+                ? Prettify<Pick<TFields[T], F>>
+                        // Non-unique column: keep qualified name "Table.column"
+                : Prettify<{[K in Field]: TFields[T][F]}>
+              : never
             : never
+          : FindColumnInFields<Field, TFields>//Pick<TFields[GetAliasTableNames<TSources[0]>], Field>;
 
-        : Field extends `${infer T extends string}.${infer F extends string}`
-            ? Record<`${T}.${F}`, Pick<TFields[T], F>[F] >
-                : Field extends string
-                    ? Pick<TFields[TSources[0] extends string
-                      ? TSources[0]
-                      : TSources[0][1]], Field>
-                    : never;
+type FindColumnInFields<Column extends string,
+    TFields extends TFieldsType,
+    Tables extends keyof TFields = keyof TFields
+    > = Tables extends keyof TFields
+         ? TFields[Tables] extends Record<Column, any>
+             ? Pick<TFields[Tables], Column>
+             : never
+         : never
+
+
 
 /**
  * Recursively iterates through an array of tables and accumulates their fields into a single type.
@@ -698,8 +751,43 @@ type IterateTablesFromFields<Table extends TTableSources, TFields extends Record
 };
 
 
+type TablesArray2Name<TSources extends Array<TTableSources>, acc extends Array<string> = []> =
+    TSources extends [infer T extends TTableSources, ...infer Rest extends Array<TTableSources>]
+    ? TablesArray2Name<Rest, [...acc, GetAliasTableNames<T>]>
+    : acc;
+
+
+// Helper to get column names from a single table (unqualified)
+type GetColumnNamesFromTable<TDBBase extends TTableSources> = keyof GetFieldsFromTable<GetRealTableNames<TDBBase>>;
+
+// Get all column names from an array of tables
+type GetColumnsFromTables<Tables extends Array<TTableSources>> =
+    Tables extends [infer T extends TTableSources, ...infer Rest extends Array<TTableSources>]
+        ? GetColumnNamesFromTable<T> | GetColumnsFromTables<Rest>
+        : never;
+
+// Find columns that appear in multiple tables via pairwise intersection
+type GetDuplicateColumnsPairwise<Tables extends TArrSources> =
+    Tables extends [infer T1 extends TTableSources, infer T2 extends TTableSources, ...infer Rest extends Array<TTableSources>]
+        ? (GetColumnNamesFromTable<T1> & GetColumnNamesFromTable<T2>)
+        | GetDuplicateColumnsPairwise<[T1, ...Rest]>
+        | GetDuplicateColumnsPairwise<[T2, ...Rest]>
+        : never;
+
+// Check if a column name is unique across all tables
+type IsColumnUnique<Col extends string, Tables extends TArrSources> =
+    Col extends GetDuplicateColumnsPairwise<Tables> ? false : true;
+
+// Updated: Returns unique column names (unqualified) + all table.column syntax
+type GetOtherColumns<Tables extends TArrSources> =
+    Exclude<GetColumnsFromTables<Tables>, GetDuplicateColumnsPairwise<Tables>>
+    | GetJoinCols<Tables[number]>;
+
 class _fSelect<TSources extends TArrSources, TFields extends TFieldsType, TSelectRT extends Record<string, any> = {}> extends _fOrderBy<TSources, TFields, TSelectRT> {
-    select<TSelect extends ValidSelect<TSources>, TAlias extends string = never>(
+    select<
+        const TSelect extends ValidSelect<TSources>,
+        TAlias extends string = never>
+    (
         select: TSelect,
         alias?: TAlias
     ): [TAlias] extends [never]
@@ -709,28 +797,63 @@ class _fSelect<TSources extends TArrSources, TFields extends TFieldsType, TSelec
 
 
         // Check if select is "Table.*" pattern
-        const tableStarMatch = select.match(/^(\w+)\.\*$/);
-        if (tableStarMatch) {
-            const tableName = tableStarMatch[1];
+        const tableColMatch = select.match(/^(\w+)\.(.*?)$/);
+        if (tableColMatch) {
+            const [,tableName, colName] = tableColMatch;
             // Expand Table.* to all columns from that table
-            const tableFields = DB[tableName as keyof typeof DB];
+            const tableObject = this.values.tables.find(t => (t.alias || t.table) === tableName);
+            if (!tableObject) throw new Error(`Table "${tableName}" not found in query`);
+            const tableFields = DB[tableObject.table];
             if (!tableFields) {
                 throw new Error(`Table "${tableName}" not found in database schema`);
             }
 
-            const hasMultipleTables = (this.values.tables && this.values.tables.length > 0) || false;
 
-            const expandedSelects = Object.keys(tableFields.fields).map((field) => {
-                if (hasMultipleTables) {
-                    return `${tableName}.${field} AS \`${tableName}.${field}\``;
+            if (colName === "*") {
+                const hasMultipleTables = (this.values.tables && this.values.tables.length > 1) || false;
+
+                const expandedSelects = Object.keys(tableFields.fields).map((field) => {
+                    if (hasMultipleTables) {
+                        return `${tableName}.${field} AS \`${tableName}.${field}\``;
+                    }
+                    return `${field}`;
+                });
+
+                return new _fSelect<TSources, TFields, Prettify<TSelectRT & MergeItems<TSelect, /*TablesArray2Name<TSources>*/TSources, TFields>>>(this.db, {
+                    ...this.values,
+                    selects: [...this.values.selects, ...expandedSelects]
+                }) as any;
+            }
+            else if (!alias && !!colName) {  //table.column
+
+                //Check if column is a unique
+                // if is a unique strip table
+                // else use table.column
+                const currentTablesWithFields = this.values.tables.reduce<Record<string, number>>((acc, table) => {
+                    const {table:real} = table;
+                    for (const col in DB[real]!.fields) {
+                        acc[col] = acc[col] ? acc[col] + 1 : 1;
+                    }
+                    return acc;
+                }, {});
+
+                if (!currentTablesWithFields[colName]) {
+                    throw new Error(`Column "${colName}" not found in database schema`);
                 }
-                return `${tableName}.${field}`;
-            });
 
-            return new _fSelect<TSources, TFields, Prettify<TSelectRT & MergeItems<TSelect, TSources, TFields>>>(this.db, {
-                ...this.values,
-                selects: [...this.values.selects, ...expandedSelects]
-            }) as any;
+
+                if (currentTablesWithFields[colName] > 1) {
+                    return new _fSelect(this.db, {
+                        ...this.values,
+                        selects: [...this.values.selects, `${select} AS \`${select}\``]
+                    }) as any;
+                } else {
+                    return new _fSelect(this.db, {
+                        ...this.values,
+                        selects: [...this.values.selects, `${colName}`]
+                    }) as any;
+                }
+            }
         }
 
         // Check if alias is provided
@@ -741,7 +864,7 @@ class _fSelect<TSources extends TArrSources, TFields extends TFieldsType, TSelec
             }) as any;
         }
 
-        return new _fSelect<TSources, TFields, Prettify<TSelectRT & MergeItems<TSelect, TSources, TFields>>>(this.db, {
+        return new _fSelect<TSources, TFields, Prettify<TSelectRT & MergeItems<TSelect, /*TablesArray2Name<TSources>*/TSources, TFields>>>(this.db, {
             ...this.values,
             selects: [...this.values.selects, select]
         }) as any;
@@ -778,17 +901,17 @@ class _fSelectDistinct<TSources extends TArrSources, TFields extends TFieldsType
 
 
         const selects = (function (values: Values) {
-            if (values.tables && values.tables.length > 0) {
-                return [values.baseTable, ...values.tables.map(t => t.table)].reduce<Array<string>>((acc, table): Array<string> => {
+            if (values.tables && values.tables.length > 1) {
+                return [/*values.baseTable,*/ ...values.tables.map(t => t.table)].reduce<Array<string>>((acc, table): Array<string> => {
                     //TODO review `!`
                     return acc.concat(Object.keys(DB[table]!.fields).map((field) => `${table}.${field} AS \`${table}.${field}\``))
                 }, []);
             }
             //TODO review `!`
-            return Object.keys(DB[values.baseTable]!.fields);
+            return Object.keys(DB[values.tables[0].table]!.fields);
         }(this.values))
 
-        return new _fOrderBy<TSources, TFields, MergeItems<"*", TSources, TFields, TableCount extends 1 ? false : true>>(this.db, {
+        return new _fOrderBy<TSources, TFields, MergeItems<"*", /*TablesArray2Name<TSources>*/TSources, TFields, TableCount extends 1 ? false : true>>(this.db, {
             ...this.values,
             selects
         });
@@ -1729,7 +1852,7 @@ type GetColumnType<Table extends TTableSources, Col1 extends keyof _db[Table ext
  * type NumberCols = GetJoinOnColsType<"Int", [["User", "u"], ["Post", "p"]]>;
  * // Returns: "u.id" | "u.age" | "p.id" | "p.views" | ...
  */
-type GetJoinOnColsType<Type extends string, TSources extends Array<TTableSources>> =
+type GetJoinOnColsType<Type extends string, TSources extends TArrSources> =
 // GetColsFromTableType<TDBBase, Type>
     GetJoinColsType<TSources[number], Type>;
 
@@ -1753,7 +1876,7 @@ type GetJoinOnColsType<Type extends string, TSources extends Array<TTableSources
  */
 type GetColsFromTableType<TDBBase extends TTableSources, Type extends string> =
 //@ts-expect-error Try and come back to
-    FieldsByTypeByTable[Loop<keyof FieldsByTypeByTable, Type>][TDBBase];
+    FieldsByTypeByTable[Loop<keyof FieldsByTypeByTable, Type>][GetRealTableNames<TDBBase>];
 
 /**
  * Filters a union of keys to find those that match a specific type string.
@@ -1820,19 +1943,21 @@ class _fJoin<
         TCol1 extends TJoinCols[0] = never,
         TAlias extends string = never
     >(options: {
-        table: Trim<Table>,
+        table: Table,
         src: TCol1,
         on: find<TJoinCols, TCol1>,
-        alias?: Trim<TAlias>
-    }): _fJoin<[...TSources, [TAlias] extends [undefined] ? Table : [Table, TAlias]], Prettify<TFields & Record<Table, GetFieldsFromTable<Table>>>>;
+        alias?: TAlias
+    }): _fJoin<[...TSources, [TAlias] extends [undefined] ? Table : [Table, TAlias]], Prettify<TFields & Record<[TAlias] extends [undefined] ? Table : TAlias, GetFieldsFromTable<Table>>>>;
 
     // Overload 2: Positional syntax with inline alias (e.g., "User u")
-    join<const TableInput extends Trim<`${AvailableJoins<TSources>}` | `${AvailableJoins<TSources>} ${string}`>,
+    join<const TableInput extends `${AvailableJoins<TSources>}` | `${AvailableJoins<TSources>} ${string}`,
         Table extends AvailableJoins<TSources> = ExtractTableName<TableInput> & AvailableJoins<TSources>,
         TAlias extends string | never = ExtractAlias<TableInput>,
         TJoinCols extends [string, string] = ValidStringTuple<GetUnionOfRelations<MapJoinsToKnownTables<SafeJoins<Table, TSources>, TSources>>>,
         TCol1 extends TJoinCols[0] = never
-    >(table: TableInput, field: TCol1, reference: find<TJoinCols, TCol1>): _fJoin<[...TSources, [TAlias] extends [never] ? Table : [Table, TAlias]], Prettify<TFields & Record<Table, GetFieldsFromTable<Table>>>>;
+    >(table: TableInput, field: TCol1, reference: find<TJoinCols, TCol1>):
+        _fJoin<[...TSources, [TAlias] extends [never] ? Table : [Table, TAlias]],
+            Prettify<TFields & Record<[TAlias] extends [never] ? Table : TAlias, GetFieldsFromTable<Table>>>>;
 
     // Implementation
     join<const TableInput extends `${AvailableJoins<TSources>}` | `${AvailableJoins<TSources>} ${string}`,
@@ -1855,12 +1980,12 @@ class _fJoin<
             table = tableOrOptions.table.trim();
             local = tableOrOptions.src;
             remote = tableOrOptions.on;
-            tableAlias = (tableOrOptions.alias || tableOrOptions.table).trim();
+            tableAlias = tableOrOptions.alias?.trim();
         } else {
             // Positional syntax with inline alias (e.g., "User u")
             const parts = tableOrOptions.split(' ');
             table = parts[0]!;
-            tableAlias = parts[1] || table;
+            tableAlias = parts[1]?.trim();
             local = field!;
             remote = reference!;
         }
@@ -1877,7 +2002,7 @@ class _fJoin<
     }
 
     // Overload 1: Object syntax
-    joinUnsafeTypeEnforced<const Table extends AvailableJoins<TSources>,
+joinUnsafeTypeEnforced<const Table extends AvailableJoins<TSources>,
         TCol1 extends GetColsBaseTable<Table>,
         TCol2 extends GetJoinOnColsType<GetColumnType<Table, TCol1>, [...TSources, Table]>,
         TAlias extends string = never
@@ -1886,55 +2011,61 @@ class _fJoin<
         src: TCol1,
         on: TCol2,
         alias?: TAlias
-    }): _fJoin<[...TSources, [TAlias] extends [never] ? Table : [Table, TAlias]], TFields & Record<Table, GetFieldsFromTable<Table>>>;
+    }): _fJoin<[...TSources, [TAlias] extends [undefined] ? Table : [Table, TAlias]], Prettify<TFields & Record<[TAlias] extends [undefined] ? Table : TAlias, GetFieldsFromTable<Table>>>>;
 
     // Overload 2: Positional syntax with inline alias (e.g., "User u2")
     joinUnsafeTypeEnforced<const TableInput extends `${AvailableJoins<TSources>}` | `${AvailableJoins<TSources>} ${string}`,
         Table extends AvailableJoins<TSources> = ExtractTableName<TableInput> & AvailableJoins<TSources>,
         TAlias extends string | never = ExtractAlias<TableInput>,
         TCol1 extends GetColsBaseTable<Table> = GetColsBaseTable<Table>,
-        TCol2 extends GetJoinOnColsType<GetColumnType<Table, TCol1>, [...TSources, Table]> = GetJoinOnColsType<GetColumnType<Table, TCol1>, [...TSources, Table]>
-    >(table: TableInput, field: TCol1, reference: TCol2): _fJoin<[...TSources, [TAlias] extends [never] ? Table : [Table, TAlias]], TFields & Record<Table, GetFieldsFromTable<Table>>>;
+        TCol2 extends GetJoinOnColsType<GetColumnType<Table, TCol1>, [...TSources, Table]> =
+                      GetJoinOnColsType<GetColumnType<Table, TCol1>, [...TSources, Table]>
+    >(table: TableInput, field: TCol1, reference: TCol2): _fJoin<[...TSources, [TAlias] extends [never] ? Table : [Table, TAlias]], Prettify<TFields & Record<[TAlias] extends [undefined] ? Table : TAlias, GetFieldsFromTable<Table>>>>;
 
     // Implementation
     joinUnsafeTypeEnforced<const TableInput extends `${AvailableJoins<TSources>}` | `${AvailableJoins<TSources>} ${string}`,
         Table extends AvailableJoins<TSources> = ExtractTableName<TableInput> & AvailableJoins<TSources>,
         TCol1 extends GetColsBaseTable<Table> = GetColsBaseTable<Table>,
-        TCol2 extends GetJoinOnColsType<GetColumnType<Table, TCol1>, [...TSources, Table]> = GetJoinOnColsType<GetColumnType<Table, TCol1>, [...TSources, Table]>
+        TCol2 extends GetJoinOnColsType<GetColumnType<Table, TCol1>, [...TSources, Table]> =
+                      GetJoinOnColsType<GetColumnType<Table, TCol1>, [...TSources, Table]>
     >(
         tableOrOptions: TableInput | {table: TableInput, src: TCol1, on: TCol2, alias?: string},
         field?: TCol1,
         reference?: TCol2
     ) {
-        let table: string;
-        let local: string;
-        let remote: string;
-        let tableAlias: string | undefined;
+        //@ts-expect-error call normal join function
+        return this.join(tableOrOptions, field, reference) as any;
 
-        if (typeof tableOrOptions === 'object' && 'table' in tableOrOptions) {
-            // Object syntax
-            table = tableOrOptions.table;
-            local = `${table}.${tableOrOptions.src}`;
-            remote = tableOrOptions.on;
-            tableAlias = tableOrOptions.alias || tableOrOptions.table;
-        } else {
-            // Positional syntax with inline alias (e.g., "User u2")
-            const parts = tableOrOptions.split(' ');
-            table = parts[0]!;
-            tableAlias = parts[1] || table;
-            local = `${table}.${field!}`;
-            remote = reference!;
-        }
+        /*
+                let table: string;
+                let local: string;
+                let remote: string;
+                let tableAlias: string | undefined;
 
-        return new _fJoin(this.db, {
-            ...this.values,
-            tables: [...this.values.tables || [], {
-                table: table,
-                local,
-                remote,
-                alias: tableAlias
-            }]
-        });
+                if (typeof tableOrOptions === 'object' && 'table' in tableOrOptions) {
+                    // Object syntax
+                    table = tableOrOptions.table;
+                    local = `${table}.${tableOrOptions.src}`;
+                    remote = tableOrOptions.on;
+                    tableAlias = tableOrOptions.alias || tableOrOptions.table;
+                } else {
+                    // Positional syntax with inline alias (e.g., "User u2")
+                    const parts = tableOrOptions.split(' ');
+                    table = parts[0]!;
+                    tableAlias = parts[1] || table;
+                    local = `${table}.${field!}`;
+                    remote = reference!;
+                }
+
+                return new _fJoin(this.db, {
+                    ...this.values,
+                    tables: [...this.values.tables || [], {
+                        table: table,
+                        local,
+                        remote,
+                        alias: tableAlias
+                    }]
+                });*/
     }
 
     // Overload 1: Object syntax
@@ -1967,7 +2098,9 @@ class _fJoin<
         field?: TCol1,
         reference?: TCol2
     ) {
-        let table: string;
+        //@ts-expect-error call normal join function
+        return this.join(tableOrOptions, field, reference) as any;
+        /*let table: string;
         let local: string;
         let remote: string;
         let tableAlias: string | undefined;
@@ -1995,7 +2128,7 @@ class _fJoin<
                 remote,
                 alias: tableAlias
             }]
-        });
+        });*/
     }
 
     // innerJoin(table: TTableSources, col1:string, col2:string){
@@ -2036,8 +2169,8 @@ OFFSET -
 export default {
     client: {
         $from<const T extends TTables | `${TTables} ${string}`,
-            Table extends TTables = Trim<ExtractTableName<T>>,
-            TAlias extends string | never = Trim<ExtractAlias<T>>,
+            Table extends TTables = ExtractTableName<T>,
+            TAlias extends string | never = ExtractAlias<T>,
         >(table: T) {
             const client = Prisma.getExtensionContext(this) as unknown as PrismaClient;
 

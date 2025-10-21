@@ -10,67 +10,9 @@ const prisma = new PrismaClient({})
     .$extends(tsSelectExtend);
 
 type TUserExpected = Array<{ id: number; email: string; name: string | null }>;
-    // prisma.user.deleteMany({})
-    //     .then(insertData)
-    //     .then(runTests)
-    //     .catch(e => {
-    //         debugger;
-    //         throw e;
-    //     })
-runTests();
 
-async function insertData(){
-        return Promise.all([
-            prisma.user.createMany({
-                data: [{
-                    id: 1,
-                    email: 'johndoe@example.com',
-                    name: 'John Doe',
-                },
-                    {
-                        id: 2,
-                        email: 'smith@example.com',
-                        name: 'John Smith',
-                    }],
-            }),
-            prisma.post.createMany({
-                data: [{
-                    id: 1,
-                    title: 'Blog 1',
-                    content: 'Something',
-                    published: false,
-                    authorId: 1,
-                    lastModifiedById: 1
-                }, {
-                    id: 2,
-                    title: 'blog 2',
-                    content: 'sql',
-                    published: false,
-                    authorId: 1,
-                    lastModifiedById: 1
-                }, {
-                    id: 3,
-                    title: 'blog 3',
-                    content: null,
-                    published: false,
-                    authorId: 2,
-                    lastModifiedById: 2
-                }]
-            })
-        ])
-}
-
-function runTests() {
-    describe("top level", ()=> {
-        before(async function(){
-
-            // await prisma.$executeRawUnsafe(`PRAGMA foreign_keys = OFF;`);
-            await prisma.user.deleteMany({});
-            await prisma.post.deleteMany({});
-            await insertData();
-
-            // await prisma.$executeRawUnsafe(`PRAGMA foreign_keys = ON;`);
-        })
+// Database is seeded via `pnpm p:r` which runs before all tests
+describe("Select Tests", ()=> {
         describe("basic select *", () => {
 
 
@@ -95,6 +37,11 @@ function runTests() {
                         id: 2,
                         email: 'smith@example.com',
                         name: 'John Smith',
+                    },
+                    {
+                        id: 3,
+                        email: "alice@example.com",
+                        name: null
                     }
                 ];
                 assert.deepEqual(result, expected);
@@ -171,7 +118,7 @@ function runTests() {
 
             it("should match SQL", () => {
                 const sql = createQuery().getSQL();
-                assert.strictEqual(sql, `SELECT * FROM User JOIN Post ON authorId = User.id;`)
+                assert.strictEqual(sql, `SELECT * FROM User JOIN Post ON Post.authorId = User.id;`)
             });
         })
 
@@ -203,6 +150,11 @@ function runTests() {
                         id: 2,
                         email: 'smith@example.com',
                         name: 'John Smith',
+                    },
+                    {
+                        id: 3,
+                        email: "alice@example.com",
+                        name: null
                     }
                 ];
 
@@ -212,7 +164,16 @@ function runTests() {
 
         describe("order of operations", () => {
             test("if selectAll, no select allowed", () => {
-
+                prisma.$from("User")
+                    .selectAll();
+                try {
+                    prisma.$from("User")
+                        .selectAll()
+                        //@ts-expect-error this is correct, select should not be allowed after selectAll
+                        .select("*");
+                    assert.fail("select should not be a function");
+                } catch {
+                }
             })
             test("selectDistinct should always be first", () => {
                 prisma.$from("User")
@@ -251,6 +212,11 @@ function runTests() {
                         id: 2,
                         email: 'smith@example.com',
                         name: 'John Smith',
+                    },
+                    {
+                        id: 3,
+                        email: "alice@example.com",
+                        name: null
                     }
                 ]
 
@@ -328,7 +294,7 @@ function runTests() {
 
             it("should match SQL", () => {
                 const sql = createQuery().getSQL();
-                assert.strictEqual(sql, `SELECT User.id AS \`User.id\`, User.email AS \`User.email\`, User.name AS \`User.name\`, Post.id AS \`Post.id\`, Post.title AS \`Post.title\`, Post.content AS \`Post.content\`, Post.published AS \`Post.published\`, Post.authorId AS \`Post.authorId\`, Post.lastModifiedById AS \`Post.lastModifiedById\` FROM User JOIN Post ON authorId = User.id;`)
+                assert.strictEqual(sql, `SELECT User.id AS \`User.id\`, User.email AS \`User.email\`, User.name AS \`User.name\`, Post.id AS \`Post.id\`, Post.title AS \`Post.title\`, Post.content AS \`Post.content\`, Post.published AS \`Post.published\`, Post.authorId AS \`Post.authorId\`, Post.lastModifiedById AS \`Post.lastModifiedById\` FROM User JOIN Post ON Post.authorId = User.id;`)
             });
         })
 
@@ -360,6 +326,10 @@ function runTests() {
                     {
                         email: 'smith@example.com',
                         name: 'John Smith',
+                    },
+                    {
+                        email: "alice@example.com",
+                        name: null
                     }
                 ];
                 assert.deepEqual(result, expected);
@@ -414,9 +384,111 @@ function runTests() {
 
             it("should match SQL", () => {
                 const sql = createQuery().getSQL();
-                assert.strictEqual(sql, `SELECT email, name, Post.title FROM User JOIN Post ON authorId = User.id;`)
+                assert.strictEqual(sql, `SELECT email, name, title FROM User JOIN Post ON Post.authorId = User.id;`)
             });
+        });
+
+    describe("basic select email, name, Post.title, Post.id with join", () => {
+
+
+        function createQuery() {
+            return prisma.$from("User")
+                .join("Post", "authorId", "User.id")
+                .select("email")
+                .select("name")
+                .select("Post.title")
+                .select("Post.id");
+        }
+
+        it("should run", async () => {
+            const result = await createQuery().run();
+
+            type TExpected = Array<{
+                email: string;
+                name: string | null;
+                title: string;
+                'Post.id': number;
+            }>;
+
+            typeCheck({} as Expect<Equal<typeof result, TExpected>>);
+
+            const expected: TExpected = [{
+                email: 'johndoe@example.com',
+                name: 'John Doe',
+                title: 'Blog 1',
+                'Post.id': 1
+            }, {
+                email: 'johndoe@example.com',
+                name: 'John Doe',
+                title: 'blog 2',
+                'Post.id': 2
+            }, {
+                email: 'smith@example.com',
+                name: 'John Smith',
+                title: 'blog 3',
+                'Post.id': 3
+            }];
+
+            assert.deepStrictEqual(result, expected);
+
+        });
+
+        it("should match SQL", () => {
+            const sql = createQuery().getSQL();
+            assert.strictEqual(sql, `SELECT email, name, title, Post.id AS \`Post.id\` FROM User JOIN Post ON Post.authorId = User.id;`)
+        });
+    });
+    describe("basic select email, name, Post.title, Post.id with join", () => {
+
+
+        function createQuery() {
+            return prisma.$from("User")
+                .join("Post", "authorId", "User.id")
+                .select("email")
+                .select("name")
+                .select("Post.title")
+                .select("Post.id", 'pId');
+        }
+
+        it("should run", async () => {
+            const result = await createQuery().run();
+
+            type TExpected = Array<{
+                email: string;
+                name: string | null;
+                title: string;
+                pId: number;
+            }>;
+
+            typeCheck({} as Expect<Equal<typeof result, TExpected>>);
+
+            const expected: TExpected = [{
+                email: 'johndoe@example.com',
+                name: 'John Doe',
+                title: 'Blog 1',
+                pId: 1
+            }, {
+                email: 'johndoe@example.com',
+                name: 'John Doe',
+                title: 'blog 2',
+                pId: 2
+            }, {
+                email: 'smith@example.com',
+                name: 'John Smith',
+                title: 'blog 3',
+                pId: 3
+            }];
+
+            assert.deepStrictEqual(result, expected);
+
+        });
+
+        it("should match SQL", () => {
+            const sql = createQuery().getSQL();
+            assert.strictEqual(sql, `SELECT email, name, title, Post.id AS \`pId\` FROM User JOIN Post ON Post.authorId = User.id;`)
         });
     });
 
-}
+});
+
+// }

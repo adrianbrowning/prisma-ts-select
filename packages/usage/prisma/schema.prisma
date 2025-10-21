@@ -48,6 +48,14 @@ model LikedPosts {
   authorId Int
 }
 
+model Employee {
+  id           Int        @id @default(autoincrement())
+  name         String
+  managerId    Int?
+  manager      Employee?  @relation("ManagerSubordinates", fields: [managerId], references: [id])
+  subordinates Employee[] @relation("ManagerSubordinates")
+}
+
 // Region Mutli-field Id
 model MFId_Category {
   id                Int                 @id
