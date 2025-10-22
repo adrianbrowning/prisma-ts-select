@@ -216,7 +216,7 @@ prisma.$from("User")
 prisma.$from("User u")
 ```
 ##### SQL
-```sql
+```sql file=../usage/tests/readme/from-inline-alias.ts region=inline-alias-from-sql
 FROM User AS u
 ```
 **Note:** Alias can be inline (space-separated) or as second parameter.
@@ -233,27 +233,9 @@ Table aliases allow you to give tables shorter or more meaningful names in your 
 #### Table Alias Syntax Options
 
 Multiple syntaxes supported:
-- **Inline in .$from()**: `prisma.$from("User u")``
+- **Inline in .$from()**: `prisma.$from("User u")` - Note: Second parameter syntax `.$from("User", "u")` is NOT supported
 - **Inline in .join()**: `.join("Post p", "authorId", "User.id")`
 - **Object syntax**: `.join({table: "Post", src: "authorId", on: "User.id", alias: "p"})`
-
-#### Basic Table Alias
-
-Use the inline alias syntax shown in the .$from section above:
-
-```typescript
-prisma.$from("User u")
-  .select("u.name")
-  .select("u.email")
-  .run();
-```
-
-##### SQL
-```sql
-SELECT name, email FROM User AS u;
-```
-
-**Note:** The second parameter syntax `.$from("User", "u")` is not supported. Use inline syntax `.$from("User u")` instead.
 
 #### Table Aliases with Joins
 
@@ -276,7 +258,7 @@ prisma.$from("User u")
 ```
 
 ##### SQL
-```sql
+```sql file=../usage/tests/readme/table-alias.ts region=inline-join-sql
 SELECT name, title
 FROM User AS u
 JOIN Post AS p ON authorId = u.id;
@@ -297,7 +279,7 @@ prisma.$from("User u1")
 ```
 
 ##### SQL
-```sql
+```sql file=../usage/tests/readme/table-alias.ts region=self-join-sql
 SELECT u1.name AS `user1Name`, u2.name AS `user2Name`
 FROM User AS u1
 JOIN User AS u2 ON User.id = u1.id;
@@ -314,7 +296,7 @@ prisma.$from("User u")
 ```
 
 ##### SQL
-```sql
+```sql file=../usage/tests/readme/table-alias.ts region=star-single-sql
 SELECT u.id, u.email, u.name FROM User AS u;
 ```
 
@@ -328,7 +310,7 @@ prisma.$from("User u")
 ```
 
 ##### SQL
-```sql
+```sql file=../usage/tests/readme/table-alias.ts region=star-join-sql
 SELECT u.id AS `u.id`, u.email AS `u.email`, u.name AS `u.name`,
        p.id AS `p.id`, p.title AS `p.title`, p.content AS `p.content`
 FROM User AS u
@@ -352,7 +334,7 @@ prisma.$from("User")
 
 The resulting SQL will look like:
 
-```sql
+```sql file=../usage/tests/readme/join-basic.ts region=join-basic-sql
 FROM User
 JOIN Post ON authorId = User.id;
 ```
@@ -392,8 +374,8 @@ prisma.$from("User")
 ##### SQL
 The resulting SQL will look like:
 
-```sql
-FROM User 
+```sql file=../usage/tests/readme/join-unsafe.ts region=type-enforced-sql
+FROM User
 JOIN Post ON Post.title = User.name;
 ```
 
@@ -418,8 +400,8 @@ prisma.$from("User")
 ##### SQL
 The resulting SQL will look like:
 
-```sql
-FROM User 
+```sql file=../usage/tests/readme/join-unsafe.ts region=ignore-type-sql
+FROM User
 JOIN Post ON Post.id = User.name
 ```
 
@@ -554,8 +536,8 @@ prisma.$from("User")
 ##### SQL
 The resulting SQL will look like:
 
-```sql
-FROM User 
+```sql file=../usage/tests/readme/where.ts region=not-null-sql
+FROM User
 JOIN Post ON authorId = User.id
 WHERE User.name IS NOT NULL;
 ```
@@ -576,8 +558,8 @@ prisma.$from("User")
 ##### SQL
 The resulting SQL will look like:
 
-```sql
-FROM User 
+```sql file=../usage/tests/readme/where.ts region=is-null-sql
+FROM User
 JOIN Post ON authorId = User.id
 WHERE Post.content IS NULL;
 ```
@@ -596,8 +578,8 @@ prisma.$from("User")
 ##### SQL
 The resulting SQL will look like:
 
-```sql
-FROM User 
+```sql file=../usage/tests/readme/where.ts region=raw-sql
+FROM User
 JOIN Post ON authorId = User.id
 WHERE this is a raw where statement;
 ```
@@ -618,8 +600,8 @@ prisma.$from("User")
 #### SQL
 The resulting SQL will look like:
 
-```sql
-FROM User 
+```sql file=../usage/tests/readme/groupby.ts region=basic-sql
+FROM User
 JOIN Post ON authorId = User.id
 GROUP BY name, Post.content;
 ```
@@ -639,7 +621,7 @@ prisma.$from("User")
 #### SQL
 The resulting SQL will look like:
 
-```sql
+```sql file=../usage/tests/readme/select-advanced.ts region=distinct-sql
 SELECT DISTINCT
 FROM User;
 ```
@@ -659,9 +641,9 @@ prisma.$from("User")
 ##### SQL
 The resulting SQL will look like:
 
-```sql
+```sql file=../usage/tests/readme/select-advanced.ts region=all-single-sql
 SELECT id, email, name
-FROM User 
+FROM User
 ```
 
 #### Example - Join table
@@ -674,9 +656,9 @@ prisma.$from("User")
 ##### SQL
 The resulting SQL will look like:
 
-```sql
+```sql file=../usage/tests/readme/select-advanced.ts region=all-join-sql
 SELECT User.id, User. email, User.name, Post.id, Post.title, Post.content, Post.published, Post.author, Post.authorId, Post.LastModifiedBy, Post.lastModifiedById
-FROM User 
+FROM User
 JOIN Post ON authorId = User.id
 ```
 
@@ -695,7 +677,7 @@ prisma.$from("User")
 ##### SQL
 The resulting SQL will look like:
 
-```sql
+```sql file=../usage/tests/readme/select-star.ts region=example-sql
 SELECT *
 FROM User;
 ```
@@ -709,7 +691,7 @@ prisma.$from("User")
 ##### SQL
 The resulting SQL will look like:
 
-```sql
+```sql file=../usage/tests/readme/select-advanced.ts region=table-star-single-sql
 SELECT User.id, User.email, User.name
 FROM User;
 ```
@@ -725,7 +707,7 @@ prisma.$from("User")
 ##### SQL
 The resulting SQL will look like:
 
-```sql
+```sql file=../usage/tests/readme/select-advanced.ts region=table-star-join-sql
 SELECT User.id AS `User.id`,
        User.email AS `User.email`,
        User.name AS `User.name`,
@@ -750,7 +732,7 @@ prisma.$from("User")
 ##### SQL
 The resulting SQL will look like:
 
-```sql
+```sql file=../usage/tests/readme/select-chained.ts region=example-sql
 SELECT name, email
 FROM User;
 ```
@@ -766,7 +748,7 @@ prisma.$from("User")
 ##### SQL
 The resulting SQL will look like:
 
-```sql
+```sql file=../usage/tests/readme/select-advanced.ts region=join-chained-sql
 SELECT name, Post.title
 FROM User
 JOIN Post ON authorId = User.id;
@@ -797,13 +779,17 @@ prisma.$from("User")
 ##### SQL
 The resulting SQL will look like:
 
-```sql
+```sql file=../usage/tests/readme/select-column-alias.ts region=basic-sql
 -- Basic alias
 SELECT User.name AS `username` FROM User;
+```
 
+```sql file=../usage/tests/readme/select-column-alias.ts region=multiple-sql
 -- Multiple aliases
 SELECT User.id AS `userId`, User.email AS `emailAddress` FROM User;
+```
 
+```sql file=../usage/tests/readme/select-column-alias.ts region=mixed-sql
 -- Mixed
 SELECT User.id, User.name AS `username`, User.email FROM User;
 ```
@@ -819,7 +805,7 @@ prisma.$from("User")
 ##### SQL
 The resulting SQL will look like:
 
-```sql
+```sql file=../usage/tests/readme/select-advanced.ts region=aliases-joins-sql
 SELECT User.name AS `authorName`, Post.title AS `postTitle`
 FROM User
 JOIN Post ON authorId = User.id;
@@ -860,14 +846,14 @@ prisma.$from("User")
 
 ##### SQL
 
-```SQL
+```SQL file=../usage/tests/readme/having.ts region=with-groupby-sql
 FROM User
 JOIN Post ON authorId = User.id
 GROUP BY name, Post.content
 HAVING (User.name LIKE 'bob%');
 ```
 
-```SQL
+```SQL file=../usage/tests/readme/having.ts region=without-groupby-sql
 FROM User
 JOIN Post ON authorId = User.id
 HAVING (User.name LIKE 'stuart%');
@@ -887,7 +873,7 @@ prisma.$from("User")
 
 ##### SQL
 
-```sql
+```sql file=../usage/tests/readme/orderby.ts region=basic-sql
 FROM User
 JOIN Post ON authorId = User.id
 ORDER BY name, Post.content DESC;
@@ -907,7 +893,7 @@ prisma.$from("User")
 
 ##### SQL
 
-```SQL
+```SQL file=../usage/tests/readme/pagination.ts region=limit-sql
 FROM User
 JOIN Post ON authorId = User.id
 LIMIT 1;
@@ -927,7 +913,7 @@ prisma.$from("User")
 
 ##### SQL
 
-```SQL
+```SQL file=../usage/tests/readme/pagination.ts region=offset-sql
 FROM User
 JOIN Post ON authorId = User.id
 LIMIT 1
