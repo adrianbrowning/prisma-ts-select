@@ -207,24 +207,12 @@ The way the methods are chained, are heavily inspired by [Dr Milan Milanović](h
 This takes the `base` table to work from.
 
 #### Example
-```typescript
+```typescript file=../usage/tests/readme/from-basic.ts region=example
 prisma.$from("User")
 ```
 
 #### Example - With Table Alias
-```typescript
-prisma.$from("User", "u")
-```
-
-##### SQL
-```sql
-FROM User AS u
-```
-
-**Note:** Table aliases are particularly useful for self-joins where you need to join a table to itself with different aliases.
-
-#### Example - Inline Alias Syntax
-```typescript
+```typescript file=../usage/tests/readme/from-inline-alias.ts region=example
 prisma.$from("User u")
 ```
 ##### SQL
@@ -232,6 +220,8 @@ prisma.$from("User u")
 FROM User AS u
 ```
 **Note:** Alias can be inline (space-separated) or as second parameter.
+**Note:** Table aliases are particularly useful for self-joins where you need to join a table to itself with different aliases.
+
 
 ### Table Aliases
 
@@ -249,8 +239,10 @@ Multiple syntaxes supported:
 
 #### Basic Table Alias
 
+Use the inline alias syntax shown in the .$from section above:
+
 ```typescript
-prisma.$from("User", "u")
+prisma.$from("User u")
   .select("u.name")
   .select("u.email")
   .run();
@@ -261,10 +253,12 @@ prisma.$from("User", "u")
 SELECT name, email FROM User AS u;
 ```
 
+**Note:** The second parameter syntax `.$from("User", "u")` is not supported. Use inline syntax `.$from("User u")` instead.
+
 #### Table Aliases with Joins
 
 ##### Inline Alias Syntax
-```typescript
+```typescript file=../usage/tests/readme/table-alias.ts region=inline-join
 prisma.$from("User u")
   .join("Post p", "authorId", "u.id")
   .select("u.name")
@@ -273,8 +267,8 @@ prisma.$from("User u")
 ```
 
 ##### Object Syntax
-```typescript
-prisma.$from("User", "u")
+```typescript file=../usage/tests/readme/table-alias.ts region=object-join
+prisma.$from("User u")
   .join({table: "Post", src: "authorId", on: "u.id", alias: "p"})
   .select("u.name")
   .select("p.title")
@@ -294,8 +288,8 @@ JOIN Post AS p ON authorId = u.id;
 
 Self-joins require aliases to distinguish between the different "instances" of the same table:
 
-```typescript
-prisma.$from("User", "u1")
+```typescript file=../usage/tests/readme/table-alias.ts region=self-join
+prisma.$from("User u1")
   .joinUnsafeTypeEnforced("User", "id", "u1.id", "u2")
   .select("u1.name", "user1Name")
   .select("u2.name", "user2Name")
@@ -313,8 +307,8 @@ JOIN User AS u2 ON User.id = u1.id;
 
 You can use the `alias.*` syntax to select all columns from an aliased table:
 
-```typescript
-prisma.$from("User", "u")
+```typescript file=../usage/tests/readme/table-alias.ts region=star-single
+prisma.$from("User u")
   .select("u.*")
   .run();
 ```
@@ -325,9 +319,9 @@ SELECT u.id, u.email, u.name FROM User AS u;
 ```
 
 With joins:
-```typescript
-prisma.$from("User", "u")
-  .join("Post", "authorId", "u.id", "p")
+```typescript file=../usage/tests/readme/table-alias.ts region=star-join
+prisma.$from("User u")
+  .join("Post p", "authorId", "u.id")
   .select("u.*")
   .select("p.*")
   .run();
@@ -347,7 +341,7 @@ JOIN Post AS p ON authorId = u.id;
 Using the defined links (foreign keys) defined in the schema, provides a type-safe way of joining on tables.
 
 ##### Example
-```typescript
+```typescript file=../usage/tests/readme/join-basic.ts region=example
 prisma.$from("User")
       .join("Post", "authorId", "User.id");
 ```
@@ -389,7 +383,7 @@ JOIN Post ON authorId = User.id;
 Unlike the `.join` command, this will allow you to join on columns that are not explicitly linked by a FK, but have the same type.
 
 ##### Example
-```typescript
+```typescript file=../usage/tests/readme/join-unsafe.ts region=type-enforced
 prisma.$from("User")
       .joinUnsafeTypeEnforced("Post", "title", "User.name");
 ```
@@ -415,7 +409,7 @@ JOIN Post ON Post.title = User.name;
 Unlike the `.joinUnsafeIgnoreType` command, this will allow you to join on columns that are not explicitly linked by a FK, and do not have the same type.
 
 ##### Example
-```typescript
+```typescript file=../usage/tests/readme/join-unsafe.ts region=ignore-type
 prisma.$from("User")
       .joinUnsafeIgnoreType("Post", "id", "User.name");
 ```
@@ -481,9 +475,9 @@ type WhereClause = {
 
 
 ###### Columns
-```typescript
+```typescript file=../usage/tests/readme/where.ts region=columns
 prisma.$from("User")
-        .join("Post", "id", "User.name")
+        .joinUnsafeIgnoreType("Post", "id", "User.name")
         .where({
           "User.age": 20,
           "User.name": {op: "LIKE", value: "Stuart%"},
@@ -491,9 +485,9 @@ prisma.$from("User")
 ```
 
 ###### $AND
-```typescript
+```typescript file=../usage/tests/readme/where.ts region=and
 prisma.$from("User")
-        .join("Post", "id", "User.name")
+        .joinUnsafeIgnoreType("Post", "id", "User.name")
         .where({
           $AND: [
             {"User.age": {op: ">", value: 20}},
@@ -503,9 +497,9 @@ prisma.$from("User")
 ```
 
 ###### $OR
-```typescript
+```typescript file=../usage/tests/readme/where.ts region=or
 prisma.$from("User")
-        .join("Post", "id", "User.name")
+        .joinUnsafeIgnoreType("Post", "id", "User.name")
         .where({
           $OR: [
             {"User.name": {op: "LIKE", value: "a%"}},
@@ -515,9 +509,9 @@ prisma.$from("User")
 ```
 
 ###### $NOT
-```typescript
+```typescript file=../usage/tests/readme/where.ts region=not
 prisma.$from("User")
-        .join("Post", "id", "User.name")
+        .joinUnsafeIgnoreType("Post", "id", "User.name")
         .where({
           $NOT: [
             {"User.age": 20},
@@ -530,9 +524,9 @@ prisma.$from("User")
 ```
 
 ###### $NOR
-```typescript
+```typescript file=../usage/tests/readme/where.ts region=nor
 prisma.$from("User")
-        .join("Post", "id", "User.name")
+        .joinUnsafeIgnoreType("Post", "id", "User.name")
         .where({
           $NOR: [
             {"User.age": 20},
@@ -547,10 +541,10 @@ prisma.$from("User")
 #### `.whereNotNull`
 
 This will remove the `null` type from the union of types of the current table column.
-To use `.whereNotNull`, you need to add it before a `.where`.  
+To use `.whereNotNull`, you need to add it before a `.where`.
 
 ##### Example
-```typescript
+```typescript file=../usage/tests/readme/where.ts region=not-null
 prisma.$from("User")
         .join("Post", "authorId", "User.id")
         .whereNotNull("User.name");
@@ -572,7 +566,7 @@ This will remove the NonNull type from the union of types of the current table c
 To use `.whereIsNull`, you need to add it before a `.where`.
 
 ##### Example
-```typescript
+```typescript file=../usage/tests/readme/where.ts region=is-null
 prisma.$from("User")
         .join("Post", "authorId", "User.id")
         .whereIsNull("Post.content");
@@ -590,10 +584,10 @@ WHERE Post.content IS NULL;
 
 #### `.whereRaw`
 
-When you want to write a complex `where`, or you just don't want the TypeSafety offered by the other methods, you can use `.whereRaw`. 
+When you want to write a complex `where`, or you just don't want the TypeSafety offered by the other methods, you can use `.whereRaw`.
 
 ##### Example
-```typescript
+```typescript file=../usage/tests/readme/where.ts region=raw
 prisma.$from("User")
         .join("Post", "authorId", "User.id")
         .whereRaw("this is a raw where statement");
@@ -611,10 +605,10 @@ WHERE this is a raw where statement;
 
 ### Group By
 
-Will allow you to pass a list of columns, that haven been specified from the `.$from` and any `.join` methods. 
+Will allow you to pass a list of columns, that haven been specified from the `.$from` and any `.join` methods.
 
 #### Example
-```typescript
+```typescript file=../usage/tests/readme/groupby.ts region=basic
 prisma.$from("User")
         .join("Post", "authorId", "User.id")
         .groupBy(["name", "Post.content"]);
@@ -637,7 +631,7 @@ GROUP BY name, Post.content;
 Will add the keyword `DISTINCT` after the select.
 
 #### Example
-```typescript
+```typescript file=../usage/tests/readme/select-advanced.ts region=distinct
 prisma.$from("User")
        .selectDistinct();
 ```
@@ -657,7 +651,7 @@ This method will explicitly list all the tables from the `$from` and `.join`. So
 
 
 #### Example - Single Table
-```typescript
+```typescript file=../usage/tests/readme/select-advanced.ts region=all-single
 prisma.$from("User")
        .selectAll();
 ```
@@ -671,9 +665,9 @@ FROM User
 ```
 
 #### Example - Join table
-```typescript
+```typescript file=../usage/tests/readme/select-advanced.ts region=all-join
 prisma.$from("User")
-       .join("Post", "authorId", "User.id") 
+       .join("Post", "authorId", "User.id")
        .selectAll();
 ```
 
@@ -693,7 +687,7 @@ JOIN Post ON authorId = User.id
 You can supply either; `*`, `Table.*` OR `table.field` and then chain them together.
 
 #### Example - `*`
-```typescript
+```typescript file=../usage/tests/readme/select-star.ts region=example
 prisma.$from("User")
        .select("*");
 ```
@@ -707,7 +701,7 @@ FROM User;
 ```
 
 #### Example - `Table.*` (Single Table)
-```typescript
+```typescript file=../usage/tests/readme/select-advanced.ts region=table-star-single
 prisma.$from("User")
        .select("User.*");
 ```
@@ -721,7 +715,7 @@ FROM User;
 ```
 
 #### Example - `Table.*` (With Join)
-```typescript
+```typescript file=../usage/tests/readme/select-advanced.ts region=table-star-join
 prisma.$from("User")
       .join("Post", "authorId", "User.id")
       .select("User.*")
@@ -747,7 +741,7 @@ JOIN Post ON authorId = User.id;
 > When using `Table.*` with joins, all columns are automatically aliased with the table name prefix to avoid column name conflicts.
 
 #### Example - Chained
-```typescript
+```typescript file=../usage/tests/readme/select-chained.ts region=example
 prisma.$from("User")
        .select("name")
        .select("email");
@@ -762,7 +756,7 @@ FROM User;
 ```
 
 #### Example - Join + Chained
-```typescript
+```typescript file=../usage/tests/readme/select-advanced.ts region=join-chained
 prisma.$from("User")
       .join("Post", "authorId", "User.id")
       .select("name")
@@ -779,16 +773,20 @@ JOIN Post ON authorId = User.id;
 ```
 
 #### Example - Column Aliases
-```typescript
+```typescript file=../usage/tests/readme/select-column-alias.ts region=basic
 // Basic alias
 prisma.$from("User")
       .select("User.name", "username");
+```
 
+```typescript file=../usage/tests/readme/select-column-alias.ts region=multiple
 // Multiple aliases
 prisma.$from("User")
       .select("User.id", "userId")
       .select("User.email", "emailAddress");
+```
 
+```typescript file=../usage/tests/readme/select-column-alias.ts region=mixed
 // Mixing aliased and non-aliased columns
 prisma.$from("User")
       .select("User.id")
@@ -811,7 +809,7 @@ SELECT User.id, User.name AS `username`, User.email FROM User;
 ```
 
 #### Example - Aliases with Joins
-```typescript
+```typescript file=../usage/tests/readme/select-advanced.ts region=aliases-joins
 prisma.$from("User")
       .join("Post", "authorId", "User.id")
       .select("User.name", "authorName")
@@ -836,7 +834,7 @@ JOIN Post ON authorId = User.id;
 
 #### Example
 
-```typescript
+```typescript file=../usage/tests/readme/having.ts region=with-groupby
 prisma.$from("User")
        .join("Post", "authorId", "User.id")
        .groupBy(["name", "Post.content"])
@@ -848,7 +846,7 @@ prisma.$from("User")
        });
 ```
 
-```typescript
+```typescript file=../usage/tests/readme/having.ts region=without-groupby
 prisma.$from("User")
        .join("Post", "authorId", "User.id")
        .having({
@@ -881,10 +879,10 @@ HAVING (User.name LIKE 'stuart%');
 
 #### Example
 
-```typescript
+```typescript file=../usage/tests/readme/orderby.ts region=basic
 prisma.$from("User")
       .join("Post", "authorId", "User.id")
-      .orderBy(["name", "Post.content DESC"]); 
+      .orderBy(["name", "Post.content DESC"]);
 ```
 
 ##### SQL
@@ -901,7 +899,7 @@ ORDER BY name, Post.content DESC;
 
 #### Example
 
-```typescript
+```typescript file=../usage/tests/readme/pagination.ts region=limit
 prisma.$from("User")
       .join("Post", "authorId", "User.id")
       .limit(1);
@@ -920,7 +918,7 @@ LIMIT 1;
 `.offSet`, the number of rows to skip. Requires `.limit` to have been used first.
 
 #### Example
-```typescript
+```typescript file=../usage/tests/readme/pagination.ts region=offset
 prisma.$from("User")
         .join("Post", "authorId", "User.id")
         .limit(1)

@@ -475,6 +475,7 @@ class _fRun<TSources extends TArrSources, TFields extends TFieldsType, TSelectRT
                         case '<':
                         case '<=':
                         case '!=':
+                        case '=':
                             return `${String(field)} ${value.op} ${typeof value.value === 'string' ? `'${value.value}'` : value.value}`;
                         default:
                             //@ts-expect-error value.op should be never
@@ -1157,7 +1158,7 @@ type COND_NUMERIC<key extends PropertyKey, keyType> =
     | OptionalRecord<key, keyType>
     | OptionalRecord<key, { op: 'IN' | 'NOT IN'; values: Array<keyType> }>
     | OptionalRecord<key, { op: 'BETWEEN'; values: [keyType, keyType] }>
-    | OptionalRecord<key, { op: '>' | '>=' | '<' | '<=' | '!='; value: keyType }>;
+    | OptionalRecord<key, { op: '>' | '>=' | '<' | '<=' | '!=' | '='; value: keyType }>;
 
 /**
  * Defines all valid SQL condition patterns for string types.
@@ -1263,7 +1264,7 @@ type BasicOpTypes =
     | OptionalRecord<PropertyKey, { op: 'BETWEEN'; values: [SUPPORTED_TYPES, SUPPORTED_TYPES] }>
     | OptionalRecord<PropertyKey, { op: 'LIKE' | 'NOT LIKE'; value: string }>
     | OptionalRecord<PropertyKey, { op: 'IS NULL' | 'IS NOT NULL' }>
-    | OptionalRecord<PropertyKey, { op: '>' | '>=' | '<' | '<=' | '!='; value: SUPPORTED_TYPES }>;
+    | OptionalRecord<PropertyKey, { op: '>' | '>=' | '<' | '<=' | '!=' | '='; value: SUPPORTED_TYPES }>;
 
 /**
  * Transforms a table's fields into a record where keys are prefixed with the table name ("Table.field").

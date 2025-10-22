@@ -2,8 +2,8 @@ import assert from "node:assert/strict"
 
 import { describe, test, before, it } from "node:test"
 import tsSelectExtend from 'prisma-ts-select/extend'
-import type {Equal, Expect} from "./utils.js";
-import { typeCheck} from "./utils.js";
+import type {Equal, Expect} from "../utils.ts";
+import { typeCheck} from "../utils.ts";
 import {PrismaClient} from "@prisma/client";
 
 const prisma = new PrismaClient({})

@@ -12,10 +12,12 @@
     "b": "pnpm --filter prisma-ts-select build",
     "b&g": "pnpm b && pnpm gen;",
     "p:r": "pnpm exec prisma migrate reset --force",
-    "test": "pnpm p:r && find ./tests -name '*.spec.ts' -exec node --import tsx --test --test-reporter spec {} \\;",
+    "test": "node --test **/tests/**/*.{cts,mts,ts} --test-reporter spec",
     "test:w": "pnpm p:r &&  find ./tests -name '*.spec.ts' -exec node --import tsx --test --test-reporter spec --watch {} \\;",
     "test:coverage": "find ./tests -name '*.spec.ts' -exec node --loader tsx --test --experimental-test-coverage --test-reporter=lcov {} \\;",
     "test:criteria": "node --import tsx --test tests/criteria.spec.ts",
+    "test:core": "node --test-reporter=dot --test **/tests/core/**/*.{cts,mts,ts}",
+    "test:readme": "node --test-reporter=spec --test **/tests/readme/**/*.{cts,mts,ts}",
     "test:ts": "tsc --noEmit -p tsconfig.json",
     "test:tsw": "pnpm test:ts --watch"
   },

@@ -1,5 +1,8 @@
 # CLAUDE.md
 
+ALWAYS use todo lists. Keep a file based one in-sync with the memory version encase the session dies. Make sure there is enough information to start everything off again.
+ALWAYS use sub-agents to help keep your context window cleaner/smaller.
+
 Be casual. 
 Be terse. 
 Give the answer first. 
@@ -198,6 +201,41 @@ When adding new SQL operations:
 - Each test file (`.spec.ts`) covers a specific feature area
 - Tests reset the database before running (`pnpm p:r`)
 - Type checking is a critical part of testing (`pnpm test:ts`)
+
+### Documentation Testing Convention
+
+**CRITICAL:** All code examples in README.md MUST be backed by executable tests.
+
+**Requirements:**
+1. **Test files with regions:** Create test in `packages/usage/tests/readme/` with `#region` markers around example code
+2. **README annotations:** Reference test file with `file=path/to/test.ts region=regionName`
+3. **Type safety:** All examples must pass `pnpm test:ts`
+4. **Runtime verification:** Tests must execute queries and verify results
+5. **Region isolation:** Only actual query code in regions, not imports/assertions
+
+**Example:**
+```typescript
+// packages/usage/tests/readme/example.ts
+describe("README Example", () => {
+  test("should work", () => {
+    // #region example
+    const result = prisma.$from("User").select("name").run();
+    // #endregion
+
+    assert.ok(result); // Assertions outside region
+  });
+});
+```
+
+README:
+` ```typescript file=../usage/tests/readme/example.ts region=example`
+
+**Verification:**
+- Run `pnpm test:readme` - All examples must pass
+- Run `pnpm test:ts` - All examples must type-check
+- See `README_TESTING.md` for full workflow
+
+**Never add README examples without corresponding tests.**
 
 ## Database Support
 
