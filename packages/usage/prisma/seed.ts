@@ -17,16 +17,19 @@ async function seed() {
                 id: 1,
                 email: 'johndoe@example.com',
                 name: 'John Doe',
+                age: 25,
             },
             {
                 id: 2,
                 email: 'smith@example.com',
                 name: 'John Smith',
+                age: 30,
             },
             {
                 id: 3,
                 email: 'alice@example.com',
                 name: null,  // Test nullable field
+                age: null,
             }
         ],
     });

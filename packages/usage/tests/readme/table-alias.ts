@@ -95,7 +95,16 @@ prisma.$from("User u")
   });
 
   test("self-joins with aliases - should create query", () => {
-    const query =
+
+      prisma.$from("User u1")
+          //@ts-expect-error This should error as User has no defined self join
+          .join("User u2",
+              "id", "u1.id")
+          .select("u1.name", "user1Name")
+          //@ts-expect-error This should error as User has no defined self join
+          .select("u2.name", "user2Name");
+
+      const query =
 // #region self-join
 prisma.$from("User u1")
       .joinUnsafeTypeEnforced("User u2", "id", "u1.id")
@@ -103,9 +112,36 @@ prisma.$from("User u1")
       .select("u2.name", "user2Name");
     // #endregion self-join
 
+      prisma.$from("User u1")
+          .joinUnsafeTypeEnforced({
+              table: "User",
+              alias: "u2",
+              src: "id",
+              on: "u1.id"
+          })
+          .select("u1.name", "user1Name")
+          .select("u2.name", "user2Name");
+
+      // #region self-join
+      prisma.$from("User u1")
+          .joinUnsafeIgnoreType("User u2", "id", "u1.id")
+          .select("u1.name", "user1Name")
+          .select("u2.name", "user2Name");
+      // #endregion self-join
+
+      prisma.$from("User u1")
+          .joinUnsafeIgnoreType({
+              table: "User",
+              alias: "u2",
+              src: "id",
+              on: "u1.id"
+          })
+          .select("u1.name", "user1Name")
+          .select("u2.name", "user2Name");
+
     const expectedSQL =
       // #region self-join-sql
-      "FROM User AS `u1` JOIN User AS `u2` ON u2.id = u1.id;";
+      "SELECT u1.name AS `user1Name`, u2.name AS `user2Name` FROM User AS `u1` JOIN User AS `u2` ON u2.id = u1.id;";
     // #endregion self-join-sql
 
     assert.equal(query.getSQL(), expectedSQL);

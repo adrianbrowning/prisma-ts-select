@@ -2146,7 +2146,7 @@ class _fJoin<
     }
 
     // Overload 1: Object syntax
-joinUnsafeTypeEnforced<const Table extends AvailableJoins<TSources>,
+joinUnsafeTypeEnforced<const Table extends TTables | `${TTables} ${string}`,
         TCol1 extends GetColsBaseTable<Table>,
         TCol2 extends GetJoinOnColsType<GetColumnType<Table, TCol1>, [...TSources, Table]>,
         TAlias extends string = never
@@ -2158,8 +2158,8 @@ joinUnsafeTypeEnforced<const Table extends AvailableJoins<TSources>,
     }): _fJoin<[...TSources, [TAlias] extends [undefined] ? Table : [Table, TAlias]], Prettify<TFields & Record<[TAlias] extends [undefined] ? Table : TAlias, GetFieldsFromTable<Table>>>>;
 
     // Overload 2: Positional syntax with inline alias (e.g., "User u2")
-    joinUnsafeTypeEnforced<const TableInput extends `${AvailableJoins<TSources>}` | `${AvailableJoins<TSources>} ${string}`,
-        Table extends AvailableJoins<TSources> = ExtractTableName<TableInput> & AvailableJoins<TSources>,
+    joinUnsafeTypeEnforced<const TableInput extends TTables | `${TTables} ${string}`/*`${AvailableJoins<TSources>}` | `${AvailableJoins<TSources>} ${string}`*/,
+        Table extends TTables = ExtractTableName<TableInput>,// & AvailableJoins<TSources>,
         TAlias extends string | never = ExtractAlias<TableInput>,
         TCol1 extends GetColsBaseTable<Table> = GetColsBaseTable<Table>,
         TCol2 extends GetJoinOnColsType<GetColumnType<Table, TCol1>, [...TSources, Table]> =
@@ -2167,8 +2167,8 @@ joinUnsafeTypeEnforced<const Table extends AvailableJoins<TSources>,
     >(table: TableInput, field: TCol1, reference: TCol2): _fJoin<[...TSources, [TAlias] extends [never] ? Table : [Table, TAlias]], Prettify<TFields & Record<[TAlias] extends [undefined] ? Table : TAlias, GetFieldsFromTable<Table>>>>;
 
     // Implementation
-    joinUnsafeTypeEnforced<const TableInput extends `${AvailableJoins<TSources>}` | `${AvailableJoins<TSources>} ${string}`,
-        Table extends AvailableJoins<TSources> = ExtractTableName<TableInput> & AvailableJoins<TSources>,
+    joinUnsafeTypeEnforced<const TableInput extends TTables,
+        Table extends TTables = ExtractTableName<TableInput>,// & AvailableJoins<TSources>,
         TCol1 extends GetColsBaseTable<Table> = GetColsBaseTable<Table>,
         TCol2 extends GetJoinOnColsType<GetColumnType<Table, TCol1>, [...TSources, Table]> =
                       GetJoinOnColsType<GetColumnType<Table, TCol1>, [...TSources, Table]>
@@ -2213,7 +2213,7 @@ joinUnsafeTypeEnforced<const Table extends AvailableJoins<TSources>,
     }
 
     // Overload 1: Object syntax
-    joinUnsafeIgnoreType<const Table extends AvailableJoins<TSources>,
+    joinUnsafeIgnoreType<const Table extends TTables,
         TCol1 extends GetColsBaseTable<Table>,
         TCol2 extends GetJoinCols<TSources[number]>,
         TAlias extends string = never
@@ -2225,16 +2225,16 @@ joinUnsafeTypeEnforced<const Table extends AvailableJoins<TSources>,
     }): _fJoin<[...TSources, [TAlias] extends [never] ? Table : [Table, TAlias]], TFields & Record<Table, GetFieldsFromTable<Table>>>;
 
     // Overload 2: Positional syntax with inline alias (e.g., "User u2")
-    joinUnsafeIgnoreType<const TableInput extends `${AvailableJoins<TSources>}` | `${AvailableJoins<TSources>} ${string}`,
-        Table extends AvailableJoins<TSources> = ExtractTableName<TableInput> & AvailableJoins<TSources>,
+    joinUnsafeIgnoreType<const TableInput extends TTables | `${TTables} ${string}`,
+        Table extends TTables = ExtractTableName<TableInput>,
         TAlias extends string | never = ExtractAlias<TableInput>,
         TCol1 extends GetColsBaseTable<Table> = GetColsBaseTable<Table>,
         TCol2 extends GetJoinCols<TSources[number]> = GetJoinCols<TSources[number]>
     >(table: TableInput, field: TCol1, reference: TCol2): _fJoin<[...TSources, [TAlias] extends [never] ? Table : [Table, TAlias]], TFields & Record<Table, GetFieldsFromTable<Table>>>;
 
     // Implementation
-    joinUnsafeIgnoreType<const TableInput extends `${AvailableJoins<TSources>}` | `${AvailableJoins<TSources>} ${string}`,
-        Table extends AvailableJoins<TSources> = ExtractTableName<TableInput> & AvailableJoins<TSources>,
+    joinUnsafeIgnoreType<const TableInput extends TTables,
+        Table extends TTables = ExtractTableName<TableInput>,
         TCol1 extends GetColsBaseTable<Table> = GetColsBaseTable<Table>,
         TCol2 extends GetJoinCols<TSources[number]> = GetJoinCols<TSources[number]>
     >(

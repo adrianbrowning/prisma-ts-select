@@ -7,12 +7,12 @@ const prisma = new PrismaClient().$extends(prismaTSSelect);
 
 describe("README Example: select column alias", () => {
   test("basic alias - should generate correct SQL", () => {
-    const sql = 
+    const sql =
 // #region basic
 prisma.$from("User")
       .select("User.name", "username")
-      // #endregion
-.getSQL(); basic
+      // #endregion basic
+.getSQL();
 
     const expectedSQL =
       // #region basic-sql
@@ -26,8 +26,8 @@ prisma.$from("User")
     // #region basic
     const result = await prisma.$from("User")
       .select("User.name", "username")
-      // #endregion
-.run(); basic
+      // #endregion basic
+.run();
 
     assert.deepEqual(result,[
         {
@@ -44,13 +44,13 @@ prisma.$from("User")
   });
 
   test("multiple aliases - should generate correct SQL", () => {
-    const sql = 
+    const sql =
 // #region multiple
 prisma.$from("User")
       .select("User.id", "userId")
       .select("User.email", "emailAddress")
-      // #endregion
-.getSQL(); multiple
+      // #endregion multiple
+.getSQL();
 
     const expectedSQL =
       // #region multiple-sql
@@ -61,14 +61,14 @@ prisma.$from("User")
   });
 
   test("mixed aliased and non-aliased", () => {
-    const sql = 
+    const sql =
 // #region mixed
 prisma.$from("User")
       .select("User.id")
       .select("User.name", "username")
       .select("User.email")
-      // #endregion
-.getSQL(); mixed
+      // #endregion mixed
+.getSQL();
 
     const expectedSQL =
       // #region mixed-sql
