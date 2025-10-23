@@ -7,8 +7,9 @@ const prisma = new PrismaClient().$extends(prismaTSSelect);
 
 describe("README Example: having", () => {
   test("having with groupBy - should generate correct SQL", () => {
-    // #region with-groupby
-    const sql = prisma.$from("User")
+    const sql =
+// #region with-groupby
+prisma.$from("User")
       .join("Post", "authorId", "User.id")
       .groupBy(["name", "Post.content"])
       .having({
@@ -18,15 +19,21 @@ describe("README Example: having", () => {
         }
       })
       .select("*")
-      .getSQL();
-    // #endregion with-groupby
+      // #endregion with-groupby
+.getSQL();
 
-    assert.equal(sql, "SELECT * FROM User JOIN Post ON Post.authorId = User.id GROUP BY name, Post.content HAVING (User.name LIKE 'bob%' );");
+    const expectedSQL =
+      // #region with-groupby-sql
+      "SELECT * FROM User JOIN Post ON Post.authorId = User.id GROUP BY name, Post.content HAVING (User.name LIKE 'bob%' );";
+      // #endregion with-groupby-sql
+
+    assert.equal(sql, expectedSQL);
   });
 
   test("having with groupBy - should be chainable", () => {
-    // #region with-groupby
-    const query = prisma.$from("User")
+    const query =
+// #region with-groupby
+prisma.$from("User")
       .join("Post", "authorId", "User.id")
       .groupBy(["name", "Post.content"])
       .having({
@@ -41,8 +48,9 @@ describe("README Example: having", () => {
   });
 
   test("having without groupBy - should generate correct SQL", () => {
-    // #region without-groupby
-    const sql = prisma.$from("User")
+    const sql =
+// #region without-groupby
+prisma.$from("User")
       .join("Post", "authorId", "User.id")
       .having({
         "User.name": {
@@ -51,15 +59,21 @@ describe("README Example: having", () => {
         }
       })
       .select("*")
-      .getSQL();
-    // #endregion without-groupby
+      // #endregion without-groupby
+.getSQL();
 
-      assert.equal(sql, "SELECT * FROM User JOIN Post ON Post.authorId = User.id HAVING (User.name LIKE 'stuart%' );");
+    const expectedSQL =
+      // #region without-groupby-sql
+      "SELECT * FROM User JOIN Post ON Post.authorId = User.id HAVING (User.name LIKE 'stuart%' );";
+      // #endregion without-groupby-sql
+
+    assert.equal(sql, expectedSQL);
   });
 
   test("having without groupBy - should be chainable", () => {
-    // #region without-groupby
-    const query = prisma.$from("User")
+    const query =
+// #region without-groupby
+prisma.$from("User")
       .join("Post", "authorId", "User.id")
       .having({
         "User.name": {

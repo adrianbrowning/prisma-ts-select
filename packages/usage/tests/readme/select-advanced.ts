@@ -7,19 +7,26 @@ const prisma = new PrismaClient().$extends(prismaTSSelect);
 
 describe("README Example: select advanced", () => {
   test("selectDistinct - should generate correct SQL", () => {
-    // #region distinct
-    const sql = prisma.$from("User")
+    const sql =
+// #region distinct
+prisma.$from("User")
       .selectDistinct()
-      .select("*")
-      .getSQL();
-    // #endregion distinct
+      .select("name")
+      // #endregion distinct
+.getSQL();
 
-    assert.equal(sql,"SELECT DISTINCT * FROM User;");
+    const expectedSQL =
+      // #region distinct-sql
+      "SELECT DISTINCT name FROM User;";
+      // #endregion distinct-sql
+
+    assert.equal(sql, expectedSQL);
   });
 
   test("selectDistinct - should be chainable", () => {
-    // #region distinct
-    const query = prisma.$from("User")
+    const query =
+// #region distinct
+prisma.$from("User")
       .selectDistinct()
       .select("User.name");
     // #endregion distinct
@@ -28,21 +35,27 @@ describe("README Example: select advanced", () => {
   });
 
   test("selectAll single table - should generate correct SQL", () => {
-    // #region all-single
-    const sql = prisma.$from("User")
+    const sql =
+// #region all-single
+prisma.$from("User")
       .selectAll()
-      .getSQL();
-    // #endregion all-single
+      // #endregion all-single
+.getSQL();
 
-    assert.strictEqual(sql, "SELECT id, email, name FROM User;");
+    const expectedSQL =
+      // #region all-single-sql
+      "SELECT id, email, name FROM User;";
+      // #endregion all-single-sql
+
+    assert.strictEqual(sql, expectedSQL);
   });
 
   test("selectAll single table - should run successfully", async () => {
     // #region all-single
     const result = await prisma.$from("User")
       .selectAll()
-      .run();
-    // #endregion all-single
+      // #endregion all-single
+.run();
 
 
 
@@ -67,14 +80,20 @@ describe("README Example: select advanced", () => {
   });
 
   test("selectAll join table - should generate correct SQL", () => {
-    // #region all-join
-    const sql = prisma.$from("User")
+    const sql =
+// #region all-join
+prisma.$from("User")
       .join("Post", "authorId", "User.id")
       .selectAll()
-      .getSQL();
-    // #endregion all-join
+      // #endregion all-join
+.getSQL();
 
-    assert.equal(sql,"SELECT User.id AS `User.id`, User.email AS `User.email`, User.name AS `User.name`, Post.id AS `Post.id`, Post.title AS `Post.title`, Post.content AS `Post.content`, Post.published AS `Post.published`, Post.authorId AS `Post.authorId`, Post.lastModifiedById AS `Post.lastModifiedById` FROM User JOIN Post ON Post.authorId = User.id;");
+    const expectedSQL =
+      // #region all-join-sql
+      "SELECT User.id AS `User.id`, User.email AS `User.email`, User.name AS `User.name`, Post.id AS `Post.id`, Post.title AS `Post.title`, Post.content AS `Post.content`, Post.published AS `Post.published`, Post.authorId AS `Post.authorId`, Post.lastModifiedById AS `Post.lastModifiedById` FROM User JOIN Post ON Post.authorId = User.id;";
+      // #endregion all-join-sql
+
+    assert.equal(sql, expectedSQL);
   });
 
   test("selectAll join table - should run successfully", async () => {
@@ -82,28 +101,34 @@ describe("README Example: select advanced", () => {
     const result = await prisma.$from("User")
       .join("Post", "authorId", "User.id")
       .selectAll()
-      .run();
-    // #endregion all-join
+      // #endregion all-join
+.run();
 
     assert.ok(Array.isArray(result));
   });
 
   test("select Table.* single - should generate correct SQL", () => {
-    // #region table-star-single
-    const sql = prisma.$from("User")
+    const sql =
+// #region table-star-single
+prisma.$from("User")
       .select("User.*")
-      .getSQL();
-    // #endregion table-star-single
+      // #endregion table-star-single
+.getSQL();
 
-    assert.strictEqual(sql, "SELECT id, email, name FROM User;");
+    const expectedSQL =
+      // #region table-star-single-sql
+      "SELECT id, email, name FROM User;";
+      // #endregion table-star-single-sql
+
+    assert.strictEqual(sql, expectedSQL);
   });
 
   test("select Table.* single - should run successfully", async () => {
     // #region table-star-single
     const result = await prisma.$from("User")
       .select("User.*")
-      .run();
-    // #endregion table-star-single
+      // #endregion table-star-single
+.run();
 
     assert.deepEqual(result,  [
            {
@@ -125,15 +150,21 @@ describe("README Example: select advanced", () => {
   });
 
   test("select Table.* with join - should generate correct SQL", () => {
-    // #region table-star-join
-    const sql = prisma.$from("User")
+    const sql =
+// #region table-star-join
+prisma.$from("User")
       .join("Post", "authorId", "User.id")
       .select("User.*")
       .select("Post.*")
-      .getSQL();
-    // #endregion table-star-join
+      // #endregion table-star-join
+.getSQL();
 
-    assert.equal(sql,"SELECT User.id AS `User.id`, User.email AS `User.email`, User.name AS `User.name`, Post.id AS `Post.id`, Post.title AS `Post.title`, Post.content AS `Post.content`, Post.published AS `Post.published`, Post.authorId AS `Post.authorId`, Post.lastModifiedById AS `Post.lastModifiedById` FROM User JOIN Post ON Post.authorId = User.id;");
+    const expectedSQL =
+      // #region table-star-join-sql
+      "SELECT User.id AS `User.id`, User.email AS `User.email`, User.name AS `User.name`, Post.id AS `Post.id`, Post.title AS `Post.title`, Post.content AS `Post.content`, Post.published AS `Post.published`, Post.authorId AS `Post.authorId`, Post.lastModifiedById AS `Post.lastModifiedById` FROM User JOIN Post ON Post.authorId = User.id;";
+      // #endregion table-star-join-sql
+
+    assert.equal(sql, expectedSQL);
   });
 
   test("select Table.* with join - should run successfully", async () => {
@@ -142,8 +173,8 @@ describe("README Example: select advanced", () => {
       .join("Post", "authorId", "User.id")
       .select("User.*")
       .select("Post.*")
-      .run();
-    // #endregion table-star-join
+      // #endregion table-star-join
+.run();
 
     assert.deepEqual(result, [
         {
@@ -183,15 +214,21 @@ describe("README Example: select advanced", () => {
   });
 
   test("select join  chained - should generate correct SQL", () => {
-    // #region join-chained
-    const sql = prisma.$from("User")
+    const sql =
+// #region join-chained
+prisma.$from("User")
       .join("Post", "authorId", "User.id")
       .select("name")
       .select("Post.title")
-      .getSQL();
-    // #endregion join-chained
+      // #endregion join-chained
+.getSQL();
 
-    assert.strictEqual(sql, "SELECT name, title FROM User JOIN Post ON Post.authorId = User.id;");
+    const expectedSQL =
+      // #region join-chained-sql
+      "SELECT name, title FROM User JOIN Post ON Post.authorId = User.id;";
+      // #endregion join-chained-sql
+
+    assert.strictEqual(sql, expectedSQL);
   });
 
   test("select join  chained - should run successfully", async () => {
@@ -200,8 +237,8 @@ describe("README Example: select advanced", () => {
       .join("Post", "authorId", "User.id")
       .select("name")
       .select("Post.title")
-      .run();
-    // #endregion join-chained
+      // #endregion join-chained
+.run();
 
     assert.deepEqual(result,    [
            {
@@ -220,18 +257,21 @@ describe("README Example: select advanced", () => {
   });
 
   test("select aliases with joins - should generate correct SQL", () => {
-    // #region aliases-joins
-    const sql = prisma.$from("User")
+    const sql =
+// #region aliases-joins
+prisma.$from("User")
       .join("Post", "authorId", "User.id")
       .select("User.name", "authorName")
       .select("Post.title", "postTitle")
-      .getSQL();
-    // #endregion aliases-joins
+      // #endregion aliases-joins
+.getSQL();
 
-    assert.strictEqual(
-      sql,
-      "SELECT User.name AS `authorName`, Post.title AS `postTitle` FROM User JOIN Post ON Post.authorId = User.id;"
-    );
+    const expectedSQL =
+      // #region aliases-joins-sql
+      "SELECT User.name AS `authorName`, Post.title AS `postTitle` FROM User JOIN Post ON Post.authorId = User.id;";
+      // #endregion aliases-joins-sql
+
+    assert.strictEqual(sql, expectedSQL);
   });
 
   test("select aliases with joins - should run successfully", async () => {
@@ -240,8 +280,8 @@ describe("README Example: select advanced", () => {
       .join("Post", "authorId", "User.id")
       .select("User.name", "authorName")
       .select("Post.title", "postTitle")
-      .run();
-    // #endregion aliases-joins
+      // #endregion aliases-joins
+.run();
 
     assert.deepEqual(result, [
           {

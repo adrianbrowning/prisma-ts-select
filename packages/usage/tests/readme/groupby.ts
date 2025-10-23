@@ -7,19 +7,26 @@ const prisma = new PrismaClient().$extends(prismaTSSelect);
 
 describe("README Example: groupBy", () => {
   test("groupBy - should generate correct SQL", () => {
-    // #region basic
-    const sql = prisma.$from("User")
+    const sql =
+// #region basic
+prisma.$from("User")
       .join("Post", "authorId", "User.id")
       .groupBy(["name", "Post.content"])
-      .getSQL();
-    // #endregion basic
+      // #endregion basic
+.getSQL();
 
-      assert.equal(sql, "FROM User JOIN Post ON Post.authorId = User.id GROUP BY name, Post.content;")
-      });
+    const expectedSQL =
+      // #region basic-sql
+      "FROM User JOIN Post ON Post.authorId = User.id GROUP BY name, Post.content;";
+      // #endregion basic-sql
+
+    assert.equal(sql, expectedSQL);
+  });
 
   test("groupBy - should be chainable", () => {
-    // #region basic
-    const query = prisma.$from("User")
+    const query =
+// #region basic
+prisma.$from("User")
       .join("Post", "authorId", "User.id")
       .groupBy(["name", "Post.content"]);
     // #endregion basic

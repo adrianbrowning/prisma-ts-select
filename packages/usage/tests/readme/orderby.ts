@@ -7,23 +7,35 @@ const prisma = new PrismaClient().$extends(prismaTSSelect);
 
 describe("README Example: orderBy", () => {
   test("orderBy - should generate correct SQL", () => {
-    // #region basic
-    const sql = prisma.$from("User")
+    const sql =
+// #region basic
+prisma.$from("User")
       .join("Post", "authorId", "User.id")
       .orderBy(["name", "Post.content DESC"])
-      .getSQL();
-    // #endregion basic
+      // #endregion basic
+.getSQL();
 
-    assert.equal(sql,"FROM User JOIN Post ON Post.authorId = User.id ORDER BY name, Post.content DESC;");
+    const expectedSQL =
+      // #region basic-sql
+      "FROM User JOIN Post ON Post.authorId = User.id ORDER BY name, Post.content DESC;";
+      // #endregion basic-sql
+
+    assert.equal(sql, expectedSQL);
   });
 
   test("orderBy - should be chainable", () => {
-    // #region basic
-    const query = prisma.$from("User")
+    const query =
+// #region basic
+prisma.$from("User")
       .join("Post", "authorId", "User.id")
       .orderBy(["name", "Post.content DESC"]);
     // #endregion basic
 
-    assert.equal(query.getSQL(), "FROM User JOIN Post ON Post.authorId = User.id ORDER BY name, Post.content DESC;");
+    const expectedSQL =
+      // #region basic-sql
+      "FROM User JOIN Post ON Post.authorId = User.id ORDER BY name, Post.content DESC;";
+      // #endregion basic-sql
+
+    assert.equal(query.getSQL(), expectedSQL);
   });
 });

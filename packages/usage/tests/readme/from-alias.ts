@@ -12,7 +12,12 @@ describe("README Example: .$from with table alias", () => {
   test("should create query with inline alias instead", () => {
     const query = prisma.$from("User u");
 
-    assert.equal(query.getSQL(), "FROM User AS `u`;");
+    const expectedSQL =
+      // #region inline-alias-from-sql
+      "FROM User AS `u`;";
+      // #endregion inline-alias-from-sql
+
+    assert.equal(query.getSQL(), expectedSQL);
   });
 
   test("should generate correct SQL with inline alias", () => {
@@ -20,6 +25,11 @@ describe("README Example: .$from with table alias", () => {
       .select("name")
       .getSQL();
 
-    assert.strictEqual(sql, "SELECT name FROM User AS `u`;");
+    const expectedSQL =
+      // #region inline-alias-select-sql
+      "SELECT name FROM User AS `u`;";
+      // #endregion inline-alias-select-sql
+
+    assert.strictEqual(sql, expectedSQL);
   });
 });

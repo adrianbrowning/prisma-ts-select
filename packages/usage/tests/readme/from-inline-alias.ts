@@ -7,21 +7,33 @@ const prisma = new PrismaClient().$extends(prismaTSSelect);
 
 describe("README Example: .$from inline alias syntax", () => {
   test("should create query with inline alias", () => {
-    // #region example
-    const query = prisma.$from("User u");
+        const query = 
+// #region example
+prisma.$from("User u");
     // #endregion
 
     // Verify query can be chained
-    assert.equal(query.getSQL(), "FROM User AS `u`;");
+    const expectedSQL =
+      // #region inline-alias-sql
+      "FROM User AS `u`;";
+      // #endregion inline-alias-sql
+
+    assert.equal(query.getSQL(), expectedSQL);
   });
 
   test("should generate correct SQL with inline alias", () => {
-    // #region example
-    const sql = prisma.$from("User u")
+        const sql = 
+// #region example
+prisma.$from("User u")
       .select("*")
-      .getSQL();
-    // #endregion
+      // #endregion
+.getSQL();
 
-    assert.strictEqual(sql, "SELECT * FROM User AS `u`;");
+    const expectedSQL =
+      // #region inline-alias-select-sql
+      "SELECT * FROM User AS `u`;";
+      // #endregion inline-alias-select-sql
+
+    assert.strictEqual(sql, expectedSQL);
   });
 });

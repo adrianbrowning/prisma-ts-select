@@ -56,8 +56,10 @@
     "test:jest": "jest",
     "2postinstall": "node src/scripts/postinstall.js",
     "doc": "pnpm exec markdown-toc -i README.md",
-    "readme:extract": "mdcode extract README.md",
-    "readme:update": "mdcode update README.md",
+    "mdcode": "go run github.com/szkiba/mdcode@latest ",
+    "readme:extract": "pnpm mdcode extract README.md",
+    "readme:update:old": "pnpm mdcode update README.md",
+    "readme:update": "pnpm mdcode update README.md && node ../../scripts/format-sql-blocks.mjs",
     "readme:test": "pnpm --filter usage test -- tests/readme"
   },
   "dependencies": {

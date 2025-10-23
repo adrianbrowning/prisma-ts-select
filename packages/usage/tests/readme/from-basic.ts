@@ -7,21 +7,33 @@ const prisma = new PrismaClient().$extends(prismaTSSelect);
 
 describe("README Example: .$from basic", () => {
   test("should create basic from query", () => {
-    // #region example
-    const query = prisma.$from("User");
+            const query = 
+// #region example
+prisma.$from("User");
     // #endregion
 
     // Verify query can be chained
-    assert.equal(query.getSQL(), "FROM User;");
+    const expectedSQL =
+      // #region example-from
+      "FROM User;";
+      // #endregion example-from
+
+    assert.equal(query.getSQL(), expectedSQL);
   });
 
   test("should generate correct SQL", () => {
-    // #region example
-    const sql = prisma.$from("User")
+    const sql = 
+// #region example
+prisma.$from("User")
       .select("*")
-      .getSQL();
-    // #endregion
+      // #endregion
+.getSQL();
 
-    assert.strictEqual(sql, "SELECT * FROM User;");
+    const expectedSQL =
+      // #region example-sql
+      "SELECT * FROM User;";
+      // #endregion example-sql
+
+    assert.strictEqual(sql, expectedSQL);
   });
 });

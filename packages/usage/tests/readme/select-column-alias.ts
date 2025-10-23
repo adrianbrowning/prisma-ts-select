@@ -7,21 +7,27 @@ const prisma = new PrismaClient().$extends(prismaTSSelect);
 
 describe("README Example: select column alias", () => {
   test("basic alias - should generate correct SQL", () => {
-    // #region basic
-    const sql = prisma.$from("User")
+    const sql = 
+// #region basic
+prisma.$from("User")
       .select("User.name", "username")
-      .getSQL();
-    // #endregion basic
+      // #endregion
+.getSQL(); basic
 
-    assert.strictEqual(sql, "SELECT User.name AS `username` FROM User;");
+    const expectedSQL =
+      // #region basic-sql
+      "SELECT User.name AS `username` FROM User;";
+      // #endregion basic-sql
+
+    assert.strictEqual(sql, expectedSQL);
   });
 
   test("basic alias - should return aliased column", async () => {
     // #region basic
     const result = await prisma.$from("User")
       .select("User.name", "username")
-      .run();
-    // #endregion basic
+      // #endregion
+.run(); basic
 
     assert.deepEqual(result,[
         {
@@ -34,39 +40,42 @@ describe("README Example: select column alias", () => {
         username: null
       }
     ]);
-    // if (result.length > 0 && result[0]) {
-    //   assert.ok("username" in result[0]);
-    //   assert.strictEqual("name" in result[0], false);
-    // }
+
   });
 
   test("multiple aliases - should generate correct SQL", () => {
-    // #region multiple
-    const sql = prisma.$from("User")
+    const sql = 
+// #region multiple
+prisma.$from("User")
       .select("User.id", "userId")
       .select("User.email", "emailAddress")
-      .getSQL();
-    // #endregion multiple
+      // #endregion
+.getSQL(); multiple
 
-    assert.strictEqual(
-      sql,
-      "SELECT User.id AS `userId`, User.email AS `emailAddress` FROM User;"
-    );
+    const expectedSQL =
+      // #region multiple-sql
+      "SELECT User.id AS `userId`, User.email AS `emailAddress` FROM User;";
+      // #endregion multiple-sql
+
+    assert.strictEqual(sql, expectedSQL);
   });
 
   test("mixed aliased and non-aliased", () => {
-    // #region mixed
-    const sql = prisma.$from("User")
+    const sql = 
+// #region mixed
+prisma.$from("User")
       .select("User.id")
       .select("User.name", "username")
       .select("User.email")
-      .getSQL();
-    // #endregion mixed
+      // #endregion
+.getSQL(); mixed
+
+    const expectedSQL =
+      // #region mixed-sql
+      "SELECT id, User.name AS `username`, email FROM User;";
+      // #endregion mixed-sql
 
     // Single table queries don't add table prefix
-    assert.strictEqual(
-      sql,
-      "SELECT id, User.name AS `username`, email FROM User;"
-    );
+    assert.strictEqual(sql, expectedSQL);
   });
 });

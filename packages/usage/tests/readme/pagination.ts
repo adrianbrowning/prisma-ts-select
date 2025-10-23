@@ -7,36 +7,54 @@ const prisma = new PrismaClient().$extends(prismaTSSelect);
 
 describe("README Example: pagination", () => {
   test("limit - should generate correct SQL", () => {
-    // #region limit
-    const sql = prisma.$from("User")
+    const sql =
+// #region limit
+prisma.$from("User")
       .join("Post", "authorId", "User.id")
       .limit(1)
-      .getSQL();
-    // #endregion limit
+      // #endregion limit
+.getSQL();
 
-    assert.equal(sql,"FROM User JOIN Post ON Post.authorId = User.id LIMIT 1;");
+    const expectedSQL =
+      // #region limit-sql
+      "FROM User JOIN Post ON Post.authorId = User.id LIMIT 1;";
+      // #endregion limit-sql
+
+    assert.equal(sql, expectedSQL);
   });
 
   test("limit - should be chainable", () => {
-    // #region limit
-    const query = prisma.$from("User")
+    const query =
+// #region limit
+prisma.$from("User")
       .join("Post", "authorId", "User.id")
       .limit(1);
     // #endregion limit
 
-    assert.equal(query.getSQL(), "FROM User JOIN Post ON Post.authorId = User.id LIMIT 1;");
+    const expectedSQL =
+      // #region limit-sql
+      "FROM User JOIN Post ON Post.authorId = User.id LIMIT 1;";
+      // #endregion limit-sql
+
+    assert.equal(query.getSQL(), expectedSQL);
   });
 
   test("offset - should generate correct SQL", () => {
-    // #region offset
-    const sql = prisma.$from("User")
+    const sql =
+// #region offset
+prisma.$from("User")
       .join("Post", "authorId", "User.id")
       .limit(1)
       .offset(1)
-      .getSQL();
-    // #endregion offset
+      // #endregion offset
+.getSQL();
 
-    assert.equal(sql,"FROM User JOIN Post ON Post.authorId = User.id LIMIT 1 OFFSET 1;");
+    const expectedSQL =
+      // #region offset-sql
+      "FROM User JOIN Post ON Post.authorId = User.id LIMIT 1 OFFSET 1;";
+      // #endregion offset-sql
+
+    assert.equal(sql, expectedSQL);
   });
 
   test("offset - should run successfully", async () => {
@@ -46,8 +64,8 @@ describe("README Example: pagination", () => {
       .select("*")
       .limit(1)
       .offset(1)
-      .run();
-    // #endregion offset
+      // #endregion offset
+.run();
 
     assert.ok(Array.isArray(result));
   });

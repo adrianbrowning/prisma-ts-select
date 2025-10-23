@@ -7,8 +7,9 @@ const prisma = new PrismaClient().$extends(prismaTSSelect);
 
 describe("README Example: where clauses", () => {
   test("where columns - should be chainable", () => {
-    // #region columns
-    const query = prisma.$from("User")
+    const query =
+// #region columns
+prisma.$from("User")
       .joinUnsafeIgnoreType("Post", "id", "User.name")
       .where({
         "User.age": 20,
@@ -16,12 +17,18 @@ describe("README Example: where clauses", () => {
       });
     // #endregion columns
 
-    assert.equal(query.getSQL(), "FROM User JOIN Post ON Post.id = User.name WHERE ((User.age = 20 AND User.name LIKE 'Stuart%' ));");
+    const expectedSQL =
+      // #region columns-sql
+      "FROM User JOIN Post ON Post.id = User.name WHERE (User.age = 20 AND  User.name LIKE 'Stuart%' ) AND (User.age = 20 AND  User.name LIKE 'Stuart%' );";
+      // #endregion columns-sql
+
+    assert.equal(query.getSQL(), expectedSQL);
   });
 
   test("where $AND - should be chainable", () => {
-    // #region and
-    const query = prisma.$from("User")
+    const query =
+// #region and
+prisma.$from("User")
       .joinUnsafeIgnoreType("Post", "id", "User.name")
       .where({
         $AND: [
@@ -31,12 +38,18 @@ describe("README Example: where clauses", () => {
       });
     // #endregion and
 
-    assert.equal(query.getSQL(), "FROM User JOIN Post ON Post.id = User.name WHERE ((User.age > 20 ) AND (User.age < 60 ));");
+    const expectedSQL =
+      // #region and-sql
+      "FROM User JOIN Post ON Post.id = User.name WHERE ((User.age > 20 ) AND (User.age < 60 ));";
+      // #endregion and-sql
+
+    assert.equal(query.getSQL(), expectedSQL);
   });
 
   test("where $OR - should be chainable", () => {
-    // #region or
-    const query = prisma.$from("User")
+    const query =
+// #region or
+prisma.$from("User")
       .joinUnsafeIgnoreType("Post", "id", "User.name")
       .where({
         $OR: [
@@ -46,12 +59,18 @@ describe("README Example: where clauses", () => {
       });
     // #endregion or
 
-    assert.equal(query.getSQL(), "FROM User JOIN Post ON Post.id = User.name WHERE ((User.name LIKE 'a%' ) OR (User.name LIKE 'd%' ));");
+    const expectedSQL =
+      // #region or-sql
+      "FROM User JOIN Post ON Post.id = User.name WHERE ((User.name LIKE 'a%' ) OR (User.name LIKE 'd%' ));";
+      // #endregion or-sql
+
+    assert.equal(query.getSQL(), expectedSQL);
   });
 
   test("where $NOT - should be chainable", () => {
-    // #region not
-    const query = prisma.$from("User")
+    const query =
+// #region not
+prisma.$from("User")
       .joinUnsafeIgnoreType("Post", "id", "User.name")
       .where({
         $NOT: [
@@ -64,12 +83,18 @@ describe("README Example: where clauses", () => {
       });
     // #endregion not
 
-    assert.equal(query.getSQL(), "FROM User JOIN Post ON Post.id = User.name WHERE (NOT (User.age = 20 OR (User.age = 60 AND User.name = 'Bob')) );");
+    const expectedSQL =
+      // #region not-sql
+      "FROM User JOIN Post ON Post.id = User.name WHERE (NOT((User.age = 20 ) AND (User.age = 60 AND  User.name = 'Bob' ) AND (User.age = 60 AND  User.name = 'Bob' )));";
+      // #endregion not-sql
+
+    assert.equal(query.getSQL(), expectedSQL);
   });
 
   test("where $NOR - should be chainable", () => {
-    // #region nor
-    const query = prisma.$from("User")
+    const query =
+// #region nor
+prisma.$from("User")
       .joinUnsafeIgnoreType("Post", "id", "User.name")
       .where({
         $NOR: [
@@ -82,69 +107,110 @@ describe("README Example: where clauses", () => {
       });
     // #endregion nor
 
-    assert.equal(query.getSQL(), "FROM User JOIN Post ON Post.id = User.name WHERE (NOT (User.age = 20 AND (User.age != 60 AND User.name = 'Bob'))");
+    const expectedSQL =
+      // #region nor-sql
+      "FROM User JOIN Post ON Post.id = User.name WHERE (NOT((User.age = 20 ) OR (User.age != 60 AND  User.name = 'Bob' ) OR (User.age != 60 AND  User.name = 'Bob' )));";
+      // #endregion nor-sql
+
+    assert.equal(query.getSQL(), expectedSQL);
   });
 
   test("whereNotNull - should generate correct SQL", () => {
-    // #region not-null
-    const sql = prisma.$from("User")
+    const sql =
+// #region not-null
+prisma.$from("User")
       .join("Post", "authorId", "User.id")
       .whereNotNull("User.name")
-      .getSQL();
-    // #endregion not-null
+      // #endregion not-null
+.getSQL();
 
-    assert.equal(sql,"FROM User JOIN Post ON Post.authorId = User.id WHERE ((User.name IS NOT NULL ));");
+    const expectedSQL =
+      // #region not-null-sql
+      "FROM User JOIN Post ON Post.authorId = User.id WHERE ((User.name IS NOT NULL ));";
+      // #endregion not-null-sql
+
+    assert.equal(sql, expectedSQL);
   });
 
   test("whereNotNull - should be chainable", () => {
-    // #region not-null
-    const query = prisma.$from("User")
+    const query =
+// #region not-null
+prisma.$from("User")
       .join("Post", "authorId", "User.id")
       .whereNotNull("User.name");
     // #endregion not-null
 
-    assert.equal(query.getSQL(), "FROM User JOIN Post ON Post.authorId = User.id WHERE ((User.name IS NOT NULL ));");
+    const expectedSQL =
+      // #region not-null-chainable-sql
+      "FROM User JOIN Post ON Post.authorId = User.id WHERE ((User.name IS NOT NULL ));";
+      // #endregion not-null-chainable-sql
+
+    assert.equal(query.getSQL(), expectedSQL);
   });
 
   test("whereIsNull - should generate correct SQL", () => {
-    // #region is-null
-    const sql = prisma.$from("User")
+    const sql =
+// #region is-null
+prisma.$from("User")
       .join("Post", "authorId", "User.id")
       .whereIsNull("Post.content")
-      .getSQL();
-    // #endregion is-null
+      // #endregion is-null
+.getSQL();
 
-    assert.equal(sql, "FROM User JOIN Post ON Post.authorId = User.id WHERE ((Post.content IS NULL ));");
+    const expectedSQL =
+      // #region is-null-sql
+      "FROM User JOIN Post ON Post.authorId = User.id WHERE ((Post.content IS NULL ));";
+      // #endregion is-null-sql
+
+    assert.equal(sql, expectedSQL);
   });
 
   test("whereIsNull - should be chainable", () => {
-    // #region is-null
-    const query = prisma.$from("User")
+    const query =
+// #region is-null
+prisma.$from("User")
       .join("Post", "authorId", "User.id")
       .whereIsNull("Post.content");
     // #endregion is-null
 
-    assert.equal(query.getSQL(), "FROM User JOIN Post ON Post.authorId = User.id WHERE ((Post.content IS NULL ));");
+    const expectedSQL =
+      // #region is-null-chainable-sql
+      "FROM User JOIN Post ON Post.authorId = User.id WHERE ((Post.content IS NULL ));";
+      // #endregion is-null-chainable-sql
+
+    assert.equal(query.getSQL(), expectedSQL);
   });
 
   test("whereRaw - should generate correct SQL", () => {
-    // #region raw
-    const sql = prisma.$from("User")
+    const sql =
+// #region raw
+prisma.$from("User")
       .join("Post", "authorId", "User.id")
       .whereRaw("this is a raw where statement")
-      .getSQL();
-    // #endregion raw
+      // #endregion raw
+.getSQL();
 
-    assert.equal(sql,"FROM User JOIN Post ON Post.authorId = User.id WHERE this is a raw where statement;");
+    const expectedSQL =
+      // #region raw-sql
+      "FROM User JOIN Post ON Post.authorId = User.id WHERE this is a raw where statement;";
+      // #endregion raw-sql
+
+    assert.equal(sql, expectedSQL);
   });
 
   test("whereRaw - should be chainable", () => {
-    // #region raw
-    const query = prisma.$from("User")
+    const query =
+// #region raw
+prisma.$from("User")
       .join("Post", "authorId", "User.id")
       .whereRaw("this is a raw where statement");
     // #endregion raw
 
-    assert.equal(query.getSQL(), "FROM User JOIN Post ON Post.authorId = User.id WHERE this is a raw where statement;");
+    const expectedSQL =
+      // #region raw-chainable-sql
+      "FROM User JOIN Post ON Post.authorId = User.id WHERE this is a raw where statement;";
+      // #endregion raw-chainable-sql
+
+    assert.equal(query.getSQL(), expectedSQL);
   });
 });

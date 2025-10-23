@@ -7,21 +7,27 @@ const prisma = new PrismaClient().$extends(prismaTSSelect);
 
 describe("README Example: select *", () => {
   test("should generate correct SQL", () => {
-    // #region example
-    const sql = prisma.$from("User")
+    const sql = 
+// #region example
+prisma.$from("User")
       .select("*")
-      .getSQL();
-    // #endregion
+      // #endregion
+.getSQL();
 
-    assert.strictEqual(sql, "SELECT * FROM User;");
+    const expectedSQL =
+      // #region example-sql
+      "SELECT * FROM User;";
+      // #endregion example-sql
+
+    assert.strictEqual(sql, expectedSQL);
   });
 
   test("should run and return data", async () => {
     // #region example
     const result = await prisma.$from("User")
       .select("*")
-      .run();
-    // #endregion
+      // #endregion
+.run();
 
     assert.deepEqual(result,  [
         {

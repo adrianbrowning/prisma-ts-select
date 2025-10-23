@@ -7,13 +7,19 @@ const prisma = new PrismaClient().$extends(prismaTSSelect);
 
 describe("README Example: .join basic", () => {
   test("should create type-safe join", () => {
-    // #region example
-    const query = prisma.$from("User")
+    const query = 
+// #region example
+prisma.$from("User")
       .join("Post", "authorId", "User.id");
     // #endregion
 
     // Verify query can be chained
-    assert.equal(query.getSQL(), "FROM User JOIN Post ON Post.authorId = User.id;");
+    const expectedSQL =
+      // #region join-basic-sql
+      "FROM User JOIN Post ON Post.authorId = User.id;";
+      // #endregion join-basic-sql
+
+    assert.equal(query.getSQL(), expectedSQL);
   });
 
   test("should generate correct SQL", () => {
@@ -22,6 +28,11 @@ describe("README Example: .join basic", () => {
       .select("*")
       .getSQL();
 
-    assert.strictEqual(sql, "SELECT * FROM User JOIN Post ON Post.authorId = User.id;");
+    const expectedSQL =
+      // #region join-with-select-sql
+      "SELECT * FROM User JOIN Post ON Post.authorId = User.id;";
+      // #endregion join-with-select-sql
+
+    assert.strictEqual(sql, expectedSQL);
   });
 });
