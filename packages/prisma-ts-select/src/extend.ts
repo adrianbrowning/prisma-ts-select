@@ -1283,28 +1283,19 @@ type TableFieldType<Table extends string, Fields extends Record<string, any>> = 
 
 type LogicalOperator = '$AND' | '$OR' | '$NOT' | "$NOR";
 
-/**
- * Defines the complete structure for WHERE clause criteria, supporting both field conditions and logical operators.
- * This is the main type used by the `.where()` method to ensure type-safe filtering across all joined tables.
- *
- * @template T - Array of table sources currently in the query (e.g., ["User", ["Post", "p"]])
- * @template TFields - Record mapping table names to their field types
- * @template F - The generated field conditions type (defaults to WhereCriteria_Fields)
- *
- * @example
- * WhereCriteria<["User", "Post"], { User: {...}, Post: {...} }>
- * // Allows conditions like:
- * // { "User.id": 1, "Post.authorId": 1 }
- * // { $AND: [{ "User.id": 1 }, { "Post.published": true }] }
- * // { $OR: [{ "User.email": "a@test.com" }, { "User.name": "Alice" }] }
- */
-type WhereCriteria<
-    T extends TArrSources,
-    TFields extends TFieldsType,
-    F = WhereCriteria_Fields<T, TFields>
-> = F & {
-    [k in LogicalOperator]?: [WhereCriteria<T, TFields, F>, ...Array<WhereCriteria<T, TFields, F>>];
+type WhereCriteriaSingle<TFields extends Record<string, unknown>> = WhereCriteria_Fields_Single<TFields> & {
+    [k in LogicalOperator]?: [WhereCriteria_Fields_Single<TFields>, ...Array<WhereCriteria_Fields_Single<TFields>>];
 };
+
+type WhereCriteria_Fields_Single<TFields extends Record<string, unknown>> = OptionalObject<(TFields)>  | OptionalObject< SQLCondition<TFields>>;
+
+type WhereCriteriaMulti<T extends TArrSources, TFields extends TFieldsType, F = WhereCriteria_Fields<T, TFields>> = F & {
+    [k in LogicalOperator]?: [WhereCriteriaMulti<T, TFields, F>, ...Array<WhereCriteriaMulti<T, TFields, F>>];
+};
+
+type WhereCriteria<T extends TArrSources, TFields extends TFieldsType> = T['length'] extends 1
+    ? WhereCriteriaSingle<TFields[GetAliasTableNames<T[0]>]>
+    : WhereCriteriaMulti<T, TFields>;
 
 /**
  * Recursively builds the field condition types for all tables in the query.

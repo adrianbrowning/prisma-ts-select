@@ -192,7 +192,8 @@ describe("Ambiguous column detection", () => {
             typeCheck({} as Expect<Equal<typeof result, Array<{
                 id: number,
                 email: string,
-                name: string | null
+                name: string | null,
+                age: number | null,
             }>>>);
         });
 
@@ -205,7 +206,8 @@ describe("Ambiguous column detection", () => {
             typeCheck({} as Expect<Equal<typeof result, Array<{
                 'User.id': number,
                 'User.email': string,
-                'User.name': string | null
+                'User.name': string | null,
+                "User.age": number | null,
             }>>>);
         });
 
@@ -219,6 +221,7 @@ describe("Ambiguous column detection", () => {
                 "User.id": number,
                 "User.email": string,
                 "User.name": string | null,
+                "User.age": number | null,
                 "Post.id": number,
                 "Post.title": string,
                 "Post.content": string | null,

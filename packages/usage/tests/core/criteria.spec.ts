@@ -64,6 +64,29 @@ describe("where", () => {
 
         function createQuery2() {
 
+            prisma.$from("User")
+                .where({
+                    //@ts-expect-error 1 should not be allowed
+                    "name": 1,
+                    //@ts-expect-error 1 should not be allowed
+                    "email": {
+                        op: "LIKE",
+                        value: 1
+                    },
+                    //@ts-expect-error string should not be allowed
+                     "age": ""
+                });
+
+            prisma.$from("User")
+                .where({
+
+                    "name": "",
+                    "email": {
+                        op: "LIKE",
+                        value: ""
+                    },
+                    "age": 1
+                });
 
             return prisma.$from("User")
                 .join("Post", "authorId", "User.id")
@@ -85,6 +108,7 @@ describe("where", () => {
                 "Post.published": boolean;
                 "Post.authorId": number;
                 "Post.lastModifiedById": number;
+                "User.age": number | null;
             }>;
 
             typeCheck({} as Expect<Equal<typeof result, TExpected>>);
@@ -99,7 +123,8 @@ describe("where", () => {
                      'Post.title': 'Blog 1',
                      'User.email': 'johndoe@example.com',
                      'User.id': 1,
-                     'User.name': 'John Doe'
+                     'User.name': 'John Doe',
+                      'User.age':25,
                }
              ];
 
@@ -134,6 +159,7 @@ describe("where", () => {
                 "User.id": number;
                 "User.email": string;
                 "User.name": string | null;
+                "User.age": number | null;
                 "Post.id": number;
                 "Post.title": string;
                 "Post.content": string | null;
@@ -154,7 +180,8 @@ describe("where", () => {
                   'Post.title': 'Blog 1',
                   'User.email': 'johndoe@example.com',
                   'User.id': 1,
-                  'User.name': 'John Doe'
+                  'User.name': 'John Doe',
+                    'User.age':25,
             },
             {
               'Post.authorId': 1,
@@ -165,7 +192,8 @@ describe("where", () => {
                   'Post.title': 'blog 2',
                   'User.email': 'johndoe@example.com',
                   'User.id': 1,
-                  'User.name': 'John Doe'
+                  'User.name': 'John Doe',
+                'User.age':30,
             },
             {
               'Post.authorId': 2,
@@ -176,7 +204,8 @@ describe("where", () => {
                   'Post.title': 'blog 3',
                   'User.email': 'smith@example.com',
                   'User.id': 2,
-                  'User.name': 'John Smith'
+                  'User.name': 'John Smith',
+                  'User.age':null,
             }
              ];
 
@@ -258,6 +287,7 @@ describe("having", () => {
                 "User.id": number;
                 "User.email": string;
                 "User.name": string | null;
+                "User.age": number | null;
                 "Post.id": number;
                 "Post.title": string;
                 "Post.content": string | null;
@@ -278,7 +308,8 @@ describe("having", () => {
                   'Post.title': 'Blog 1',
                   'User.email': 'johndoe@example.com',
                   'User.id': 1,
-                  'User.name': 'John Doe'
+                  'User.name': 'John Doe',
+                    "User.age":25,
             },
             {
               'Post.authorId': 2,
@@ -289,7 +320,8 @@ describe("having", () => {
                   'Post.title': 'blog 3',
                   'User.email': 'smith@example.com',
                   'User.id': 2,
-                  'User.name': 'John Smith'
+                  'User.name': 'John Smith',
+                "User.age":30,
             }
              ];
 
@@ -333,6 +365,7 @@ describe("having", () => {
                 "User.id": number;
                 "User.email": string;
                 "User.name": string | null;
+                "User.age": number | null;
                 "Post.id": number;
                 "Post.title": string;
                 "Post.content": string | null;
@@ -382,6 +415,7 @@ describe("having", () => {
                 "User.id": number;
                 "User.email": string;
                 "User.name": string | null;
+                "User.age": number | null;
                 "Post.id": number;
                 "Post.title": string;
                 "Post.content": string | null;
@@ -402,7 +436,8 @@ describe("having", () => {
                   'Post.title': 'Blog 1',
                   'User.email': 'johndoe@example.com',
                   'User.id': 1,
-                  'User.name': 'John Doe'
+                  'User.name': 'John Doe',
+                  'User.age':25,
             },
             {
               'Post.authorId': 2,
@@ -413,7 +448,8 @@ describe("having", () => {
                   'Post.title': 'blog 3',
                   'User.email': 'smith@example.com',
                   'User.id': 2,
-                  'User.name': 'John Smith'
+                  'User.name': 'John Smith',
+                "User.age":30,
             }
              ];
 
@@ -423,9 +459,12 @@ describe("having", () => {
         it("should match SQL", () => {
             const sql = createQuery().getSQL();
             // Should have both GROUP BY and HAVING
-            assert.ok(sql.includes("GROUP BY"));
-            assert.ok(sql.includes("HAVING"));
-            assert.ok(sql.includes("User.name LIKE 'J%'"));
+            assert.equal(sql,
+            "SELECT * from User JOIN Post ON Post.authorId = User.id GROUP BY User.id, User.name HAVING (User.id = 1 OR User.id = 2 ) AND (User.name LIKE 'J%' );" );
+            //     );
+            //     .includes("GROUP BY"));
+            // assert.ok(sql.includes("HAVING"));
+            // assert.ok(sql.includes("User.name LIKE 'J%'"));
         });
     });
 });

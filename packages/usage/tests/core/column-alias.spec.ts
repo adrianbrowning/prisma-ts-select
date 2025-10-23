@@ -179,7 +179,7 @@ describe("Column Alias Support", () => {
     describe("Aliases with WHERE clause", () => {
         test("should allow WHERE on original column name even with alias", async () => {
             const query = prisma.$from("User")
-                .where({"User.id": 1})
+                .where({"id": 1})
                 .select("User.name", "username");
 
             {
@@ -248,7 +248,7 @@ describe("Column Alias Support", () => {
         test("should use alias in HAVING clause", async () => {
             const query = prisma.$from("Post")
                 .groupBy(["Post.authorId"])
-                .having({"Post.authorId": {op: ">", value: 1}})
+                .having({"authorId": {op: ">", value: 1}})
                 .select("Post.authorId", "author");
 
             {

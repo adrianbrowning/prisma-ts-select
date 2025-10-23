@@ -26,7 +26,7 @@ describe("Table Alias Support", () => {
 
         test("should allow using alias in WHERE clause", async () => {
             const query = prisma.$from("User u")
-                .where({"u.id": 1})
+                .where({"id": 1})
                 .select("u.name");
 
             {
@@ -36,7 +36,7 @@ describe("Table Alias Support", () => {
 
             assert.strictEqual(
                 query.getSQL(),
-                "SELECT name FROM User AS `u` WHERE (u.id = 1 );"
+                "SELECT name FROM User AS `u` WHERE (id = 1 );"
             );
         });
 
@@ -279,7 +279,7 @@ describe("Table Alias Support", () => {
         test("should use aliases in HAVING clause", async () => {
             const query = prisma.$from("Post p")
                 .groupBy(["p.authorId"])
-                .having({"p.authorId": {op: ">", value: 1}})
+                .having({"authorId": {op: ">", value: 1}})
                 .select("p.authorId");
 
             {
@@ -289,7 +289,7 @@ describe("Table Alias Support", () => {
 
             assert.strictEqual(
                 query.getSQL(),
-                "SELECT authorId FROM Post AS `p` GROUP BY p.authorId HAVING (p.authorId > 1 );"
+                "SELECT authorId FROM Post AS `p` GROUP BY p.authorId HAVING (authorId > 1 );"
             );
         });
     });
@@ -339,7 +339,8 @@ describe("Table Alias Support", () => {
                 typeCheck({} as Expect<Equal<typeof result, Array<{
                     "u.id": number;
                     "u.email": string;
-                    "u.name": string | null
+                    "u.name": string | null;
+                    "u.age": number | null;
                 }>>>);
             }
 
@@ -367,6 +368,7 @@ describe("Table Alias Support", () => {
                     "u.id": number;
                     "u.email": string;
                     "u.name": string | null;
+                    "u.age": number | null;
                     "p.id": number;
                     "p.title": string;
                     "p.content": string | null;

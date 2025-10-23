@@ -9,7 +9,7 @@ import {PrismaClient} from "@prisma/client";
 const prisma = new PrismaClient({})
     .$extends(tsSelectExtend);
 
-type TUserExpected = Array<{ id: number; email: string; name: string | null }>;
+type TUserExpected = Array<{ id: number; email: string; name: string | null; age: number | null; }>;
 
 // Database is seeded via `pnpm p:r` which runs before all tests
 describe("Select Tests", ()=> {
@@ -32,16 +32,19 @@ describe("Select Tests", ()=> {
                         id: 1,
                         email: 'johndoe@example.com',
                         name: 'John Doe',
+                        age: 25
                     },
                     {
                         id: 2,
                         email: 'smith@example.com',
                         name: 'John Smith',
+                        age: 30
                     },
                     {
                         id: 3,
                         email: "alice@example.com",
-                        name: null
+                        name: null,
+                        age: null
                     }
                 ];
                 assert.deepEqual(result, expected);
@@ -70,6 +73,7 @@ describe("Select Tests", ()=> {
                     id: number;
                     email: string;
                     name: string | null;
+                    age: number | null;
                     // "Post.id": number,
                     title: string;
                     content: string | null;
@@ -89,7 +93,8 @@ describe("Select Tests", ()=> {
                     content: 'Something',
                     published: false,
                     authorId: 1,
-                    lastModifiedById: 1
+                    lastModifiedById: 1,
+                    age: 25,
                 }, {
                     // id: 1,
                     email: 'johndoe@example.com',
@@ -99,7 +104,8 @@ describe("Select Tests", ()=> {
                     content: 'sql',
                     published: false,
                     authorId: 1,
-                    lastModifiedById: 1
+                    lastModifiedById: 1,
+                    age: 30,
                 }, {
                     // id: 2,
                     email: 'smith@example.com',
@@ -109,7 +115,8 @@ describe("Select Tests", ()=> {
                     content: null,
                     published: false,
                     authorId: 2,
-                    lastModifiedById: 2
+                    lastModifiedById: 2,
+                    age: null,
                 }];
 
                 assert.deepStrictEqual(result, expected);
@@ -145,16 +152,19 @@ describe("Select Tests", ()=> {
                         id: 1,
                         email: 'johndoe@example.com',
                         name: 'John Doe',
+                        age: 25,
                     },
                     {
                         id: 2,
                         email: 'smith@example.com',
                         name: 'John Smith',
+                        age: 30
                     },
                     {
                         id: 3,
                         email: "alice@example.com",
-                        name: null
+                        name: null,
+                        age: null
                     }
                 ];
 
@@ -207,16 +217,19 @@ describe("Select Tests", ()=> {
                         id: 1,
                         email: 'johndoe@example.com',
                         name: 'John Doe',
+                        age: 25,
                     },
                     {
                         id: 2,
                         email: 'smith@example.com',
                         name: 'John Smith',
+                        age: 30
                     },
                     {
                         id: 3,
                         email: "alice@example.com",
-                        name: null
+                        name: null,
+                        age: null,
                     }
                 ]
 
@@ -246,6 +259,7 @@ describe("Select Tests", ()=> {
                     "User.id": number;
                     "User.email": string;
                     "User.name": string | null;
+                    "User.age": number | null;
                     "Post.id": number,
                     "Post.title": string;
                     "Post.content": string | null;
@@ -260,6 +274,7 @@ describe("Select Tests", ()=> {
                     'User.id': 1,
                     'User.email': 'johndoe@example.com',
                     'User.name': 'John Doe',
+                    "User.age": 25,
                     'Post.id': 1,
                     'Post.title': 'Blog 1',
                     'Post.content': 'Something',
@@ -270,6 +285,7 @@ describe("Select Tests", ()=> {
                     'User.id': 1,
                     'User.email': 'johndoe@example.com',
                     'User.name': 'John Doe',
+                    "User.age": 30,
                     'Post.id': 2,
                     'Post.title': 'blog 2',
                     'Post.content': 'sql',
@@ -280,6 +296,7 @@ describe("Select Tests", ()=> {
                     'User.id': 2,
                     'User.email': 'smith@example.com',
                     'User.name': 'John Smith',
+                    "User.age": null,
                     'Post.id': 3,
                     'Post.title': 'blog 3',
                     'Post.content': null,

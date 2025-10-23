@@ -14,7 +14,7 @@ describe("Table.* select syntax", () => {
 
         {
             const result = await query.run();
-            typeCheck({} as Expect<Equal<typeof result, Array<{ id: number, email: string, name: string | null }>>>);
+            typeCheck({} as Expect<Equal<typeof result, Array<{ id: number, email: string, name: string | null; age: number|null; }>>>);
         }
 
         assert.strictEqual(
@@ -29,7 +29,11 @@ describe("Table.* select syntax", () => {
             .run();
 
 
-        typeCheck({} as Expect<Equal<typeof result, Array<{ id: number, email: string, name: string | null }>>>);
+        typeCheck({} as Expect<Equal<typeof result, Array<{
+            id: number;
+            email: string;
+            name: string | null;
+            age: number | null;}>>>);
         assert.ok(Array.isArray(result));
     });
 
@@ -40,7 +44,12 @@ describe("Table.* select syntax", () => {
 
         {
             const result = await query.run();
-            typeCheck({} as Expect<Equal<typeof result, Array<{ "User.id": number, "User.email": string, "User.name": string | null }>>>);
+            typeCheck({} as Expect<Equal<typeof result, Array<{
+                "User.id": number;
+                "User.email": string;
+                "User.name": string | null;
+                "User.age": number | null;
+            }>>>);
         }
 
         assert.strictEqual(
@@ -55,7 +64,12 @@ describe("Table.* select syntax", () => {
             .select("User.*")
             .run();
 
-        typeCheck({} as Expect<Equal<typeof result, Array<{ "User.id": number, "User.email": string, "User.name": string | null }>>>);
+        typeCheck({} as Expect<Equal<typeof result, Array<{
+            "User.id": number;
+            "User.email": string;
+            "User.name": string | null;
+            "User.age": number | null;
+        }>>>);
         assert.ok(Array.isArray(result));
     });
 
@@ -83,7 +97,18 @@ describe("Table.* select syntax", () => {
 
         {
             const result = await query.run();
-            typeCheck({} as Expect<Equal<typeof result, Array<{ "User.id": number, "User.email": string, "User.name": string | null, "Post.id": number, "Post.title": string, "Post.content": string | null, "Post.published": boolean, "Post.authorId": number, "Post.lastModifiedById": number }>>>);
+            typeCheck({} as Expect<Equal<typeof result, Array<{
+                "User.id": number;
+                "User.email": string;
+                "User.name": string | null;
+                "User.age": number | null;
+                "Post.id": number;
+                "Post.title": string;
+                "Post.content": string | null;
+                "Post.published": boolean;
+                "Post.authorId": number;
+                "Post.lastModifiedById": number;
+            }>>>);
         }
 
         assert.strictEqual(
@@ -100,7 +125,12 @@ describe("Table.* select syntax", () => {
 
         {
             const result = await query.run();
-            typeCheck({} as Expect<Equal<typeof result, Array<{ "User.id": number, "User.email": string, "User.name": string | null, title: string }>>>);
+            typeCheck({} as Expect<Equal<typeof result, Array<{
+                "User.id": number;
+                "User.email": string;
+                "User.name": string | null;
+                "User.age": number | null;
+                title: string; }>>>);
         }
 
         assert.strictEqual(
@@ -111,12 +141,12 @@ describe("Table.* select syntax", () => {
 
     test("Table.* with WHERE clause", async () => {
         const query = prisma.$from("User")
-            .where({"User.id": 1})
+            .where({"id": 1})
             .select("User.*");
 
         {
             const result = await query.run();
-            typeCheck({} as Expect<Equal<typeof result, Array<{ id: number, email: string, name: string | null }>>>);
+            typeCheck({} as Expect<Equal<typeof result, Array<{ id: number, email: string, name: string | null; age: number | null }>>>);
         }
 
         assert.strictEqual(
@@ -133,7 +163,7 @@ describe("Table.* select syntax", () => {
 
         {
             const result = await query.run();
-            typeCheck({} as Expect<Equal<typeof result, Array<{ id: number, email: string, name: string | null }>>>);
+            typeCheck({} as Expect<Equal<typeof result, Array<{ id: number, email: string, name: string | null; age: number | null; }>>>);
         }
 
         assert.strictEqual(
