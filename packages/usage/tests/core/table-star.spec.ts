@@ -2,7 +2,8 @@ import {describe, test} from "node:test";
 import assert from "node:assert/strict";
 import tsSelectExtend from 'prisma-ts-select/extend';
 import {PrismaClient} from "@prisma/client";
-import {type Equal, type Expect, typeCheck} from "../utils.ts";
+import {type Equal, type Expect, type Prettify, typeCheck} from "../utils.ts";
+import type {PostRow, PostRowQualified, UserPostQualifiedJoinRow, UserRow, UserRowQualified} from "../types.js";
 
 const prisma = new PrismaClient({})
     .$extends(tsSelectExtend);
@@ -14,12 +15,12 @@ describe("Table.* select syntax", () => {
 
         {
             const result = await query.run();
-            typeCheck({} as Expect<Equal<typeof result, Array<{ id: number, email: string, name: string | null; age: number|null; }>>>);
+            typeCheck({} as Expect<Equal<typeof result, Array<UserRow>>>);
         }
-
+// t.assert.snapshot(query.getSQL())
         assert.strictEqual(
             query.getSQL(),
-            "SELECT id, email, name FROM User;"
+            "SELECT id, email, name, age FROM User;"
         );
     });
 
@@ -29,11 +30,7 @@ describe("Table.* select syntax", () => {
             .run();
 
 
-        typeCheck({} as Expect<Equal<typeof result, Array<{
-            id: number;
-            email: string;
-            name: string | null;
-            age: number | null;}>>>);
+        typeCheck({} as Expect<Equal<typeof result, Array<UserRow>>>);
         assert.ok(Array.isArray(result));
     });
 
@@ -44,17 +41,12 @@ describe("Table.* select syntax", () => {
 
         {
             const result = await query.run();
-            typeCheck({} as Expect<Equal<typeof result, Array<{
-                "User.id": number;
-                "User.email": string;
-                "User.name": string | null;
-                "User.age": number | null;
-            }>>>);
+            typeCheck({} as Expect<Equal<typeof result, Array<UserRowQualified>>>);
         }
 
         assert.strictEqual(
             query.getSQL(),
-            "SELECT User.id AS `User.id`, User.email AS `User.email`, User.name AS `User.name` FROM User JOIN Post ON Post.authorId = User.id;"
+            "SELECT User.id AS `User.id`, User.email AS `User.email`, User.name AS `User.name`, User.age AS `User.age` FROM User JOIN Post ON Post.authorId = User.id;"
         );
     });
 
@@ -64,12 +56,8 @@ describe("Table.* select syntax", () => {
             .select("User.*")
             .run();
 
-        typeCheck({} as Expect<Equal<typeof result, Array<{
-            "User.id": number;
-            "User.email": string;
-            "User.name": string | null;
-            "User.age": number | null;
-        }>>>);
+        typeCheck({} as Expect<Equal<typeof result, Array<UserRowQualified>>>);
+        // t.assert.snapshot(result);
         assert.ok(Array.isArray(result));
     });
 
@@ -80,7 +68,7 @@ describe("Table.* select syntax", () => {
 
         {
             const result = await query.run();
-            typeCheck({} as Expect<Equal<typeof result, Array<{ "Post.id": number, "Post.title": string, "Post.content": string | null, "Post.published": boolean, "Post.authorId": number, "Post.lastModifiedById": number }>>>);
+            typeCheck({} as Expect<Equal<typeof result, Array<PostRowQualified>>>);
         }
 
         assert.strictEqual(
@@ -97,23 +85,12 @@ describe("Table.* select syntax", () => {
 
         {
             const result = await query.run();
-            typeCheck({} as Expect<Equal<typeof result, Array<{
-                "User.id": number;
-                "User.email": string;
-                "User.name": string | null;
-                "User.age": number | null;
-                "Post.id": number;
-                "Post.title": string;
-                "Post.content": string | null;
-                "Post.published": boolean;
-                "Post.authorId": number;
-                "Post.lastModifiedById": number;
-            }>>>);
+            typeCheck({} as Expect<Equal<typeof result, Array<UserPostQualifiedJoinRow>>>);
         }
 
         assert.strictEqual(
             query.getSQL(),
-            "SELECT User.id AS `User.id`, User.email AS `User.email`, User.name AS `User.name`, Post.id AS `Post.id`, Post.title AS `Post.title`, Post.content AS `Post.content`, Post.published AS `Post.published`, Post.authorId AS `Post.authorId`, Post.lastModifiedById AS `Post.lastModifiedById` FROM User JOIN Post ON Post.authorId = User.id;"
+            "SELECT User.id AS `User.id`, User.email AS `User.email`, User.name AS `User.name`, User.age AS `User.age`, Post.id AS `Post.id`, Post.title AS `Post.title`, Post.content AS `Post.content`, Post.published AS `Post.published`, Post.authorId AS `Post.authorId`, Post.lastModifiedById AS `Post.lastModifiedById` FROM User JOIN Post ON Post.authorId = User.id;"
         );
     });
 
@@ -125,17 +102,12 @@ describe("Table.* select syntax", () => {
 
         {
             const result = await query.run();
-            typeCheck({} as Expect<Equal<typeof result, Array<{
-                "User.id": number;
-                "User.email": string;
-                "User.name": string | null;
-                "User.age": number | null;
-                title: string; }>>>);
+            typeCheck({} as Expect<Equal<typeof result, Array<Prettify<UserRowQualified & Pick<PostRow, 'title'>>>>>);
         }
 
         assert.strictEqual(
             query.getSQL(),
-            "SELECT User.id AS `User.id`, User.email AS `User.email`, User.name AS `User.name`, title FROM User JOIN Post ON Post.authorId = User.id;"
+            "SELECT User.id AS `User.id`, User.email AS `User.email`, User.name AS `User.name`, User.age AS `User.age`, title FROM User JOIN Post ON Post.authorId = User.id;"
         );
     });
 
@@ -146,12 +118,12 @@ describe("Table.* select syntax", () => {
 
         {
             const result = await query.run();
-            typeCheck({} as Expect<Equal<typeof result, Array<{ id: number, email: string, name: string | null; age: number | null }>>>);
+            typeCheck({} as Expect<Equal<typeof result, Array<UserRow>>>);
         }
 
         assert.strictEqual(
             query.getSQL(),
-            "SELECT id, email, name FROM User WHERE (User.id = 1 );"
+            "SELECT id, email, name, age FROM User WHERE (id = 1 );"
         );
     });
 
@@ -163,12 +135,12 @@ describe("Table.* select syntax", () => {
 
         {
             const result = await query.run();
-            typeCheck({} as Expect<Equal<typeof result, Array<{ id: number, email: string, name: string | null; age: number | null; }>>>);
+            typeCheck({} as Expect<Equal<typeof result, Array<UserRow>>>);
         }
 
         assert.strictEqual(
             query.getSQL(),
-            "SELECT id, email, name FROM User ORDER BY User.id DESC LIMIT 10;"
+            "SELECT id, email, name, age FROM User ORDER BY User.id DESC LIMIT 10;"
         );
     });
 });

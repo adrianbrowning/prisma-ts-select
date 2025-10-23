@@ -44,7 +44,7 @@ prisma.$from("User")
 
     const expectedSQL =
       // #region all-single-sql
-      "SELECT id, email, name FROM User;";
+      "SELECT id, email, name, age FROM User;";
       // #endregion all-single-sql
 
     assert.strictEqual(sql, expectedSQL);
@@ -63,17 +63,20 @@ prisma.$from("User")
              {
                email: 'johndoe@example.com',
                id: 1,
-               name: 'John Doe'
+               name: 'John Doe',
+                 age: 25
          },
          {
            email: 'smith@example.com',
                id: 2,
-               name: 'John Smith'
+               name: 'John Smith',
+             age: 30
          },
          {
           email: 'alice@example.com',
                id: 3,
-               name: null
+               name: null,
+             age:null
          }
        ]);
 
@@ -90,7 +93,7 @@ prisma.$from("User")
 
     const expectedSQL =
       // #region all-join-sql
-      "SELECT User.id AS `User.id`, User.email AS `User.email`, User.name AS `User.name`, Post.id AS `Post.id`, Post.title AS `Post.title`, Post.content AS `Post.content`, Post.published AS `Post.published`, Post.authorId AS `Post.authorId`, Post.lastModifiedById AS `Post.lastModifiedById` FROM User JOIN Post ON Post.authorId = User.id;";
+      "SELECT User.id AS `User.id`, User.email AS `User.email`, User.name AS `User.name`, User.age AS `User.age`, Post.id AS `Post.id`, Post.title AS `Post.title`, Post.content AS `Post.content`, Post.published AS `Post.published`, Post.authorId AS `Post.authorId`, Post.lastModifiedById AS `Post.lastModifiedById` FROM User JOIN Post ON Post.authorId = User.id;";
       // #endregion all-join-sql
 
     assert.equal(sql, expectedSQL);
@@ -117,7 +120,7 @@ prisma.$from("User")
 
     const expectedSQL =
       // #region table-star-single-sql
-      "SELECT id, email, name FROM User;";
+      "SELECT id, email, name, age FROM User;";
       // #endregion table-star-single-sql
 
     assert.strictEqual(sql, expectedSQL);
@@ -132,16 +135,19 @@ prisma.$from("User")
 
     assert.deepEqual(result,  [
            {
+               age: 25,
              email: 'johndoe@example.com',
                id: 1,
                name: 'John Doe'
          },
          {
+             age: 30,
            email: 'smith@example.com',
                id: 2,
                name: 'John Smith'
          },
          {
+             age: null,
            email: 'alice@example.com',
                id: 3,
                name: null
@@ -161,7 +167,7 @@ prisma.$from("User")
 
     const expectedSQL =
       // #region table-star-join-sql
-      "SELECT User.id AS `User.id`, User.email AS `User.email`, User.name AS `User.name`, Post.id AS `Post.id`, Post.title AS `Post.title`, Post.content AS `Post.content`, Post.published AS `Post.published`, Post.authorId AS `Post.authorId`, Post.lastModifiedById AS `Post.lastModifiedById` FROM User JOIN Post ON Post.authorId = User.id;";
+      "SELECT User.id AS `User.id`, User.email AS `User.email`, User.name AS `User.name`, User.age AS `User.age`, Post.id AS `Post.id`, Post.title AS `Post.title`, Post.content AS `Post.content`, Post.published AS `Post.published`, Post.authorId AS `Post.authorId`, Post.lastModifiedById AS `Post.lastModifiedById` FROM User JOIN Post ON Post.authorId = User.id;";
       // #endregion table-star-join-sql
 
     assert.equal(sql, expectedSQL);
@@ -186,7 +192,8 @@ prisma.$from("User")
             'Post.title': 'Blog 1',
             'User.email': 'johndoe@example.com',
             'User.id': 1,
-            'User.name': 'John Doe'
+            'User.name': 'John Doe',
+            "User.age": 25
       },
       {
         'Post.authorId': 1,
@@ -197,7 +204,8 @@ prisma.$from("User")
             'Post.title': 'blog 2',
             'User.email': 'johndoe@example.com',
             'User.id': 1,
-            'User.name': 'John Doe'
+            'User.name': 'John Doe',
+          "User.age": 25
       },
       {
         'Post.authorId': 2,
@@ -208,7 +216,8 @@ prisma.$from("User")
             'Post.title': 'blog 3',
             'User.email': 'smith@example.com',
             'User.id': 2,
-            'User.name': 'John Smith'
+            'User.name': 'John Smith',
+          "User.age": 30
       }
     ]);
   });

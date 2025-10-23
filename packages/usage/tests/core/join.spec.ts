@@ -6,7 +6,6 @@ import type {Equal, Expect, GetUnionOfRelations, Prettify, TestUnion} from "../u
 import { typeCheck} from "../utils.ts";
 import {PrismaClient} from "@prisma/client";
 
-// import type {GetUnionOfRelations, SafeJoins} from "prisma-ts-select/dist/extend/extend.js";
 
 const prisma = new PrismaClient({})
     .$extends(tsSelectExtend);

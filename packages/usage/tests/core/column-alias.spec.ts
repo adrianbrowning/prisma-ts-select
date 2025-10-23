@@ -2,7 +2,8 @@ import {describe, test} from "node:test";
 import assert from "node:assert/strict";
 import tsSelectExtend from 'prisma-ts-select/extend';
 import {PrismaClient} from "@prisma/client";
-import {type Equal, type Expect, typeCheck} from "../utils.ts";
+import {type Equal, type Expect, type Prettify, typeCheck} from "../utils.ts";
+import type {PostRow, UserRow} from "../types.js";
 
 const prisma = new PrismaClient({})
     .$extends(tsSelectExtend);
@@ -15,7 +16,7 @@ describe("Column Alias Support", () => {
 
             {
                 const result = await query.run();
-                typeCheck({} as Expect<Equal<typeof result, Array<{ username: string | null }>>>);
+                typeCheck({} as Expect<Equal<typeof result, Array<{ username: UserRow['name'] }>>>);
             }
 
             assert.strictEqual(
@@ -30,7 +31,7 @@ describe("Column Alias Support", () => {
                 .select("User.name", "username")
                 .run();
 
-            typeCheck({} as Expect<Equal<typeof result, Array<{ username: string | null }>>>);
+            typeCheck({} as Expect<Equal<typeof result, Array<{ username: UserRow['name'] }>>>);
             assert.ok(Array.isArray(result));
         });
 
@@ -53,11 +54,8 @@ describe("Column Alias Support", () => {
 
             {
                 const result = await query.run();
-                typeCheck({} as Expect<Equal<typeof result, Array<{
-                    id: number,
-                    username: string | null,
-                    email: string
-                }>>>);
+                typeCheck({} as Expect<Equal<typeof result, Array<
+                    Prettify<Pick<UserRow, "id" | "email"> & { username: UserRow['name'] }>>>>);
             }
 
             assert.strictEqual(
@@ -73,8 +71,8 @@ describe("Column Alias Support", () => {
                 .run();
 
             typeCheck({} as Expect<Equal<typeof result, Array<{
-                id: number,
-                username: string | null
+                id: UserRow['id'],
+                username: UserRow['name']
             }>>>);
             assert.ok(Array.isArray(result));
         });
@@ -90,9 +88,9 @@ describe("Column Alias Support", () => {
             {
                 const result = await query.run();
                 typeCheck({} as Expect<Equal<typeof result, Array<{
-                    userId: number,
-                    fullName: string | null,
-                    emailAddr: string
+                    userId: UserRow['id'],
+                    fullName: UserRow['name'],
+                    emailAddr: UserRow['email']
                 }>>>);
             }
 
@@ -109,8 +107,8 @@ describe("Column Alias Support", () => {
                 .run();
 
             typeCheck({} as Expect<Equal<typeof result, Array<{
-                userId: number,
-                emailAddr: string
+                userId: UserRow['id'],
+                emailAddr: UserRow['email']
             }>>>);
             assert.ok(Array.isArray(result));
         });
@@ -126,8 +124,8 @@ describe("Column Alias Support", () => {
             {
                 const result = await query.run();
                 typeCheck({} as Expect<Equal<typeof result, Array<{
-                    authorName: string | null,
-                    postTitle: string
+                    authorName: UserRow['name'],
+                    postTitle: PostRow['title']
                 }>>>);
             }
 
@@ -145,8 +143,8 @@ describe("Column Alias Support", () => {
                 .run();
 
             typeCheck({} as Expect<Equal<typeof result, Array<{
-                author: string | null,
-                title: string
+                author: UserRow['name'],
+                title: PostRow['title']
             }>>>);
             assert.ok(Array.isArray(result));
         });
@@ -162,10 +160,10 @@ describe("Column Alias Support", () => {
             {
                 const result = await query.run();
                 typeCheck({} as Expect<Equal<typeof result, Array<{
-                    userId: number,
-                    authorName: string | null,
-                    postId: number,
-                    postTitle: string
+                    userId: UserRow['id'],
+                    authorName: UserRow['name'],
+                    postId: PostRow['id'],
+                    postTitle: PostRow['title']
                 }>>>);
             }
 
@@ -184,12 +182,12 @@ describe("Column Alias Support", () => {
 
             {
                 const result = await query.run();
-                typeCheck({} as Expect<Equal<typeof result, Array<{ username: string | null }>>>);
+                typeCheck({} as Expect<Equal<typeof result, Array<{ username: UserRow['name'] }>>>);
             }
 
             assert.strictEqual(
                 query.getSQL(),
-                "SELECT User.name AS `username` FROM User WHERE (User.id = 1 );"
+                "SELECT User.name AS `username` FROM User WHERE (id = 1 );"
             );
         });
     });
@@ -202,7 +200,7 @@ describe("Column Alias Support", () => {
 
             {
                 const result = await query.run();
-                typeCheck({} as Expect<Equal<typeof result, Array<{ username: string | null }>>>);
+                typeCheck({} as Expect<Equal<typeof result, Array<{ username: UserRow['name'] }>>>);
             }
 
             assert.strictEqual(
@@ -218,7 +216,7 @@ describe("Column Alias Support", () => {
 
             {
                 const result = await query.run();
-                typeCheck({} as Expect<Equal<typeof result, Array<{ username: string | null }>>>);
+                typeCheck({} as Expect<Equal<typeof result, Array<{ username: UserRow['name'] }>>>);
             }
 
             assert.strictEqual(
@@ -236,7 +234,7 @@ describe("Column Alias Support", () => {
 
             {
                 const result = await query.run();
-                typeCheck({} as Expect<Equal<typeof result, Array<{ userName: string | null }>>>);
+                typeCheck({} as Expect<Equal<typeof result, Array<{ userName: UserRow['name'] }>>>);
             }
 
             assert.strictEqual(
@@ -253,12 +251,12 @@ describe("Column Alias Support", () => {
 
             {
                 const result = await query.run();
-                typeCheck({} as Expect<Equal<typeof result, Array<{ author: number }>>>);
+                typeCheck({} as Expect<Equal<typeof result, Array<{ author: PostRow['authorId'] }>>>);
             }
 
             assert.strictEqual(
                 query.getSQL(),
-                "SELECT Post.authorId AS `author` FROM Post GROUP BY Post.authorId HAVING (Post.authorId > 1 );"
+                "SELECT Post.authorId AS `author` FROM Post GROUP BY Post.authorId HAVING (authorId > 1 );"
             );
         });
     });
@@ -271,7 +269,7 @@ describe("Column Alias Support", () => {
 
             {
                 const result = await query.run();
-                typeCheck({} as Expect<Equal<typeof result, Array<{ username: string | null }>>>);
+                typeCheck({} as Expect<Equal<typeof result, Array<{ username: UserRow['name'] }>>>);
             }
 
             assert.strictEqual(
@@ -288,7 +286,7 @@ describe("Column Alias Support", () => {
 
             {
                 const result = await query.run();
-                typeCheck({} as Expect<Equal<typeof result, Array<{ emailAddr: string }>>>);
+                typeCheck({} as Expect<Equal<typeof result, Array<{ emailAddr: UserRow['email'] }>>>);
             }
 
             assert.strictEqual(
@@ -305,7 +303,7 @@ describe("Column Alias Support", () => {
 
             {
                 const result = await query.run();
-                typeCheck({} as Expect<Equal<typeof result, Array<{ user_full_name: string | null }>>>);
+                typeCheck({} as Expect<Equal<typeof result, Array<{ user_full_name: UserRow['name'] }>>>);
             }
 
             assert.strictEqual(
@@ -321,8 +319,8 @@ describe("Column Alias Support", () => {
                 .run();
 
             typeCheck({} as Expect<Equal<typeof result, Array<{
-                userId: number,
-                userEmail: string
+                userId: UserRow['id'],
+                userEmail: UserRow['email']
             }>>>);
             assert.ok(Array.isArray(result));
         });
@@ -334,7 +332,7 @@ describe("Column Alias Support", () => {
 
             // name is nullable, so displayName should also be nullable
             typeCheck({} as Expect<Equal<typeof result, Array<{
-                displayName: string | null
+                displayName: UserRow['name']
             }>>>);
             assert.ok(Array.isArray(result));
         });
@@ -374,8 +372,8 @@ describe("Column Alias Support", () => {
 
             const result = await query.run();
             typeCheck({} as Expect<Equal<typeof result, Array<{
-                userId: number,
-                postId: number
+                userId: UserRow['id'],
+                postId: PostRow['id']
             }>>>);
         });
 
@@ -386,8 +384,8 @@ describe("Column Alias Support", () => {
                 .run();
 
             typeCheck({} as Expect<Equal<typeof result, Array<{
-                primaryId: number,
-                backupId: number
+                primaryId: UserRow['id'],
+                backupId: UserRow['id']
             }>>>);
             assert.ok(Array.isArray(result));
         });

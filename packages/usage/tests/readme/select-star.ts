@@ -7,7 +7,7 @@ const prisma = new PrismaClient().$extends(prismaTSSelect);
 
 describe("README Example: select *", () => {
   test("should generate correct SQL", () => {
-    const sql = 
+    const sql =
 // #region example
 prisma.$from("User")
       .select("*")
@@ -33,17 +33,20 @@ prisma.$from("User")
         {
           email: 'johndoe@example.com',
             id: 1,
-            name: 'John Doe'
+            name: 'John Doe',
+            age: 25
       },
       {
         email: 'smith@example.com',
             id: 2,
-            name: 'John Smith'
+            name: 'John Smith',
+          age: 30
       },
       {
         email: 'alice@example.com',
             id: 3,
-            name: null
+            name: null,
+          age: null
       }
     ]);
 

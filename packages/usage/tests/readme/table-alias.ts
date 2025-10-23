@@ -157,7 +157,7 @@ prisma.$from("User u")
 
     const expectedSQL =
       // #region star-single-sql
-      "SELECT id, email, name FROM User AS `u`;";
+      "SELECT id, email, name, age FROM User AS `u`;";
     // #endregion star-single-sql
 
     assert.strictEqual(sql, expectedSQL);
@@ -174,17 +174,20 @@ prisma.$from("User u")
       {
           id: 1,
         name: 'John Doe',
-           email: 'johndoe@example.com'
+           email: 'johndoe@example.com',
+          age: 25
      },
      {
          id: 2,
        name: 'John Smith',
-           email: 'smith@example.com'
+           email: 'smith@example.com',
+         age: 30
      },
      {
          id: 3,
        name: null,
-           email: 'alice@example.com'
+           email: 'alice@example.com',
+         age: null
      }
        ]);
   });
@@ -201,7 +204,7 @@ prisma.$from("User u")
 
     const expectedSQL =
       // #region star-join-sql
-      "SELECT u.id AS `u.id`, u.email AS `u.email`, u.name AS `u.name`, p.id AS `p.id`, p.title AS `p.title`, p.content AS `p.content`, p.published AS `p.published`, p.authorId AS `p.authorId`, p.lastModifiedById AS `p.lastModifiedById` FROM User AS `u` JOIN Post AS `p` ON p.authorId = u.id;";
+      "SELECT u.id AS `u.id`, u.email AS `u.email`, u.name AS `u.name`, u.age AS `u.age`, p.id AS `p.id`, p.title AS `p.title`, p.content AS `p.content`, p.published AS `p.published`, p.authorId AS `p.authorId`, p.lastModifiedById AS `p.lastModifiedById` FROM User AS `u` JOIN Post AS `p` ON p.authorId = u.id;";
     // #endregion star-join-sql
 
     assert.equal(sql, expectedSQL);
@@ -226,7 +229,8 @@ prisma.$from("User u")
            'p.title': 'Blog 1',
            'u.email': 'johndoe@example.com',
            'u.id': 1,
-           'u.name': 'John Doe'
+           'u.name': 'John Doe',
+             "u.age": 25
      },
      {
        'p.authorId': 1,
@@ -237,7 +241,8 @@ prisma.$from("User u")
            'p.title': 'blog 2',
            'u.email': 'johndoe@example.com',
            'u.id': 1,
-           'u.name': 'John Doe'
+           'u.name': 'John Doe',
+         "u.age": 25
      },
      {
        'p.authorId': 2,
@@ -248,7 +253,8 @@ prisma.$from("User u")
            'p.title': 'blog 3',
            'u.email': 'smith@example.com',
            'u.id': 2,
-           'u.name': 'John Smith'
+           'u.name': 'John Smith',
+         "u.age": 30
      }
        ]);
   });
