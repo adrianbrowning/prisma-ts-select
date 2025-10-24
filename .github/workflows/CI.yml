@@ -48,7 +48,7 @@ jobs:
         run: pnpm exec prisma generate
       - name: Set Up Prisma DB
         working-directory: ./packages/usage
-        run: pnpm exec prisma db push
+        run: pnpm p:r
       - name: Test TS 🧪
         working-directory: ./packages/usage
         run: pnpm run test:ts
