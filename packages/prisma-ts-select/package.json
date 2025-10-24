@@ -1,6 +1,6 @@
 {
   "name": "@gcm/prisma-ts-select",
-  "version": "0.0.33",
+  "version": "0.0.34",
   "type": "module",
   "bin": {
     "prisma-ts-select": "dist/bin.cjs"
@@ -55,7 +55,12 @@
     "test": "echo 'TODO call package/usage'",
     "test:jest": "jest",
     "2postinstall": "node src/scripts/postinstall.js",
-    "doc": "pnpm exec markdown-toc -i README.md"
+    "doc": "pnpm exec markdown-toc -i README.md",
+    "mdcode": "go run github.com/szkiba/mdcode@latest ",
+    "readme:extract": "pnpm mdcode extract README.md",
+    "readme:update:old": "pnpm mdcode update README.md",
+    "readme:update": "pnpm mdcode update README.md && node ../../scripts/format-sql-blocks.mjs",
+    "readme:test": "pnpm --filter usage test -- tests/readme"
   },
   "dependencies": {
     "@prisma/generator-helper": "5.16.2",
@@ -73,7 +78,7 @@
   "homepage": "Link to homepage or github readme here",
   "repository": {
     "type": "git",
-    "url": "https://github.com/adrianbrowning/prisma-ts-select"
+    "url": "git+https://github.com/adrianbrowning/prisma-ts-select.git"
   },
   "devDependencies": {
     "@prisma/client": "5.16.1",
@@ -166,5 +171,12 @@
         }
       ]
     ]
-  }
+  },
+  "files": [
+    "./dist",
+    "./built",
+    "./assets",
+    "README.md",
+    "package.json"
+  ]
 }

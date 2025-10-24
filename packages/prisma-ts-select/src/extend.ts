@@ -449,9 +449,8 @@ class _fRun<TSources extends TArrSources, TFields extends TFieldsType, TSelectRT
     getSQL(formatted: boolean = false) {
 
 
-        function processCondition(condition: BasicOpTypes, formatted: boolean): string {
-            return "(" + Object.keys(condition).map((field) => {
-                // @-ts-expect-error todo comeback too
+        function processConditions(condition: BasicOpTypes, formatted: boolean): string {
+            const r = Object.keys(condition).map((field) => {
                 const value = condition[field];
 
                 if (typeof value === 'object' && value !== null && !Array.isArray(value) && "op" in value) {
@@ -475,6 +474,7 @@ class _fRun<TSources extends TArrSources, TFields extends TFieldsType, TSelectRT
                         case '<':
                         case '<=':
                         case '!=':
+                        case '=':
                             return `${String(field)} ${value.op} ${typeof value.value === 'string' ? `'${value.value}'` : value.value}`;
                         default:
                             //@ts-expect-error value.op should be never
@@ -488,7 +488,12 @@ class _fRun<TSources extends TArrSources, TFields extends TFieldsType, TSelectRT
                 } else {
                     return `${String(field)} = ${typeof value === 'string' ? `'${value}'` : value}`;
                 }
-            }).join(" AND " + (formatted ? "\n" : " ")) + " )";
+            });
+
+
+            return r.length === 1
+               ? r[0]!.trim()
+               : "(" + r.join(" AND " + (formatted ? "\n" : "")).trim() + ")";
         }
 
         function processCriteria(main: ClauseType, joinType: "AND" | "OR" = "AND", formatted: boolean = false): string {
@@ -498,66 +503,55 @@ class _fRun<TSources extends TArrSources, TFields extends TFieldsType, TSelectRT
                     results.push(criteria);
                     continue;
                 }
+                let toProcess: BasicOpTypes = {};
+                const processPending = () => {
+                    if (Object.keys(toProcess).length > 0) {
+                        results.push(processConditions(toProcess, formatted));
+                        toProcess = {};
+                    }
+                };
                 for (const criterion in criteria) {
-                    results.push(match(criterion)
-                        .returnType<string>()
-                        .with("$AND", (criterion) => {
+                        const r = match(criterion)
+                          .returnType<string>()
+                          .with("$AND", (criterion) => {
+                              processPending();
                             return "(" +
                                 //@ts-expect-error criterion
                                 processCriteria(criteria[criterion], "AND", formatted)
                                 + ")"
-                        })
-                        .with("$OR", (criterion) => {
+                          })
+                          .with("$OR", (criterion) => {
+                              processPending();
                             return "(" +
                                 //@ts-expect-error criterion
                                 processCriteria(criteria[criterion], "OR", formatted)
                                 + ")"
-                        })
-                        .with("$NOT", (criterion) => {
+                          })
+                          .with("$NOT", (criterion) => {
+                              processPending();
                             return "(NOT(" +
                                 //@ts-expect-error criterion
                                 processCriteria(criteria[criterion], "AND", formatted)
                                 + "))"
-                        })
-                        .with("$NOR", (criterion) => {
+                          })
+                          .with("$NOR", (criterion) => {
+                              processPending();
                             return "(NOT(" +
                                 //@ts-expect-error criterion
                                 processCriteria(criteria[criterion], "OR", formatted)
                                 + "))"
-                        })
-                        .with(P.string, () => {
-                            //@ts-expect-error criterion
-                            return processCondition(criteria);
-                        })
-                        .exhaustive());
+                          })
+                        .with(P.string, (key) => {
+                                //@ts-expect-error criterion
+                                toProcess[key]=  criteria[key];
+                            return "";
+                          })
+                          .exhaustive();
+                          if (r) results.push(r);
                 }
+                processPending();
             }
-            return results.join((formatted ? "\n" : " ") + joinType + (formatted ? "\n" : " "));
-
-            // return main.map(criteria => {
-            //     if (typeof criteria === 'string') return criteria;
-            //     let last_op = "";
-            //     return Object.keys(criteria).map((operator) => {
-            //         last_op = operator;
-            //         // return Object.keys(criteria).map((operator) => {
-            //         debugger;
-            //         if (operator !== 'AND' && operator !== 'OR') {
-            //             throw new Error(`Operator '${operator}' is not supported`);
-            //         }
-            //         // console.log(operator);
-            //         // return "";
-            //         const subCriteria = (criteria as any)[operator] as (WhereCriteria<TSources, TFields> | WhereCriteria<TSources, TFields>)[];
-            //         const subConditions = subCriteria.map(subCriterion => {
-            //             debugger;
-            //
-            //             if ('AND' in subCriterion || 'OR' in subCriterion) return processCriteria(subCriterion as any);
-            //             else return processCondition(subCriterion as any);
-            //
-            //         }).join(` ${operator} `);
-            //         return `(${subConditions})`;
-            //
-            //     }).join(` ${last_op} `);
-            // }).join(` AND `);
+            return results.join((formatted ? "\n" : " ") + joinType + (formatted ? "\n" : " ")).trim();
         }
 
 
@@ -1157,7 +1151,7 @@ type COND_NUMERIC<key extends PropertyKey, keyType> =
     | OptionalRecord<key, keyType>
     | OptionalRecord<key, { op: 'IN' | 'NOT IN'; values: Array<keyType> }>
     | OptionalRecord<key, { op: 'BETWEEN'; values: [keyType, keyType] }>
-    | OptionalRecord<key, { op: '>' | '>=' | '<' | '<=' | '!='; value: keyType }>;
+    | OptionalRecord<key, { op: '>' | '>=' | '<' | '<=' | '!=' | '='; value: keyType }>;
 
 /**
  * Defines all valid SQL condition patterns for string types.
@@ -1263,7 +1257,7 @@ type BasicOpTypes =
     | OptionalRecord<PropertyKey, { op: 'BETWEEN'; values: [SUPPORTED_TYPES, SUPPORTED_TYPES] }>
     | OptionalRecord<PropertyKey, { op: 'LIKE' | 'NOT LIKE'; value: string }>
     | OptionalRecord<PropertyKey, { op: 'IS NULL' | 'IS NOT NULL' }>
-    | OptionalRecord<PropertyKey, { op: '>' | '>=' | '<' | '<=' | '!='; value: SUPPORTED_TYPES }>;
+    | OptionalRecord<PropertyKey, { op: '>' | '>=' | '<' | '<=' | '!=' | '='; value: SUPPORTED_TYPES }>;
 
 /**
  * Transforms a table's fields into a record where keys are prefixed with the table name ("Table.field").
@@ -1282,28 +1276,19 @@ type TableFieldType<Table extends string, Fields extends Record<string, any>> = 
 
 type LogicalOperator = '$AND' | '$OR' | '$NOT' | "$NOR";
 
-/**
- * Defines the complete structure for WHERE clause criteria, supporting both field conditions and logical operators.
- * This is the main type used by the `.where()` method to ensure type-safe filtering across all joined tables.
- *
- * @template T - Array of table sources currently in the query (e.g., ["User", ["Post", "p"]])
- * @template TFields - Record mapping table names to their field types
- * @template F - The generated field conditions type (defaults to WhereCriteria_Fields)
- *
- * @example
- * WhereCriteria<["User", "Post"], { User: {...}, Post: {...} }>
- * // Allows conditions like:
- * // { "User.id": 1, "Post.authorId": 1 }
- * // { $AND: [{ "User.id": 1 }, { "Post.published": true }] }
- * // { $OR: [{ "User.email": "a@test.com" }, { "User.name": "Alice" }] }
- */
-type WhereCriteria<
-    T extends TArrSources,
-    TFields extends TFieldsType,
-    F = WhereCriteria_Fields<T, TFields>
-> = F & {
-    [k in LogicalOperator]?: [WhereCriteria<T, TFields, F>, ...Array<WhereCriteria<T, TFields, F>>];
+type WhereCriteriaSingle<TFields extends Record<string, unknown>> = WhereCriteria_Fields_Single<TFields> & {
+    [k in LogicalOperator]?: [WhereCriteria_Fields_Single<TFields>, ...Array<WhereCriteria_Fields_Single<TFields>>];
 };
+
+type WhereCriteria_Fields_Single<TFields extends Record<string, unknown>> = OptionalObject<(TFields)>  | OptionalObject< SQLCondition<TFields>>;
+
+type WhereCriteriaMulti<T extends TArrSources, TFields extends TFieldsType, F = WhereCriteria_Fields<T, TFields>> = F & {
+    [k in LogicalOperator]?: [WhereCriteriaMulti<T, TFields, F>, ...Array<WhereCriteriaMulti<T, TFields, F>>];
+};
+
+type WhereCriteria<T extends TArrSources, TFields extends TFieldsType> = T['length'] extends 1
+    ? WhereCriteriaSingle<TFields[GetAliasTableNames<T[0]>]>
+    : WhereCriteriaMulti<T, TFields>;
 
 /**
  * Recursively builds the field condition types for all tables in the query.
@@ -2145,7 +2130,7 @@ class _fJoin<
     }
 
     // Overload 1: Object syntax
-joinUnsafeTypeEnforced<const Table extends AvailableJoins<TSources>,
+joinUnsafeTypeEnforced<const Table extends TTables | `${TTables} ${string}`,
         TCol1 extends GetColsBaseTable<Table>,
         TCol2 extends GetJoinOnColsType<GetColumnType<Table, TCol1>, [...TSources, Table]>,
         TAlias extends string = never
@@ -2157,8 +2142,8 @@ joinUnsafeTypeEnforced<const Table extends AvailableJoins<TSources>,
     }): _fJoin<[...TSources, [TAlias] extends [undefined] ? Table : [Table, TAlias]], Prettify<TFields & Record<[TAlias] extends [undefined] ? Table : TAlias, GetFieldsFromTable<Table>>>>;
 
     // Overload 2: Positional syntax with inline alias (e.g., "User u2")
-    joinUnsafeTypeEnforced<const TableInput extends `${AvailableJoins<TSources>}` | `${AvailableJoins<TSources>} ${string}`,
-        Table extends AvailableJoins<TSources> = ExtractTableName<TableInput> & AvailableJoins<TSources>,
+    joinUnsafeTypeEnforced<const TableInput extends TTables | `${TTables} ${string}`/*`${AvailableJoins<TSources>}` | `${AvailableJoins<TSources>} ${string}`*/,
+        Table extends TTables = ExtractTableName<TableInput>,// & AvailableJoins<TSources>,
         TAlias extends string | never = ExtractAlias<TableInput>,
         TCol1 extends GetColsBaseTable<Table> = GetColsBaseTable<Table>,
         TCol2 extends GetJoinOnColsType<GetColumnType<Table, TCol1>, [...TSources, Table]> =
@@ -2166,8 +2151,8 @@ joinUnsafeTypeEnforced<const Table extends AvailableJoins<TSources>,
     >(table: TableInput, field: TCol1, reference: TCol2): _fJoin<[...TSources, [TAlias] extends [never] ? Table : [Table, TAlias]], Prettify<TFields & Record<[TAlias] extends [undefined] ? Table : TAlias, GetFieldsFromTable<Table>>>>;
 
     // Implementation
-    joinUnsafeTypeEnforced<const TableInput extends `${AvailableJoins<TSources>}` | `${AvailableJoins<TSources>} ${string}`,
-        Table extends AvailableJoins<TSources> = ExtractTableName<TableInput> & AvailableJoins<TSources>,
+    joinUnsafeTypeEnforced<const TableInput extends TTables,
+        Table extends TTables = ExtractTableName<TableInput>,// & AvailableJoins<TSources>,
         TCol1 extends GetColsBaseTable<Table> = GetColsBaseTable<Table>,
         TCol2 extends GetJoinOnColsType<GetColumnType<Table, TCol1>, [...TSources, Table]> =
                       GetJoinOnColsType<GetColumnType<Table, TCol1>, [...TSources, Table]>
@@ -2212,7 +2197,7 @@ joinUnsafeTypeEnforced<const Table extends AvailableJoins<TSources>,
     }
 
     // Overload 1: Object syntax
-    joinUnsafeIgnoreType<const Table extends AvailableJoins<TSources>,
+    joinUnsafeIgnoreType<const Table extends TTables,
         TCol1 extends GetColsBaseTable<Table>,
         TCol2 extends GetJoinCols<TSources[number]>,
         TAlias extends string = never
@@ -2224,16 +2209,16 @@ joinUnsafeTypeEnforced<const Table extends AvailableJoins<TSources>,
     }): _fJoin<[...TSources, [TAlias] extends [never] ? Table : [Table, TAlias]], TFields & Record<Table, GetFieldsFromTable<Table>>>;
 
     // Overload 2: Positional syntax with inline alias (e.g., "User u2")
-    joinUnsafeIgnoreType<const TableInput extends `${AvailableJoins<TSources>}` | `${AvailableJoins<TSources>} ${string}`,
-        Table extends AvailableJoins<TSources> = ExtractTableName<TableInput> & AvailableJoins<TSources>,
+    joinUnsafeIgnoreType<const TableInput extends TTables | `${TTables} ${string}`,
+        Table extends TTables = ExtractTableName<TableInput>,
         TAlias extends string | never = ExtractAlias<TableInput>,
         TCol1 extends GetColsBaseTable<Table> = GetColsBaseTable<Table>,
         TCol2 extends GetJoinCols<TSources[number]> = GetJoinCols<TSources[number]>
     >(table: TableInput, field: TCol1, reference: TCol2): _fJoin<[...TSources, [TAlias] extends [never] ? Table : [Table, TAlias]], TFields & Record<Table, GetFieldsFromTable<Table>>>;
 
     // Implementation
-    joinUnsafeIgnoreType<const TableInput extends `${AvailableJoins<TSources>}` | `${AvailableJoins<TSources>} ${string}`,
-        Table extends AvailableJoins<TSources> = ExtractTableName<TableInput> & AvailableJoins<TSources>,
+    joinUnsafeIgnoreType<const TableInput extends TTables,
+        Table extends TTables = ExtractTableName<TableInput>,
         TCol1 extends GetColsBaseTable<Table> = GetColsBaseTable<Table>,
         TCol2 extends GetJoinCols<TSources[number]> = GetJoinCols<TSources[number]>
     >(

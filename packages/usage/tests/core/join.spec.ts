@@ -2,11 +2,10 @@ import assert from "node:assert/strict"
 import { describe, test, before } from "node:test"
 import tsSelectExtend from 'prisma-ts-select/extend'
 import type {SafeJoins} from 'prisma-ts-select/extend'
-import type {Equal, Expect, GetUnionOfRelations, Prettify, TestUnion} from "./utils.js";
-import { typeCheck} from "./utils.js";
+import type {Equal, Expect, GetUnionOfRelations, Prettify, TestUnion} from "../utils.ts";
+import { typeCheck} from "../utils.ts";
 import {PrismaClient} from "@prisma/client";
 
-// import type {GetUnionOfRelations, SafeJoins} from "prisma-ts-select/dist/extend/extend.js";
 
 const prisma = new PrismaClient({})
     .$extends(tsSelectExtend);

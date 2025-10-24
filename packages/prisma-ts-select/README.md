@@ -13,18 +13,36 @@
     + [Generator](#generator)
   * [API](#api)
     + [`.$from`](#from)
+      - [Example](#example)
+      - [Example - With Table Alias](#example---with-table-alias)
+        * [SQL](#sql)
+      - [Example - Inline Alias Syntax](#example---inline-alias-syntax)
+        * [SQL](#sql-1)
+    + [Table Aliases](#table-aliases)
+      - [Table Alias Syntax Options](#table-alias-syntax-options)
+      - [Basic Table Alias](#basic-table-alias)
+        * [SQL](#sql-2)
+      - [Table Aliases with Joins](#table-aliases-with-joins)
+        * [Inline Alias Syntax](#inline-alias-syntax)
+        * [Object Syntax](#object-syntax)
+        * [SQL](#sql-3)
+      - [Self-Joins with Aliases](#self-joins-with-aliases)
+        * [SQL](#sql-4)
+      - [Table.* with Aliases](#table-with-aliases)
+        * [SQL](#sql-5)
+        * [SQL](#sql-6)
     + [Joins](#joins)
       - [`.join`](#join)
-        * [Example](#example)
-        * [SQL](#sql)
+        * [Example](#example-1)
+        * [SQL](#sql-7)
         * [Parameters](#parameters)
       - [`.joinUnsafeTypeEnforced`](#joinunsafetypeenforced)
-        * [Example](#example-1)
-        * [SQL](#sql-1)
+        * [Example](#example-2)
+        * [SQL](#sql-8)
         * [Parameters](#parameters-1)
       - [`.joinUnsafeIgnoreType`](#joinunsafeignoretype)
-        * [Example](#example-2)
-        * [SQL](#sql-2)
+        * [Example](#example-3)
+        * [SQL](#sql-9)
         * [Parameters](#parameters-2)
     + [Where](#where)
       - [`.where`](#where)
@@ -37,45 +55,53 @@
           + [$NOT](#not)
           + [$NOR](#nor)
       - [`.whereNotNull`](#wherenotnull)
-        * [Example](#example-3)
-        * [SQL](#sql-3)
-      - [`.whereIsNull`](#whereisnull)
         * [Example](#example-4)
-        * [SQL](#sql-4)
-      - [`.whereRaw`](#whereraw)
+        * [SQL](#sql-10)
+      - [`.whereIsNull`](#whereisnull)
         * [Example](#example-5)
-        * [SQL](#sql-5)
+        * [SQL](#sql-11)
+      - [`.whereRaw`](#whereraw)
+        * [Example](#example-6)
+        * [SQL](#sql-12)
     + [Group By](#group-by)
-      - [Example](#example-6)
-      - [SQL](#sql-6)
+      - [Example](#example-7)
+      - [SQL](#sql-13)
     + [Selecting](#selecting)
       - [`.selectDistinct`](#selectdistinct)
-      - [Example](#example-7)
-      - [SQL](#sql-7)
+      - [Example](#example-8)
+      - [SQL](#sql-14)
       - [`.selectAll`](#selectall)
       - [Example - Single Table](#example---single-table)
-        * [SQL](#sql-8)
+        * [SQL](#sql-15)
       - [Example - Join table](#example---join-table)
-        * [SQL](#sql-9)
+        * [SQL](#sql-16)
       - [`.select`](#select)
       - [Example - `*`](#example---)
-        * [SQL](#sql-10)
+        * [SQL](#sql-17)
+      - [Example - `Table.*` (Single Table)](#example---table-single-table)
+        * [SQL](#sql-18)
+      - [Example - `Table.*` (With Join)](#example---table-with-join)
+        * [SQL](#sql-19)
       - [Example - Chained](#example---chained)
-        * [SQL](#sql-11)
+        * [SQL](#sql-20)
       - [Example - Join + Chained](#example---join--chained)
-        * [SQL](#sql-12)
+        * [SQL](#sql-21)
+      - [Example - Column Aliases](#example---column-aliases)
+        * [SQL](#sql-22)
+      - [Example - Aliases with Joins](#example---aliases-with-joins)
+        * [SQL](#sql-23)
     + [Having](#having)
-      - [Example](#example-8)
-        * [SQL](#sql-13)
-    + [Order By](#order-by)
       - [Example](#example-9)
-        * [SQL](#sql-14)
-    + [Limit](#limit)
+        * [SQL](#sql-24)
+    + [Order By](#order-by)
       - [Example](#example-10)
-        * [SQL](#sql-15)
-    + [Offset](#offset)
+        * [SQL](#sql-25)
+    + [Limit](#limit)
       - [Example](#example-11)
-        * [SQL](#sql-16)
+        * [SQL](#sql-26)
+    + [Offset](#offset)
+      - [Example](#example-12)
+        * [SQL](#sql-27)
   * [Future updates](#future-updates)
   * [Changelog / Versioning](#changelog--versioning)
   * [License](#license)
@@ -181,31 +207,21 @@ The way the methods are chained, are heavily inspired by [Dr Milan Milanović](h
 This takes the `base` table to work from.
 
 #### Example
-```typescript
-prisma.$from("User")
+```typescript file=../usage/tests/readme/from-basic.ts region=example
+prisma.$from("User");
 ```
 
 #### Example - With Table Alias
-```typescript
-prisma.$from("User", "u")
-```
-
-##### SQL
-```sql
-FROM User AS u
-```
-
-**Note:** Table aliases are particularly useful for self-joins where you need to join a table to itself with different aliases.
-
-#### Example - Inline Alias Syntax
-```typescript
-prisma.$from("User u")
+```typescript file=../usage/tests/readme/from-inline-alias.ts region=example
+prisma.$from("User u");
 ```
 ##### SQL
-```sql
-FROM User AS u
+```sql file=../usage/tests/readme/from-inline-alias.ts region=inline-alias-sql
+FROM User AS `u`;
 ```
 **Note:** Alias can be inline (space-separated) or as second parameter.
+**Note:** Table aliases are particularly useful for self-joins where you need to join a table to itself with different aliases.
+
 
 ### Table Aliases
 
@@ -217,49 +233,33 @@ Table aliases allow you to give tables shorter or more meaningful names in your 
 #### Table Alias Syntax Options
 
 Multiple syntaxes supported:
-- **Inline in .$from()**: `prisma.$from("User u")``
+- **Inline in .$from()**: `prisma.$from("User u")` - Note: Second parameter syntax `.$from("User", "u")` is NOT supported
 - **Inline in .join()**: `.join("Post p", "authorId", "User.id")`
 - **Object syntax**: `.join({table: "Post", src: "authorId", on: "User.id", alias: "p"})`
-
-#### Basic Table Alias
-
-```typescript
-prisma.$from("User", "u")
-  .select("u.name")
-  .select("u.email")
-  .run();
-```
-
-##### SQL
-```sql
-SELECT name, email FROM User AS u;
-```
 
 #### Table Aliases with Joins
 
 ##### Inline Alias Syntax
-```typescript
+```typescript file=../usage/tests/readme/table-alias.ts region=inline-join
 prisma.$from("User u")
-  .join("Post p", "authorId", "u.id")
-  .select("u.name")
-  .select("p.title")
-  .run();
+      .join("Post p", "authorId", "u.id")
+      .select("u.name")
+      .select("p.title");
 ```
 
 ##### Object Syntax
-```typescript
-prisma.$from("User", "u")
-  .join({table: "Post", src: "authorId", on: "u.id", alias: "p"})
-  .select("u.name")
-  .select("p.title")
-  .run();
+```typescript file=../usage/tests/readme/table-alias.ts region=object-join
+prisma.$from("User u")
+      .join({table: "Post", src: "authorId", on: "u.id", alias: "p"})
+      .select("u.name")
+      .select("p.title");
 ```
 
 ##### SQL
-```sql
+```sql file=../usage/tests/readme/table-alias.ts region=inline-join-sql
 SELECT name, title
-FROM User AS u
-JOIN Post AS p ON authorId = u.id;
+FROM User AS `u`
+JOIN Post AS `p` ON p.authorId = u.id;
 ```
 
 **Note:** The object syntax provides a foundation for future enhancements like multiple join conditions and complex WHERE-style conditions in joins.
@@ -268,51 +268,64 @@ JOIN Post AS p ON authorId = u.id;
 
 Self-joins require aliases to distinguish between the different "instances" of the same table:
 
-```typescript
-prisma.$from("User", "u1")
-  .joinUnsafeTypeEnforced("User", "id", "u1.id", "u2")
-  .select("u1.name", "user1Name")
-  .select("u2.name", "user2Name")
-  .run();
+```typescript file=../usage/tests/readme/table-alias.ts region=self-join
+prisma.$from("User u1")
+      .joinUnsafeTypeEnforced("User u2", "id", "u1.id")
+      .select("u1.name", "user1Name")
+      .select("u2.name", "user2Name");
 ```
 
 ##### SQL
-```sql
-SELECT u1.name AS `user1Name`, u2.name AS `user2Name`
-FROM User AS u1
-JOIN User AS u2 ON User.id = u1.id;
+```sql file=../usage/tests/readme/table-alias.ts region=self-join-sql
+SELECT 
+  u1.name AS `user1Name`,
+  u2.name AS `user2Name`
+FROM User AS `u1`
+JOIN User AS `u2` ON u2.id = u1.id;
 ```
 
 #### Table.* with Aliases
 
 You can use the `alias.*` syntax to select all columns from an aliased table:
 
-```typescript
-prisma.$from("User", "u")
-  .select("u.*")
-  .run();
+```typescript file=../usage/tests/readme/table-alias.ts region=star-single
+prisma.$from("User u")
+      .select("u.*");
 ```
 
 ##### SQL
-```sql
-SELECT u.id, u.email, u.name FROM User AS u;
+```sql file=../usage/tests/readme/table-alias.ts region=star-single-sql
+SELECT 
+  id,
+  email,
+  name,
+  age
+FROM User AS `u`;
 ```
 
 With joins:
-```typescript
-prisma.$from("User", "u")
-  .join("Post", "authorId", "u.id", "p")
-  .select("u.*")
-  .select("p.*")
-  .run();
+```typescript file=../usage/tests/readme/table-alias.ts region=star-join
+prisma.$from("User u")
+      .join("Post p", "authorId", "u.id")
+      .select("u.*")
+      .select("p.*");
 ```
 
 ##### SQL
-```sql
-SELECT u.id AS `u.id`, u.email AS `u.email`, u.name AS `u.name`,
-       p.id AS `p.id`, p.title AS `p.title`, p.content AS `p.content`
-FROM User AS u
-JOIN Post AS p ON authorId = u.id;
+```sql file=../usage/tests/readme/table-alias.ts region=star-join-sql
+SELECT 
+  u.id AS `u.id`,
+  u.email AS `u.email`,
+  u.name AS `u.name`,
+  u.age AS `u.age`,
+  p.id AS `p.id`,
+  p.title AS `p.title`,
+  p.content AS `p.content`,
+  p.published AS `p.published`,
+  p.authorId AS `p.authorId`,
+  p.lastModifiedById AS `p.lastModifiedById`
+FROM User AS `u`
+JOIN Post AS `p` ON p.authorId = u.id;
 ```
 
 ### Joins
@@ -321,7 +334,7 @@ JOIN Post AS p ON authorId = u.id;
 Using the defined links (foreign keys) defined in the schema, provides a type-safe way of joining on tables.
 
 ##### Example
-```typescript
+```typescript file=../usage/tests/readme/join-basic.ts region=example
 prisma.$from("User")
       .join("Post", "authorId", "User.id");
 ```
@@ -332,9 +345,9 @@ prisma.$from("User")
 
 The resulting SQL will look like:
 
-```sql
+```sql file=../usage/tests/readme/join-basic.ts region=join-basic-sql
 FROM User
-JOIN Post ON authorId = User.id;
+JOIN Post ON Post.authorId = User.id;
 ```
 
 ##### Parameters
@@ -363,7 +376,7 @@ JOIN Post ON authorId = User.id;
 Unlike the `.join` command, this will allow you to join on columns that are not explicitly linked by a FK, but have the same type.
 
 ##### Example
-```typescript
+```typescript file=../usage/tests/readme/join-unsafe.ts region=type-enforced
 prisma.$from("User")
       .joinUnsafeTypeEnforced("Post", "title", "User.name");
 ```
@@ -372,8 +385,8 @@ prisma.$from("User")
 ##### SQL
 The resulting SQL will look like:
 
-```sql
-FROM User 
+```sql file=../usage/tests/readme/join-unsafe.ts region=type-enforced-sql
+FROM User
 JOIN Post ON Post.title = User.name;
 ```
 
@@ -389,7 +402,7 @@ JOIN Post ON Post.title = User.name;
 Unlike the `.joinUnsafeIgnoreType` command, this will allow you to join on columns that are not explicitly linked by a FK, and do not have the same type.
 
 ##### Example
-```typescript
+```typescript file=../usage/tests/readme/join-unsafe.ts region=ignore-type
 prisma.$from("User")
       .joinUnsafeIgnoreType("Post", "id", "User.name");
 ```
@@ -398,9 +411,9 @@ prisma.$from("User")
 ##### SQL
 The resulting SQL will look like:
 
-```sql
-FROM User 
-JOIN Post ON Post.id = User.name
+```sql file=../usage/tests/readme/join-unsafe.ts region=ignore-type-sql
+FROM User
+JOIN Post ON Post.id = User.name;
 ```
 
 ##### Parameters
@@ -442,6 +455,7 @@ type WhereClause = {
 | <           |             | Numbers, Date         |
 | <=          |             | Numbers, Date         |
 | !=          |             | Numbers, String, Date |
+| =           |             | Numbers, String, Date |
 
 
 ##### Examples
@@ -455,89 +469,89 @@ type WhereClause = {
 
 
 ###### Columns
-```typescript
+```typescript file=../usage/tests/readme/where.ts region=columns
 prisma.$from("User")
-        .join("Post", "id", "User.name")
-        .where({
-          "User.age": 20,
-          "User.name": {op: "LIKE", value: "Stuart%"},
-        });
+      .joinUnsafeIgnoreType("Post", "id", "User.name")
+      .where({
+        "User.age": 20,
+        "User.name": {op: "LIKE", value: "Stuart%"},
+      });
 ```
 
 ###### $AND
-```typescript
+```typescript file=../usage/tests/readme/where.ts region=and
 prisma.$from("User")
-        .join("Post", "id", "User.name")
-        .where({
-          $AND: [
-            {"User.age": {op: ">", value: 20}},
-            {"User.age": {op: "<", value: 60}},
-          ]
-        });
+      .joinUnsafeIgnoreType("Post", "id", "User.name")
+      .where({
+        $AND: [
+          {"User.age": {op: ">", value: 20}},
+          {"User.age": {op: "<", value: 60}},
+        ]
+      });
 ```
 
 ###### $OR
-```typescript
+```typescript file=../usage/tests/readme/where.ts region=or
 prisma.$from("User")
-        .join("Post", "id", "User.name")
-        .where({
-          $OR: [
-            {"User.name": {op: "LIKE", value: "a%"}},
-            {"User.name": {op: "LIKE", value: "d%"}},
-          ]
-        });
+      .joinUnsafeIgnoreType("Post", "id", "User.name")
+      .where({
+        $OR: [
+          {"User.name": {op: "LIKE", value: "a%"}},
+          {"User.name": {op: "LIKE", value: "d%"}},
+        ]
+      });
 ```
 
 ###### $NOT
-```typescript
+```typescript file=../usage/tests/readme/where.ts region=not
 prisma.$from("User")
-        .join("Post", "id", "User.name")
-        .where({
-          $NOT: [
-            {"User.age": 20},
-            {
-              "User.age": {op: "=", value: 60},
-              "User.name": "Bob",
-            },
-          ]
-        });
+      .joinUnsafeIgnoreType("Post", "id", "User.name")
+      .where({
+        $NOT: [
+          {"User.age": 20},
+          {
+            "User.age": {op: "=", value: 60},
+            "User.name": "Bob",
+          },
+        ]
+      });
 ```
 
 ###### $NOR
-```typescript
+```typescript file=../usage/tests/readme/where.ts region=nor
 prisma.$from("User")
-        .join("Post", "id", "User.name")
-        .where({
-          $NOR: [
-            {"User.age": 20},
-            {
-              "User.age": {op: "!=", value: 60},
-              "User.name": "Bob",
-            },
-          ]
-        });
+      .joinUnsafeIgnoreType("Post", "id", "User.name")
+      .where({
+        $NOR: [
+          {"User.age": 20},
+          {
+            "User.age": {op: "!=", value: 60},
+            "User.name": "Bob",
+          },
+        ]
+      });
 ```
 
 #### `.whereNotNull`
 
 This will remove the `null` type from the union of types of the current table column.
-To use `.whereNotNull`, you need to add it before a `.where`.  
+To use `.whereNotNull`, you need to add it before a `.where`.
 
 ##### Example
-```typescript
+```typescript file=../usage/tests/readme/where.ts region=not-null
 prisma.$from("User")
-        .join("Post", "authorId", "User.id")
-        .whereNotNull("User.name");
+      .join("Post", "authorId", "User.id")
+      .whereNotNull("User.name");
 ```
 ![whereNotNull](./assets/whereNotNull.gif)
 
 ##### SQL
 The resulting SQL will look like:
 
-```sql
-FROM User 
-JOIN Post ON authorId = User.id
-WHERE User.name IS NOT NULL;
+```sql file=../usage/tests/readme/where.ts region=not-null-sql
+FROM User
+JOIN Post ON Post.authorId = User.id
+WHERE (User.name IS NOT NULL);
 ```
 
 #### `.whereIsNull`
@@ -546,61 +560,62 @@ This will remove the NonNull type from the union of types of the current table c
 To use `.whereIsNull`, you need to add it before a `.where`.
 
 ##### Example
-```typescript
+```typescript file=../usage/tests/readme/where.ts region=is-null
 prisma.$from("User")
-        .join("Post", "authorId", "User.id")
-        .whereIsNull("Post.content");
+      .join("Post", "authorId", "User.id")
+      .whereIsNull("Post.content");
 ```
 ![whereIsNull](./assets/whereIsNull.gif)
 
 ##### SQL
 The resulting SQL will look like:
 
-```sql
-FROM User 
-JOIN Post ON authorId = User.id
-WHERE Post.content IS NULL;
+```sql file=../usage/tests/readme/where.ts region=is-null-sql
+FROM User
+JOIN Post ON Post.authorId = User.id
+WHERE (Post.content IS NULL);
 ```
 
 #### `.whereRaw`
 
-When you want to write a complex `where`, or you just don't want the TypeSafety offered by the other methods, you can use `.whereRaw`. 
+When you want to write a complex `where`, or you just don't want the TypeSafety offered by the other methods, you can use `.whereRaw`.
 
 ##### Example
-```typescript
+```typescript file=../usage/tests/readme/where.ts region=raw
 prisma.$from("User")
-        .join("Post", "authorId", "User.id")
-        .whereRaw("this is a raw where statement");
+      .join("Post", "authorId", "User.id")
+      .whereRaw("this is a raw where statement");
 ```
 
 ##### SQL
 The resulting SQL will look like:
 
-```sql
-FROM User 
-JOIN Post ON authorId = User.id
-WHERE this is a raw where statement;
+```sql file=../usage/tests/readme/where.ts region=raw-sql
+FROM User
+JOIN Post ON Post.authorId = User.id
+WHERE this is a raw
+WHERE statement;
 ```
 
 
 ### Group By
 
-Will allow you to pass a list of columns, that haven been specified from the `.$from` and any `.join` methods. 
+Will allow you to pass a list of columns, that haven been specified from the `.$from` and any `.join` methods.
 
 #### Example
-```typescript
+```typescript file=../usage/tests/readme/groupby.ts region=basic
 prisma.$from("User")
-        .join("Post", "authorId", "User.id")
-        .groupBy(["name", "Post.content"]);
+      .join("Post", "authorId", "User.id")
+      .groupBy(["name", "Post.content"]);
 ```
 ![groupBy](./assets/groupBy.gif)
 
 #### SQL
 The resulting SQL will look like:
 
-```sql
-FROM User 
-JOIN Post ON authorId = User.id
+```sql file=../usage/tests/readme/groupby.ts region=basic-sql
+FROM User
+JOIN Post ON Post.authorId = User.id
 GROUP BY name, Post.content;
 ```
 
@@ -611,16 +626,17 @@ GROUP BY name, Post.content;
 Will add the keyword `DISTINCT` after the select.
 
 #### Example
-```typescript
+```typescript file=../usage/tests/readme/select-advanced.ts region=distinct
 prisma.$from("User")
-       .selectDistinct();
+      .selectDistinct()
+      .select("name");
 ```
 
 #### SQL
 The resulting SQL will look like:
 
-```sql
-SELECT DISTINCT
+```sql file=../usage/tests/readme/select-advanced.ts region=distinct-sql
+SELECT DISTINCT name
 FROM User;
 ```
 
@@ -631,33 +647,47 @@ This method will explicitly list all the tables from the `$from` and `.join`. So
 
 
 #### Example - Single Table
-```typescript
+```typescript file=../usage/tests/readme/select-advanced.ts region=all-single
 prisma.$from("User")
-       .selectAll();
+      .selectAll();
 ```
 
 ##### SQL
 The resulting SQL will look like:
 
-```sql
-SELECT id, email, name
-FROM User 
+```sql file=../usage/tests/readme/select-advanced.ts region=all-single-sql
+SELECT 
+  id,
+  email,
+  name,
+  age
+FROM User;
 ```
 
 #### Example - Join table
-```typescript
+```typescript file=../usage/tests/readme/select-advanced.ts region=all-join
 prisma.$from("User")
-       .join("Post", "authorId", "User.id") 
-       .selectAll();
+      .join("Post", "authorId", "User.id")
+      .selectAll();
 ```
 
 ##### SQL
 The resulting SQL will look like:
 
-```sql
-SELECT User.id, User. email, User.name, Post.id, Post.title, Post.content, Post.published, Post.author, Post.authorId, Post.LastModifiedBy, Post.lastModifiedById
-FROM User 
-JOIN Post ON authorId = User.id
+```sql file=../usage/tests/readme/select-advanced.ts region=all-join-sql
+SELECT 
+  User.id AS `User.id`,
+  User.email AS `User.email`,
+  User.name AS `User.name`,
+  User.age AS `User.age`,
+  Post.id AS `Post.id`,
+  Post.title AS `Post.title`,
+  Post.content AS `Post.content`,
+  Post.published AS `Post.published`,
+  Post.authorId AS `Post.authorId`,
+  Post.lastModifiedById AS `Post.lastModifiedById`
+FROM User
+JOIN Post ON Post.authorId = User.id;
 ```
 
 [//]: # (#### `.selectAllOmit`)
@@ -667,35 +697,39 @@ JOIN Post ON authorId = User.id
 You can supply either; `*`, `Table.*` OR `table.field` and then chain them together.
 
 #### Example - `*`
-```typescript
+```typescript file=../usage/tests/readme/select-star.ts region=example
 prisma.$from("User")
-       .select("*");
+      .select("*");
 ```
 
 ##### SQL
 The resulting SQL will look like:
 
-```sql
+```sql file=../usage/tests/readme/select-star.ts region=example-sql
 SELECT *
 FROM User;
 ```
 
 #### Example - `Table.*` (Single Table)
-```typescript
+```typescript file=../usage/tests/readme/select-advanced.ts region=table-star-single
 prisma.$from("User")
-       .select("User.*");
+      .select("User.*");
 ```
 
 ##### SQL
 The resulting SQL will look like:
 
-```sql
-SELECT User.id, User.email, User.name
+```sql file=../usage/tests/readme/select-advanced.ts region=table-star-single-sql
+SELECT 
+  id,
+  email,
+  name,
+  age
 FROM User;
 ```
 
 #### Example - `Table.*` (With Join)
-```typescript
+```typescript file=../usage/tests/readme/select-advanced.ts region=table-star-join
 prisma.$from("User")
       .join("Post", "authorId", "User.id")
       .select("User.*")
@@ -705,38 +739,42 @@ prisma.$from("User")
 ##### SQL
 The resulting SQL will look like:
 
-```sql
-SELECT User.id AS `User.id`,
-       User.email AS `User.email`,
-       User.name AS `User.name`,
-       Post.id AS `Post.id`,
-       Post.title AS `Post.title`,
-       Post.content AS `Post.content`,
-       Post.published AS `Post.published`
+```sql file=../usage/tests/readme/select-advanced.ts region=table-star-join-sql
+SELECT 
+  User.id AS `User.id`,
+  User.email AS `User.email`,
+  User.name AS `User.name`,
+  User.age AS `User.age`,
+  Post.id AS `Post.id`,
+  Post.title AS `Post.title`,
+  Post.content AS `Post.content`,
+  Post.published AS `Post.published`,
+  Post.authorId AS `Post.authorId`,
+  Post.lastModifiedById AS `Post.lastModifiedById`
 FROM User
-JOIN Post ON authorId = User.id;
+JOIN Post ON Post.authorId = User.id;
 ```
 
 [!NOTE]
 > When using `Table.*` with joins, all columns are automatically aliased with the table name prefix to avoid column name conflicts.
 
 #### Example - Chained
-```typescript
+```typescript file=../usage/tests/readme/select-chained.ts region=example
 prisma.$from("User")
-       .select("name")
-       .select("email");
+      .select("name")
+      .select("email");
 ```
 
 ##### SQL
 The resulting SQL will look like:
 
-```sql
+```sql file=../usage/tests/readme/select-chained.ts region=example-sql
 SELECT name, email
 FROM User;
 ```
 
 #### Example - Join + Chained
-```typescript
+```typescript file=../usage/tests/readme/select-advanced.ts region=join-chained
 prisma.$from("User")
       .join("Post", "authorId", "User.id")
       .select("name")
@@ -746,24 +784,25 @@ prisma.$from("User")
 ##### SQL
 The resulting SQL will look like:
 
-```sql
-SELECT name, Post.title
+```sql file=../usage/tests/readme/select-advanced.ts region=join-chained-sql
+SELECT name, title
 FROM User
-JOIN Post ON authorId = User.id;
+JOIN Post ON Post.authorId = User.id;
 ```
 
 #### Example - Column Aliases
-```typescript
-// Basic alias
+```typescript file=../usage/tests/readme/select-column-alias.ts region=basic
 prisma.$from("User")
       .select("User.name", "username");
+```
 
-// Multiple aliases
+```typescript file=../usage/tests/readme/select-column-alias.ts region=multiple
 prisma.$from("User")
       .select("User.id", "userId")
       .select("User.email", "emailAddress");
+```
 
-// Mixing aliased and non-aliased columns
+```typescript file=../usage/tests/readme/select-column-alias.ts region=mixed
 prisma.$from("User")
       .select("User.id")
       .select("User.name", "username")
@@ -773,19 +812,28 @@ prisma.$from("User")
 ##### SQL
 The resulting SQL will look like:
 
-```sql
--- Basic alias
-SELECT User.name AS `username` FROM User;
+```sql file=../usage/tests/readme/select-column-alias.ts region=basic-sql
+SELECT User.name AS `username`
+FROM User;
+```
 
--- Multiple aliases
-SELECT User.id AS `userId`, User.email AS `emailAddress` FROM User;
+```sql file=../usage/tests/readme/select-column-alias.ts region=multiple-sql
+SELECT 
+  User.id AS `userId`,
+  User.email AS `emailAddress`
+FROM User;
+```
 
--- Mixed
-SELECT User.id, User.name AS `username`, User.email FROM User;
+```sql file=../usage/tests/readme/select-column-alias.ts region=mixed-sql
+SELECT 
+  id,
+  User.name AS `username`,
+  email
+FROM User;
 ```
 
 #### Example - Aliases with Joins
-```typescript
+```typescript file=../usage/tests/readme/select-advanced.ts region=aliases-joins
 prisma.$from("User")
       .join("Post", "authorId", "User.id")
       .select("User.name", "authorName")
@@ -795,10 +843,12 @@ prisma.$from("User")
 ##### SQL
 The resulting SQL will look like:
 
-```sql
-SELECT User.name AS `authorName`, Post.title AS `postTitle`
+```sql file=../usage/tests/readme/select-advanced.ts region=aliases-joins-sql
+SELECT 
+  User.name AS `authorName`,
+  Post.title AS `postTitle`
 FROM User
-JOIN Post ON authorId = User.id;
+JOIN Post ON Post.authorId = User.id;
 ```
 
 [!NOTE]
@@ -810,43 +860,47 @@ JOIN Post ON authorId = User.id;
 
 #### Example
 
-```typescript
+```typescript file=../usage/tests/readme/having.ts region=with-groupby
 prisma.$from("User")
-       .join("Post", "authorId", "User.id")
-       .groupBy(["name", "Post.content"])
-       .having({
-           "User.name": {
-               "op": "LIKE",
-               "value": "bob%"
-           }
-       });
+      .join("Post", "authorId", "User.id")
+      .groupBy(["name", "Post.content"])
+      .having({
+        "User.name": {
+          "op": "LIKE",
+          "value": "bob%"
+        }
+      })
+      .select("*");
 ```
 
-```typescript
+```typescript file=../usage/tests/readme/having.ts region=without-groupby
 prisma.$from("User")
-       .join("Post", "authorId", "User.id")
-       .having({
-           "User.name": {
-               "op": "LIKE",
-               "value": "stuart%"
-           }
-       });
+      .join("Post", "authorId", "User.id")
+      .having({
+        "User.name": {
+          "op": "LIKE",
+          "value": "stuart%"
+        }
+      })
+      .select("*");
 ```
 
 
 ##### SQL
 
-```SQL
+```sql file=../usage/tests/readme/having.ts region=with-groupby-sql
+SELECT *
 FROM User
-JOIN Post ON authorId = User.id
+JOIN Post ON Post.authorId = User.id
 GROUP BY name, Post.content
-HAVING (User.name LIKE 'bob%');
+HAVING User.name LIKE 'bob%';
 ```
 
-```SQL
+```sql file=../usage/tests/readme/having.ts region=without-groupby-sql
+SELECT *
 FROM User
-JOIN Post ON authorId = User.id
-HAVING (User.name LIKE 'stuart%');
+JOIN Post ON Post.authorId = User.id
+HAVING User.name LIKE 'stuart%';
 ```
 
 ### Order By
@@ -855,17 +909,17 @@ HAVING (User.name LIKE 'stuart%');
 
 #### Example
 
-```typescript
+```typescript file=../usage/tests/readme/orderby.ts region=basic
 prisma.$from("User")
       .join("Post", "authorId", "User.id")
-      .orderBy(["name", "Post.content DESC"]); 
+      .orderBy(["name", "Post.content DESC"]);
 ```
 
 ##### SQL
 
-```sql
+```sql file=../usage/tests/readme/orderby.ts region=basic-sql
 FROM User
-JOIN Post ON authorId = User.id
+JOIN Post ON Post.authorId = User.id
 ORDER BY name, Post.content DESC;
 ```
 
@@ -875,7 +929,7 @@ ORDER BY name, Post.content DESC;
 
 #### Example
 
-```typescript
+```typescript file=../usage/tests/readme/pagination.ts region=limit
 prisma.$from("User")
       .join("Post", "authorId", "User.id")
       .limit(1);
@@ -883,9 +937,9 @@ prisma.$from("User")
 
 ##### SQL
 
-```SQL
+```sql file=../usage/tests/readme/pagination.ts region=limit-sql
 FROM User
-JOIN Post ON authorId = User.id
+JOIN Post ON Post.authorId = User.id
 LIMIT 1;
 ```
 
@@ -894,20 +948,20 @@ LIMIT 1;
 `.offSet`, the number of rows to skip. Requires `.limit` to have been used first.
 
 #### Example
-```typescript
+```typescript file=../usage/tests/readme/pagination.ts region=offset
 prisma.$from("User")
-        .join("Post", "authorId", "User.id")
-        .limit(1)
-        .offset(1);
+      .join("Post", "authorId", "User.id")
+      .limit(1)
+      .offset(1);
 ```
 
 ##### SQL
 
-```SQL
+```sql file=../usage/tests/readme/pagination.ts region=offset-sql
 FROM User
-JOIN Post ON authorId = User.id
+JOIN Post ON Post.authorId = User.id
 LIMIT 1
-OFFSET 1
+OFFSET 1;
 ```
 
 ## Future updates

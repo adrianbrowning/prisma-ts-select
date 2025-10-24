@@ -2,7 +2,8 @@ import {describe, test, before} from "node:test";
 import assert from "node:assert/strict";
 import tsSelectExtend from 'prisma-ts-select/extend';
 import {PrismaClient} from "@prisma/client";
-import {type Equal, type Expect, typeCheck} from "./utils.ts";
+import {type Equal, type Expect, type Prettify, typeCheck} from "../utils.ts";
+import type {PostRow, UserPostJoinRow, UserPostQualifiedJoinRow, UserRow, UserRowQualified} from "../types.js";
 
 const prisma = new PrismaClient({})
     .$extends(tsSelectExtend);
@@ -17,10 +18,7 @@ describe("Ambiguous column detection", () => {
                 .select("email");
 
             const result = await query.run();
-            typeCheck({} as Expect<Equal<typeof result, Array<{
-                id: number,
-                email: string
-            }>>>);
+            typeCheck({} as Expect<Equal<typeof result, Array<Pick<UserRow, "id" | "email">>>>);
 
             assert.strictEqual(
                 query.getSQL(),
@@ -34,10 +32,7 @@ describe("Ambiguous column detection", () => {
                 .select("User.email");
 
             const result = await query.run();
-            typeCheck({} as Expect<Equal<typeof result, Array<{
-                id: number,
-                email: string
-            }>>>);
+            typeCheck({} as Expect<Equal<typeof result, Array<Pick<UserRow, "id" | "email">>>>);
 
             assert.strictEqual(
                 query.getSQL(),
@@ -53,9 +48,7 @@ describe("Ambiguous column detection", () => {
                 .select("email");  // Only User has email
 
             const result = await query.run();
-            typeCheck({} as Expect<Equal<typeof result, Array<{
-                email: string
-            }>>>);
+            typeCheck({} as Expect<Equal<typeof result, Array<Pick<UserRow, "email">>>>);
 
             assert.strictEqual(
                 query.getSQL(),
@@ -70,10 +63,7 @@ describe("Ambiguous column detection", () => {
                 .select("title");  // Only in Post
             {
                 const result = await query.run();
-                typeCheck({} as Expect<Equal<typeof result, Array<{
-                    email: string,
-                    title: string
-                }>>>);
+                typeCheck({} as Expect<Equal<typeof result, Array<Pick<UserPostJoinRow, "email"| "title">>>>);
             }
             assert.strictEqual(
                 query.getSQL(),
@@ -111,8 +101,8 @@ describe("Ambiguous column detection", () => {
             {
                 const result = await query.run();
                 typeCheck({} as Expect<Equal<typeof result, Array<{
-                    'User.id': number,
-                    postId: number
+                    'User.id': UserRow['id'],
+                    postId: PostRow['id']
                 }>>>);
             }
             assert.strictEqual(
@@ -129,8 +119,8 @@ describe("Ambiguous column detection", () => {
 
             const result = await query.run();
             typeCheck({} as Expect<Equal<typeof result, Array<{
-                userId: number,
-                postId: number
+                userId: UserRow['id'],
+                postId: PostRow['id']
             }>>>);
         });
     });
@@ -142,9 +132,7 @@ describe("Ambiguous column detection", () => {
                 .select("email");  // Only User has email
 
             const result = await query.run();
-            typeCheck({} as Expect<Equal<typeof result, Array<{
-                email: string
-            }>>>);
+            typeCheck({} as Expect<Equal<typeof result, Array<Pick<UserRow, "email">>>>);
         });
 
         test("should error on ambiguous unqualified with table aliases", async () => {
@@ -172,8 +160,8 @@ describe("Ambiguous column detection", () => {
 
             const result = await query.run();
             typeCheck({} as Expect<Equal<typeof result, Array<{
-                userId: number,
-                postId: number
+                userId: UserRow['id'],
+                postId: PostRow['id']
             }>>>);
 
             assert.strictEqual(
@@ -189,11 +177,7 @@ describe("Ambiguous column detection", () => {
                 .select("*");
 
             const result = await query.run();
-            typeCheck({} as Expect<Equal<typeof result, Array<{
-                id: number,
-                email: string,
-                name: string | null
-            }>>>);
+            typeCheck({} as Expect<Equal<typeof result, Array<UserRow>>>);
         });
 
         test("should handle Table.* selector without ambiguity issues", async () => {
@@ -202,11 +186,7 @@ describe("Ambiguous column detection", () => {
                 .select("User.*");
 
             const result = await query.run();
-            typeCheck({} as Expect<Equal<typeof result, Array<{
-                'User.id': number,
-                'User.email': string,
-                'User.name': string | null
-            }>>>);
+            typeCheck({} as Expect<Equal<typeof result, Array<UserRowQualified>>>);
         });
 
         test("should handle selectAll without ambiguity issues", async () => {
@@ -215,17 +195,7 @@ describe("Ambiguous column detection", () => {
                 .selectAll();
 
             const result = await query.run();
-            typeCheck({} as Expect<Equal<typeof result, Array<{
-                "User.id": number,
-                "User.email": string,
-                "User.name": string | null,
-                "Post.id": number,
-                "Post.title": string,
-                "Post.content": string | null,
-                "Post.published": boolean,
-                "Post.authorId": number,
-                "Post.lastModifiedById": number
-            }>>>);
+            typeCheck({} as Expect<Equal<typeof result, Array<UserPostQualifiedJoinRow>>>);
         });
 
         test("should allow mixing unambiguous unqualified with qualified columns", async () => {
@@ -237,11 +207,9 @@ describe("Ambiguous column detection", () => {
 
 
             const result = await query.run();
-            typeCheck({} as Expect<Equal<typeof result, Array<{
-                email: string,
-                userId: number,
-                title: string
-            }>>>);
+            typeCheck({} as Expect<Equal<typeof result, Array<Prettify<Pick<UserPostJoinRow, "email" | "title"> & {
+                userId: UserRow['id']
+            }>>>>);
         });
     });
 });

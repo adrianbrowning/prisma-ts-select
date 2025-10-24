@@ -15,6 +15,7 @@ model User {
   id                Int          @id @default(autoincrement())
   email             String       @unique
   name              String?
+  age               Int?
   Posts             Post[]       @relation("author")
   LastModifiedPosts Post[]       @relation("lastModifiedBy")
   LikedPosts        LikedPosts[]

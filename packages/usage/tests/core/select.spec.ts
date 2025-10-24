@@ -2,14 +2,20 @@ import assert from "node:assert/strict"
 
 import { describe, test, before, it } from "node:test"
 import tsSelectExtend from 'prisma-ts-select/extend'
-import type {Equal, Expect} from "./utils.js";
-import { typeCheck} from "./utils.js";
+import type {Equal, Expect, Prettify} from "../utils.ts";
+import { typeCheck} from "../utils.ts";
 import {PrismaClient} from "@prisma/client";
+import type {
+    UserRowArray,
+    UserPostQualifiedJoinRow,
+    UserPostJoinRow,
+    UserRow,
+    PostRow,
+    PostRowQualified
+} from "../types.ts";
 
 const prisma = new PrismaClient({})
     .$extends(tsSelectExtend);
-
-type TUserExpected = Array<{ id: number; email: string; name: string | null }>;
 
 // Database is seeded via `pnpm p:r` which runs before all tests
 describe("Select Tests", ()=> {
@@ -24,24 +30,27 @@ describe("Select Tests", ()=> {
             it("should RUN", async () => {
                 const result = await createQuery().run();
 
-                typeCheck({} as Expect<Equal<typeof result, TUserExpected>>);
+                typeCheck({} as Expect<Equal<typeof result, UserRowArray>>);
 
 
-                const expected: TUserExpected = [
+                const expected: UserRowArray = [
                     {
                         id: 1,
                         email: 'johndoe@example.com',
                         name: 'John Doe',
+                        age: 25
                     },
                     {
                         id: 2,
                         email: 'smith@example.com',
                         name: 'John Smith',
+                        age: 30
                     },
                     {
                         id: 3,
                         email: "alice@example.com",
-                        name: null
+                        name: null,
+                        age: null
                     }
                 ];
                 assert.deepEqual(result, expected);
@@ -66,22 +75,11 @@ describe("Select Tests", ()=> {
             it("should run", async () => {
                 const result = await createQuery().run();
 
-                type TExpected = Array<{
-                    id: number;
-                    email: string;
-                    name: string | null;
-                    // "Post.id": number,
-                    title: string;
-                    content: string | null;
-                    published: boolean;
-                    authorId: number;
-                    lastModifiedById: number;
-                }>;
+                type TExpected = Array<UserPostJoinRow>;
 
                 typeCheck({} as Expect<Equal<typeof result, TExpected>>);
 
                 const expected: TExpected = [{
-                    // id: 1,
                     email: 'johndoe@example.com',
                     name: 'John Doe',
                     id: 1,
@@ -89,9 +87,9 @@ describe("Select Tests", ()=> {
                     content: 'Something',
                     published: false,
                     authorId: 1,
-                    lastModifiedById: 1
+                    lastModifiedById: 1,
+                    age: 25,
                 }, {
-                    // id: 1,
                     email: 'johndoe@example.com',
                     name: 'John Doe',
                     id: 2,
@@ -99,9 +97,9 @@ describe("Select Tests", ()=> {
                     content: 'sql',
                     published: false,
                     authorId: 1,
-                    lastModifiedById: 1
+                    lastModifiedById: 1,
+                    age: 25,
                 }, {
-                    // id: 2,
                     email: 'smith@example.com',
                     name: 'John Smith',
                     id: 3,
@@ -109,7 +107,8 @@ describe("Select Tests", ()=> {
                     content: null,
                     published: false,
                     authorId: 2,
-                    lastModifiedById: 2
+                    lastModifiedById: 2,
+                    age: 30,
                 }];
 
                 assert.deepStrictEqual(result, expected);
@@ -138,23 +137,26 @@ describe("Select Tests", ()=> {
                 const result = await createQuery().run();
 
 
-                typeCheck({} as Expect<Equal<typeof result, TUserExpected>>);
+                typeCheck({} as Expect<Equal<typeof result, UserRowArray>>);
 
-                const expected: TUserExpected = [
+                const expected: UserRowArray = [
                     {
                         id: 1,
                         email: 'johndoe@example.com',
                         name: 'John Doe',
+                        age: 25,
                     },
                     {
                         id: 2,
                         email: 'smith@example.com',
                         name: 'John Smith',
+                        age: 30
                     },
                     {
                         id: 3,
                         email: "alice@example.com",
-                        name: null
+                        name: null,
+                        age: null
                     }
                 ];
 
@@ -200,23 +202,26 @@ describe("Select Tests", ()=> {
             it("should run", async () => {
                 const result = await createQuery().run();
 
-                typeCheck({} as Expect<Equal<typeof result, TUserExpected>>);
+                typeCheck({} as Expect<Equal<typeof result, UserRowArray>>);
 
-                const expected: TUserExpected = [
+                const expected: UserRowArray = [
                     {
                         id: 1,
                         email: 'johndoe@example.com',
                         name: 'John Doe',
+                        age: 25,
                     },
                     {
                         id: 2,
                         email: 'smith@example.com',
                         name: 'John Smith',
+                        age: 30
                     },
                     {
                         id: 3,
                         email: "alice@example.com",
-                        name: null
+                        name: null,
+                        age: null,
                     }
                 ]
 
@@ -226,7 +231,7 @@ describe("Select Tests", ()=> {
 
             it("should match SQL", () => {
                 const sql = createQuery().getSQL();
-                assert.deepStrictEqual(sql, `SELECT id, email, name FROM User;`)
+                assert.deepStrictEqual(sql, `SELECT id, email, name, age FROM User;`)
             });
         });
 
@@ -242,24 +247,13 @@ describe("Select Tests", ()=> {
             it("should run", async () => {
                 const result = await createQuery().run();
 
-                type RTTest = {
-                    "User.id": number;
-                    "User.email": string;
-                    "User.name": string | null;
-                    "Post.id": number,
-                    "Post.title": string;
-                    "Post.content": string | null;
-                    "Post.published": boolean;
-                    "Post.authorId": number;
-                    "Post.lastModifiedById": number;
-                };
+                typeCheck({} as Expect<Equal<typeof result, Array<UserPostQualifiedJoinRow>>>);
 
-                typeCheck({} as Expect<Equal<typeof result, Array<RTTest>>>);
-
-                const expected: Array<RTTest> = [{
+                const expected: Array<UserPostQualifiedJoinRow> = [{
                     'User.id': 1,
                     'User.email': 'johndoe@example.com',
                     'User.name': 'John Doe',
+                    "User.age": 25,
                     'Post.id': 1,
                     'Post.title': 'Blog 1',
                     'Post.content': 'Something',
@@ -270,6 +264,7 @@ describe("Select Tests", ()=> {
                     'User.id': 1,
                     'User.email': 'johndoe@example.com',
                     'User.name': 'John Doe',
+                    "User.age": 25,
                     'Post.id': 2,
                     'Post.title': 'blog 2',
                     'Post.content': 'sql',
@@ -280,6 +275,7 @@ describe("Select Tests", ()=> {
                     'User.id': 2,
                     'User.email': 'smith@example.com',
                     'User.name': 'John Smith',
+                    "User.age": 30,
                     'Post.id': 3,
                     'Post.title': 'blog 3',
                     'Post.content': null,
@@ -294,7 +290,7 @@ describe("Select Tests", ()=> {
 
             it("should match SQL", () => {
                 const sql = createQuery().getSQL();
-                assert.strictEqual(sql, `SELECT User.id AS \`User.id\`, User.email AS \`User.email\`, User.name AS \`User.name\`, Post.id AS \`Post.id\`, Post.title AS \`Post.title\`, Post.content AS \`Post.content\`, Post.published AS \`Post.published\`, Post.authorId AS \`Post.authorId\`, Post.lastModifiedById AS \`Post.lastModifiedById\` FROM User JOIN Post ON Post.authorId = User.id;`)
+                assert.strictEqual(sql, `SELECT User.id AS \`User.id\`, User.email AS \`User.email\`, User.name AS \`User.name\`, User.age AS \`User.age\`, Post.id AS \`Post.id\`, Post.title AS \`Post.title\`, Post.content AS \`Post.content\`, Post.published AS \`Post.published\`, Post.authorId AS \`Post.authorId\`, Post.lastModifiedById AS \`Post.lastModifiedById\` FROM User JOIN Post ON Post.authorId = User.id;`)
             });
         })
 
@@ -310,10 +306,7 @@ describe("Select Tests", ()=> {
             it("should RUN", async () => {
                 const result = await createQuery().run();
 
-                type TExpected = Array<{
-                    email: string;
-                    name: string | null;
-                }>;
+                type TExpected = Array<Pick<UserRow, "name" | "email">>;
 
                 typeCheck({} as Expect<Equal<typeof result, TExpected>>);
 
@@ -356,11 +349,7 @@ describe("Select Tests", ()=> {
             it("should run", async () => {
                 const result = await createQuery().run();
 
-                type TExpected = Array<{
-                    email: string;
-                    name: string | null;
-                    title: string;
-                }>;
+                type TExpected = Array<Pick<UserPostJoinRow, "email" | "name" | "title">>;
 
                 typeCheck({} as Expect<Equal<typeof result, TExpected>>);
 
@@ -403,12 +392,7 @@ describe("Select Tests", ()=> {
         it("should run", async () => {
             const result = await createQuery().run();
 
-            type TExpected = Array<{
-                email: string;
-                name: string | null;
-                title: string;
-                'Post.id': number;
-            }>;
+            type TExpected = Array<Prettify<Pick<UserRow, "email"|"name"> & Pick<PostRow, "title"> & Pick<PostRowQualified, "Post.id">>>;
 
             typeCheck({} as Expect<Equal<typeof result, TExpected>>);
 
@@ -453,12 +437,9 @@ describe("Select Tests", ()=> {
         it("should run", async () => {
             const result = await createQuery().run();
 
-            type TExpected = Array<{
-                email: string;
-                name: string | null;
-                title: string;
-                pId: number;
-            }>;
+
+            type TExpected = Array<Prettify<Pick<UserRow, "email"|"name"> & Pick<PostRow, "title"> & Record<'pId', PostRow['id']>>>;
+
 
             typeCheck({} as Expect<Equal<typeof result, TExpected>>);
 
