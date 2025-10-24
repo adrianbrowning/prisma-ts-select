@@ -19,7 +19,7 @@ prisma.$from("User")
 
     const expectedSQL =
       // #region columns-sql
-      "FROM User JOIN Post ON Post.id = User.name WHERE (User.age = 20 AND  User.name LIKE 'Stuart%' ) AND (User.age = 20 AND  User.name LIKE 'Stuart%' );";
+      "FROM User JOIN Post ON Post.id = User.name WHERE (User.age = 20 AND User.name LIKE 'Stuart%');";
       // #endregion columns-sql
 
     assert.equal(query.getSQL(), expectedSQL);
@@ -40,7 +40,7 @@ prisma.$from("User")
 
     const expectedSQL =
       // #region and-sql
-      "FROM User JOIN Post ON Post.id = User.name WHERE ((User.age > 20 ) AND (User.age < 60 ));";
+      "FROM User JOIN Post ON Post.id = User.name WHERE (User.age > 20 AND User.age < 60);";
       // #endregion and-sql
 
     assert.equal(query.getSQL(), expectedSQL);
@@ -61,7 +61,7 @@ prisma.$from("User")
 
     const expectedSQL =
       // #region or-sql
-      "FROM User JOIN Post ON Post.id = User.name WHERE ((User.name LIKE 'a%' ) OR (User.name LIKE 'd%' ));";
+      "FROM User JOIN Post ON Post.id = User.name WHERE (User.name LIKE 'a%' OR User.name LIKE 'd%');";
       // #endregion or-sql
 
     assert.equal(query.getSQL(), expectedSQL);
@@ -85,7 +85,7 @@ prisma.$from("User")
 
     const expectedSQL =
       // #region not-sql
-      "FROM User JOIN Post ON Post.id = User.name WHERE (NOT((User.age = 20 ) AND (User.age = 60 AND  User.name = 'Bob' ) AND (User.age = 60 AND  User.name = 'Bob' )));";
+      "FROM User JOIN Post ON Post.id = User.name WHERE (NOT(User.age = 20 AND (User.age = 60 AND User.name = 'Bob')));";
       // #endregion not-sql
 
     assert.equal(query.getSQL(), expectedSQL);
@@ -109,7 +109,7 @@ prisma.$from("User")
 
     const expectedSQL =
       // #region nor-sql
-      "FROM User JOIN Post ON Post.id = User.name WHERE (NOT((User.age = 20 ) OR (User.age != 60 AND  User.name = 'Bob' ) OR (User.age != 60 AND  User.name = 'Bob' )));";
+      "FROM User JOIN Post ON Post.id = User.name WHERE (NOT(User.age = 20 OR (User.age != 60 AND User.name = 'Bob')));";
       // #endregion nor-sql
 
     assert.equal(query.getSQL(), expectedSQL);
@@ -126,7 +126,7 @@ prisma.$from("User")
 
     const expectedSQL =
       // #region not-null-sql
-      "FROM User JOIN Post ON Post.authorId = User.id WHERE ((User.name IS NOT NULL ));";
+      "FROM User JOIN Post ON Post.authorId = User.id WHERE (User.name IS NOT NULL);";
       // #endregion not-null-sql
 
     assert.equal(sql, expectedSQL);
@@ -142,7 +142,7 @@ prisma.$from("User")
 
     const expectedSQL =
       // #region not-null-chainable-sql
-      "FROM User JOIN Post ON Post.authorId = User.id WHERE ((User.name IS NOT NULL ));";
+      "FROM User JOIN Post ON Post.authorId = User.id WHERE (User.name IS NOT NULL);";
       // #endregion not-null-chainable-sql
 
     assert.equal(query.getSQL(), expectedSQL);
@@ -159,7 +159,7 @@ prisma.$from("User")
 
     const expectedSQL =
       // #region is-null-sql
-      "FROM User JOIN Post ON Post.authorId = User.id WHERE ((Post.content IS NULL ));";
+      "FROM User JOIN Post ON Post.authorId = User.id WHERE (Post.content IS NULL);";
       // #endregion is-null-sql
 
     assert.equal(sql, expectedSQL);
@@ -175,7 +175,7 @@ prisma.$from("User")
 
     const expectedSQL =
       // #region is-null-chainable-sql
-      "FROM User JOIN Post ON Post.authorId = User.id WHERE ((Post.content IS NULL ));";
+      "FROM User JOIN Post ON Post.authorId = User.id WHERE (Post.content IS NULL);";
       // #endregion is-null-chainable-sql
 
     assert.equal(query.getSQL(), expectedSQL);

@@ -123,7 +123,7 @@ describe("Table.* select syntax", () => {
 
         assert.strictEqual(
             query.getSQL(),
-            "SELECT id, email, name, age FROM User WHERE (id = 1 );"
+            "SELECT id, email, name, age FROM User WHERE id = 1;"
         );
     });
 

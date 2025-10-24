@@ -48,9 +48,7 @@ function formatSQL(sql) {
 
     if ((hasAliases && columnCount >= 2) || columnCount >= 3) {
       const columnList = columns.split(',').map(col => col.trim());
-      const formattedColumns = columnList.map((col, i) =>
-        i === 0 ? col : `  ${col}`
-      ).join(',\n');
+      const formattedColumns = columnList.map((col) =>`  ${col}`).join(',\n');
 
       formatted = formatted.replace(
         /SELECT\s+(DISTINCT\s+)?(.+?)\s+FROM/i,

@@ -277,6 +277,9 @@ prisma.$from("User u1")
 
 ##### SQL
 ```sql file=../usage/tests/readme/table-alias.ts region=self-join-sql
+SELECT 
+  u1.name AS `user1Name`,
+  u2.name AS `user2Name`
 FROM User AS `u1`
 JOIN User AS `u2` ON u2.id = u1.id;
 ```
@@ -293,9 +296,10 @@ prisma.$from("User u")
 ##### SQL
 ```sql file=../usage/tests/readme/table-alias.ts region=star-single-sql
 SELECT 
-id,
+  id,
   email,
-  name
+  name,
+  age
 FROM User AS `u`;
 ```
 
@@ -310,9 +314,10 @@ prisma.$from("User u")
 ##### SQL
 ```sql file=../usage/tests/readme/table-alias.ts region=star-join-sql
 SELECT 
-u.id AS `u.id`,
+  u.id AS `u.id`,
   u.email AS `u.email`,
   u.name AS `u.name`,
+  u.age AS `u.age`,
   p.id AS `p.id`,
   p.title AS `p.title`,
   p.content AS `p.content`,
@@ -546,7 +551,7 @@ The resulting SQL will look like:
 ```sql file=../usage/tests/readme/where.ts region=not-null-sql
 FROM User
 JOIN Post ON Post.authorId = User.id
-WHERE ((User.name IS NOT NULL ));
+WHERE (User.name IS NOT NULL);
 ```
 
 #### `.whereIsNull`
@@ -568,7 +573,7 @@ The resulting SQL will look like:
 ```sql file=../usage/tests/readme/where.ts region=is-null-sql
 FROM User
 JOIN Post ON Post.authorId = User.id
-WHERE ((Post.content IS NULL ));
+WHERE (Post.content IS NULL);
 ```
 
 #### `.whereRaw`
@@ -652,9 +657,10 @@ The resulting SQL will look like:
 
 ```sql file=../usage/tests/readme/select-advanced.ts region=all-single-sql
 SELECT 
-id,
+  id,
   email,
-  name
+  name,
+  age
 FROM User;
 ```
 
@@ -670,9 +676,10 @@ The resulting SQL will look like:
 
 ```sql file=../usage/tests/readme/select-advanced.ts region=all-join-sql
 SELECT 
-User.id AS `User.id`,
+  User.id AS `User.id`,
   User.email AS `User.email`,
   User.name AS `User.name`,
+  User.age AS `User.age`,
   Post.id AS `Post.id`,
   Post.title AS `Post.title`,
   Post.content AS `Post.content`,
@@ -714,9 +721,10 @@ The resulting SQL will look like:
 
 ```sql file=../usage/tests/readme/select-advanced.ts region=table-star-single-sql
 SELECT 
-id,
+  id,
   email,
-  name
+  name,
+  age
 FROM User;
 ```
 
@@ -733,9 +741,10 @@ The resulting SQL will look like:
 
 ```sql file=../usage/tests/readme/select-advanced.ts region=table-star-join-sql
 SELECT 
-User.id AS `User.id`,
+  User.id AS `User.id`,
   User.email AS `User.email`,
   User.name AS `User.name`,
+  User.age AS `User.age`,
   Post.id AS `Post.id`,
   Post.title AS `Post.title`,
   Post.content AS `Post.content`,
@@ -810,14 +819,14 @@ FROM User;
 
 ```sql file=../usage/tests/readme/select-column-alias.ts region=multiple-sql
 SELECT 
-User.id AS `userId`,
+  User.id AS `userId`,
   User.email AS `emailAddress`
 FROM User;
 ```
 
 ```sql file=../usage/tests/readme/select-column-alias.ts region=mixed-sql
 SELECT 
-id,
+  id,
   User.name AS `username`,
   email
 FROM User;
@@ -836,7 +845,7 @@ The resulting SQL will look like:
 
 ```sql file=../usage/tests/readme/select-advanced.ts region=aliases-joins-sql
 SELECT 
-User.name AS `authorName`,
+  User.name AS `authorName`,
   Post.title AS `postTitle`
 FROM User
 JOIN Post ON Post.authorId = User.id;
@@ -884,14 +893,14 @@ SELECT *
 FROM User
 JOIN Post ON Post.authorId = User.id
 GROUP BY name, Post.content
-HAVING (User.name LIKE 'bob%' );
+HAVING User.name LIKE 'bob%';
 ```
 
 ```sql file=../usage/tests/readme/having.ts region=without-groupby-sql
 SELECT *
 FROM User
 JOIN Post ON Post.authorId = User.id
-HAVING (User.name LIKE 'stuart%' );
+HAVING User.name LIKE 'stuart%';
 ```
 
 ### Order By

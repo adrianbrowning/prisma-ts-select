@@ -24,7 +24,7 @@ prisma.$from("User")
 
     const expectedSQL =
       // #region with-groupby-sql
-      "SELECT * FROM User JOIN Post ON Post.authorId = User.id GROUP BY name, Post.content HAVING (User.name LIKE 'bob%' );";
+      "SELECT * FROM User JOIN Post ON Post.authorId = User.id GROUP BY name, Post.content HAVING User.name LIKE 'bob%';";
       // #endregion with-groupby-sql
 
     assert.equal(sql, expectedSQL);
@@ -44,7 +44,7 @@ prisma.$from("User")
       });
     // #endregion with-groupby
 
-    assert.equal(query.getSQL(), "FROM User JOIN Post ON Post.authorId = User.id GROUP BY name, Post.content HAVING (User.name LIKE 'bob%' );");
+    assert.equal(query.getSQL(), "FROM User JOIN Post ON Post.authorId = User.id GROUP BY name, Post.content HAVING User.name LIKE 'bob%';");
   });
 
   test("having without groupBy - should generate correct SQL", () => {
@@ -64,7 +64,7 @@ prisma.$from("User")
 
     const expectedSQL =
       // #region without-groupby-sql
-      "SELECT * FROM User JOIN Post ON Post.authorId = User.id HAVING (User.name LIKE 'stuart%' );";
+      "SELECT * FROM User JOIN Post ON Post.authorId = User.id HAVING User.name LIKE 'stuart%';";
       // #endregion without-groupby-sql
 
     assert.equal(sql, expectedSQL);
@@ -83,6 +83,6 @@ prisma.$from("User")
       });
     // #endregion without-groupby
 
-    assert.equal(query.getSQL(), "FROM User JOIN Post ON Post.authorId = User.id HAVING (User.name LIKE 'stuart%' );");
+    assert.equal(query.getSQL(), "FROM User JOIN Post ON Post.authorId = User.id HAVING User.name LIKE 'stuart%';");
   });
 });

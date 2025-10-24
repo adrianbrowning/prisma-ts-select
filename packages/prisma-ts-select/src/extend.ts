@@ -449,9 +449,8 @@ class _fRun<TSources extends TArrSources, TFields extends TFieldsType, TSelectRT
     getSQL(formatted: boolean = false) {
 
 
-        function processCondition(condition: BasicOpTypes, formatted: boolean): string {
-            return "(" + Object.keys(condition).map((field) => {
-                // @-ts-expect-error todo comeback too
+        function processConditions(condition: BasicOpTypes, formatted: boolean): string {
+            const r = Object.keys(condition).map((field) => {
                 const value = condition[field];
 
                 if (typeof value === 'object' && value !== null && !Array.isArray(value) && "op" in value) {
@@ -489,7 +488,12 @@ class _fRun<TSources extends TArrSources, TFields extends TFieldsType, TSelectRT
                 } else {
                     return `${String(field)} = ${typeof value === 'string' ? `'${value}'` : value}`;
                 }
-            }).join(" AND " + (formatted ? "\n" : " ")) + " )";
+            });
+
+
+            return r.length === 1
+               ? r[0]!.trim()
+               : "(" + r.join(" AND " + (formatted ? "\n" : "")).trim() + ")";
         }
 
         function processCriteria(main: ClauseType, joinType: "AND" | "OR" = "AND", formatted: boolean = false): string {
@@ -499,66 +503,55 @@ class _fRun<TSources extends TArrSources, TFields extends TFieldsType, TSelectRT
                     results.push(criteria);
                     continue;
                 }
+                let toProcess: BasicOpTypes = {};
+                const processPending = () => {
+                    if (Object.keys(toProcess).length > 0) {
+                        results.push(processConditions(toProcess, formatted));
+                        toProcess = {};
+                    }
+                };
                 for (const criterion in criteria) {
-                    results.push(match(criterion)
-                        .returnType<string>()
-                        .with("$AND", (criterion) => {
+                        const r = match(criterion)
+                          .returnType<string>()
+                          .with("$AND", (criterion) => {
+                              processPending();
                             return "(" +
                                 //@ts-expect-error criterion
                                 processCriteria(criteria[criterion], "AND", formatted)
                                 + ")"
-                        })
-                        .with("$OR", (criterion) => {
+                          })
+                          .with("$OR", (criterion) => {
+                              processPending();
                             return "(" +
                                 //@ts-expect-error criterion
                                 processCriteria(criteria[criterion], "OR", formatted)
                                 + ")"
-                        })
-                        .with("$NOT", (criterion) => {
+                          })
+                          .with("$NOT", (criterion) => {
+                              processPending();
                             return "(NOT(" +
                                 //@ts-expect-error criterion
                                 processCriteria(criteria[criterion], "AND", formatted)
                                 + "))"
-                        })
-                        .with("$NOR", (criterion) => {
+                          })
+                          .with("$NOR", (criterion) => {
+                              processPending();
                             return "(NOT(" +
                                 //@ts-expect-error criterion
                                 processCriteria(criteria[criterion], "OR", formatted)
                                 + "))"
-                        })
-                        .with(P.string, () => {
-                            //@ts-expect-error criterion
-                            return processCondition(criteria);
-                        })
-                        .exhaustive());
+                          })
+                        .with(P.string, (key) => {
+                                //@ts-expect-error criterion
+                                toProcess[key]=  criteria[key];
+                            return "";
+                          })
+                          .exhaustive();
+                          if (r) results.push(r);
                 }
+                processPending();
             }
-            return results.join((formatted ? "\n" : " ") + joinType + (formatted ? "\n" : " "));
-
-            // return main.map(criteria => {
-            //     if (typeof criteria === 'string') return criteria;
-            //     let last_op = "";
-            //     return Object.keys(criteria).map((operator) => {
-            //         last_op = operator;
-            //         // return Object.keys(criteria).map((operator) => {
-            //         debugger;
-            //         if (operator !== 'AND' && operator !== 'OR') {
-            //             throw new Error(`Operator '${operator}' is not supported`);
-            //         }
-            //         // console.log(operator);
-            //         // return "";
-            //         const subCriteria = (criteria as any)[operator] as (WhereCriteria<TSources, TFields> | WhereCriteria<TSources, TFields>)[];
-            //         const subConditions = subCriteria.map(subCriterion => {
-            //             debugger;
-            //
-            //             if ('AND' in subCriterion || 'OR' in subCriterion) return processCriteria(subCriterion as any);
-            //             else return processCondition(subCriterion as any);
-            //
-            //         }).join(` ${operator} `);
-            //         return `(${subConditions})`;
-            //
-            //     }).join(` ${last_op} `);
-            // }).join(` AND `);
+            return results.join((formatted ? "\n" : " ") + joinType + (formatted ? "\n" : " ")).trim();
         }
 
 

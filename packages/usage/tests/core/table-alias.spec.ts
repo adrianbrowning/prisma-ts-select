@@ -44,7 +44,7 @@ describe("Table Alias Support", () => {
 
             assert.strictEqual(
                 query.getSQL(),
-                "SELECT name FROM User AS `u` WHERE (id = 1 );"
+                "SELECT name FROM User AS `u` WHERE id = 1;"
             );
         });
 
@@ -261,7 +261,7 @@ describe("Table Alias Support", () => {
 
             assert.strictEqual(
                 query.getSQL(),
-                "SELECT name, title FROM User AS `u` JOIN Post AS `p` ON p.authorId = u.id WHERE (u.id = 1 );"
+                "SELECT name, title FROM User AS `u` JOIN Post AS `p` ON p.authorId = u.id WHERE u.id = 1;"
             );
         });
     });
@@ -296,7 +296,7 @@ describe("Table Alias Support", () => {
 
             assert.strictEqual(
                 query.getSQL(),
-                "SELECT authorId FROM Post AS `p` GROUP BY p.authorId HAVING (authorId > 1 );"
+                "SELECT authorId FROM Post AS `p` GROUP BY p.authorId HAVING authorId > 1;"
             );
         });
     });

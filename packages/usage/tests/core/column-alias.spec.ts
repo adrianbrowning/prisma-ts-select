@@ -187,7 +187,7 @@ describe("Column Alias Support", () => {
 
             assert.strictEqual(
                 query.getSQL(),
-                "SELECT User.name AS `username` FROM User WHERE (id = 1 );"
+                "SELECT User.name AS `username` FROM User WHERE id = 1;"
             );
         });
     });
@@ -256,7 +256,7 @@ describe("Column Alias Support", () => {
 
             assert.strictEqual(
                 query.getSQL(),
-                "SELECT Post.authorId AS `author` FROM Post GROUP BY Post.authorId HAVING (authorId > 1 );"
+                "SELECT Post.authorId AS `author` FROM Post GROUP BY Post.authorId HAVING authorId > 1;"
             );
         });
     });
