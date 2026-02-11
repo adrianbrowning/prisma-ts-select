@@ -5,7 +5,14 @@
     "husky": "7.0.4"
   },
   "scripts": {
-    "prepare": "husky install"
+    "prepare": "husky install",
+    "test:local": "bash scripts/test-local.sh",
+    "test:v6:sqlite": "bash scripts/test-local.sh sqlite 6",
+    "test:v6:mysql": "bash scripts/test-local.sh mysql 6",
+    "test:v6:pg": "bash scripts/test-local.sh postgresql 6",
+    "test:v7:sqlite": "bash scripts/test-local.sh sqlite 7",
+    "test:v7:mysql": "bash scripts/test-local.sh mysql 7",
+    "test:v7:pg": "bash scripts/test-local.sh postgresql 7"
   },
   "pnpm": {
     "onlyBuiltDependencies": [
