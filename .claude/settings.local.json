@@ -1,0 +1,17 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(grep:*)",
+      "Bash(wc:*)",
+      "mcp__context7__resolve-library-id",
+      "mcp__context7__query-docs",
+      "WebFetch(domain:www.prisma.io)",
+      "Bash(pnpm build:*)",
+      "Bash(pnpm i:*)",
+      "Bash(pnpm gen:*)",
+      "Bash(pnpm test)",
+      "Bash(find:*)",
+      "Bash(node --import tsx --test:*)"
+    ]
+  }
+}

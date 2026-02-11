@@ -3,7 +3,7 @@
  * Exports PrismaClient extended with tsSelectExtend + driver adapter
  */
 
-import { PrismaClient } from '../generated/client/index.js'
+import { PrismaClient } from '../generated/client.js'
 import tsSelectExtend from 'prisma-ts-select/extend'
 import { getAdapter } from '../test-setup.js'
 
@@ -14,4 +14,4 @@ const adapter = await getAdapter()
 export const prisma = new PrismaClient({ adapter }).$extends(tsSelectExtend)
 
 // Re-export PrismaClient type for type imports
-export { PrismaClient } from '../generated/client/index.js'
+export { PrismaClient } from '../generated/client.js'

@@ -48,7 +48,7 @@ export async function getAdapter(): Promise<SqlDriverAdapter> {
  * Create PrismaClient with driver adapter for current provider
  */
 export async function createTestClient() {
-  const { PrismaClient } = await import('../generated/client/index.js')
+  const { PrismaClient } = await import('../generated/client.js')
   const adapter = await getAdapter()
   return new PrismaClient({ adapter })
 }
