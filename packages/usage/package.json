@@ -22,10 +22,10 @@
     "test:tsw": "pnpm test:ts --watch"
   },
   "devDependencies": {
-    "@prisma/client": "5.16.1",
+    "@prisma/client": "6.19.2",
     "@types/node": "~22.18.12",
     "exponential-backoff": "^3.1.1",
-    "prisma": "5.16.1",
+    "prisma": "6.19.2",
     "prisma-ts-select": "workspace:@gcm/prisma-ts-select@*",
     "tsx": "^4.16.2",
     "typescript": "^5.9.3"

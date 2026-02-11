@@ -1,4 +1,4 @@
-import {type ConnectorType, DMMF, generatorHandler} from '@prisma/generator-helper'
+import {type ConnectorType, type DMMF, generatorHandler} from '@prisma/generator-helper'
 import type { GeneratorOptions } from '@prisma/generator-helper'
 import { logger } from '@prisma/internals'
 import path from 'node:path'
@@ -14,6 +14,7 @@ const SupportedProviders : Record<ConnectorType, boolean> = {
   sqlite: true,
   mysql: true,
   postgresql: true,
+  "prisma+postgres": false,
   cockroachdb: false,
   mongodb: false,
   postgres: false,
