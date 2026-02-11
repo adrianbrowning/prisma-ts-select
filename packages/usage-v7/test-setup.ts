@@ -5,43 +5,38 @@
  * This module provides adapter factory based on PRISMA_PROVIDER env var.
  */
 
-import type { DriverAdapter } from '@prisma/client'
+import type { SqlDriverAdapter } from '@prisma/driver-adapter-utils'
 
 const provider = process.env.PRISMA_PROVIDER || 'sqlite'
 
-export async function getAdapter(): Promise<DriverAdapter> {
+export async function getAdapter(): Promise<SqlDriverAdapter> {
   switch (provider) {
     case 'sqlite': {
       const { PrismaBetterSqlite3 } = await import('@prisma/adapter-better-sqlite3')
-      const Database = (await import('better-sqlite3')).default
-      const db = new Database('prisma/data.db')
-      return new PrismaBetterSqlite3(db)
+      const factory = new PrismaBetterSqlite3({
+        url: 'file:./prisma/data.db'
+      })
+      return await factory.connect()
     }
 
     case 'mysql': {
-      const { PrismaMariaDB } = await import('@prisma/adapter-mariadb')
-      const mariadb = await import('mariadb')
-      const pool = mariadb.createPool({
+      const { PrismaMariaDb } = await import('@prisma/adapter-mariadb')
+      const factory = new PrismaMariaDb({
         host: 'localhost',
         port: 3306,
         user: 'root',
         password: 'test',
         database: 'prisma_test',
       })
-      return new PrismaMariaDB(pool)
+      return await factory.connect()
     }
 
     case 'postgresql': {
       const { PrismaPg } = await import('@prisma/adapter-pg')
-      const pg = await import('pg')
-      const pool = new pg.Pool({
-        host: 'localhost',
-        port: 5432,
-        user: 'postgres',
-        password: 'test',
-        database: 'prisma_test',
+      const factory = new PrismaPg({
+        connectionString: 'postgresql://postgres:test@localhost:5432/prisma_test'
       })
-      return new PrismaPg(pool)
+      return await factory.connect()
     }
 
     default:

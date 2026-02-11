@@ -1,14 +1,12 @@
 import assert from "node:assert/strict"
+import { prisma } from "../client.ts";
 import { describe, test, before } from "node:test"
-import tsSelectExtend from 'prisma-ts-select/extend'
 import type {SafeJoins} from 'prisma-ts-select/extend'
 import type {Equal, Expect, GetUnionOfRelations, Prettify, TestUnion} from "../utils.ts";
 import { typeCheck} from "../utils.ts";
-import {PrismaClient} from "@prisma/client";
+// PrismaClient now imported from shared client.ts
 
 
-const prisma = new PrismaClient({})
-    .$extends(tsSelectExtend);
 
 // Database is seeded via `pnpm p:r` which runs before all tests
 describe("join", () => {

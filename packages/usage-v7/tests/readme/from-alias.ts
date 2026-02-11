@@ -1,10 +1,7 @@
 import { describe, test } from "node:test";
 import assert from "node:assert/strict";
-import { PrismaClient } from "@prisma/client";
 import { expectSQL } from "../test-utils.ts";
-import prismaTSSelect from "prisma-ts-select/extend";
-
-const prisma = new PrismaClient().$extends(prismaTSSelect);
+import { prisma } from "../client.ts";
 
 describe("README Example: .$from with table alias", () => {
   // Note: This example in README uses non-existent syntax

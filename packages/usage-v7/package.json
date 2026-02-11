@@ -26,6 +26,7 @@
     "@prisma/adapter-mariadb": "^7.0.0",
     "@prisma/adapter-pg": "^7.0.0",
     "@prisma/client": "^7.0.0",
+    "@prisma/driver-adapter-utils": "^7.3.0",
     "@types/better-sqlite3": "^7.6.12",
     "@types/node": "~22.18.12",
     "@types/pg": "^8.11.10",

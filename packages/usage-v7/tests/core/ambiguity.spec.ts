@@ -1,12 +1,10 @@
 import {describe, test, before} from "node:test";
+import { prisma } from "../client.ts";
 import assert from "node:assert/strict";
-import tsSelectExtend from 'prisma-ts-select/extend';
-import {PrismaClient} from "@prisma/client";
+// PrismaClient now imported from shared client.ts
 import {type Equal, type Expect, type Prettify, typeCheck} from "../utils.ts";
 import type {PostRow, UserPostJoinRow, UserPostQualifiedJoinRow, UserRow, UserRowQualified} from "../types.js";
 
-const prisma = new PrismaClient({})
-    .$extends(tsSelectExtend);
 
 // Database is seeded via `pnpm p:r` which runs before all tests
 describe("Ambiguous column detection", () => {

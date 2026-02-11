@@ -1,12 +1,11 @@
 import assert from "node:assert/strict"
+import { prisma } from "../client.ts";
 import {describe, it, before} from "node:test"
-import tsSelectExtend from 'prisma-ts-select/extend'
-import {PrismaClient} from "@prisma/client";
+// PrismaClient now imported from shared client.ts
 import {type Equal, type Expect, typeCheck} from "../utils.ts";
 import type {PostRow, UserPostQualifiedJoinRow, UserRow} from "../types.ts";
 import { expectSQL } from "../test-utils.ts";
 
-const prisma = new PrismaClient({}).$extends(tsSelectExtend);
 
 describe("where", () => {
 

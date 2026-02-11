@@ -1,11 +1,11 @@
 import assert from "node:assert/strict"
 
+import { prisma } from "../client.ts";
 import { describe, test, before, it } from "node:test"
-import tsSelectExtend from 'prisma-ts-select/extend'
 import type {Equal, Expect, Prettify} from "../utils.ts";
 import { typeCheck} from "../utils.ts";
 import { expectSQL } from "../test-utils.ts";
-import {PrismaClient} from "@prisma/client";
+// PrismaClient now imported from shared client.ts
 import type {
     UserRowArray,
     UserPostQualifiedJoinRow,
@@ -15,8 +15,6 @@ import type {
     PostRowQualified
 } from "../types.ts";
 
-const prisma = new PrismaClient({})
-    .$extends(tsSelectExtend);
 
 // Database is seeded via `pnpm p:r` which runs before all tests
 describe("Select Tests", ()=> {

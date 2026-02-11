@@ -1,9 +1,6 @@
 import { describe, test } from "node:test";
 import assert from "node:assert/strict";
-import { PrismaClient } from "@prisma/client";
-import prismaTSSelect from "prisma-ts-select/extend";
-
-const prisma = new PrismaClient().$extends(prismaTSSelect);
+import { prisma } from "../client.ts";
 
 describe("README Example: groupBy", () => {
   test("groupBy - should generate correct SQL", () => {

@@ -1,7 +1,7 @@
 import {describe, test} from "node:test";
+import { prisma } from "../client.ts";
 import assert from "node:assert/strict";
-import tsSelectExtend from 'prisma-ts-select/extend';
-import {PrismaClient} from "@prisma/client";
+// PrismaClient now imported from shared client.ts
 import {type Equal, type Expect, type Prettify, typeCheck} from "../utils.ts";
 import type {
     EmployeeRow,
@@ -12,8 +12,6 @@ import type {
     UserRowQualified
 } from "../types.js";
 
-const prisma = new PrismaClient({})
-    .$extends(tsSelectExtend);
 
 describe("Table Alias Support", () => {
     describe("Single table alias with FROM", () => {
