@@ -21,7 +21,15 @@ export default defineConfig((options) => [
         target: 'node20',
     },
     {
-        entry: ['src/extend.ts'],
+        entry: [
+            'src/extend.ts',
+            'src/dialects/types.ts',
+            'src/dialects/shared.ts',
+            'src/dialects/sqlite.ts',
+            'src/dialects/mysql.ts',
+            'src/dialects/postgresql.ts',
+            'src/dialects/index.ts',
+        ],
         outDir: 'dist/extend',
         splitting: true,
         minify: false,

@@ -29,6 +29,8 @@ generatorHandler({
     }
   },
   onGenerate: async (options: GeneratorOptions) => {
+    const provider = options.datasources[0]?.provider;
+
     const validDS = options
         .datasources
         .map(ds => ds.provider)
@@ -186,13 +188,28 @@ generatorHandler({
     const srcDir = path.join(pTSSelPath, "extend");
     const outDir = path.join(pTSSelPath, "..", "built");
 
+    // Copy dialect files
+    const dialectFiles = ["types.js", "shared.js", "sqlite.js", "mysql.js", "postgresql.js", "index.js"];
+    const dialectOutDir = path.join(outDir, "dialects");
+    if (!fs.existsSync(dialectOutDir)) {
+      fs.mkdirSync(dialectOutDir, {recursive: true});
+    }
+    for (const file of dialectFiles) {
+      const src = path.join(pTSSelPath, "extend", "dialects", file);
+      const dest = path.join(dialectOutDir, file);
+      if (fs.existsSync(src)) {
+        fs.copyFileSync(src, dest);
+      }
+    }
+
     { //mjs
       const file = "extend.js";
       const contents = fs.readFileSync(path.join(srcDir, file), {encoding: "utf-8"});
 
       writeFileSafely(path.join(outDir, file),
-          contents.replace("const DB = {};",
-              `const DB = ${JSON.stringify(models, null, 2)};`));
+          contents
+              .replace("const dialect = sqliteDialect;", `const dialect = ${provider}Dialect;`)
+              .replace("const DB = {};", `const DB = ${JSON.stringify(models, null, 2)};`));
     }
 
     { //cjs
@@ -200,8 +217,9 @@ generatorHandler({
       const contents = fs.readFileSync(path.join(srcDir, file), {encoding: "utf-8"});
 
       writeFileSafely(path.join(outDir, file),
-          contents.replace("const DB = {};",
-              `const DB = ${JSON.stringify(models, null, 2)};`));
+          contents
+              .replace("const dialect = sqliteDialect;", `const dialect = ${provider}Dialect;`)
+              .replace("const DB = {};", `const DB = ${JSON.stringify(models, null, 2)};`));
     }
 
 

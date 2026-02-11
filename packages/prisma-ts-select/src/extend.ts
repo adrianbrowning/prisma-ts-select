@@ -1,7 +1,10 @@
 import {Prisma} from "@prisma/client/extension";
 import type {PrismaClient} from "@prisma/client";
 import {match, P} from "ts-pattern";
+import {sqliteDialect} from "./dialects/sqlite.js";
+import type {Dialect} from "./dialects/types.js";
 
+const dialect: Dialect = sqliteDialect;
 const DB: DBType = {} as const satisfies DBType;
 
 type TDB = typeof DB;
@@ -561,7 +564,7 @@ class _fRun<TSources extends TArrSources, TFields extends TFieldsType, TSelectRT
         const [base, ...joins] = this.values.tables;
 
         const baseTable = base.alias
-            ? `${base.table} AS \`${base.alias}\``
+            ? `${base.table} AS ${dialect.quote(base.alias)}`
             : base.table;
 
 
@@ -582,7 +585,7 @@ class _fRun<TSources extends TArrSources, TFields extends TFieldsType, TSelectRT
                                          alias
                                      }) => {
                 const tLocal = (alias || table) + "." + local;
-                return `JOIN ${!!alias ? (table + " AS `" + alias + "`") : table} ON ${tLocal} = ${remote}`;
+                return `JOIN ${!!alias ? (table + " AS " + dialect.quote(alias)) : table} ON ${tLocal} = ${remote}`;
             }).join(formatted ? "\n" : " ") ?? "",
             !whereClause ? "" : `WHERE ${whereClause}`,
             !this.values.groupBy?.length ? "" : `GROUP BY ${this.values.groupBy.join(', ')}`,
@@ -951,7 +954,7 @@ class _fSelect<TSources extends TArrSources, TFields extends TFieldsType, TSelec
 
                 const expandedSelects = Object.keys(tableFields.fields).map((field) => {
                     if (hasMultipleTables) {
-                        return `${tableName}.${field} AS \`${tableName}.${field}\``;
+                        return `${tableName}.${field} AS ${dialect.quote(`${tableName}.${field}`)}`;
                     }
                     return `${field}`;
                 });
@@ -982,7 +985,7 @@ class _fSelect<TSources extends TArrSources, TFields extends TFieldsType, TSelec
                 if (currentTablesWithFields[colName] > 1) {
                     return new _fSelect(this.db, {
                         ...this.values,
-                        selects: [...this.values.selects, `${select} AS \`${select}\``]
+                        selects: [...this.values.selects, `${select} AS ${dialect.quote(select)}`]
                     }) as any;
                 } else {
                     return new _fSelect(this.db, {
@@ -997,7 +1000,7 @@ class _fSelect<TSources extends TArrSources, TFields extends TFieldsType, TSelec
         if (alias !== undefined) {
             return new _fSelect(this.db, {
                 ...this.values,
-                selects: [...this.values.selects, `${select} AS \`${alias}\``]
+                selects: [...this.values.selects, `${select} AS ${dialect.quote(alias)}`]
             }) as any;
         }
 
@@ -1041,7 +1044,7 @@ class _fSelectDistinct<TSources extends TArrSources, TFields extends TFieldsType
             if (values.tables && values.tables.length > 1) {
                 return [/*values.baseTable,*/ ...values.tables.map(t => t.table)].reduce<Array<string>>((acc, table): Array<string> => {
                     //TODO review `!`
-                    return acc.concat(Object.keys(DB[table]!.fields).map((field) => `${table}.${field} AS \`${table}.${field}\``))
+                    return acc.concat(Object.keys(DB[table]!.fields).map((field) => `${table}.${field} AS ${dialect.quote(`${table}.${field}`)}`))
                 }, []);
             }
             //TODO review `!`
@@ -2294,7 +2297,8 @@ OFFSET -
 
 
 
-export default {
+export default Prisma.defineExtension({
+    name: "prisma-ts-select",
     client: {
         $from<const T extends TTables | `${TTables} ${string}`,
             Table extends TTables = ExtractTableName<T>,
@@ -2309,4 +2313,4 @@ export default {
                 .from(base!.trim() as Table, (aliases.join().trim() || undefined) as TAlias)
         },
     },
-};
+});
