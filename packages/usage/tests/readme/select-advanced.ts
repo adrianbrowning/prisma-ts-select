@@ -1,6 +1,7 @@
 import { describe, test } from "node:test";
 import assert from "node:assert/strict";
 import { PrismaClient } from "@prisma/client";
+import { expectSQL } from "../test-utils.ts";
 import prismaTSSelect from "prisma-ts-select/extend";
 
 const prisma = new PrismaClient().$extends(prismaTSSelect);
@@ -47,7 +48,7 @@ prisma.$from("User")
       "SELECT id, email, name, age FROM User;";
       // #endregion all-single-sql
 
-    assert.strictEqual(sql, expectedSQL);
+    expectSQL(sql, expectedSQL);
   });
 
   test("selectAll single table - should run successfully", async () => {
@@ -123,7 +124,7 @@ prisma.$from("User")
       "SELECT id, email, name, age FROM User;";
       // #endregion table-star-single-sql
 
-    assert.strictEqual(sql, expectedSQL);
+    expectSQL(sql, expectedSQL);
   });
 
   test("select Table.* single - should run successfully", async () => {
@@ -237,7 +238,7 @@ prisma.$from("User")
       "SELECT name, title FROM User JOIN Post ON Post.authorId = User.id;";
       // #endregion join-chained-sql
 
-    assert.strictEqual(sql, expectedSQL);
+    expectSQL(sql, expectedSQL);
   });
 
   test("select join  chained - should run successfully", async () => {
@@ -280,7 +281,7 @@ prisma.$from("User")
       "SELECT User.name AS `authorName`, Post.title AS `postTitle` FROM User JOIN Post ON Post.authorId = User.id;";
       // #endregion aliases-joins-sql
 
-    assert.strictEqual(sql, expectedSQL);
+    expectSQL(sql, expectedSQL);
   });
 
   test("select aliases with joins - should run successfully", async () => {

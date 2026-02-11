@@ -1,6 +1,7 @@
 import { describe, test } from "node:test";
 import assert from "node:assert/strict";
 import { PrismaClient } from "@prisma/client";
+import { expectSQL } from "../test-utils.ts";
 import prismaTSSelect from "prisma-ts-select/extend";
 
 const prisma = new PrismaClient().$extends(prismaTSSelect);
@@ -30,6 +31,6 @@ describe("README Example: .$from with table alias", () => {
       "SELECT name FROM User AS `u`;";
       // #endregion inline-alias-select-sql
 
-    assert.strictEqual(sql, expectedSQL);
+    expectSQL(sql, expectedSQL);
   });
 });

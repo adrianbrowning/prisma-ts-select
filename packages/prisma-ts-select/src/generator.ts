@@ -209,6 +209,10 @@ generatorHandler({
 
       writeFileSafely(path.join(outDir, file),
           contents
+              .replace(
+                  "import { sqliteDialect } from './dialects/sqlite.js';",
+                  `import { ${provider}Dialect } from './dialects/${provider}.js';`
+              )
               .replace("const dialect = sqliteDialect;", `const dialect = ${provider}Dialect;`)
               .replace("const DB = {};", `const DB = ${JSON.stringify(models, null, 2)};`));
     }
@@ -219,6 +223,10 @@ generatorHandler({
 
       writeFileSafely(path.join(outDir, file),
           contents
+              .replace(
+                  'const { sqliteDialect } = require("./dialects/sqlite.cjs");',
+                  `const { ${provider}Dialect } = require("./dialects/${provider}.cjs");`
+              )
               .replace("const dialect = sqliteDialect;", `const dialect = ${provider}Dialect;`)
               .replace("const DB = {};", `const DB = ${JSON.stringify(models, null, 2)};`));
     }

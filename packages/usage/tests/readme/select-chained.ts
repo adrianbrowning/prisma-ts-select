@@ -1,6 +1,7 @@
 import { describe, test } from "node:test";
 import assert from "node:assert/strict";
 import { PrismaClient } from "@prisma/client";
+import { expectSQL } from "../test-utils.ts";
 import prismaTSSelect from "prisma-ts-select/extend";
 
 const prisma = new PrismaClient().$extends(prismaTSSelect);
@@ -20,7 +21,7 @@ prisma.$from("User")
       "SELECT name, email FROM User;";
       // #endregion example-sql
 
-    assert.strictEqual(sql, expectedSQL);
+    expectSQL(sql, expectedSQL);
   });
 
   test("should run and return selected columns", async () => {

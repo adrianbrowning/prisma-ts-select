@@ -1,6 +1,7 @@
 import { describe, test } from "node:test";
 import assert from "node:assert/strict";
 import { PrismaClient } from "@prisma/client";
+import { expectSQL } from "../test-utils.ts";
 import prismaTSSelect from "prisma-ts-select/extend";
 
 const prisma = new PrismaClient().$extends(prismaTSSelect);
@@ -19,7 +20,7 @@ prisma.$from("User")
       "SELECT User.name AS `username` FROM User;";
       // #endregion basic-sql
 
-    assert.strictEqual(sql, expectedSQL);
+    expectSQL(sql, expectedSQL);
   });
 
   test("basic alias - should return aliased column", async () => {
@@ -57,7 +58,7 @@ prisma.$from("User")
       "SELECT User.id AS `userId`, User.email AS `emailAddress` FROM User;";
       // #endregion multiple-sql
 
-    assert.strictEqual(sql, expectedSQL);
+    expectSQL(sql, expectedSQL);
   });
 
   test("mixed aliased and non-aliased", () => {
@@ -76,6 +77,6 @@ prisma.$from("User")
       // #endregion mixed-sql
 
     // Single table queries don't add table prefix
-    assert.strictEqual(sql, expectedSQL);
+    expectSQL(sql, expectedSQL);
   });
 });

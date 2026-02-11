@@ -8,10 +8,13 @@
     "seed": "tsx prisma/seed.ts"
   },
   "scripts": {
-    "gen": "pnpm exec prisma generate",
+    "gen": "pnpm exec prisma generate --schema=prisma/schema.${PRISMA_PROVIDER:-sqlite}.prisma",
+    "gen:sqlite": "PRISMA_PROVIDER=sqlite pnpm gen",
+    "gen:mysql": "PRISMA_PROVIDER=mysql pnpm gen",
+    "gen:postgresql": "PRISMA_PROVIDER=postgresql pnpm gen",
     "b": "pnpm --filter prisma-ts-select build",
     "b&g": "pnpm b && pnpm gen;",
-    "p:r": "pnpm exec prisma migrate reset --force",
+    "p:r": "pnpm exec prisma migrate reset --force --schema=prisma/schema.${PRISMA_PROVIDER:-sqlite}.prisma",
     "test": "pnpm test:ts; node --test  --test-reporter=spec **/tests/**/*.{cts,mts,ts}",
     "test:w": "pnpm p:r &&  find ./tests -name '*.spec.ts' -exec node --import tsx --test --test-reporter spec --watch {} \\;",
     "test:coverage": "find ./tests -name '*.spec.ts' -exec node --loader tsx --test --experimental-test-coverage --test-reporter=lcov {} \\;",
