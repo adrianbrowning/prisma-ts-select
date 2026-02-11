@@ -269,9 +269,30 @@ Phase 4: Prisma v7 test package (packages/usage-v7/ w/ driver adapters)
 - packages/usage-v7/tests/ (copied from usage/)
 - packages/usage-v7/generated/ (Prisma v7 client)
 
+**V7 adapter API (corrected):**
+- Factory pattern: `new PrismaBetterSqlite3({url})`, `new PrismaMariaDb(config)`, `new PrismaPg({connectionString})`
+- Call `.connect()` to get `SqlDriverAdapter` instance
+- Type import: `@prisma/driver-adapter-utils` (not `@prisma/client`)
+- Dependency: `@prisma/driver-adapter-utils` required
+
+**Test infrastructure updates:**
+- Created `tests/client.ts` - shared client w/ adapter + tsSelectExtend
+- Updated 22 test files - import `prisma` from shared client
+- Removed direct PrismaClient instantiation from all tests
+- Script: `update-imports.mjs` automates import replacement
+
+**Type-checking status:**
+- 18 non-blocking warnings (unused `@ts-expect-error` directives)
+- Main errors resolved - tests ready for execution
+
+### Commits
+
+- `5f12197`: Phase 4 foundation - package, schemas, setup, sync scripts
+- `6f24197`: V7 test infrastructure - adapter integration + import updates
+
 ### Next Steps
 
-- Update test imports to use test-setup.ts adapter factory
 - Run tests w/ v7 client on SQLite
-- Verify MySQL + PostgreSQL schemas generate
-- Document v6/v7 test package differences
+- Fix remaining `@ts-expect-error` warnings (optional)
+- Verify MySQL + PostgreSQL generation + execution
+- Document v6/v7 differences in README
