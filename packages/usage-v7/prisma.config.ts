@@ -10,6 +10,10 @@ const urls = {
 
 export default defineConfig({
   schema: `prisma/schema.${provider}.prisma`,
+  migrations: {
+    path: 'prisma/migrations',
+    seed: 'tsx prisma/seed.ts',
+  },
   datasource: {
     url: urls[provider as keyof typeof urls],
   },

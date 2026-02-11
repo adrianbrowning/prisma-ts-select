@@ -29,5 +29,8 @@
     "prisma-ts-select": "workspace:@gcm/prisma-ts-select@*",
     "tsx": "^4.16.2",
     "typescript": "^5.9.3"
+  },
+  "prisma": {
+    "seed": "tsx prisma/seed.ts"
   }
 }
