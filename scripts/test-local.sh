@@ -17,6 +17,13 @@ fi
 echo "🧪 Testing Prisma v$VERSION + $DB in packages/$PKG"
 echo ""
 
+# Clean migrations directory to avoid provider lock conflicts
+MIGRATIONS_DIR="packages/$PKG/prisma/migrations"
+if [ -d "$MIGRATIONS_DIR" ]; then
+  echo "🧹 Cleaning migrations directory..."
+  rm -rf "$MIGRATIONS_DIR"
+fi
+
 # Start Docker services if needed
 if [[ "$DB" != "sqlite" ]]; then
   echo "📦 Starting Docker services..."
