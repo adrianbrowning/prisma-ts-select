@@ -1,0 +1,542 @@
+🐳 Docker-Isolated Test Matrix (Node 24)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+🧹 Cleaning up old test resources...
+   Removed old containers and volumes
+
+Building test image...
+ Image prisma-ts-select-test-v7-postgresql Building 
+ Image prisma-ts-select-test-v6-mysql Building 
+ Image prisma-ts-select-test-v6-postgresql Building 
+ Image prisma-ts-select-test-v6-sqlite Building 
+ Image prisma-ts-select-test-v7-sqlite Building 
+ Image prisma-ts-select-test-v7-mysql Building 
+ Image prisma-ts-select-test-v7-mysql Built 
+ Image prisma-ts-select-test-v7-postgresql Built 
+ Image prisma-ts-select-test-v7-sqlite Built 
+ Image prisma-ts-select-test-v6-mysql Built 
+ Image prisma-ts-select-test-v6-postgresql Built 
+ Image prisma-ts-select-test-v6-sqlite Built 
+
+🚀 Launching ALL 6 tests in parallel (fully isolated containers)...
+
+ Network prisma-ts-select_default Creating 
+ Network prisma-ts-select_default Created 
+ Volume prisma-ts-select_mysql-data Creating 
+ Volume prisma-ts-select_mysql-data Created 
+ Volume prisma-ts-select_postgres-data Creating 
+ Volume prisma-ts-select_postgres-data Created 
+ Container prisma-ts-select-mysql-1 Creating 
+ Container prisma-ts-select-postgres-1 Creating 
+ Container prisma-ts-select-postgres-1 Created 
+ Container prisma-ts-select-mysql-1 Created 
+ Container prisma-ts-select-postgres-1 Starting 
+ Container prisma-ts-select-mysql-1 Starting 
+ Container prisma-ts-select-mysql-1 Started 
+ Container prisma-ts-select-postgres-1 Started 
+⏳ Waiting for databases to be healthy...
+ Container prisma-ts-select-mysql-1 Running 
+ Container prisma-ts-select-test-v6-mysql-1 Creating 
+ Container prisma-ts-select-test-v7-sqlite-1 Creating 
+ Container prisma-ts-select-postgres-1 Running 
+ Container prisma-ts-select-test-v6-sqlite-1 Creating 
+ Container prisma-ts-select-test-v6-postgresql-1 Creating 
+ Container prisma-ts-select-test-v7-mysql-1 Creating 
+ Container prisma-ts-select-test-v7-postgresql-1 Creating 
+ Container prisma-ts-select-test-v7-postgresql-1 Created 
+ Container prisma-ts-select-test-v7-mysql-1 Created 
+ Container prisma-ts-select-test-v6-postgresql-1 Created 
+ Container prisma-ts-select-test-v6-mysql-1 Created 
+ Container prisma-ts-select-test-v6-sqlite-1 Created 
+ Container prisma-ts-select-test-v7-sqlite-1 Created 
+ Container prisma-ts-select-test-v6-sqlite-1 Starting 
+ Container prisma-ts-select-postgres-1 Waiting 
+ Container prisma-ts-select-postgres-1 Waiting 
+ Container prisma-ts-select-mysql-1 Waiting 
+ Container prisma-ts-select-mysql-1 Waiting 
+ Container prisma-ts-select-test-v7-sqlite-1 Starting 
+ Container prisma-ts-select-test-v6-sqlite-1 Started 
+ Container prisma-ts-select-test-v7-sqlite-1 Started 
+ Container prisma-ts-select-postgres-1 Healthy 
+ Container prisma-ts-select-test-v7-postgresql-1 Starting 
+ Container prisma-ts-select-mysql-1 Healthy 
+ Container prisma-ts-select-test-v7-mysql-1 Starting 
+ Container prisma-ts-select-postgres-1 Healthy 
+ Container prisma-ts-select-test-v6-postgresql-1 Starting 
+ Container prisma-ts-select-mysql-1 Healthy 
+ Container prisma-ts-select-test-v6-mysql-1 Starting 
+ Container prisma-ts-select-test-v7-postgresql-1 Started 
+ Container prisma-ts-select-test-v6-mysql-1 Started 
+ Container prisma-ts-select-test-v7-mysql-1 Started 
+ Container prisma-ts-select-test-v6-postgresql-1 Started 
+Containers started, monitoring progress...
+⏳ Monitoring test progress (live updates every 5s)...
+
+[2K[0s] Checking containers...
+  🔵 v6-sqlite: running...
+  🔵 v6-mysql: running...
+  🔵 v6-postgresql: running...
+  🔵 v7-sqlite: running...
+  🔵 v7-mysql: running...
+  🔵 v7-postgresql: running...
+
+[2K[7s] Checking containers...
+  ✅ v6-sqlite: finished
+  ✅ v6-mysql: finished
+  🔵 v6-postgresql:     ✖ should allow same column name with explicit 
+  🔵 v7-sqlite: ✖ Table Alias Support (787.282583ms)
+  🔵 v7-mysql: ✔ tests/client.ts (2321.746084ms)
+  🔵 v7-postgresql:     ✖ should handle Table.* selector without ambig
+
+[2K[13s] Checking containers...
+  ✅ v6-sqlite: finished
+  ✅ v6-mysql: finished
+  ✅ v6-postgresql: finished
+  ✅ v7-sqlite: finished
+  🔵 v7-mysql: ✔ tests/client.ts (2321.746084ms)
+  ✅ v7-postgresql: finished
+
+[2K[18s] Checking containers...
+  ✅ v6-sqlite: finished
+  ✅ v6-mysql: finished
+  ✅ v6-postgresql: finished
+  ✅ v7-sqlite: finished
+  🔵 v7-mysql: ✔ tests/client.ts (2321.746084ms)
+  ✅ v7-postgresql: finished
+
+[2K[23s] Checking containers...
+  ✅ v6-sqlite: finished
+  ✅ v6-mysql: finished
+  ✅ v6-postgresql: finished
+  ✅ v7-sqlite: finished
+  🔵 v7-mysql: ✔ tests/client.ts (2321.746084ms)
+  ✅ v7-postgresql: finished
+
+[2K[29s] Checking containers...
+  ✅ v6-sqlite: finished
+  ✅ v6-mysql: finished
+  ✅ v6-postgresql: finished
+  ✅ v7-sqlite: finished
+  🔵 v7-mysql:     ✖ should allow unqualified column names in sin
+  ✅ v7-postgresql: finished
+
+[2K[34s] Checking containers...
+  ✅ v6-sqlite: finished
+  ✅ v6-mysql: finished
+  ✅ v6-postgresql: finished
+  ✅ v7-sqlite: finished
+  🔵 v7-mysql:     ✖ should allow unqualified column names in sin
+  ✅ v7-postgresql: finished
+
+[2K[39s] Checking containers...
+  ✅ v6-sqlite: finished
+  ✅ v6-mysql: finished
+  ✅ v6-postgresql: finished
+  ✅ v7-sqlite: finished
+  🔵 v7-mysql:   ✖ Single table queries (30085.334473ms)
+  ✅ v7-postgresql: finished
+
+[2K[44s] Checking containers...
+  ✅ v6-sqlite: finished
+  ✅ v6-mysql: finished
+  ✅ v6-postgresql: finished
+  ✅ v7-sqlite: finished
+  🔵 v7-mysql:   ✖ Single table queries (30085.334473ms)
+  ✅ v7-postgresql: finished
+
+[2K[49s] Checking containers...
+  ✅ v6-sqlite: finished
+  ✅ v6-mysql: finished
+  ✅ v6-postgresql: finished
+  ✅ v7-sqlite: finished
+  🔵 v7-mysql:     ✖ should allow unqualified column that exists 
+  ✅ v7-postgresql: finished
+
+[2K[55s] Checking containers...
+  ✅ v6-sqlite: finished
+  ✅ v6-mysql: finished
+  ✅ v6-postgresql: finished
+  ✅ v7-sqlite: finished
+  🔵 v7-mysql:     ✖ should allow unqualified column that exists 
+  ✅ v7-postgresql: finished
+
+[2K[60s] Checking containers...
+  ✅ v6-sqlite: finished
+  ✅ v6-mysql: finished
+  ✅ v6-postgresql: finished
+  ✅ v7-sqlite: finished
+  🔵 v7-mysql:     ✔ should error on ambiguous unqualified column
+  ✅ v7-postgresql: finished
+
+[2K[65s] Checking containers...
+  ✅ v6-sqlite: finished
+  ✅ v6-mysql: finished
+  ✅ v6-postgresql: finished
+  ✅ v7-sqlite: finished
+  🔵 v7-mysql:     ✔ should error on ambiguous unqualified column
+  ✅ v7-postgresql: finished
+
+[2K[70s] Checking containers...
+  ✅ v6-sqlite: finished
+  ✅ v6-mysql: finished
+  ✅ v6-postgresql: finished
+  ✅ v7-sqlite: finished
+  🔵 v7-mysql:     ✖ should allow qualified column even if ambigu
+  ✅ v7-postgresql: finished
+
+[2K[75s] Checking containers...
+  ✅ v6-sqlite: finished
+  ✅ v6-mysql: finished
+  ✅ v6-postgresql: finished
+  ✅ v7-sqlite: finished
+  🔵 v7-mysql:     ✖ should allow qualified column even if ambigu
+  ✅ v7-postgresql: finished
+
+[2K[80s] Checking containers...
+  ✅ v6-sqlite: finished
+  ✅ v6-mysql: finished
+  ✅ v6-postgresql: finished
+  ✅ v7-sqlite: finished
+  🔵 v7-mysql:   ✖ Multi-table queries - ambiguous columns (20017
+  ✅ v7-postgresql: finished
+
+[2K[86s] Checking containers...
+  ✅ v6-sqlite: finished
+  ✅ v6-mysql: finished
+  ✅ v6-postgresql: finished
+  ✅ v7-sqlite: finished
+  🔵 v7-mysql:   ✖ Multi-table queries - ambiguous columns (20017
+  ✅ v7-postgresql: finished
+
+[2K[91s] Checking containers...
+  ✅ v6-sqlite: finished
+  ✅ v6-mysql: finished
+  ✅ v6-postgresql: finished
+  ✅ v7-sqlite: finished
+  🔵 v7-mysql:     ✔ should error on ambiguous unqualified with t
+  ✅ v7-postgresql: finished
+
+[2K[96s] Checking containers...
+  ✅ v6-sqlite: finished
+  ✅ v6-mysql: finished
+  ✅ v6-postgresql: finished
+  ✅ v7-sqlite: finished
+  🔵 v7-mysql:     ✔ should error on ambiguous unqualified with t
+  ✅ v7-postgresql: finished
+
+[2K[101s] Checking containers...
+  ✅ v6-sqlite: finished
+  ✅ v6-mysql: finished
+  ✅ v6-postgresql: finished
+  ✅ v7-sqlite: finished
+  🔵 v7-mysql:   ✖ Multi-table queries with table aliases (20010.
+  ✅ v7-postgresql: finished
+
+[2K[106s] Checking containers...
+  ✅ v6-sqlite: finished
+  ✅ v6-mysql: finished
+  ✅ v6-postgresql: finished
+  ✅ v7-sqlite: finished
+  🔵 v7-mysql:   ✖ Multi-table queries with table aliases (20010.
+  ✅ v7-postgresql: finished
+
+[2K[112s] Checking containers...
+  ✅ v6-sqlite: finished
+  ✅ v6-mysql: finished
+  ✅ v6-postgresql: finished
+  ✅ v7-sqlite: finished
+  🔵 v7-mysql:     ✖ should handle star selector without ambiguit
+  ✅ v7-postgresql: finished
+
+[2K[117s] Checking containers...
+  ✅ v6-sqlite: finished
+  ✅ v6-mysql: finished
+  ✅ v6-postgresql: finished
+  ✅ v7-sqlite: finished
+  🔵 v7-mysql:     ✖ should handle star selector without ambiguit
+  ✅ v7-postgresql: finished
+
+[2K[122s] Checking containers...
+  ✅ v6-sqlite: finished
+  ✅ v6-mysql: finished
+  ✅ v6-postgresql: finished
+  ✅ v7-sqlite: finished
+  🔵 v7-mysql:     ✖ should handle Table.* selector without ambig
+  ✅ v7-postgresql: finished
+
+[2K[127s] Checking containers...
+  ✅ v6-sqlite: finished
+  ✅ v6-mysql: finished
+  ✅ v6-postgresql: finished
+  ✅ v7-sqlite: finished
+  🔵 v7-mysql:     ✖ should handle Table.* selector without ambig
+  ✅ v7-postgresql: finished
+
+[2K[132s] Checking containers...
+  ✅ v6-sqlite: finished
+  ✅ v6-mysql: finished
+  ✅ v6-postgresql: finished
+  ✅ v7-sqlite: finished
+  🔵 v7-mysql:     ✖ should handle selectAll without ambiguity is
+  ✅ v7-postgresql: finished
+
+[2K[138s] Checking containers...
+  ✅ v6-sqlite: finished
+  ✅ v6-mysql: finished
+  ✅ v6-postgresql: finished
+  ✅ v7-sqlite: finished
+  🔵 v7-mysql: ✖ Ambiguous column detection (130144.454226ms)
+  ✅ v7-postgresql: finished
+
+[2K[143s] Checking containers...
+  ✅ v6-sqlite: finished
+  ✅ v6-mysql: finished
+  ✅ v6-postgresql: finished
+  ✅ v7-sqlite: finished
+  🔵 v7-mysql: ✖ Ambiguous column detection (130144.454226ms)
+  ✅ v7-postgresql: finished
+
+[2K[148s] Checking containers...
+  ✅ v6-sqlite: finished
+  ✅ v6-mysql: finished
+  ✅ v6-postgresql: finished
+  ✅ v7-sqlite: finished
+  🔵 v7-mysql:     ✖ should use alias in GROUP BY (10006.361213ms
+  ✅ v7-postgresql: finished
+
+[2K[153s] Checking containers...
+  ✅ v6-sqlite: finished
+  ✅ v6-mysql: finished
+  ✅ v6-postgresql: finished
+  ✅ v7-sqlite: finished
+  🔵 v7-mysql:     ✖ should use alias in GROUP BY (10006.361213ms
+  ✅ v7-postgresql: finished
+
+[2K[158s] Checking containers...
+  ✅ v6-sqlite: finished
+  ✅ v6-mysql: finished
+  ✅ v6-postgresql: finished
+  ✅ v7-sqlite: finished
+  🔵 v7-mysql:   ✖ Aliases with GROUP BY and HAVING (20012.539717
+  ✅ v7-postgresql: finished
+
+[2K[164s] Checking containers...
+  ✅ v6-sqlite: finished
+  ✅ v6-mysql: finished
+  ✅ v6-postgresql: finished
+  ✅ v7-sqlite: finished
+  🔵 v7-mysql:   ✖ Aliases with GROUP BY and HAVING (20012.539717
+  ✅ v7-postgresql: finished
+
+[2K[169s] Checking containers...
+  ✅ v6-sqlite: finished
+  ✅ v6-mysql: finished
+  ✅ v6-postgresql: finished
+  ✅ v7-sqlite: finished
+  🔵 v7-mysql:     ✖ should work with LIMIT (10004.794171ms)
+  ✅ v7-postgresql: finished
+
+[2K[174s] Checking containers...
+  ✅ v6-sqlite: finished
+  ✅ v6-mysql: finished
+  ✅ v6-postgresql: finished
+  ✅ v7-sqlite: finished
+  🔵 v7-mysql:     ✖ should work with LIMIT (10004.794171ms)
+  ✅ v7-postgresql: finished
+
+[2K[179s] Checking containers...
+  ✅ v6-sqlite: finished
+  ✅ v6-mysql: finished
+  ✅ v6-postgresql: finished
+  ✅ v7-sqlite: finished
+  🔵 v7-mysql:   ✖ Aliases with LIMIT and OFFSET (20014.629676ms)
+  ✅ v7-postgresql: finished
+
+[2K[184s] Checking containers...
+  ✅ v6-sqlite: finished
+  ✅ v6-mysql: finished
+  ✅ v6-postgresql: finished
+  ✅ v7-sqlite: finished
+  🔵 v7-mysql:   ✖ Aliases with LIMIT and OFFSET (20014.629676ms)
+  ✅ v7-postgresql: finished
+
+[2K[189s] Checking containers...
+  ✅ v6-sqlite: finished
+  ✅ v6-mysql: finished
+  ✅ v6-postgresql: finished
+  ✅ v7-sqlite: finished
+  🔵 v7-mysql:     ✖ should handle special characters in alias na
+  ✅ v7-postgresql: finished
+
+[2K[195s] Checking containers...
+  ✅ v6-sqlite: finished
+  ✅ v6-mysql: finished
+  ✅ v6-postgresql: finished
+  ✅ v7-sqlite: finished
+  🔵 v7-mysql:     ✖ should handle special characters in alias na
+  ✅ v7-postgresql: finished
+
+[2K[200s] Checking containers...
+  ✅ v6-sqlite: finished
+  ✅ v6-mysql: finished
+  ✅ v6-postgresql: finished
+  ✅ v7-sqlite: finished
+  🔵 v7-mysql:     ✖ should preserve data types in aliased column
+  ✅ v7-postgresql: finished
+
+[2K[205s] Checking containers...
+  ✅ v6-sqlite: finished
+  ✅ v6-mysql: finished
+  ✅ v6-postgresql: finished
+  ✅ v7-sqlite: finished
+  🔵 v7-mysql:     ✖ should preserve data types in aliased column
+  ✅ v7-postgresql: finished
+
+[2K[210s] Checking containers...
+  ✅ v6-sqlite: finished
+  ✅ v6-mysql: finished
+  ✅ v6-postgresql: finished
+  ✅ v7-sqlite: finished
+  🔵 v7-mysql:     ✔ should error on duplicate result keys from s
+  ✅ v7-postgresql: finished
+
+[2K[215s] Checking containers...
+  ✅ v6-sqlite: finished
+  ✅ v6-mysql: finished
+  ✅ v6-postgresql: finished
+  ✅ v7-sqlite: finished
+  🔵 v7-mysql:     ✔ should error on duplicate result keys from s
+  ✅ v7-postgresql: finished
+
+[2K[221s] Checking containers...
+  ✅ v6-sqlite: finished
+  ✅ v6-mysql: finished
+  ✅ v6-postgresql: finished
+  ✅ v7-sqlite: finished
+  🔵 v7-mysql:     ✖ should allow same column name with explicit 
+  ✅ v7-postgresql: finished
+
+[2K[226s] Checking containers...
+  ✅ v6-sqlite: finished
+  ✅ v6-mysql: finished
+  ✅ v6-postgresql: finished
+  ✅ v7-sqlite: finished
+  🔵 v7-mysql:     ✖ should allow same column name with explicit 
+  ✅ v7-postgresql: finished
+
+[2K[231s] Checking containers...
+  ✅ v6-sqlite: finished
+  ✅ v6-mysql: finished
+  ✅ v6-postgresql: finished
+  ✅ v7-sqlite: finished
+  🔵 v7-mysql: ✖ Column Alias Support (220256.804141ms)
+  ✅ v7-postgresql: finished
+
+[2K[236s] Checking containers...
+  ✅ v6-sqlite: finished
+  ✅ v6-mysql: finished
+  ✅ v6-postgresql: finished
+  ✅ v7-sqlite: finished
+  🔵 v7-mysql: ✖ Select Tests (100141.409962ms)
+  ✅ v7-postgresql: finished
+
+[2K[241s] Checking containers...
+  ✅ v6-sqlite: finished
+  ✅ v6-mysql: finished
+  ✅ v6-postgresql: finished
+  ✅ v7-sqlite: finished
+  🔵 v7-mysql:     ✖ should handle aliases with column aliases (1
+  ✅ v7-postgresql: finished
+
+[2K[246s] Checking containers...
+  ✅ v6-sqlite: finished
+  ✅ v6-mysql: finished
+  ✅ v6-postgresql: finished
+  ✅ v7-sqlite: finished
+  🔵 v7-mysql:     ✖ should handle aliases with column aliases (1
+  ✅ v7-postgresql: finished
+
+[2K[252s] Checking containers...
+  ✅ v6-sqlite: finished
+  ✅ v6-mysql: finished
+  ✅ v6-postgresql: finished
+  ✅ v7-sqlite: finished
+  🔵 v7-mysql:     ✖ should preserve data types with aliases (100
+  ✅ v7-postgresql: finished
+
+[2K[257s] Checking containers...
+  ✅ v6-sqlite: finished
+  ✅ v6-mysql: finished
+  ✅ v6-postgresql: finished
+  ✅ v7-sqlite: finished
+  🔵 v7-mysql:     ✖ should preserve data types with aliases (100
+  ✅ v7-postgresql: finished
+
+[2K[262s] Checking containers...
+  ✅ v6-sqlite: finished
+  ✅ v6-mysql: finished
+  ✅ v6-postgresql: finished
+  ✅ v7-sqlite: finished
+  ✅ v7-mysql: finished
+  ✅ v7-postgresql: finished
+
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📊 Test Results
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+[0;32m✅ v6-sqlite[0m → 179/179 passed
+[0;31m❌ v6-mysql[0m → 95/179 failed (see test-results/v6-mysql.log)
+[0;31m❌ v6-postgresql[0m → 107/179 failed (see test-results/v6-postgresql.log)
+[0;31m❌ v7-sqlite[0m → 95/180 failed (see test-results/v7-sqlite.log)
+[0;31m❌ v7-mysql[0m → 95/180 failed (see test-results/v7-mysql.log)
+[0;31m❌ v7-postgresql[0m → 107/180 failed (see test-results/v7-postgresql.log)
+
+🧹 Cleaning up containers...
+ Container prisma-ts-select-test-v6-postgresql-1 Stopping 
+ Container prisma-ts-select-test-v7-mysql-1 Stopping 
+ Container prisma-ts-select-test-v7-postgresql-1 Stopping 
+ Container prisma-ts-select-test-v6-mysql-1 Stopping 
+ Container prisma-ts-select-test-v6-sqlite-1 Stopping 
+ Container prisma-ts-select-test-v7-sqlite-1 Stopping 
+ Container prisma-ts-select-test-v7-sqlite-1 Stopped 
+ Container prisma-ts-select-test-v7-sqlite-1 Removing 
+ Container prisma-ts-select-test-v7-mysql-1 Stopped 
+ Container prisma-ts-select-test-v7-mysql-1 Removing 
+ Container prisma-ts-select-test-v7-postgresql-1 Stopped 
+ Container prisma-ts-select-test-v7-postgresql-1 Removing 
+ Container prisma-ts-select-test-v6-sqlite-1 Stopped 
+ Container prisma-ts-select-test-v6-sqlite-1 Removing 
+ Container prisma-ts-select-test-v6-mysql-1 Stopped 
+ Container prisma-ts-select-test-v6-mysql-1 Removing 
+ Container prisma-ts-select-test-v6-postgresql-1 Stopped 
+ Container prisma-ts-select-test-v6-postgresql-1 Removing 
+ Container prisma-ts-select-test-v7-mysql-1 Removed 
+ Container prisma-ts-select-test-v7-postgresql-1 Removed 
+ Container prisma-ts-select-test-v7-sqlite-1 Removed 
+ Container prisma-ts-select-test-v6-sqlite-1 Removed 
+ Container prisma-ts-select-test-v6-postgresql-1 Removed 
+ Container prisma-ts-select-postgres-1 Stopping 
+ Container prisma-ts-select-test-v6-mysql-1 Removed 
+ Container prisma-ts-select-mysql-1 Stopping 
+ Container prisma-ts-select-postgres-1 Stopped 
+ Container prisma-ts-select-postgres-1 Removing 
+ Container prisma-ts-select-postgres-1 Removed 
+ Container prisma-ts-select-mysql-1 Stopped 
+ Container prisma-ts-select-mysql-1 Removing 
+ Container prisma-ts-select-mysql-1 Removed 
+ Network prisma-ts-select_default Removing 
+ Network prisma-ts-select_default Removed 
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📊 Final Summary
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+[0;32m✅ Passed: 1 / 6[0m
+[0;31m❌ Failed: 5 / 6[0m
+
+Failed tests:
+  [0;31m❌ v6-mysql[0m → test-results/v6-mysql.log
+  [0;31m❌ v6-postgresql[0m → test-results/v6-postgresql.log
+  [0;31m❌ v7-sqlite[0m → test-results/v7-sqlite.log
+  [0;31m❌ v7-mysql[0m → test-results/v7-mysql.log
+  [0;31m❌ v7-postgresql[0m → test-results/v7-postgresql.log

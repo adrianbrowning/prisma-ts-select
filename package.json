@@ -1,16 +1,22 @@
 {
+  "type": "module",
   "devDependencies": {
     "@commitlint/cli": "16.2.3",
     "@commitlint/config-conventional": "16.0.0",
     "husky": "7.0.4"
   },
   "scripts": {
-    "prepare": "husky install"
+    "prepare": "husky install",
+    "test:v6": "./run-tests-v6.sh",
+    "test:v7": "./run-tests-v7.sh",
+    "test:isolated": "./run-tests-isolated.sh",
+    "test:all": "./run-all-tests.sh"
   },
   "pnpm": {
     "onlyBuiltDependencies": [
       "@prisma/client",
       "@prisma/engines",
+      "better-sqlite3",
       "es5-ext",
       "esbuild",
       "prisma",

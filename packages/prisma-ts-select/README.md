@@ -4,6 +4,13 @@
 ![build](https://github.com/adrianbrowning/prisma-ts-select/actions/workflows/CI.yml/badge.svg)
 ![license](https://img.shields.io/github/license/adrianbrowning/prisma-ts-select)
 
+## Test Matrix
+
+|                | SQLite | MySQL | PostgreSQL |
+|----------------|--------|-------|------------|
+| **Prisma v6**  | ![v6-sqlite](https://github.com/adrianbrowning/prisma-ts-select/actions/workflows/test-v6-sqlite.yml/badge.svg) | ![v6-mysql](https://github.com/adrianbrowning/prisma-ts-select/actions/workflows/test-v6-mysql.yml/badge.svg) | ![v6-postgresql](https://github.com/adrianbrowning/prisma-ts-select/actions/workflows/test-v6-pg.yml/badge.svg) |
+| **Prisma v7**  | ![v7-sqlite](https://github.com/adrianbrowning/prisma-ts-select/actions/workflows/test-v7-sqlite.yml/badge.svg) | ![v7-mysql](https://github.com/adrianbrowning/prisma-ts-select/actions/workflows/test-v7-mysql.yml/badge.svg) | ![v7-postgresql](https://github.com/adrianbrowning/prisma-ts-select/actions/workflows/test-v7-pg.yml/badge.svg) |
+
 <!-- toc -->
 
   * [Summary](#summary)

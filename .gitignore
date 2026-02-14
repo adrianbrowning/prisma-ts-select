@@ -1,3 +1,5 @@
+packages/*/generated
+.claude
 node_modules
 # Keep environment variables out of version control
 .env
@@ -14,3 +16,4 @@ pnpm-debug.log
 **/coverage
 .idea
 **/.DS_Store
+/packages/usage-v7/generated/

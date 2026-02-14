@@ -1,4 +1,4 @@
-import {type ConnectorType, DMMF, generatorHandler} from '@prisma/generator-helper'
+import {type ConnectorType, type DMMF, generatorHandler} from '@prisma/generator-helper'
 import type { GeneratorOptions } from '@prisma/generator-helper'
 import { logger } from '@prisma/internals'
 import path from 'node:path'
@@ -14,6 +14,7 @@ const SupportedProviders : Record<ConnectorType, boolean> = {
   sqlite: true,
   mysql: true,
   postgresql: true,
+  "prisma+postgres": false,
   cockroachdb: false,
   mongodb: false,
   postgres: false,
@@ -29,6 +30,8 @@ generatorHandler({
     }
   },
   onGenerate: async (options: GeneratorOptions) => {
+    const provider = options.datasources[0]?.provider;
+
     const validDS = options
         .datasources
         .map(ds => ds.provider)
@@ -186,13 +189,32 @@ generatorHandler({
     const srcDir = path.join(pTSSelPath, "extend");
     const outDir = path.join(pTSSelPath, "..", "built");
 
+    // Copy dialect files
+    const dialectFiles = ["types.js", "shared.js", "sqlite.js", "mysql.js", "postgresql.js", "index.js"];
+    const dialectOutDir = path.join(outDir, "dialects");
+    if (!fs.existsSync(dialectOutDir)) {
+      fs.mkdirSync(dialectOutDir, {recursive: true});
+    }
+    for (const file of dialectFiles) {
+      const src = path.join(pTSSelPath, "extend", "dialects", file);
+      const dest = path.join(dialectOutDir, file);
+      if (fs.existsSync(src)) {
+        fs.copyFileSync(src, dest);
+      }
+    }
+
     { //mjs
       const file = "extend.js";
       const contents = fs.readFileSync(path.join(srcDir, file), {encoding: "utf-8"});
 
       writeFileSafely(path.join(outDir, file),
-          contents.replace("const DB = {};",
-              `const DB = ${JSON.stringify(models, null, 2)};`));
+          contents
+              .replace(
+                  "import { sqliteDialect } from './dialects/sqlite.js';",
+                  `import { ${provider}Dialect } from './dialects/${provider}.js';`
+              )
+              .replace("const dialect = sqliteDialect;", `const dialect = ${provider}Dialect;`)
+              .replace("const DB = {};", `const DB = ${JSON.stringify(models, null, 2)};`));
     }
 
     { //cjs
@@ -200,8 +222,13 @@ generatorHandler({
       const contents = fs.readFileSync(path.join(srcDir, file), {encoding: "utf-8"});
 
       writeFileSafely(path.join(outDir, file),
-          contents.replace("const DB = {};",
-              `const DB = ${JSON.stringify(models, null, 2)};`));
+          contents
+              .replace(
+                  'const { sqliteDialect } = require("./dialects/sqlite.cjs");',
+                  `const { ${provider}Dialect } = require("./dialects/${provider}.cjs");`
+              )
+              .replace("const dialect = sqliteDialect;", `const dialect = ${provider}Dialect;`)
+              .replace("const DB = {};", `const DB = ${JSON.stringify(models, null, 2)};`));
     }
 
 

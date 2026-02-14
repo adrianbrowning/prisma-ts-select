@@ -63,9 +63,12 @@
     "readme:test": "pnpm --filter usage test -- tests/readme"
   },
   "dependencies": {
-    "@prisma/generator-helper": "5.16.2",
-    "@prisma/internals": "5.16.2",
+    "@prisma/generator-helper": "^6.0.0",
+    "@prisma/internals": "^6.0.0",
     "ts-pattern": "^5.3.1"
+  },
+  "peerDependencies": {
+    "@prisma/client": ">=6.0.0 <8.0.0"
   },
   "license": "MIT",
   "author": {
@@ -81,7 +84,7 @@
     "url": "git+https://github.com/adrianbrowning/prisma-ts-select.git"
   },
   "devDependencies": {
-    "@prisma/client": "5.16.1",
+    "@prisma/client": "6.19.2",
     "@semantic-release/changelog": "^6.0.1",
     "@semantic-release/git": "^10.0.1",
     "@stylistic/eslint-plugin": "^1.5.4",
@@ -107,7 +110,7 @@
     "knip": "^5.9.4",
     "log-with-statusbar": "^1.2.0",
     "markdown-toc": "^1.2.0",
-    "prisma": "5.16.1",
+    "prisma": "6.19.2",
     "prisma-dbml-generator": "^0.10.0",
     "prisma-docs-generator": "^0.8.0",
     "prisma-erd-generator": "^1.11.0",

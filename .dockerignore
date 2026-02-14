@@ -1,0 +1,30 @@
+# Dependencies (installed in container)
+node_modules/
+.pnpm-store/
+
+# Generated files
+**/generated/
+**/dist/
+*.log
+
+# Git
+.git/
+.gitignore
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Test results
+test-results/
+
+# Docker
+Dockerfile*
+docker-compose*.yml
+.dockerignore
