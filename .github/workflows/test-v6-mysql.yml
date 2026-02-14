@@ -1,0 +1,84 @@
+name: v6-mysql
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: ["*"]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node: [22.x, 24.x]
+
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: test
+          MYSQL_DATABASE: prisma_test
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h localhost -uroot -ptest"
+          --health-interval=5s
+          --health-timeout=3s
+          --health-retries=10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Use Node.js ${{ matrix.node }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+
+      - name: Setup PNPM
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.18.x
+
+      - uses: actions/cache@v4
+        with:
+          path: "**/node_modules"
+          key: ${{ runner.os }}-node-${{ matrix.node }}-v6-mysql-${{ hashFiles('**/pnpm-lock.yaml') }}
+
+      - name: Install dependencies
+        run: pnpm i --no-frozen-lockfile
+
+      - name: Build prisma-ts-select
+        working-directory: ./packages/prisma-ts-select
+        run: pnpm exec tsup
+
+      - name: Install dependencies (v6-mysql)
+        working-directory: ./packages/usage-v6-mysql
+        run: pnpm i --no-frozen-lockfile
+
+      - name: Wait for MySQL
+        run: |
+          for i in {1..30}; do
+            if mysqladmin ping -h 127.0.0.1 -P 3306 -uroot -ptest --silent; then
+              echo "MySQL ready"
+              exit 0
+            fi
+            echo "Waiting for MySQL... ($i/30)"
+            sleep 2
+          done
+          exit 1
+
+      - name: Generate Prisma client
+        working-directory: ./packages/usage-v6-mysql
+        run: pnpm exec prisma generate
+
+      - name: Reset database
+        working-directory: ./packages/usage-v6-mysql
+        run: pnpm p:r
+
+      - name: TypeScript check
+        working-directory: ./packages/usage-v6-mysql
+        run: pnpm test:ts
+
+      - name: Run tests
+        working-directory: ./packages/usage-v6-mysql
+        run: pnpm test
