@@ -1,6 +1,9 @@
 import {Prisma} from "@prisma/client/extension";
-import type {PrismaClient} from "@prisma/client";
 import {match, P} from "ts-pattern";
+
+// Type stub for PrismaClient to avoid DTS build issues when @prisma/client isn't generated
+// The actual PrismaClient type from @prisma/client will be used at runtime via getExtensionContext
+type PrismaClient = any;
 import {sqliteDialect} from "./dialects/sqlite.js";
 import type {Dialect} from "./dialects/types.js";
 
@@ -430,11 +433,36 @@ class _fRun<TSources extends TArrSources, TFields extends TFieldsType, TSelectRT
         this.values.offset = typeof this.values.offset === "number" ? this.values.offset : undefined;
     }
 
-    run() {
-        return this.db.$queryRawUnsafe(
+    async run() {
+        const results = await this.db.$queryRawUnsafe(
             this.getSQL()
-        ) as unknown as Prisma.PrismaPromise<Array<TSelectRT>>
-        //as Prisma.PrismaPromise<Array<Extract<DATABASE, { table: TDBBase }>["fields"]>>;
+        ) as unknown as Array<TSelectRT>;
+
+        // Coerce 0/1 → false/true for Boolean fields in SQLite/MySQL
+        if (dialect.name === 'sqlite' || dialect.name === 'mysql') {
+            return results.map(row => {
+                const coerced = { ...row };
+                for (const key in coerced) {
+                    const value = coerced[key];
+                    if (typeof value !== 'number' || (value !== 0 && value !== 1)) continue;
+
+                    // Parse key to get table and column (format: "Table.column" or "column")
+                    const parts = key.split('.');
+                    const [table, column] = parts.length === 2 ? parts : [this.values.tables[0]?.table, key];
+
+                    if (!table || !column) continue;
+
+                    // Check if field is Boolean type in schema
+                    const fieldType = DB[table]?.fields[column];
+                    if (fieldType && fieldType.replace('?', '') === 'Boolean') {
+                        (coerced as any)[key] = value === 1;
+                    }
+                }
+                return coerced;
+            }) as unknown as Prisma.PrismaPromise<Array<TSelectRT>>;
+        }
+
+        return results as unknown as Prisma.PrismaPromise<Array<TSelectRT>>;
     }
 
     getTables() {
@@ -939,7 +967,7 @@ class _fSelect<TSources extends TArrSources, TFields extends TFieldsType, TSelec
         // Check if select is "Table.*" pattern
         const tableColMatch = select.match(/^(\w+)\.(.*?)$/);
         if (tableColMatch) {
-            const [,tableName, colName] = tableColMatch;
+            const [,tableName, colName] = tableColMatch as [string, string, string];
             // Expand Table.* to all columns from that table
             const tableObject = this.values.tables.find(t => (t.alias || t.table) === tableName);
             if (!tableObject) throw new Error(`Table "${tableName}" not found in query`);
@@ -954,7 +982,11 @@ class _fSelect<TSources extends TArrSources, TFields extends TFieldsType, TSelec
 
                 const expandedSelects = Object.keys(tableFields.fields).map((field) => {
                     if (hasMultipleTables) {
-                        return `${tableName}.${field} AS ${dialect.quote(`${tableName}.${field}`)}`;
+                        // Only quote table names for PostgreSQL, not aliases
+                        const tableIdentifier = (dialect.name === 'postgresql' && !tableObject.alias)
+                            ? dialect.quote(tableName)
+                            : tableName;
+                        return `${tableIdentifier}.${field} AS ${dialect.quote(`${tableName}.${field}`)}`;
                     }
                     return `${field}`;
                 });
@@ -1042,9 +1074,18 @@ class _fSelectDistinct<TSources extends TArrSources, TFields extends TFieldsType
 
         const selects = (function (values: Values) {
             if (values.tables && values.tables.length > 1) {
-                return [/*values.baseTable,*/ ...values.tables.map(t => t.table)].reduce<Array<string>>((acc, table): Array<string> => {
-                    //TODO review `!`
-                    return acc.concat(Object.keys(DB[table]!.fields).map((field) => `${table}.${field} AS ${dialect.quote(`${table}.${field}`)}`))
+                return values.tables.reduce<Array<string>>((acc, tableObj): Array<string> => {
+                    const tableIdentifier = tableObj.alias || tableObj.table;
+                    const actualTable = tableObj.table;
+
+                    // Only quote table names for PostgreSQL when not using alias
+                    const quotedIdentifier = (dialect.name === 'postgresql' && !tableObj.alias)
+                        ? dialect.quote(tableIdentifier)
+                        : tableIdentifier;
+
+                    return acc.concat(Object.keys(DB[actualTable]!.fields).map((field) =>
+                        `${quotedIdentifier}.${field} AS ${dialect.quote(`${tableIdentifier}.${field}`)}`
+                    ))
                 }, []);
             }
             //TODO review `!`

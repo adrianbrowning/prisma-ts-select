@@ -1,4 +1,5 @@
 {
+  "type": "module",
   "devDependencies": {
     "@commitlint/cli": "16.2.3",
     "@commitlint/config-conventional": "16.0.0",
@@ -6,18 +7,16 @@
   },
   "scripts": {
     "prepare": "husky install",
-    "test:local": "bash scripts/test-local.sh",
-    "test:v6:sqlite": "bash scripts/test-local.sh sqlite 6",
-    "test:v6:mysql": "bash scripts/test-local.sh mysql 6",
-    "test:v6:pg": "bash scripts/test-local.sh postgresql 6",
-    "test:v7:sqlite": "bash scripts/test-local.sh sqlite 7",
-    "test:v7:mysql": "bash scripts/test-local.sh mysql 7",
-    "test:v7:pg": "bash scripts/test-local.sh postgresql 7"
+    "test:v6": "./run-tests-v6.sh",
+    "test:v7": "./run-tests-v7.sh",
+    "test:isolated": "./run-tests-isolated.sh",
+    "test:all": "./run-all-tests.sh"
   },
   "pnpm": {
     "onlyBuiltDependencies": [
       "@prisma/client",
       "@prisma/engines",
+      "better-sqlite3",
       "es5-ext",
       "esbuild",
       "prisma",

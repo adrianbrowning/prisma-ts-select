@@ -1,0 +1,116 @@
+services:
+  # Shared databases
+  mysql:
+    image: mysql:8.0
+    environment:
+      MYSQL_ROOT_PASSWORD: test
+    command: --default-authentication-plugin=mysql_native_password
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-ptest"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: test
+      POSTGRES_DB: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  # Prisma v6 tests (isolated containers)
+  test-v6-sqlite:
+    build:
+      context: .
+      dockerfile: packages/usage-v6-sqlite/Dockerfile
+    image: prisma-ts-select-v6-sqlite:latest
+    environment:
+      PRISMA_PROVIDER: sqlite
+      DATABASE_URL: file:./dev.db
+      NODE_ENV: test
+    command: sh -c "pnpm p:r && pnpm test"
+
+  test-v6-mysql:
+    build:
+      context: .
+      dockerfile: packages/usage-v6-mysql/Dockerfile
+    image: prisma-ts-select-v6-mysql:latest
+    environment:
+      PRISMA_PROVIDER: mysql
+      DATABASE_URL: mysql://root:test@mysql:3306/prisma_v6_test
+      NODE_ENV: test
+    command: sh -c "pnpm p:r && pnpm test"
+    depends_on:
+      mysql:
+        condition: service_healthy
+
+  test-v6-pg:
+    build:
+      context: .
+      dockerfile: packages/usage-v6-pg/Dockerfile
+    image: prisma-ts-select-v6-pg:latest
+    environment:
+      PRISMA_PROVIDER: postgresql
+      DATABASE_URL: postgresql://postgres:test@postgres:5432/prisma_v6_test
+      NODE_ENV: test
+    command: sh -c "pnpm p:r && pnpm test"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  # Prisma v7 tests (isolated containers)
+  test-v7-sqlite:
+    build:
+      context: .
+      dockerfile: packages/usage-v7-sqlite/Dockerfile
+    image: prisma-ts-select-v7-sqlite:latest
+    environment:
+      PRISMA_PROVIDER: sqlite
+      DATABASE_URL: file:./dev.db
+      NODE_ENV: test
+    command: sh -c "pnpm p:r && pnpm test"
+
+  test-v7-mysql:
+    build:
+      context: .
+      dockerfile: packages/usage-v7-mysql/Dockerfile
+    image: prisma-ts-select-v7-mysql:latest
+    environment:
+      PRISMA_PROVIDER: mysql
+      DATABASE_URL: mysql://root:test@mysql:3306/prisma_v7_test
+      NODE_ENV: test
+    command: sh -c "pnpm p:r && pnpm test"
+    depends_on:
+      mysql:
+        condition: service_healthy
+
+  test-v7-pg:
+    build:
+      context: .
+      dockerfile: packages/usage-v7-pg/Dockerfile
+    image: prisma-ts-select-v7-pg:latest
+    environment:
+      PRISMA_PROVIDER: postgresql
+      DATABASE_URL: postgresql://postgres:test@postgres:5432/prisma_v7_test
+      NODE_ENV: test
+    command: sh -c "pnpm p:r && pnpm test"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+volumes:
+  mysql-data:
+  postgres-data:

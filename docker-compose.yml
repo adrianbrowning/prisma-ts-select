@@ -1,15 +1,16 @@
 services:
+  # Database services
   mysql:
     image: mysql:8.0
     environment:
       MYSQL_ROOT_PASSWORD: test
       MYSQL_DATABASE: prisma_test
     ports:
-      - '3306:3306'
+      - "3306:3306"
     healthcheck:
-      test: ['CMD', 'mysqladmin', 'ping', '-h', 'localhost', '-uroot', '-ptest']
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-ptest"]
       interval: 5s
-      timeout: 3s
+      timeout: 5s
       retries: 10
 
   postgres:
@@ -18,9 +19,67 @@ services:
       POSTGRES_PASSWORD: test
       POSTGRES_DB: prisma_test
     ports:
-      - '5432:5432'
+      - "5432:5432"
     healthcheck:
-      test: ['CMD-SHELL', 'pg_isready -U postgres']
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 5s
-      timeout: 3s
+      timeout: 5s
       retries: 10
+
+  # Prisma v6 test services
+  test-v6-sqlite:
+    build:
+      context: .
+      dockerfile: packages/usage-v6-sqlite/Dockerfile
+    profiles: ["v6", "all"]
+
+  test-v6-mysql:
+    build:
+      context: .
+      dockerfile: packages/usage-v6-mysql/Dockerfile
+    depends_on:
+      mysql:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: mysql://root:test@mysql:3306/prisma_test
+    profiles: ["v6", "all"]
+
+  test-v6-pg:
+    build:
+      context: .
+      dockerfile: packages/usage-v6-pg/Dockerfile
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://postgres:test@postgres:5432/prisma_test
+    profiles: ["v6", "all"]
+
+  # Prisma v7 test services
+  test-v7-sqlite:
+    build:
+      context: .
+      dockerfile: packages/usage-v7-sqlite/Dockerfile
+    profiles: ["v7", "all"]
+
+  test-v7-mysql:
+    build:
+      context: .
+      dockerfile: packages/usage-v7-mysql/Dockerfile
+    depends_on:
+      mysql:
+        condition: service_healthy
+    environment:
+      MYSQL_HOST: mysql
+    profiles: ["v7", "all"]
+
+  test-v7-pg:
+    build:
+      context: .
+      dockerfile: packages/usage-v7-pg/Dockerfile
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      POSTGRES_HOST: postgres
+    profiles: ["v7", "all"]

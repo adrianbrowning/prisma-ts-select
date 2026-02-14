@@ -11,7 +11,23 @@
       "Bash(pnpm gen:*)",
       "Bash(pnpm test)",
       "Bash(find:*)",
-      "Bash(node --import tsx --test:*)"
+      "Bash(node --import tsx --test:*)",
+      "Bash(pnpm test:v7:sqlite:*)",
+      "Bash(ls:*)",
+      "Bash(gh run view:*)",
+      "Bash(npm info:*)",
+      "Bash(PRISMA_PROVIDER=sqlite pnpm test:*)",
+      "Bash(PRISMA_PROVIDER=mysql pnpm test:*)",
+      "Bash(docker compose:*)",
+      "Bash(docker run:*)",
+      "WebFetch(domain:pnpm.io)",
+      "Bash(./run-tests-isolated.sh:*)",
+      "Bash(ln:*)",
+      "Bash(pnpm --filter @gcm/usage-v6-sqlite test:ts:*)",
+      "Bash(node --test:*)",
+      "Bash(docker ps:*)",
+      "Bash(docker wait:*)",
+      "Bash(echo:*)"
     ]
   }
 }

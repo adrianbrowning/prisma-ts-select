@@ -38,7 +38,7 @@ export default defineConfig((options) => [
         sourcemap: false,
         clean: false,
         dts: true,
-        external: [],
+        external: ['@prisma/client', '@prisma/client/extension'],
         bundle: false,
         // platform: 'node',
         // target: 'node20', // Sync with `runs.using` in action.yml
