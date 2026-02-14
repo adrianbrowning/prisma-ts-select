@@ -5,7 +5,7 @@ import { loadEnvFile } from "node:process";
 
 loadEnvFile(".env");
 
-const DB_URL=new URL(process.env.URL || "");
+const DB_URL=new URL(process.env.DATABASE_URL || "");
 
 const adapter = new PrismaMariaDb({
   host: DB_URL.hostname,

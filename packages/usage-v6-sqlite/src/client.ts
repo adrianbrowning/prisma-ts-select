@@ -4,10 +4,4 @@ import { loadEnvFile} from "node:process"
 
 loadEnvFile(".env")
 
-export const prisma = new PrismaClient({
-    // datasources: {
-    //     db:{
-    //         "url": process.env.DATABASE_URL,
-    //     }
-    // }
-}).$extends(tsSelectExtend)
+export const prisma = new PrismaClient().$extends(tsSelectExtend)
