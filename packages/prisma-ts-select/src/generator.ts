@@ -25,12 +25,21 @@ generatorHandler({
   onManifest() {
     logger.info(`${GENERATOR_NAME}:Registered`);
     return {
-      defaultOutput: '../generated',
+      defaultOutput: '',
       prettyName: GENERATOR_NAME,
     }
   },
   onGenerate: async (options: GeneratorOptions) => {
     const provider = options.datasources[0]?.provider;
+    const output = options.generator.output?.value;
+
+    if(!output) throw new Error(`${GENERATOR_NAME}: No output directory found. Please add an output directory to your schema.prisma file.`)
+
+    const outputPath = path.resolve(output);
+
+    fs.mkdirSync(outputPath, { recursive: true });
+
+    console.log(`${GENERATOR_NAME}: Generating to ${outputPath}`);
 
     const validDS = options
         .datasources
@@ -187,11 +196,11 @@ generatorHandler({
     logger.info("pTSSelPath", pTSSelPath);
 
     const srcDir = path.join(pTSSelPath, "extend");
-    const outDir = path.join(pTSSelPath, "..", "built");
+    // const outDir = path.join(pTSSelPath, "..", "built");
 
     // Copy dialect files
     const dialectFiles = ["types.js", "shared.js", "sqlite.js", "mysql.js", "postgresql.js", "index.js"];
-    const dialectOutDir = path.join(outDir, "dialects");
+    const dialectOutDir = path.join(outputPath, "dialects");
     if (!fs.existsSync(dialectOutDir)) {
       fs.mkdirSync(dialectOutDir, {recursive: true});
     }
@@ -207,7 +216,7 @@ generatorHandler({
       const file = "extend.js";
       const contents = fs.readFileSync(path.join(srcDir, file), {encoding: "utf-8"});
 
-      writeFileSafely(path.join(outDir, file),
+      writeFileSafely(path.join(outputPath, file),
           contents
               .replace(
                   "import { sqliteDialect } from './dialects/sqlite.js';",
@@ -221,7 +230,7 @@ generatorHandler({
       const file = "extend.cjs";
       const contents = fs.readFileSync(path.join(srcDir, file), {encoding: "utf-8"});
 
-      writeFileSafely(path.join(outDir, file),
+      writeFileSafely(path.join(outputPath, file),
           contents
               .replace(
                   'const { sqliteDialect } = require("./dialects/sqlite.cjs");',
@@ -240,7 +249,7 @@ generatorHandler({
       const file = "extend.d.ts";
       const contents = fs.readFileSync(path.join(srcDir, file), {encoding: "utf-8"});
 
-      writeFileSafely(path.join(outDir, file),
+      writeFileSafely(path.join(outputPath, file),
           contents
               .replace("declare const DB: DBType;",declaration)
       );
@@ -250,7 +259,7 @@ generatorHandler({
       const file = "extend.d.cts";
       const contents = fs.readFileSync(path.join(srcDir, file), {encoding: "utf-8"});
 
-      writeFileSafely(path.join(outDir, file),
+      writeFileSafely(path.join(outputPath, file),
           contents
               .replace("declare const DB: DBType;",declaration)
       );

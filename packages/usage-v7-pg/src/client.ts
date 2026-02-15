@@ -1,6 +1,6 @@
 import { loadEnvFile } from "node:process"
 import { PrismaClient } from '../generated/prisma/client.ts'
-import tsSelectExtend from '@gcm/prisma-ts-select/extend'
+import tsSelectExtend from '../generated/prisma-ts-select/extend.js'
 import { PrismaPg } from '@prisma/adapter-pg'
 
 loadEnvFile(".env");

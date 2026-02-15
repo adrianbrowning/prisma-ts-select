@@ -1,5 +1,5 @@
 import { PrismaClient } from '../generated/prisma/client.ts'
-import tsSelectExtend from '@gcm/prisma-ts-select/extend'
+import tsSelectExtend from '../generated/prisma-ts-select/extend.js'
 import { PrismaMariaDb } from '@prisma/adapter-mariadb'
 import { loadEnvFile } from "node:process";
 
