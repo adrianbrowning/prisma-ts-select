@@ -439,7 +439,7 @@ class _fRun<TSources extends TArrSources, TFields extends TFieldsType, TSelectRT
         ) as unknown as Array<TSelectRT>;
 
         // Coerce 0/1 → false/true for Boolean fields in SQLite/MySQL
-        if (dialect.name === 'sqlite' || dialect.name === 'mysql') {
+        if (dialect.needsBooleanCoercion()) {
             return results.map(row => {
                 const coerced = { ...row };
                 for (const key in coerced) {
@@ -448,9 +448,28 @@ class _fRun<TSources extends TArrSources, TFields extends TFieldsType, TSelectRT
 
                     // Parse key to get table and column (format: "Table.column" or "column")
                     const parts = key.split('.');
-                    const [table, column] = parts.length === 2 ? parts : [this.values.tables[0]?.table, key];
+                    let table: string;
+                    let column: string;
 
-                    if (!table || !column) continue;
+                    if (parts.length === 2 && parts[0] && parts[1]) {
+                        table = parts[0];
+                        column = parts[1];
+                    } else {
+                        // No table prefix - search all tables for this column
+                        column = key;
+                        let foundTable: string | undefined;
+                        for (const tableObj of this.values.tables) {
+                            const tableName = tableObj.table;
+                            if (DB[tableName]?.fields[column]) {
+                                foundTable = tableName;
+                                break;
+                            }
+                        }
+                        if (!foundTable) continue;
+                        table = foundTable;
+                    }
+
+                    if (!column) continue;
 
                     // Check if field is Boolean type in schema
                     const fieldType = DB[table]?.fields[column];
@@ -459,10 +478,10 @@ class _fRun<TSources extends TArrSources, TFields extends TFieldsType, TSelectRT
                     }
                 }
                 return coerced;
-            }) as unknown as Prisma.PrismaPromise<Array<TSelectRT>>;
+            });
         }
 
-        return results as unknown as Prisma.PrismaPromise<Array<TSelectRT>>;
+        return results;
     }
 
     getTables() {
@@ -982,10 +1001,7 @@ class _fSelect<TSources extends TArrSources, TFields extends TFieldsType, TSelec
 
                 const expandedSelects = Object.keys(tableFields.fields).map((field) => {
                     if (hasMultipleTables) {
-                        // Only quote table names for PostgreSQL, not aliases
-                        const tableIdentifier = (dialect.name === 'postgresql' && !tableObject.alias)
-                            ? dialect.quote(tableName)
-                            : tableName;
+                        const tableIdentifier = dialect.quoteTableIdentifier(tableName, !!tableObject.alias);
                         return `${tableIdentifier}.${field} AS ${dialect.quote(`${tableName}.${field}`)}`;
                     }
                     return `${field}`;
@@ -1078,10 +1094,7 @@ class _fSelectDistinct<TSources extends TArrSources, TFields extends TFieldsType
                     const tableIdentifier = tableObj.alias || tableObj.table;
                     const actualTable = tableObj.table;
 
-                    // Only quote table names for PostgreSQL when not using alias
-                    const quotedIdentifier = (dialect.name === 'postgresql' && !tableObj.alias)
-                        ? dialect.quote(tableIdentifier)
-                        : tableIdentifier;
+                    const quotedIdentifier = dialect.quoteTableIdentifier(tableIdentifier, !!tableObj.alias);
 
                     return acc.concat(Object.keys(DB[actualTable]!.fields).map((field) =>
                         `${quotedIdentifier}.${field} AS ${dialect.quote(`${tableIdentifier}.${field}`)}`

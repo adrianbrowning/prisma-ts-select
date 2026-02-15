@@ -15,4 +15,6 @@ export const mysqlDialect: Dialect = {
     CONCAT: (...args: string[]) => `CONCAT(${args.join(", ")})`,
     GROUP_CONCAT: (...args: string[]) => `GROUP_CONCAT(${args.join(", ")})`,
   },
+  needsBooleanCoercion: () => true,
+  quoteTableIdentifier: (name: string, _isAlias: boolean) => name,
 };

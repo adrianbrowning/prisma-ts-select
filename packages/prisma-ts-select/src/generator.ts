@@ -198,8 +198,8 @@ generatorHandler({
     const srcDir = path.join(pTSSelPath, "extend");
     // const outDir = path.join(pTSSelPath, "..", "built");
 
-    // Copy dialect files
-    const dialectFiles = ["types.js", "shared.js", "sqlite.js", "mysql.js", "postgresql.js", "index.js"];
+    // Copy dialect files - only types, shared, and provider-specific
+    const dialectFiles = ["types.js", "shared.js", `${provider}.js`];
     const dialectOutDir = path.join(outputPath, "dialects");
     if (!fs.existsSync(dialectOutDir)) {
       fs.mkdirSync(dialectOutDir, {recursive: true});

@@ -33,6 +33,10 @@ export type Dialect = {
   name: "sqlite" | "mysql" | "postgresql";
   quote: (identifier: string) => string;
   functions: FunctionRegistry;
+
+  // Dialect-specific behavior methods
+  needsBooleanCoercion: () => boolean;
+  quoteTableIdentifier: (name: string, isAlias: boolean) => string;
 };
 
 export const SUPPORTED_PROVIDERS = ["sqlite", "mysql", "postgresql"] as const;

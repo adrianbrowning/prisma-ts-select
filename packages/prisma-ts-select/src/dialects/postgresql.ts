@@ -15,4 +15,6 @@ export const postgresqlDialect: Dialect = {
     CONCAT: (...args: string[]) => `CONCAT(${args.join(", ")})`,
     GROUP_CONCAT: (...args: string[]) => `STRING_AGG(${args.join(", ")})`,
   },
+  needsBooleanCoercion: () => false,
+  quoteTableIdentifier: (name: string, isAlias: boolean) => isAlias ? name : `"${name}"`,
 };
