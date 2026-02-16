@@ -2,6 +2,7 @@ import {describe, test} from "node:test";
 import assert from "node:assert/strict";
 import {type Equal, type Expect, type Prettify, typeCheck} from "../utils.ts";
 import type {PostRow, PostRowQualified, UserPostQualifiedJoinRow, UserRow, UserRowQualified} from "../types.js";
+import { expectSQL } from "../test-utils.ts";
 import { prisma } from '#client';
 
 describe("Table.* select syntax", () => {
@@ -14,9 +15,9 @@ describe("Table.* select syntax", () => {
             typeCheck({} as Expect<Equal<typeof result, Array<UserRow>>>);
         }
 // t.assert.snapshot(query.getSQL())
-        assert.strictEqual(
+        expectSQL(
             query.getSQL(),
-            "SELECT id, email, name, age FROM User;"
+            "SELECT `id`, `email`, `name`, `age` FROM `User`;"
         );
     });
 
@@ -40,9 +41,9 @@ describe("Table.* select syntax", () => {
             typeCheck({} as Expect<Equal<typeof result, Array<UserRowQualified>>>);
         }
 
-        assert.strictEqual(
+        expectSQL(
             query.getSQL(),
-            "SELECT User.id AS `User.id`, User.email AS `User.email`, User.name AS `User.name`, User.age AS `User.age` FROM User JOIN Post ON Post.authorId = User.id;"
+            "SELECT `User`.`id` AS `User.id`, `User`.`email` AS `User.email`, `User`.`name` AS `User.name`, `User`.`age` AS `User.age` FROM `User` JOIN `Post` ON `Post`.`authorId` = `User`.`id`;"
         );
     });
 
@@ -67,9 +68,9 @@ describe("Table.* select syntax", () => {
             typeCheck({} as Expect<Equal<typeof result, Array<PostRowQualified>>>);
         }
 
-        assert.strictEqual(
+        expectSQL(
             query.getSQL(),
-            "SELECT Post.id AS `Post.id`, Post.title AS `Post.title`, Post.content AS `Post.content`, Post.published AS `Post.published`, Post.authorId AS `Post.authorId`, Post.lastModifiedById AS `Post.lastModifiedById` FROM User JOIN Post ON Post.authorId = User.id;"
+            "SELECT `Post`.`id` AS `Post.id`, `Post`.`title` AS `Post.title`, `Post`.`content` AS `Post.content`, `Post`.`published` AS `Post.published`, `Post`.`authorId` AS `Post.authorId`, `Post`.`lastModifiedById` AS `Post.lastModifiedById` FROM `User` JOIN `Post` ON `Post`.`authorId` = `User`.`id`;"
         );
     });
 
@@ -84,9 +85,9 @@ describe("Table.* select syntax", () => {
             typeCheck({} as Expect<Equal<typeof result, Array<UserPostQualifiedJoinRow>>>);
         }
 
-        assert.strictEqual(
+        expectSQL(
             query.getSQL(),
-            "SELECT User.id AS `User.id`, User.email AS `User.email`, User.name AS `User.name`, User.age AS `User.age`, Post.id AS `Post.id`, Post.title AS `Post.title`, Post.content AS `Post.content`, Post.published AS `Post.published`, Post.authorId AS `Post.authorId`, Post.lastModifiedById AS `Post.lastModifiedById` FROM User JOIN Post ON Post.authorId = User.id;"
+            "SELECT `User`.`id` AS `User.id`, `User`.`email` AS `User.email`, `User`.`name` AS `User.name`, `User`.`age` AS `User.age`, `Post`.`id` AS `Post.id`, `Post`.`title` AS `Post.title`, `Post`.`content` AS `Post.content`, `Post`.`published` AS `Post.published`, `Post`.`authorId` AS `Post.authorId`, `Post`.`lastModifiedById` AS `Post.lastModifiedById` FROM `User` JOIN `Post` ON `Post`.`authorId` = `User`.`id`;"
         );
     });
 
@@ -101,9 +102,9 @@ describe("Table.* select syntax", () => {
             typeCheck({} as Expect<Equal<typeof result, Array<Prettify<UserRowQualified & Pick<PostRow, 'title'>>>>>);
         }
 
-        assert.strictEqual(
+        expectSQL(
             query.getSQL(),
-            "SELECT User.id AS `User.id`, User.email AS `User.email`, User.name AS `User.name`, User.age AS `User.age`, title FROM User JOIN Post ON Post.authorId = User.id;"
+            "SELECT `User`.`id` AS `User.id`, `User`.`email` AS `User.email`, `User`.`name` AS `User.name`, `User`.`age` AS `User.age`, `title` FROM `User` JOIN `Post` ON `Post`.`authorId` = `User`.`id`;"
         );
     });
 
@@ -117,9 +118,9 @@ describe("Table.* select syntax", () => {
             typeCheck({} as Expect<Equal<typeof result, Array<UserRow>>>);
         }
 
-        assert.strictEqual(
+        expectSQL(
             query.getSQL(),
-            "SELECT id, email, name, age FROM User WHERE id = 1;"
+            "SELECT `id`, `email`, `name`, `age` FROM `User` WHERE `id` = 1;"
         );
     });
 
@@ -134,9 +135,9 @@ describe("Table.* select syntax", () => {
             typeCheck({} as Expect<Equal<typeof result, Array<UserRow>>>);
         }
 
-        assert.strictEqual(
+        expectSQL(
             query.getSQL(),
-            "SELECT id, email, name, age FROM User ORDER BY User.id DESC LIMIT 10;"
+            "SELECT `id`, `email`, `name`, `age` FROM `User` ORDER BY `User`.`id` DESC LIMIT 10;"
         );
     });
 });

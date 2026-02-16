@@ -13,7 +13,8 @@
     "p:r": "prisma db push --force-reset && prisma db seed"
   },
   "imports": {
-    "#client": "./src/client.ts"
+    "#client": "./src/client.ts",
+    "#dialect": "./generated/prisma-ts-select/dialects/index.js"
   },
   "dependencies": {
     "@gcm/prisma-ts-select": "workspace:*"

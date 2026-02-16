@@ -4,6 +4,7 @@ import {type Equal, type Expect, typeCheck} from "../utils.ts";
 import type {PostRow, UserPostQualifiedJoinRow, UserRow} from "../types.ts";
 import { expectSQL } from "../test-utils.ts";
 import { prisma } from '#client';
+import { dialect } from '#dialect';
 
 describe("where", () => {
 
@@ -114,7 +115,7 @@ describe("where", () => {
             const sql = createQuery()
                 .getSQL();
 
-            const expectedSQL = `SELECT User.id AS \`User.id\`, User.email AS \`User.email\`, User.name AS \`User.name\`, User.age AS \`User.age\`, Post.id AS \`Post.id\`, Post.title AS \`Post.title\`, Post.content AS \`Post.content\`, Post.published AS \`Post.published\`, Post.authorId AS \`Post.authorId\`, Post.lastModifiedById AS \`Post.lastModifiedById\` FROM User JOIN Post ON Post.authorId = User.id WHERE (NOT(User.name LIKE 'something' OR User.name LIKE 'something else')) AND (NOT((User.id = 2))) AND ((User.id = 1 AND Post.id = 1)) AND (User.id = 2 OR Post.content IS NOT NULL);`;
+            const expectedSQL = `SELECT \`User\`.\`id\` AS \`User.id\`, \`User\`.\`email\` AS \`User.email\`, \`User\`.\`name\` AS \`User.name\`, \`User\`.\`age\` AS \`User.age\`, \`Post\`.\`id\` AS \`Post.id\`, \`Post\`.\`title\` AS \`Post.title\`, \`Post\`.\`content\` AS \`Post.content\`, \`Post\`.\`published\` AS \`Post.published\`, \`Post\`.\`authorId\` AS \`Post.authorId\`, \`Post\`.\`lastModifiedById\` AS \`Post.lastModifiedById\` FROM \`User\` JOIN \`Post\` ON \`Post\`.\`authorId\` = \`User\`.\`id\` WHERE (NOT(\`User\`.\`name\` LIKE 'something' OR \`User\`.\`name\` LIKE 'something else')) AND (NOT((\`User\`.\`id\` = 2))) AND ((\`User\`.\`id\` = 1 AND \`Post\`.\`id\` = 1)) AND (\`User\`.\`id\` = 2 OR \`Post\`.\`content\` IS NOT NULL);`;
 
             expectSQL(sql, expectedSQL);
         });
@@ -124,7 +125,9 @@ describe("where", () => {
 
     describe("Where Raw", () => {
 
-        const rawWhere = "(User.id = 1 AND Post.id = 1) OR (User.id = 2 OR Post.content IS NOT NULL)";
+        const rawWhere = dialect.name === "postgresql"
+            ? `("User"."id" = 1 AND "Post"."id" = 1) OR ("User"."id" = 2 OR "Post"."content" IS NOT NULL)`
+            : "(User.id = 1 AND Post.id = 1) OR (User.id = 2 OR Post.content IS NOT NULL)";
 
         function createQuery() {
             return prisma.$from("User")
@@ -183,7 +186,7 @@ describe("where", () => {
 
         it("should match SQL", () => {
             const sql = createQuery().getSQL();
-            const expectedSQL = `SELECT User.id AS \`User.id\`, User.email AS \`User.email\`, User.name AS \`User.name\`, User.age AS \`User.age\`, Post.id AS \`Post.id\`, Post.title AS \`Post.title\`, Post.content AS \`Post.content\`, Post.published AS \`Post.published\`, Post.authorId AS \`Post.authorId\`, Post.lastModifiedById AS \`Post.lastModifiedById\` FROM User JOIN Post ON Post.authorId = User.id WHERE ${rawWhere};`;
+            const expectedSQL = `SELECT \`User\`.\`id\` AS \`User.id\`, \`User\`.\`email\` AS \`User.email\`, \`User\`.\`name\` AS \`User.name\`, \`User\`.\`age\` AS \`User.age\`, \`Post\`.\`id\` AS \`Post.id\`, \`Post\`.\`title\` AS \`Post.title\`, \`Post\`.\`content\` AS \`Post.content\`, \`Post\`.\`published\` AS \`Post.published\`, \`Post\`.\`authorId\` AS \`Post.authorId\`, \`Post\`.\`lastModifiedById\` AS \`Post.lastModifiedById\` FROM \`User\` JOIN \`Post\` ON \`Post\`.\`authorId\` = \`User\`.\`id\` WHERE ${rawWhere};`;
             expectSQL(sql, expectedSQL);
         });
 
@@ -218,7 +221,7 @@ describe("where", () => {
 
         it("should match SQL", () => {
             const sql = createQuery().getSQL();
-            const expectedSQL = `SELECT name, content FROM User JOIN Post ON Post.authorId = User.id WHERE (Post.content IS NOT NULL) AND (User.name IS NULL);`;
+            const expectedSQL = `SELECT \`name\`, \`content\` FROM \`User\` JOIN \`Post\` ON \`Post\`.\`authorId\` = \`User\`.\`id\` WHERE (\`Post\`.\`content\` IS NOT NULL) AND (\`User\`.\`name\` IS NULL);`;
             expectSQL(sql, expectedSQL);
         });
 
@@ -259,7 +262,7 @@ describe("having", () => {
 
         it("should match SQL", () => {
             const sql = createQuery().getSQL();
-            const expectedSQL = `SELECT name FROM User JOIN Post ON Post.authorId = User.id GROUP BY User.name HAVING User.name LIKE 'John%';`;
+            const expectedSQL = `SELECT \`name\` FROM \`User\` JOIN \`Post\` ON \`Post\`.\`authorId\` = \`User\`.\`id\` GROUP BY \`User\`.\`name\` HAVING \`User\`.\`name\` LIKE 'John%';`;
             expectSQL(sql, expectedSQL);
         });
 
@@ -286,7 +289,7 @@ describe("having", () => {
 
             const sql = createQuery()
                 .getSQL();
-            const expectedSQL = `SELECT User.id AS \`User.id\`, User.email AS \`User.email\`, User.name AS \`User.name\`, User.age AS \`User.age\`, Post.id AS \`Post.id\`, Post.title AS \`Post.title\`, Post.content AS \`Post.content\`, Post.published AS \`Post.published\`, Post.authorId AS \`Post.authorId\`, Post.lastModifiedById AS \`Post.lastModifiedById\` FROM User JOIN Post ON Post.authorId = User.id HAVING User.name LIKE 'Stuart%';`;
+            const expectedSQL = `SELECT \`User\`.\`id\` AS \`User.id\`, \`User\`.\`email\` AS \`User.email\`, \`User\`.\`name\` AS \`User.name\`, \`User\`.\`age\` AS \`User.age\`, \`Post\`.\`id\` AS \`Post.id\`, \`Post\`.\`title\` AS \`Post.title\`, \`Post\`.\`content\` AS \`Post.content\`, \`Post\`.\`published\` AS \`Post.published\`, \`Post\`.\`authorId\` AS \`Post.authorId\`, \`Post\`.\`lastModifiedById\` AS \`Post.lastModifiedById\` FROM \`User\` JOIN \`Post\` ON \`Post\`.\`authorId\` = \`User\`.\`id\` HAVING \`User\`.\`name\` LIKE 'Stuart%';`;
             expectSQL(sql, expectedSQL);
 
             // Verify type is correct even though we don't run it
@@ -357,8 +360,8 @@ describe("having", () => {
         it("should match SQL", () => {
             const sql = createQuery().getSQL();
             // Should have both GROUP BY and HAVING
-            assert.equal(sql,
-            "SELECT User.id AS `User.id`, name, email, age FROM User JOIN Post ON Post.authorId = User.id GROUP BY User.id, User.name HAVING (User.name LIKE 'J%') AND (User.id = 1 OR User.id = 2);" );
+            expectSQL(sql,
+            "SELECT `User`.`id` AS `User.id`, `name`, `email`, `age` FROM `User` JOIN `Post` ON `Post`.`authorId` = `User`.`id` GROUP BY `User`.`id`, `User`.`name` HAVING (`User`.`name` LIKE 'J%') AND (`User`.`id` = 1 OR `User`.`id` = 2);" );
 
         });
     });

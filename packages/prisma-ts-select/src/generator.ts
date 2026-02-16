@@ -67,7 +67,6 @@ generatorHandler({
         relations: {},
       } as InnerOutType);
 
-      // if (model.name === "MFId_Post") debugger;
 
       for (const field of model.fields) {
         if (field.kind !== "object") {
@@ -98,7 +97,6 @@ generatorHandler({
 
             if (!isManyToManyRelationShip(field)) continue;
 
-            debugger;
             const joinTableName = "_"+field.relationName;
 
             const joinTableModel = acc[joinTableName] = acc[joinTableName] ?? ({
@@ -127,62 +125,6 @@ generatorHandler({
             const m = modelObj.relations[joinTableName] = modelObj.relations[joinTableName] ?? {};
             const mf = m[idName] = m[idName] ?? [];
             mf.push(abJoin);
-
-            // TODO
-            // const fieldObj = modelObj.relations[joinTableName] = modelObj.relations[joinTableName] ?? {};
-            //
-            // fieldObj[relationFromField] = fieldObj[relationFromField] || [];
-            // fieldObj[relationFromField].push(relationToField);
-            //
-            // const accModel = acc[field.type] = acc[field.type] ?? ({} as InnerOutType);
-            // const accModelRelations = accModel.relations = accModel.relations ?? {};
-            // const accModelRelationToModel = accModelRelations[model.name] = accModelRelations[model.name] ?? {};
-            // const relationFromFieldList = accModelRelationToModel[relationToField] = accModelRelationToModel[relationToField] ?? [];
-            // relationFromFieldList.push(relationFromField);
-
-            // if(model.name === "User") debugger;
-
-            /*let relationString = "";
-            if (!modelToId[model.name]) {
-              for (const f of model.fields) {
-                if (f.isId) {
-                  modelToId[model.name] = f.name;
-                  break;
-                }
-              }
-            }
-            const localId = modelToId[model.name];
-            if (!localId) {
-              logger.info(`Skipping MF: ${model.name}.${field.name} [${field.relationName}]`);
-              continue;
-            }
-            if (!localId) throw new Error(`Local: Unable to find @id field for model, ${model.name}`);
-            // relationString += localId + ".";
-            const abJoin = [field.type.toLowerCase(), model.name.toLowerCase()].sort().indexOf(field.type.toLowerCase()) === 0 ? "A" : "B";
-            relationString +=  abJoin + "._" + field.relationName + "." + (abJoin === "A" ? "B" : "A") + ".";
-
-            if (!modelToId[field.type]) {
-              for (const m of options.dmmf.datamodel.models) {
-                if (m.name !== field.type) continue;
-                for (const f of m.fields) {
-                  if (f.isId) {
-                    modelToId[m.name] = f.name;
-                    break;
-                  }
-                }
-              }
-            }
-            const remoteId = modelToId[field.type];
-            if (!remoteId) {
-              logger.info(`Skipping FM:  ${model.name}.${field.name} > ${field.type}  [${field.relationName}] -> ${relationString}`);
-              continue;
-            }
-            if (!remoteId) throw new Error(`Remote: Unable to find @id field for model, ${field.type}`);
-            relationString += remoteId;
-
-            const fieldObj = modelObj.relations[field.type] = modelObj.relations[field.type] ?? {};
-            fieldObj[localId] = fieldObj[localId] || [];
-            fieldObj[localId].push(relationString);*/
           }
 
         }
@@ -201,9 +143,7 @@ generatorHandler({
     // Copy dialect files - only types, shared, and provider-specific
     const dialectFiles = ["types.js", "shared.js", `${provider}.js`];
     const dialectOutDir = path.join(outputPath, "dialects");
-    if (!fs.existsSync(dialectOutDir)) {
-      fs.mkdirSync(dialectOutDir, {recursive: true});
-    }
+    fs.mkdirSync(dialectOutDir, {recursive: true});
     for (const file of dialectFiles) {
       const src = path.join(pTSSelPath, "extend", "dialects", file);
       const dest = path.join(dialectOutDir, file);
@@ -212,33 +152,39 @@ generatorHandler({
       }
     }
 
-    { //mjs
-      const file = "extend.js";
+    // Generate dialects/index.js that exports the correct dialect
+    const dialectIndexContent = `export { ${provider}Dialect as dialect } from './${provider}.js';\n`;
+    fs.writeFileSync(path.join(dialectOutDir, "index.js"), dialectIndexContent);
+
+    // Helper to process dialect replacement for both .js and .cjs files
+    function processDialectReplacement(file: string): void {
+      const extension = file.split('.').pop();
       const contents = fs.readFileSync(path.join(srcDir, file), {encoding: "utf-8"});
 
-      writeFileSafely(path.join(outputPath, file),
-          contents
-              .replace(
-                  "import { sqliteDialect } from './dialects/sqlite.js';",
-                  `import { ${provider}Dialect } from './dialects/${provider}.js';`
-              )
-              .replace("var dialect = sqliteDialect;", `var dialect = ${provider}Dialect;`)
-              .replace("var DB = {};", `var DB = ${JSON.stringify(models, null, 2)};`));
+      // Extract dialect object: var {provider}Dialect = { ... }
+      const dialectFile = fs.readFileSync(
+        path.join(srcDir, `dialects/${provider}.${extension}`),
+        {encoding: "utf-8"}
+      );
+
+      const dialectMatch = dialectFile.match(/var \w+Dialect = \{[\s\S]*?\n\};/);
+      if (!dialectMatch) {
+        throw new Error(`Could not extract dialect definition from ${provider}.${extension}`);
+      }
+
+      let dialectDef = dialectMatch[0].replace(/var \w+Dialect/, `var ${provider}Dialect`);
+
+      writeFileSafely(
+        path.join(outputPath, file),
+        contents
+          .replace(/var sqliteDialect = \{[\s\S]*?\n\};/, dialectDef)
+          .replace(/sqliteDialect/g, `${provider}Dialect`)
+          .replace("var DB = {};", `var DB = ${JSON.stringify(models, null, 2)};`)
+      );
     }
 
-    { //cjs
-      const file = "extend.cjs";
-      const contents = fs.readFileSync(path.join(srcDir, file), {encoding: "utf-8"});
-
-      writeFileSafely(path.join(outputPath, file),
-          contents
-              .replace(
-                  "var sqlite_js = require('./dialects/sqlite.js');",
-                  `var ${provider}_js = require('./dialects/${provider}.js');`
-              )
-              .replace("var dialect = sqlite_js.sqliteDialect;", `var dialect = ${provider}_js.${provider}Dialect;`)
-              .replace("var DB = {};", `var DB = ${JSON.stringify(models, null, 2)};`));
-    }
+    processDialectReplacement("extend.js");
+    processDialectReplacement("extend.cjs");
 
 
     // await writeFileSafely(path.join(pTSSelPath,"generator-build","db.d.ts"), `export const DB = ${JSON.stringify(models, null, 2)} as const satisfies Record<string, { fields: Record<string, string>; relations: Record<string, Record<string, Array<string>>> }>`+";");

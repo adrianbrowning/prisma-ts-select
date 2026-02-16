@@ -2,6 +2,7 @@ import {describe, test} from "node:test";
 import assert from "node:assert/strict";
 import {type Equal, type Expect, type Prettify, typeCheck} from "../utils.ts";
 import type {PostRow, UserPostJoinRow, UserPostQualifiedJoinRow, UserRow, UserRowQualified} from "../types.js";
+import { expectSQL } from "../test-utils.ts";
 import { prisma } from '#client';
 
 // Database is seeded via `pnpm p:r` which runs before all tests
@@ -16,9 +17,9 @@ describe("Ambiguous column detection", () => {
             const result = await query.run();
             typeCheck({} as Expect<Equal<typeof result, Array<Pick<UserRow, "id" | "email">>>>);
 
-            assert.strictEqual(
+            expectSQL(
                 query.getSQL(),
-                "SELECT id, email FROM User;"
+                "SELECT `id`, `email` FROM `User`;"
             );
         });
 
@@ -30,9 +31,9 @@ describe("Ambiguous column detection", () => {
             const result = await query.run();
             typeCheck({} as Expect<Equal<typeof result, Array<Pick<UserRow, "id" | "email">>>>);
 
-            assert.strictEqual(
+            expectSQL(
                 query.getSQL(),
-                "SELECT id, email FROM User;"
+                "SELECT `id`, `email` FROM `User`;"
             );
         });
     });
@@ -46,9 +47,9 @@ describe("Ambiguous column detection", () => {
             const result = await query.run();
             typeCheck({} as Expect<Equal<typeof result, Array<Pick<UserRow, "email">>>>);
 
-            assert.strictEqual(
+            expectSQL(
                 query.getSQL(),
-                "SELECT email FROM User JOIN Post ON Post.authorId = User.id;"
+                "SELECT `email` FROM `User` JOIN `Post` ON `Post`.`authorId` = `User`.`id`;"
             );
         });
 
@@ -61,9 +62,9 @@ describe("Ambiguous column detection", () => {
                 const result = await query.run();
                 typeCheck({} as Expect<Equal<typeof result, Array<Pick<UserPostJoinRow, "email"| "title">>>>);
             }
-            assert.strictEqual(
+            expectSQL(
                 query.getSQL(),
-                "SELECT email, title FROM User JOIN Post ON Post.authorId = User.id;"
+                "SELECT `email`, `title` FROM `User` JOIN `Post` ON `Post`.`authorId` = `User`.`id`;"
             );
         });
     });
@@ -101,9 +102,9 @@ describe("Ambiguous column detection", () => {
                     postId: PostRow['id']
                 }>>>);
             }
-            assert.strictEqual(
+            expectSQL(
                 query.getSQL(),
-                "SELECT User.id AS `User.id`, Post.id AS `postId` FROM User JOIN Post ON Post.authorId = User.id;"
+                "SELECT `User`.`id` AS `User.id`, `Post`.`id` AS `postId` FROM `User` JOIN `Post` ON `Post`.`authorId` = `User`.`id`;"
             );
         });
 
@@ -160,9 +161,9 @@ describe("Ambiguous column detection", () => {
                 postId: PostRow['id']
             }>>>);
 
-            assert.strictEqual(
+            expectSQL(
                 query.getSQL(),
-                "SELECT u.id AS `userId`, p.id AS `postId` FROM User AS `u` JOIN Post AS `p` ON p.authorId = u.id;"
+                "SELECT `u`.`id` AS `userId`, `p`.`id` AS `postId` FROM `User` AS `u` JOIN `Post` AS `p` ON `p`.`authorId` = `u`.`id`;"
             );
         });
     });

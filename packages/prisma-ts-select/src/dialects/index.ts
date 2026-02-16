@@ -9,6 +9,9 @@ import {sqliteDialect} from "./sqlite.js";
 import {mysqlDialect} from "./mysql.js";
 import {postgresqlDialect} from "./postgresql.js";
 
+// Default dialect export (overwritten by generator at runtime)
+export {sqliteDialect as dialect};
+
 /**
  * Get dialect configuration by provider name.
  * Defaults to SQLite if provider is not recognized.

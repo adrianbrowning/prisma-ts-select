@@ -2,6 +2,7 @@ import {describe, test} from "node:test";
 import assert from "node:assert/strict";
 import {type Equal, type Expect, type Prettify, typeCheck} from "../utils.ts";
 import type {PostRow, UserRow} from "../types.js";
+import { expectSQL } from "../test-utils.ts";
 import { prisma } from '#client';
 
 describe("Column Alias Support", () => {
@@ -15,9 +16,9 @@ describe("Column Alias Support", () => {
                 typeCheck({} as Expect<Equal<typeof result, Array<{ username: UserRow['name'] }>>>);
             }
 
-            assert.strictEqual(
+            expectSQL(
                 query.getSQL(),
-                "SELECT User.name AS `username` FROM User;"
+                "SELECT `User`.`name` AS `username` FROM `User`;"
             );
         });
 
@@ -36,9 +37,9 @@ describe("Column Alias Support", () => {
                 .select("User.email")
                 .getSQL();
 
-            assert.strictEqual(
+            expectSQL(
                 query,
-                "SELECT email FROM User;"
+                "SELECT `email` FROM `User`;"
             );
         });
 
@@ -54,9 +55,9 @@ describe("Column Alias Support", () => {
                     Prettify<Pick<UserRow, "id" | "email"> & { username: UserRow['name'] }>>>>);
             }
 
-            assert.strictEqual(
+            expectSQL(
                 query.getSQL(),
-                "SELECT id, User.name AS `username`, email FROM User;"
+                "SELECT `id`, `User`.`name` AS `username`, `email` FROM `User`;"
             );
         });
 
@@ -90,9 +91,9 @@ describe("Column Alias Support", () => {
                 }>>>);
             }
 
-            assert.strictEqual(
+            expectSQL(
                 query.getSQL(),
-                "SELECT User.id AS `userId`, User.name AS `fullName`, User.email AS `emailAddr` FROM User;"
+                "SELECT `User`.`id` AS `userId`, `User`.`name` AS `fullName`, `User`.`email` AS `emailAddr` FROM `User`;"
             );
         });
 
@@ -125,9 +126,9 @@ describe("Column Alias Support", () => {
                 }>>>);
             }
 
-            assert.strictEqual(
+            expectSQL(
                 query.getSQL(),
-                "SELECT User.name AS `authorName`, Post.title AS `postTitle` FROM User JOIN Post ON Post.authorId = User.id;"
+                "SELECT `User`.`name` AS `authorName`, `Post`.`title` AS `postTitle` FROM `User` JOIN `Post` ON `Post`.`authorId` = `User`.`id`;"
             );
         });
 
@@ -163,9 +164,9 @@ describe("Column Alias Support", () => {
                 }>>>);
             }
 
-            assert.strictEqual(
+            expectSQL(
                 query.getSQL(),
-                "SELECT User.id AS `userId`, User.name AS `authorName`, Post.id AS `postId`, Post.title AS `postTitle` FROM User JOIN Post ON Post.authorId = User.id;"
+                "SELECT `User`.`id` AS `userId`, `User`.`name` AS `authorName`, `Post`.`id` AS `postId`, `Post`.`title` AS `postTitle` FROM `User` JOIN `Post` ON `Post`.`authorId` = `User`.`id`;"
             );
         });
     });
@@ -181,9 +182,9 @@ describe("Column Alias Support", () => {
                 typeCheck({} as Expect<Equal<typeof result, Array<{ username: UserRow['name'] }>>>);
             }
 
-            assert.strictEqual(
+            expectSQL(
                 query.getSQL(),
-                "SELECT User.name AS `username` FROM User WHERE id = 1;"
+                "SELECT `User`.`name` AS `username` FROM `User` WHERE `id` = 1;"
             );
         });
     });
@@ -199,9 +200,9 @@ describe("Column Alias Support", () => {
                 typeCheck({} as Expect<Equal<typeof result, Array<{ username: UserRow['name'] }>>>);
             }
 
-            assert.strictEqual(
+            expectSQL(
                 query.getSQL(),
-                "SELECT User.name AS `username` FROM User ORDER BY username DESC;"
+                "SELECT `User`.`name` AS `username` FROM `User` ORDER BY `username` DESC;"
             );
         });
 
@@ -215,9 +216,9 @@ describe("Column Alias Support", () => {
                 typeCheck({} as Expect<Equal<typeof result, Array<{ username: UserRow['name'] }>>>);
             }
 
-            assert.strictEqual(
+            expectSQL(
                 query.getSQL(),
-                "SELECT User.name AS `username` FROM User ORDER BY User.name DESC;"
+                "SELECT `User`.`name` AS `username` FROM `User` ORDER BY `User`.`name` DESC;"
             );
         });
     });
@@ -233,9 +234,9 @@ describe("Column Alias Support", () => {
                 typeCheck({} as Expect<Equal<typeof result, Array<{ userName: UserRow['name'] }>>>);
             }
 
-            assert.strictEqual(
+            expectSQL(
                 query.getSQL(),
-                "SELECT User.name AS `userName` FROM User GROUP BY User.name;"
+                "SELECT `User`.`name` AS `userName` FROM `User` GROUP BY `User`.`name`;"
             );
         });
 
@@ -250,9 +251,9 @@ describe("Column Alias Support", () => {
                 typeCheck({} as Expect<Equal<typeof result, Array<{ author: PostRow['authorId'] }>>>);
             }
 
-            assert.strictEqual(
+            expectSQL(
                 query.getSQL(),
-                "SELECT Post.authorId AS `author` FROM Post GROUP BY Post.authorId HAVING authorId > 1;"
+                "SELECT `Post`.`authorId` AS `author` FROM `Post` GROUP BY `Post`.`authorId` HAVING `authorId` > 1;"
             );
         });
     });
@@ -268,9 +269,9 @@ describe("Column Alias Support", () => {
                 typeCheck({} as Expect<Equal<typeof result, Array<{ username: UserRow['name'] }>>>);
             }
 
-            assert.strictEqual(
+            expectSQL(
                 query.getSQL(),
-                "SELECT User.name AS `username` FROM User LIMIT 10;"
+                "SELECT `User`.`name` AS `username` FROM `User` LIMIT 10;"
             );
         });
 
@@ -285,9 +286,9 @@ describe("Column Alias Support", () => {
                 typeCheck({} as Expect<Equal<typeof result, Array<{ emailAddr: UserRow['email'] }>>>);
             }
 
-            assert.strictEqual(
+            expectSQL(
                 query.getSQL(),
-                "SELECT User.email AS `emailAddr` FROM User LIMIT 10 OFFSET 5;"
+                "SELECT `User`.`email` AS `emailAddr` FROM `User` LIMIT 10 OFFSET 5;"
             );
         });
     });
@@ -302,9 +303,9 @@ describe("Column Alias Support", () => {
                 typeCheck({} as Expect<Equal<typeof result, Array<{ user_full_name: UserRow['name'] }>>>);
             }
 
-            assert.strictEqual(
+            expectSQL(
                 query.getSQL(),
-                "SELECT User.name AS `user_full_name` FROM User;"
+                "SELECT `User`.`name` AS `user_full_name` FROM `User`;"
             );
         });
 
@@ -361,9 +362,9 @@ describe("Column Alias Support", () => {
                 .select("Post.id", "postId");
 
             const sql = query.getSQL();
-            assert.strictEqual(
+            expectSQL(
                 sql,
-                "SELECT User.id AS `userId`, Post.id AS `postId` FROM User JOIN Post ON Post.authorId = User.id;"
+                "SELECT `User`.`id` AS `userId`, `Post`.`id` AS `postId` FROM `User` JOIN `Post` ON `Post`.`authorId` = `User`.`id`;"
             );
 
             const result = await query.run();

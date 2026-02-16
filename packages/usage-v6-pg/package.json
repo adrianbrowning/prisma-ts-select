@@ -5,15 +5,16 @@
   "type": "module",
   "scripts": {
     "gen": "prisma generate",
-    "test": "pnpm test:ts && CLIENT_PACKAGE=usage-v6-pg node --import ../../shared-tests/client-resolver.mjs --import ../../shared-tests/test-setup.mjs --test './tests/core/**/*.spec.ts' 'tests/readme/**/*.ts' 'tests/dialect/pg/**/*.ts'",
+    "test": "pnpm test:ts && PRISMA_PROVIDER=postgresql CLIENT_PACKAGE=usage-v6-pg node --import ../../shared-tests/client-resolver.mjs --import ../../shared-tests/test-setup.mjs --test './tests/core/**/*.spec.ts' 'tests/readme/**/*.ts' 'tests/dialect/pg/**/*.ts'",
     "test:ts": "tsc --noEmit",
-    "test:core": "CLIENT_PACKAGE=usage-v6-pg node --import ../../shared-tests/client-resolver.mjs --import ../../shared-tests/test-setup.mjs --test './tests/core/**/*.spec.ts'",
-    "test:readme": "CLIENT_PACKAGE=usage-v6-pg node --import ../../shared-tests/client-resolver.mjs --import ../../shared-tests/test-setup.mjs --test './tests/readme/**/*.ts'",
-    "test:dialect": "CLIENT_PACKAGE=usage-v6-pg node --import ../../shared-tests/client-resolver.mjs --import ../../shared-tests/test-setup.mjs --test './tests/dialect/sqlite/**/*.ts'",
+    "test:core": "PRISMA_PROVIDER=postgresql CLIENT_PACKAGE=usage-v6-pg node --import ../../shared-tests/client-resolver.mjs --import ../../shared-tests/test-setup.mjs --test './tests/core/**/*.spec.ts'",
+    "test:readme": "PRISMA_PROVIDER=postgresql CLIENT_PACKAGE=usage-v6-pg node --import ../../shared-tests/client-resolver.mjs --import ../../shared-tests/test-setup.mjs --test './tests/readme/**/*.ts'",
+    "test:dialect": "PRISMA_PROVIDER=postgresql CLIENT_PACKAGE=usage-v6-pg node --import ../../shared-tests/client-resolver.mjs --import ../../shared-tests/test-setup.mjs --test './tests/dialect/sqlite/**/*.ts'",
     "p:r": "prisma db push --force-reset && prisma db seed"
   },
   "imports": {
-    "#client": "./src/client.ts"
+    "#client": "./src/client.ts",
+    "#dialect": "./generated/prisma-ts-select/dialects/index.js"
   },
   "dependencies": {
     "@gcm/prisma-ts-select": "workspace:*"
