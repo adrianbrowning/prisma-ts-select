@@ -469,8 +469,6 @@ class _fRun<TSources extends TArrSources, TFields extends TFieldsType, TSelectRT
                         table = foundTable;
                     }
 
-                    if (!column) continue;
-
                     // Check if field is Boolean type in schema
                     const fieldType = DB[table]?.fields[column];
                     if (fieldType && fieldType.replace('?', '') === 'Boolean') {
@@ -610,9 +608,10 @@ class _fRun<TSources extends TArrSources, TFields extends TFieldsType, TSelectRT
 
         const [base, ...joins] = this.values.tables;
 
+        const quotedTable = dialect.quoteTableIdentifier(base.table, !!base.alias);
         const baseTable = base.alias
-            ? `${base.table} AS ${dialect.quote(base.alias)}`
-            : base.table;
+            ? `${quotedTable} AS ${dialect.quote(base.alias)}`
+            : quotedTable;
 
 
 
@@ -632,7 +631,8 @@ class _fRun<TSources extends TArrSources, TFields extends TFieldsType, TSelectRT
                                          alias
                                      }) => {
                 const tLocal = (alias || table) + "." + local;
-                return `JOIN ${!!alias ? (table + " AS " + dialect.quote(alias)) : table} ON ${tLocal} = ${remote}`;
+                const quotedTable = dialect.quoteTableIdentifier(table, !!alias);
+                return `JOIN ${alias ? `${quotedTable} AS ${dialect.quote(alias)}` : quotedTable} ON ${tLocal} = ${remote}`;
             }).join(formatted ? "\n" : " ") ?? "",
             !whereClause ? "" : `WHERE ${whereClause}`,
             !this.values.groupBy?.length ? "" : `GROUP BY ${this.values.groupBy.join(', ')}`,
@@ -1126,11 +1126,16 @@ LIMIT - the returned data is limited to row count.
 OFFSET -
 */
 
-class _fHaving<TSources extends TArrSources, TFields extends TFieldsType> extends _fSelectDistinct<TSources, TFields> {
+class _fHaving<TSources extends TArrSources, TFields extends TFieldsType> extends _fSelect<TSources, TFields> {
+    // Keep selectDistinct() available after groupBy(), but not selectAll()
+    selectDistinct() {
+        return new _fSelect<TSources, TFields>(this.db, {...this.values, selectDistinct: true});
+    }
+
     // TODO Allowed Fields
     //  - specified in groupBy
     having<const TCriteria extends WhereCriteria<TSources, TFields>>(criteria: TCriteria) {
-        return new _fSelectDistinct<TSources, TFields>(this.db, {
+        return new _fSelect<TSources, TFields>(this.db, {
             ...this.values,
             having: [criteria]
         });
@@ -1146,7 +1151,15 @@ LIMIT - the returned data is limited to row count.
 OFFSET -
 */
 
-class _fGroupBy<TSources extends TArrSources, TFields extends TFieldsType> extends _fHaving<TSources, TFields> {
+class _fGroupBy<TSources extends TArrSources, TFields extends TFieldsType> extends _fSelectDistinct<TSources, TFields> {
+
+    // having() method for queries without GROUP BY - allows selectAll()
+    having<const TCriteria extends WhereCriteria<TSources, TFields>>(criteria: TCriteria) {
+        return new _fSelectDistinct<TSources, TFields>(this.db, {
+            ...this.values,
+            having: [criteria]
+        });
+    }
 
     //TODO this should only accept columns for tables in play
     groupBy<TSelect extends GetOtherColumns<TSources>>(groupBy: Array<TSelect>) {

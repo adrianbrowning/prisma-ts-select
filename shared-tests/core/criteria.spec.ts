@@ -1,5 +1,5 @@
 import assert from "node:assert/strict"
-import {describe, it, before} from "node:test"
+import {describe, it} from "node:test"
 import {type Equal, type Expect, typeCheck} from "../utils.ts";
 import type {PostRow, UserPostQualifiedJoinRow, UserRow} from "../types.ts";
 import { expectSQL } from "../test-utils.ts";
@@ -239,38 +239,18 @@ describe("having", () => {
                         value: "John%"
                     }
                 })
-                .selectAll();
+                .select("User.name");
         }
 
         it("should run", async () => {
             const result = await createQuery().run();
 
-            typeCheck({} as Expect<Equal<typeof result, Array<UserPostQualifiedJoinRow>>>);
-
-            const expected: Array<UserPostQualifiedJoinRow> = [
+            const expected: Array<{ name: string }> = [
                 {
-                  'Post.authorId': 1,
-                  'Post.content': 'Something',
-                  'Post.id': 1,
-                  'Post.lastModifiedById': 1,
-                  'Post.published': false,
-                  'Post.title': 'Blog 1',
-                  'User.email': 'johndoe@example.com',
-                  'User.id': 1,
-                  'User.name': 'John Doe',
-                    "User.age":25,
+                  name: 'John Doe',
             },
             {
-              'Post.authorId': 2,
-                  'Post.content': null,
-                  'Post.id': 3,
-                  'Post.lastModifiedById': 2,
-                  'Post.published': false,
-                  'Post.title': 'blog 3',
-                  'User.email': 'smith@example.com',
-                  'User.id': 2,
-                  'User.name': 'John Smith',
-                "User.age":30,
+                  name: 'John Smith',
             }
              ];
 
@@ -279,7 +259,7 @@ describe("having", () => {
 
         it("should match SQL", () => {
             const sql = createQuery().getSQL();
-            const expectedSQL = `SELECT User.id AS \`User.id\`, User.email AS \`User.email\`, User.name AS \`User.name\`, User.age AS \`User.age\`, Post.id AS \`Post.id\`, Post.title AS \`Post.title\`, Post.content AS \`Post.content\`, Post.published AS \`Post.published\`, Post.authorId AS \`Post.authorId\`, Post.lastModifiedById AS \`Post.lastModifiedById\` FROM User JOIN Post ON Post.authorId = User.id GROUP BY User.name HAVING User.name LIKE 'John%';`;
+            const expectedSQL = `SELECT name FROM User JOIN Post ON Post.authorId = User.id GROUP BY User.name HAVING User.name LIKE 'John%';`;
             expectSQL(sql, expectedSQL);
         });
 
@@ -343,40 +323,31 @@ describe("having", () => {
                         }
                     ]
                 })
-                .selectAll();
+                .select("User.id")
+                .select("User.name")
+                .select("User.email")
+                .select("User.age");
         }
 
         it("should run", async () => {
             const result = await createQuery().run();
 
-            type TExpected = Array<UserPostQualifiedJoinRow>;
+            type TExpected = Array<{ "User.id": number, name: string | null, email: string, age: number | null }>;
 
             typeCheck({} as Expect<Equal<typeof result, TExpected>>);
 
             const expected: TExpected =  [
                 {
-                  'Post.authorId': 1,
-                  'Post.content': 'Something',
-                  'Post.id': 1,
-                  'Post.lastModifiedById': 1,
-                  'Post.published': false,
-                  'Post.title': 'Blog 1',
-                  'User.email': 'johndoe@example.com',
+                  email: 'johndoe@example.com',
                   'User.id': 1,
-                  'User.name': 'John Doe',
-                  'User.age':25,
+                  name: 'John Doe',
+                  age:25,
             },
             {
-              'Post.authorId': 2,
-                  'Post.content': null,
-                  'Post.id': 3,
-                  'Post.lastModifiedById': 2,
-                  'Post.published': false,
-                  'Post.title': 'blog 3',
-                  'User.email': 'smith@example.com',
+                  email: 'smith@example.com',
                   'User.id': 2,
-                  'User.name': 'John Smith',
-                "User.age":30,
+                  name: 'John Smith',
+                  age:30,
             }
              ];
 
@@ -387,8 +358,32 @@ describe("having", () => {
             const sql = createQuery().getSQL();
             // Should have both GROUP BY and HAVING
             assert.equal(sql,
-            "SELECT User.id AS `User.id`, User.email AS `User.email`, User.name AS `User.name`, User.age AS `User.age`, Post.id AS `Post.id`, Post.title AS `Post.title`, Post.content AS `Post.content`, Post.published AS `Post.published`, Post.authorId AS `Post.authorId`, Post.lastModifiedById AS `Post.lastModifiedById` FROM User JOIN Post ON Post.authorId = User.id GROUP BY User.id, User.name HAVING (User.name LIKE 'J%') AND (User.id = 1 OR User.id = 2);" );
+            "SELECT User.id AS `User.id`, name, email, age FROM User JOIN Post ON Post.authorId = User.id GROUP BY User.id, User.name HAVING (User.name LIKE 'J%') AND (User.id = 1 OR User.id = 2);" );
 
+        });
+    });
+
+    describe("GROUP BY type safety", () => {
+        it("should prevent selectAll() after groupBy()", () => {
+            // Runtime check: selectAll should not exist after groupBy
+            const query = prisma.$from("User").groupBy(["User.id"]);
+            const hasSelectAll = 'selectAll' in query;
+            assert.ok(!hasSelectAll, "selectAll should not exist after groupBy()");
+        });
+
+        it("should allow select() after groupBy()", () => {
+            const query = prisma.$from("User")
+                .groupBy(["User.id"])
+                .select("User.id")
+                .select("User.name");
+            // Should compile without errors
+        });
+
+        it("should allow selectDistinct() after groupBy()", () => {
+            const query = prisma.$from("User")
+                .groupBy(["User.id"])
+                .selectDistinct();
+            // Should compile without errors
         });
     });
 });

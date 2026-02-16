@@ -222,8 +222,8 @@ generatorHandler({
                   "import { sqliteDialect } from './dialects/sqlite.js';",
                   `import { ${provider}Dialect } from './dialects/${provider}.js';`
               )
-              .replace("const dialect = sqliteDialect;", `const dialect = ${provider}Dialect;`)
-              .replace("const DB = {};", `const DB = ${JSON.stringify(models, null, 2)};`));
+              .replace("var dialect = sqliteDialect;", `var dialect = ${provider}Dialect;`)
+              .replace("var DB = {};", `var DB = ${JSON.stringify(models, null, 2)};`));
     }
 
     { //cjs
@@ -233,11 +233,11 @@ generatorHandler({
       writeFileSafely(path.join(outputPath, file),
           contents
               .replace(
-                  'const { sqliteDialect } = require("./dialects/sqlite.cjs");',
-                  `const { ${provider}Dialect } = require("./dialects/${provider}.cjs");`
+                  "var sqlite_js = require('./dialects/sqlite.js');",
+                  `var ${provider}_js = require('./dialects/${provider}.js');`
               )
-              .replace("const dialect = sqliteDialect;", `const dialect = ${provider}Dialect;`)
-              .replace("const DB = {};", `const DB = ${JSON.stringify(models, null, 2)};`));
+              .replace("var dialect = sqlite_js.sqliteDialect;", `var dialect = ${provider}_js.${provider}Dialect;`)
+              .replace("var DB = {};", `var DB = ${JSON.stringify(models, null, 2)};`));
     }
 
 

@@ -1,6 +1,6 @@
 import {describe, test} from "node:test";
 import assert from "node:assert/strict";
-import {type Equal, type Expect, type Prettify, typeCheck} from "../utils.ts";
+import {type Equal, type Expect, typeCheck} from "../utils.ts";
 import type {
     EmployeeRow,
     PostRow,

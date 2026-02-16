@@ -1,6 +1,6 @@
 import assert from "node:assert/strict"
 
-import { describe, test, before, it } from "node:test"
+import { describe, test, it } from "node:test"
 import type {Equal, Expect, Prettify} from "../utils.ts";
 import { typeCheck} from "../utils.ts";
 import { expectSQL } from "../test-utils.ts";
