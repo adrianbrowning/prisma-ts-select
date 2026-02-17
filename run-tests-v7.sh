@@ -10,16 +10,22 @@ pnpm --filter @gcm/prisma-ts-select build
 # Run v7 tests sequentially (adapter constraint)
 echo ""
 echo "=== Running v7-sqlite ==="
+pnpm --filter @gcm/usage-v7-sqlite gen
+pnpm --filter @gcm/usage-v7-sqlite p:r
 pnpm --filter @gcm/usage-v7-sqlite test
 EXIT_SQLITE=$?
 
 echo ""
 echo "=== Running v7-mysql ==="
+pnpm --filter @gcm/usage-v7-mysql gen
+pnpm --filter @gcm/usage-v7-mysql p:r
 pnpm --filter @gcm/usage-v7-mysql test
 EXIT_MYSQL=$?
 
 echo ""
 echo "=== Running v7-pg ==="
+pnpm --filter @gcm/usage-v7-pg gen
+pnpm --filter @gcm/usage-v7-pg p:r
 pnpm --filter @gcm/usage-v7-pg test
 EXIT_PG=$?
 

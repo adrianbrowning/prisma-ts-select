@@ -57,9 +57,9 @@ build_and_test() {
 build_and_test "test-v6-sqlite"
 build_and_test "test-v6-mysql"
 build_and_test "test-v6-pg"
-build_and_test "test-v7-sqlite"
-build_and_test "test-v7-mysql"
-build_and_test "test-v7-pg"
+#build_and_test "test-v7-sqlite"
+#build_and_test "test-v7-mysql"
+#build_and_test "test-v7-pg"
 
 echo ""
 echo "=== All images built, waiting for tests to complete ==="

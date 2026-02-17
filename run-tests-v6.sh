@@ -5,16 +5,22 @@ echo "Starting v6 test suite (SQLite + MySQL + PostgreSQL in parallel)..."
 
 docker compose up -d --wait mysql postgres
 
-pnpm --filter @gcm/prisma-ts-select build
+pnpm --filter prisma-ts-select build
 
 # Run all v6 tests in parallel (SQLite doesn't need DB service)
-pnpm --filter @gcm/usage-v6-sqlite test &
+pnpm --filter usage-v6-sqlite gen
+pnpm --filter usage-v6-sqlite p:r
+pnpm --filter usage-v6-sqlite test &
 PID_SQLITE=$!
 
-pnpm --filter @gcm/usage-v6-mysql test &
+pnpm --filter usage-v6-mysql gen
+pnpm --filter usage-v6-mysql p:r
+pnpm --filter usage-v6-mysql test &
 PID_MYSQL=$!
 
-pnpm --filter @gcm/usage-v6-pg test &
+pnpm --filter usage-v6-pg gen
+pnpm --filter usage-v6-pg p:r
+pnpm --filter usage-v6-pg test &
 PID_PG=$!
 
 # Wait for all tests

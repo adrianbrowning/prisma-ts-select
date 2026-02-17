@@ -111,7 +111,7 @@
     "ts-jest": "27.1.4",
     "tsup": "^8.1.0",
     "tsx": "^4.16.0",
-    "typescript": "^5.5.3"
+    "typescript": "^5.9.3"
   },
   "keywords": [
     "prisma",
