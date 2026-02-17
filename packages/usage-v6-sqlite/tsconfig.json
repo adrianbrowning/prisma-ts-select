@@ -13,7 +13,6 @@
     "preserveSymlinks": true,
     "baseUrl": ".",
     "paths": {
-      "../client.ts": ["./client.ts"]
     }
   },
   "include": ["**/*.ts"],

@@ -9,7 +9,10 @@ import {sharedFunctions} from "./shared.js";
  */
 export const sqliteDialect: Dialect = {
   name: "sqlite",
-  quote: (id) => id,
+  quote: (name, _isAlias) => {
+    if (_isAlias) return "`" + name + "`";
+    return name;
+  },
   functions: {
     ...sharedFunctions,
     CONCAT: (...args) => args.join(" || "),

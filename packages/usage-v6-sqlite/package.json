@@ -14,7 +14,9 @@
   },
   "imports": {
     "#client": "./src/client.ts",
-    "#dialect": "./generated/prisma-ts-select/dialects/index.js"
+    "#prisma-ts-select": "./generated/prisma-ts-select/*",
+    "#dialect": "./generated/prisma-ts-select/dialects/index.js",
+    "#extend": "./generated/prisma-ts-select/extend.js"
   },
   "dependencies": {
     "@gcm/prisma-ts-select": "workspace:*"
