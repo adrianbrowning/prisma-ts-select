@@ -44,6 +44,24 @@ jobs:
         working-directory: ./packages/usage-v7-sqlite
         run: pnpm --filter usage-v7-sqlite gen
 
+      - name: Debug TypeScript environment
+        working-directory: ./packages/usage-v7-sqlite
+        run: |
+          echo "=== Generated files ==="
+          ls -la generated/prisma-ts-select/ | head -20
+          echo ""
+          echo "=== extend.d.ts header ==="
+          head -30 generated/prisma-ts-select/extend.d.ts
+          echo ""
+          echo "=== extend.js header ==="
+          head -10 generated/prisma-ts-select/extend.js
+          echo ""
+          echo "=== TypeScript config ==="
+          pnpm tsc --showConfig | head -50
+          echo ""
+          echo "=== TypeScript version ==="
+          pnpm tsc --version
+
       - name: Reset database
         working-directory: ./packages/usage-v7-sqlite
         run: pnpm --filter usage-v7-sqlite p:r
