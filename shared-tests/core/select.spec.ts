@@ -5,6 +5,7 @@ import type {Equal, Expect, Prettify} from "../utils.ts";
 import { typeCheck} from "../utils.ts";
 import { expectSQL } from "../test-utils.ts";
 import { prisma } from '#client';
+import { dialect } from '#dialect';
 import type {
     UserRowArray,
     UserPostQualifiedJoinRow,
@@ -56,7 +57,7 @@ describe("Select Tests", ()=> {
 
             it("should match SQL", () => {
                 const sql = createQuery().getSQL();
-                expectSQL(sql, `SELECT * FROM \`User\`;`)
+                expectSQL(sql, `SELECT * FROM ${dialect.quote("User")};`)
             });
         });
 
@@ -114,7 +115,7 @@ describe("Select Tests", ()=> {
 
             it("should match SQL", () => {
                 const sql = createQuery().getSQL();
-                expectSQL(sql, `SELECT * FROM \`User\` JOIN \`Post\` ON \`Post\`.\`authorId\` = \`User\`.\`id\`;`)
+                expectSQL(sql, `SELECT * FROM ${dialect.quote("User")} JOIN ${dialect.quote("Post")} ON ${dialect.quoteQualifiedColumn("Post.authorId")} = ${dialect.quoteQualifiedColumn("User.id")};`)
             });
         })
 
@@ -129,7 +130,7 @@ describe("Select Tests", ()=> {
 
             it("sql", async () => {
                 const sql = createQuery().getSQL();
-                expectSQL(sql, `SELECT DISTINCT * FROM \`User\` ORDER BY \`id\`;`)
+                expectSQL(sql, `SELECT DISTINCT * FROM ${dialect.quote("User")} ORDER BY ${dialect.quoteOrderByClause("id")};`)
             });
             it("sql", async () => {
                 const result = await createQuery().run();
@@ -229,7 +230,7 @@ describe("Select Tests", ()=> {
 
             it("should match SQL", () => {
                 const sql = createQuery().getSQL();
-                expectSQL(sql, `SELECT \`id\`, \`email\`, \`name\`, \`age\` FROM \`User\`;`)
+                expectSQL(sql, `SELECT ${dialect.quote("id")}, ${dialect.quote("email")}, ${dialect.quote("name")}, ${dialect.quote("age")} FROM ${dialect.quote("User")};`)
             });
         });
 
@@ -288,7 +289,7 @@ describe("Select Tests", ()=> {
 
             it("should match SQL", () => {
                 const sql = createQuery().getSQL();
-                expectSQL(sql, `SELECT \`User\`.\`id\` AS \`User.id\`, \`User\`.\`email\` AS \`User.email\`, \`User\`.\`name\` AS \`User.name\`, \`User\`.\`age\` AS \`User.age\`, \`Post\`.\`id\` AS \`Post.id\`, \`Post\`.\`title\` AS \`Post.title\`, \`Post\`.\`content\` AS \`Post.content\`, \`Post\`.\`published\` AS \`Post.published\`, \`Post\`.\`authorId\` AS \`Post.authorId\`, \`Post\`.\`lastModifiedById\` AS \`Post.lastModifiedById\` FROM \`User\` JOIN \`Post\` ON \`Post\`.\`authorId\` = \`User\`.\`id\`;`)
+                expectSQL(sql, `SELECT ${dialect.quoteQualifiedColumn("User.id")} AS ${dialect.quote("User.id", true)}, ${dialect.quoteQualifiedColumn("User.email")} AS ${dialect.quote("User.email", true)}, ${dialect.quoteQualifiedColumn("User.name")} AS ${dialect.quote("User.name", true)}, ${dialect.quoteQualifiedColumn("User.age")} AS ${dialect.quote("User.age", true)}, ${dialect.quoteQualifiedColumn("Post.id")} AS ${dialect.quote("Post.id", true)}, ${dialect.quoteQualifiedColumn("Post.title")} AS ${dialect.quote("Post.title", true)}, ${dialect.quoteQualifiedColumn("Post.content")} AS ${dialect.quote("Post.content", true)}, ${dialect.quoteQualifiedColumn("Post.published")} AS ${dialect.quote("Post.published", true)}, ${dialect.quoteQualifiedColumn("Post.authorId")} AS ${dialect.quote("Post.authorId", true)}, ${dialect.quoteQualifiedColumn("Post.lastModifiedById")} AS ${dialect.quote("Post.lastModifiedById", true)} FROM ${dialect.quote("User")} JOIN ${dialect.quote("Post")} ON ${dialect.quoteQualifiedColumn("Post.authorId")} = ${dialect.quoteQualifiedColumn("User.id")};`)
             });
         })
 
@@ -329,7 +330,7 @@ describe("Select Tests", ()=> {
 
             it("should match SQL", () => {
                 const sql = createQuery().getSQL();
-                expectSQL(sql, `SELECT \`email\`, \`name\` FROM \`User\`;`)
+                expectSQL(sql, `SELECT ${dialect.quote("email")}, ${dialect.quote("name")} FROM ${dialect.quote("User")};`)
             });
         });
 
@@ -371,7 +372,7 @@ describe("Select Tests", ()=> {
 
             it("should match SQL", () => {
                 const sql = createQuery().getSQL();
-                expectSQL(sql, `SELECT \`email\`, \`name\`, \`title\` FROM \`User\` JOIN \`Post\` ON \`Post\`.\`authorId\` = \`User\`.\`id\`;`)
+                expectSQL(sql, `SELECT ${dialect.quote("email")}, ${dialect.quote("name")}, ${dialect.quote("title")} FROM ${dialect.quote("User")} JOIN ${dialect.quote("Post")} ON ${dialect.quoteQualifiedColumn("Post.authorId")} = ${dialect.quoteQualifiedColumn("User.id")};`)
             });
         });
 
@@ -417,7 +418,7 @@ describe("Select Tests", ()=> {
 
         it("should match SQL", () => {
             const sql = createQuery().getSQL();
-            expectSQL(sql, `SELECT \`email\`, \`name\`, \`title\`, \`Post\`.\`id\` AS \`Post.id\` FROM \`User\` JOIN \`Post\` ON \`Post\`.\`authorId\` = \`User\`.\`id\`;`)
+            expectSQL(sql, `SELECT ${dialect.quote("email")}, ${dialect.quote("name")}, ${dialect.quote("title")}, ${dialect.quoteQualifiedColumn("Post.id")} AS ${dialect.quote("Post.id", true)} FROM ${dialect.quote("User")} JOIN ${dialect.quote("Post")} ON ${dialect.quoteQualifiedColumn("Post.authorId")} = ${dialect.quoteQualifiedColumn("User.id")};`)
         });
     });
     describe("basic select email, name, Post.title, Post.id with join", () => {
@@ -464,7 +465,7 @@ describe("Select Tests", ()=> {
 
         it("should match SQL", () => {
             const sql = createQuery().getSQL();
-            expectSQL(sql, `SELECT \`email\`, \`name\`, \`title\`, \`Post\`.\`id\` AS \`pId\` FROM \`User\` JOIN \`Post\` ON \`Post\`.\`authorId\` = \`User\`.\`id\`;`)
+            expectSQL(sql, `SELECT ${dialect.quote("email")}, ${dialect.quote("name")}, ${dialect.quote("title")}, ${dialect.quoteQualifiedColumn("Post.id")} AS ${dialect.quote("pId", true)} FROM ${dialect.quote("User")} JOIN ${dialect.quote("Post")} ON ${dialect.quoteQualifiedColumn("Post.authorId")} = ${dialect.quoteQualifiedColumn("User.id")};`)
         });
     });
 

@@ -115,7 +115,7 @@ describe("where", () => {
             const sql = createQuery()
                 .getSQL();
 
-            const expectedSQL = `SELECT \`User\`.\`id\` AS \`User.id\`, \`User\`.\`email\` AS \`User.email\`, \`User\`.\`name\` AS \`User.name\`, \`User\`.\`age\` AS \`User.age\`, \`Post\`.\`id\` AS \`Post.id\`, \`Post\`.\`title\` AS \`Post.title\`, \`Post\`.\`content\` AS \`Post.content\`, \`Post\`.\`published\` AS \`Post.published\`, \`Post\`.\`authorId\` AS \`Post.authorId\`, \`Post\`.\`lastModifiedById\` AS \`Post.lastModifiedById\` FROM \`User\` JOIN \`Post\` ON \`Post\`.\`authorId\` = \`User\`.\`id\` WHERE (NOT(\`User\`.\`name\` LIKE 'something' OR \`User\`.\`name\` LIKE 'something else')) AND (NOT((\`User\`.\`id\` = 2))) AND ((\`User\`.\`id\` = 1 AND \`Post\`.\`id\` = 1)) AND (\`User\`.\`id\` = 2 OR \`Post\`.\`content\` IS NOT NULL);`;
+            const expectedSQL = `SELECT ${dialect.quoteQualifiedColumn("User.id")} AS ${dialect.quote("User.id", true)}, ${dialect.quoteQualifiedColumn("User.email")} AS ${dialect.quote("User.email", true)}, ${dialect.quoteQualifiedColumn("User.name")} AS ${dialect.quote("User.name", true)}, ${dialect.quoteQualifiedColumn("User.age")} AS ${dialect.quote("User.age", true)}, ${dialect.quoteQualifiedColumn("Post.id")} AS ${dialect.quote("Post.id", true)}, ${dialect.quoteQualifiedColumn("Post.title")} AS ${dialect.quote("Post.title", true)}, ${dialect.quoteQualifiedColumn("Post.content")} AS ${dialect.quote("Post.content", true)}, ${dialect.quoteQualifiedColumn("Post.published")} AS ${dialect.quote("Post.published", true)}, ${dialect.quoteQualifiedColumn("Post.authorId")} AS ${dialect.quote("Post.authorId", true)}, ${dialect.quoteQualifiedColumn("Post.lastModifiedById")} AS ${dialect.quote("Post.lastModifiedById", true)} FROM ${dialect.quote("User")} JOIN ${dialect.quote("Post")} ON ${dialect.quoteQualifiedColumn("Post.authorId")} = ${dialect.quoteQualifiedColumn("User.id")} WHERE (NOT(${dialect.quoteQualifiedColumn("User.name")} LIKE 'something' OR ${dialect.quoteQualifiedColumn("User.name")} LIKE 'something else')) AND (NOT((${dialect.quoteQualifiedColumn("User.id")} = 2))) AND ((${dialect.quoteQualifiedColumn("User.id")} = 1 AND ${dialect.quoteQualifiedColumn("Post.id")} = 1)) AND (${dialect.quoteQualifiedColumn("User.id")} = 2 OR ${dialect.quoteQualifiedColumn("Post.content")} IS NOT NULL);`;
 
             expectSQL(sql, expectedSQL);
         });
@@ -186,7 +186,7 @@ describe("where", () => {
 
         it("should match SQL", () => {
             const sql = createQuery().getSQL();
-            const expectedSQL = `SELECT \`User\`.\`id\` AS \`User.id\`, \`User\`.\`email\` AS \`User.email\`, \`User\`.\`name\` AS \`User.name\`, \`User\`.\`age\` AS \`User.age\`, \`Post\`.\`id\` AS \`Post.id\`, \`Post\`.\`title\` AS \`Post.title\`, \`Post\`.\`content\` AS \`Post.content\`, \`Post\`.\`published\` AS \`Post.published\`, \`Post\`.\`authorId\` AS \`Post.authorId\`, \`Post\`.\`lastModifiedById\` AS \`Post.lastModifiedById\` FROM \`User\` JOIN \`Post\` ON \`Post\`.\`authorId\` = \`User\`.\`id\` WHERE ${rawWhere};`;
+            const expectedSQL = `SELECT ${dialect.quoteQualifiedColumn("User.id")} AS ${dialect.quote("User.id", true)}, ${dialect.quoteQualifiedColumn("User.email")} AS ${dialect.quote("User.email", true)}, ${dialect.quoteQualifiedColumn("User.name")} AS ${dialect.quote("User.name", true)}, ${dialect.quoteQualifiedColumn("User.age")} AS ${dialect.quote("User.age", true)}, ${dialect.quoteQualifiedColumn("Post.id")} AS ${dialect.quote("Post.id", true)}, ${dialect.quoteQualifiedColumn("Post.title")} AS ${dialect.quote("Post.title", true)}, ${dialect.quoteQualifiedColumn("Post.content")} AS ${dialect.quote("Post.content", true)}, ${dialect.quoteQualifiedColumn("Post.published")} AS ${dialect.quote("Post.published", true)}, ${dialect.quoteQualifiedColumn("Post.authorId")} AS ${dialect.quote("Post.authorId", true)}, ${dialect.quoteQualifiedColumn("Post.lastModifiedById")} AS ${dialect.quote("Post.lastModifiedById", true)} FROM ${dialect.quote("User")} JOIN ${dialect.quote("Post")} ON ${dialect.quoteQualifiedColumn("Post.authorId")} = ${dialect.quoteQualifiedColumn("User.id")} WHERE ${rawWhere};`;
             expectSQL(sql, expectedSQL);
         });
 
@@ -221,7 +221,7 @@ describe("where", () => {
 
         it("should match SQL", () => {
             const sql = createQuery().getSQL();
-            const expectedSQL = `SELECT \`name\`, \`content\` FROM \`User\` JOIN \`Post\` ON \`Post\`.\`authorId\` = \`User\`.\`id\` WHERE (\`Post\`.\`content\` IS NOT NULL) AND (\`User\`.\`name\` IS NULL);`;
+            const expectedSQL = `SELECT ${dialect.quote("name")}, ${dialect.quote("content")} FROM ${dialect.quote("User")} JOIN ${dialect.quote("Post")} ON ${dialect.quoteQualifiedColumn("Post.authorId")} = ${dialect.quoteQualifiedColumn("User.id")} WHERE (${dialect.quoteQualifiedColumn("Post.content")} IS NOT NULL) AND (${dialect.quoteQualifiedColumn("User.name")} IS NULL);`;
             expectSQL(sql, expectedSQL);
         });
 
@@ -262,7 +262,7 @@ describe("having", () => {
 
         it("should match SQL", () => {
             const sql = createQuery().getSQL();
-            const expectedSQL = `SELECT \`name\` FROM \`User\` JOIN \`Post\` ON \`Post\`.\`authorId\` = \`User\`.\`id\` GROUP BY \`User\`.\`name\` HAVING \`User\`.\`name\` LIKE 'John%';`;
+            const expectedSQL = `SELECT ${dialect.quote("name")} FROM ${dialect.quote("User")} JOIN ${dialect.quote("Post")} ON ${dialect.quoteQualifiedColumn("Post.authorId")} = ${dialect.quoteQualifiedColumn("User.id")} GROUP BY ${dialect.quoteQualifiedColumn("User.name")} HAVING ${dialect.quoteQualifiedColumn("User.name")} LIKE 'John%';`;
             expectSQL(sql, expectedSQL);
         });
 
@@ -289,7 +289,7 @@ describe("having", () => {
 
             const sql = createQuery()
                 .getSQL();
-            const expectedSQL = `SELECT \`User\`.\`id\` AS \`User.id\`, \`User\`.\`email\` AS \`User.email\`, \`User\`.\`name\` AS \`User.name\`, \`User\`.\`age\` AS \`User.age\`, \`Post\`.\`id\` AS \`Post.id\`, \`Post\`.\`title\` AS \`Post.title\`, \`Post\`.\`content\` AS \`Post.content\`, \`Post\`.\`published\` AS \`Post.published\`, \`Post\`.\`authorId\` AS \`Post.authorId\`, \`Post\`.\`lastModifiedById\` AS \`Post.lastModifiedById\` FROM \`User\` JOIN \`Post\` ON \`Post\`.\`authorId\` = \`User\`.\`id\` HAVING \`User\`.\`name\` LIKE 'Stuart%';`;
+            const expectedSQL = `SELECT ${dialect.quoteQualifiedColumn("User.id")} AS ${dialect.quote("User.id", true)}, ${dialect.quoteQualifiedColumn("User.email")} AS ${dialect.quote("User.email", true)}, ${dialect.quoteQualifiedColumn("User.name")} AS ${dialect.quote("User.name", true)}, ${dialect.quoteQualifiedColumn("User.age")} AS ${dialect.quote("User.age", true)}, ${dialect.quoteQualifiedColumn("Post.id")} AS ${dialect.quote("Post.id", true)}, ${dialect.quoteQualifiedColumn("Post.title")} AS ${dialect.quote("Post.title", true)}, ${dialect.quoteQualifiedColumn("Post.content")} AS ${dialect.quote("Post.content", true)}, ${dialect.quoteQualifiedColumn("Post.published")} AS ${dialect.quote("Post.published", true)}, ${dialect.quoteQualifiedColumn("Post.authorId")} AS ${dialect.quote("Post.authorId", true)}, ${dialect.quoteQualifiedColumn("Post.lastModifiedById")} AS ${dialect.quote("Post.lastModifiedById", true)} FROM ${dialect.quote("User")} JOIN ${dialect.quote("Post")} ON ${dialect.quoteQualifiedColumn("Post.authorId")} = ${dialect.quoteQualifiedColumn("User.id")} HAVING ${dialect.quoteQualifiedColumn("User.name")} LIKE 'Stuart%';`;
             expectSQL(sql, expectedSQL);
 
             // Verify type is correct even though we don't run it
@@ -361,7 +361,7 @@ describe("having", () => {
             const sql = createQuery().getSQL();
             // Should have both GROUP BY and HAVING
             expectSQL(sql,
-            "SELECT `User`.`id` AS `User.id`, `name`, `email`, `age` FROM `User` JOIN `Post` ON `Post`.`authorId` = `User`.`id` GROUP BY `User`.`id`, `User`.`name` HAVING (`User`.`name` LIKE 'J%') AND (`User`.`id` = 1 OR `User`.`id` = 2);" );
+            `SELECT ${dialect.quoteQualifiedColumn("User.id")} AS ${dialect.quote("User.id", true)}, ${dialect.quote("name")}, ${dialect.quote("email")}, ${dialect.quote("age")} FROM ${dialect.quote("User")} JOIN ${dialect.quote("Post")} ON ${dialect.quoteQualifiedColumn("Post.authorId")} = ${dialect.quoteQualifiedColumn("User.id")} GROUP BY ${dialect.quoteQualifiedColumn("User.id")}, ${dialect.quoteQualifiedColumn("User.name")} HAVING (${dialect.quoteQualifiedColumn("User.name")} LIKE 'J%') AND (${dialect.quoteQualifiedColumn("User.id")} = 1 OR ${dialect.quoteQualifiedColumn("User.id")} = 2);` );
 
         });
     });

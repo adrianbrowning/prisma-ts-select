@@ -11,6 +11,7 @@ import type {
 } from "../types.js";
 import { expectSQL } from "../test-utils.ts";
 import { prisma } from '#client';
+import { dialect } from '#dialect';
 
 describe("Table Alias Support", () => {
     describe("Single table alias with FROM", () => {
@@ -25,7 +26,7 @@ describe("Table Alias Support", () => {
 
             expectSQL(
                 query.getSQL(),
-                "SELECT `name` FROM `User` AS `u`;"
+                `SELECT ${dialect.quote("name")} FROM ${dialect.quote("User")} AS ${dialect.quote("u", true)};`
             );
         });
 
@@ -41,7 +42,7 @@ describe("Table Alias Support", () => {
 
             expectSQL(
                 query.getSQL(),
-                "SELECT `name` FROM `User` AS `u` WHERE `id` = 1;"
+                `SELECT ${dialect.quote("name")} FROM ${dialect.quote("User")} AS ${dialect.quote("u", true)} WHERE ${dialect.quote("id")} = 1;`
             );
         });
 
@@ -56,7 +57,7 @@ describe("Table Alias Support", () => {
 
             expectSQL(
                 query.getSQL(),
-                "SELECT `email` FROM `User`;"
+                `SELECT ${dialect.quote("email")} FROM ${dialect.quote("User")};`
             );
         });
 
@@ -72,7 +73,7 @@ describe("Table Alias Support", () => {
 
             expectSQL(
                 query.getSQL(),
-                "SELECT `name` FROM `User` AS `u` ORDER BY `u`.`name` DESC;"
+                `SELECT ${dialect.quote("name")} FROM ${dialect.quote("User")} AS ${dialect.quote("u", true)} ORDER BY ${dialect.quoteOrderByClause("u.name DESC")};`
             );
         });
 
@@ -111,7 +112,7 @@ describe("Table Alias Support", () => {
 
             expectSQL(
                 query.getSQL(),
-                "SELECT `name`, `title` FROM `User` AS `u` JOIN `Post` AS `p` ON `p`.`authorId` = `u`.`id`;"
+                `SELECT ${dialect.quote("name")}, ${dialect.quote("title")} FROM ${dialect.quote("User")} AS ${dialect.quote("u", true)} JOIN ${dialect.quote("Post")} AS ${dialect.quote("p", true)} ON ${dialect.quoteQualifiedColumn("p.authorId")} = ${dialect.quoteQualifiedColumn("u.id")};`
             );
         });
 
@@ -128,7 +129,7 @@ describe("Table Alias Support", () => {
 
             expectSQL(
                 query.getSQL(),
-                "SELECT `name`, `title` FROM `User` AS `u` JOIN `Post` AS `p` ON `p`.`authorId` = `u`.`id`;"
+                `SELECT ${dialect.quote("name")}, ${dialect.quote("title")} FROM ${dialect.quote("User")} AS ${dialect.quote("u", true)} JOIN ${dialect.quote("Post")} AS ${dialect.quote("p", true)} ON ${dialect.quoteQualifiedColumn("p.authorId")} = ${dialect.quoteQualifiedColumn("u.id")};`
             );
         });
 
@@ -145,7 +146,7 @@ describe("Table Alias Support", () => {
 
             expectSQL(
                 query.getSQL(),
-                "SELECT `name`, `title` FROM `User` AS `u` JOIN `Post` ON `Post`.`authorId` = `u`.`id`;"
+                `SELECT ${dialect.quote("name")}, ${dialect.quote("title")} FROM ${dialect.quote("User")} AS ${dialect.quote("u", true)} JOIN ${dialect.quote("Post")} ON ${dialect.quoteQualifiedColumn("Post.authorId")} = ${dialect.quoteQualifiedColumn("u.id")};`
             );
         });
 
@@ -162,7 +163,7 @@ describe("Table Alias Support", () => {
 
             expectSQL(
                 query.getSQL(),
-                "SELECT `name`, `title` FROM `User` JOIN `Post` AS `p` ON `p`.`authorId` = `User`.`id`;"
+                `SELECT ${dialect.quote("name")}, ${dialect.quote("title")} FROM ${dialect.quote("User")} JOIN ${dialect.quote("Post")} AS ${dialect.quote("p", true)} ON ${dialect.quoteQualifiedColumn("p.authorId")} = ${dialect.quoteQualifiedColumn("User.id")};`
             );
         });
 
@@ -179,7 +180,7 @@ describe("Table Alias Support", () => {
 
             expectSQL(
                 query.getSQL(),
-                "SELECT `name`, `title` FROM `User` JOIN `Post` ON `Post`.`authorId` = `User`.`id`;"
+                `SELECT ${dialect.quote("name")}, ${dialect.quote("title")} FROM ${dialect.quote("User")} JOIN ${dialect.quote("Post")} ON ${dialect.quoteQualifiedColumn("Post.authorId")} = ${dialect.quoteQualifiedColumn("User.id")};`
             );
         });
 
@@ -201,7 +202,7 @@ describe("Table Alias Support", () => {
 
             expectSQL(
                 query.getSQL(),
-                "SELECT `e1`.`name` AS `employeeName`, `e2`.`name` AS `managerName` FROM `Employee` AS `e1` JOIN `Employee` AS `e2` ON `e2`.`managerId` = `e1`.`id`;"
+                `SELECT ${dialect.quoteQualifiedColumn("e1.name")} AS ${dialect.quote("employeeName", true)}, ${dialect.quoteQualifiedColumn("e2.name")} AS ${dialect.quote("managerName", true)} FROM ${dialect.quote("Employee")} AS ${dialect.quote("e1", true)} JOIN ${dialect.quote("Employee")} AS ${dialect.quote("e2", true)} ON ${dialect.quoteQualifiedColumn("e2.managerId")} = ${dialect.quoteQualifiedColumn("e1.id")};`
             );
         });
 
@@ -215,7 +216,7 @@ describe("Table Alias Support", () => {
 
             expectSQL(
                 query.getSQL(),
-                "SELECT `e1`.`name` AS `employee1Name`, `e2`.`name` AS `employee2Name` FROM `Employee` AS `e1` JOIN `Employee` AS `e2` ON `e2`.`id` = `e1`.`id`;"
+                `SELECT ${dialect.quoteQualifiedColumn("e1.name")} AS ${dialect.quote("employee1Name", true)}, ${dialect.quoteQualifiedColumn("e2.name")} AS ${dialect.quote("employee2Name", true)} FROM ${dialect.quote("Employee")} AS ${dialect.quote("e1", true)} JOIN ${dialect.quote("Employee")} AS ${dialect.quote("e2", true)} ON ${dialect.quoteQualifiedColumn("e2.id")} = ${dialect.quoteQualifiedColumn("e1.id")};`
             );
 
             {
@@ -258,7 +259,7 @@ describe("Table Alias Support", () => {
 
             expectSQL(
                 query.getSQL(),
-                "SELECT `name`, `title` FROM `User` AS `u` JOIN `Post` AS `p` ON `p`.`authorId` = `u`.`id` WHERE `u`.`id` = 1;"
+                `SELECT ${dialect.quote("name")}, ${dialect.quote("title")} FROM ${dialect.quote("User")} AS ${dialect.quote("u", true)} JOIN ${dialect.quote("Post")} AS ${dialect.quote("p", true)} ON ${dialect.quoteQualifiedColumn("p.authorId")} = ${dialect.quoteQualifiedColumn("u.id")} WHERE ${dialect.quoteQualifiedColumn("u.id")} = 1;`
             );
         });
     });
@@ -276,7 +277,7 @@ describe("Table Alias Support", () => {
 
             expectSQL(
                 query.getSQL(),
-                "SELECT `authorId` FROM `Post` AS `p` GROUP BY `p`.`authorId`;"
+                `SELECT ${dialect.quote("authorId")} FROM ${dialect.quote("Post")} AS ${dialect.quote("p", true)} GROUP BY ${dialect.quoteQualifiedColumn("p.authorId")};`
             );
         });
 
@@ -293,7 +294,7 @@ describe("Table Alias Support", () => {
 
             expectSQL(
                 query.getSQL(),
-                "SELECT `authorId` FROM `Post` AS `p` GROUP BY `p`.`authorId` HAVING `authorId` > 1;"
+                `SELECT ${dialect.quote("authorId")} FROM ${dialect.quote("Post")} AS ${dialect.quote("p", true)} GROUP BY ${dialect.quoteQualifiedColumn("p.authorId")} HAVING ${dialect.quote("authorId")} > 1;`
             );
         });
     });
@@ -311,7 +312,7 @@ describe("Table Alias Support", () => {
 
             expectSQL(
                 query.getSQL(),
-                "SELECT `name` FROM `User` AS `u` LIMIT 10;"
+                `SELECT ${dialect.quote("name")} FROM ${dialect.quote("User")} AS ${dialect.quote("u", true)} LIMIT 10;`
             );
         });
 
@@ -328,7 +329,7 @@ describe("Table Alias Support", () => {
 
             expectSQL(
                 query.getSQL(),
-                "SELECT `email` FROM `User` AS `u` LIMIT 10 OFFSET 5;"
+                `SELECT ${dialect.quote("email")} FROM ${dialect.quote("User")} AS ${dialect.quote("u", true)} LIMIT 10 OFFSET 5;`
             );
         });
     });
@@ -345,7 +346,7 @@ describe("Table Alias Support", () => {
 
             expectSQL(
                 query.getSQL(),
-                "SELECT `id`, `email`, `name`, `age` FROM `User` AS `u`;"
+                `SELECT ${dialect.quote("id")}, ${dialect.quote("email")}, ${dialect.quote("name")}, ${dialect.quote("age")} FROM ${dialect.quote("User")} AS ${dialect.quote("u", true)};`
             );
         });
 
@@ -359,7 +360,7 @@ describe("Table Alias Support", () => {
 
             expectSQL(
                 query.getSQL(),
-                "SELECT `u`.`id` AS `u.id`, `u`.`email` AS `u.email`, `u`.`name` AS `u.name`, `u`.`age` AS `u.age`, `p`.`id` AS `p.id`, `p`.`title` AS `p.title`, `p`.`content` AS `p.content`, `p`.`published` AS `p.published`, `p`.`authorId` AS `p.authorId`, `p`.`lastModifiedById` AS `p.lastModifiedById` FROM `User` AS `u` JOIN `Post` AS `p` ON `p`.`authorId` = `u`.`id`;"
+                `SELECT ${dialect.quoteQualifiedColumn("u.id")} AS ${dialect.quote("u.id", true)}, ${dialect.quoteQualifiedColumn("u.email")} AS ${dialect.quote("u.email", true)}, ${dialect.quoteQualifiedColumn("u.name")} AS ${dialect.quote("u.name", true)}, ${dialect.quoteQualifiedColumn("u.age")} AS ${dialect.quote("u.age", true)}, ${dialect.quoteQualifiedColumn("p.id")} AS ${dialect.quote("p.id", true)}, ${dialect.quoteQualifiedColumn("p.title")} AS ${dialect.quote("p.title", true)}, ${dialect.quoteQualifiedColumn("p.content")} AS ${dialect.quote("p.content", true)}, ${dialect.quoteQualifiedColumn("p.published")} AS ${dialect.quote("p.published", true)}, ${dialect.quoteQualifiedColumn("p.authorId")} AS ${dialect.quote("p.authorId", true)}, ${dialect.quoteQualifiedColumn("p.lastModifiedById")} AS ${dialect.quote("p.lastModifiedById", true)} FROM ${dialect.quote("User")} AS ${dialect.quote("u", true)} JOIN ${dialect.quote("Post")} AS ${dialect.quote("p", true)} ON ${dialect.quoteQualifiedColumn("p.authorId")} = ${dialect.quoteQualifiedColumn("u.id")};`
             );
             {
                 const result = await query.run();
@@ -380,7 +381,7 @@ describe("Table Alias Support", () => {
 
             expectSQL(
                 query.getSQL(),
-                "SELECT `u`.`name` AS `userName` FROM `User` AS `u`;"
+                `SELECT ${dialect.quoteQualifiedColumn("u.name")} AS ${dialect.quote("userName", true)} FROM ${dialect.quote("User")} AS ${dialect.quote("u", true)};`
             );
         });
 
