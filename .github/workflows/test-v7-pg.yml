@@ -53,7 +53,7 @@ jobs:
 
       - name: Install dependencies (v7-pg)
         working-directory: ./packages/usage-v7-pg
-        run: pnpm --filter usage-v6-mysql i --no-frozen-lockfile
+        run: pnpm --filter usage-v7-pg i --no-frozen-lockfile
 
       - name: Wait for PostgreSQL
         run: |

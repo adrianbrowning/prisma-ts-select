@@ -81,4 +81,4 @@ jobs:
 
       - name: Run tests
         working-directory: ./packages/usage-v6-mysql
-        run: pnpm pnpm --filter usage-v6-mysql test
+        run: pnpm --filter usage-v6-mysql test

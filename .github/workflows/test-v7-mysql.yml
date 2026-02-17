@@ -53,7 +53,7 @@ jobs:
 
       - name: Install dependencies (v7-mysql)
         working-directory: ./packages/usage-v7-mysql
-        run: pnpm --filter usage-v6-mysql i --no-frozen-lockfile
+        run: pnpm --filter usage-v7-mysql i --no-frozen-lockfile
 
       - name: Wait for MySQL
         run: |

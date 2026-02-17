@@ -81,4 +81,4 @@ jobs:
 
       - name: Run tests
         working-directory: ./packages/usage-v6-pg
-        run: pnpm pnpm --filter usage-v6-pg test
+        run: pnpm --filter usage-v6-pg test
