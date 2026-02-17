@@ -140,76 +140,47 @@ generatorHandler({
     const srcDir = path.join(pTSSelPath, "extend");
     // const outDir = path.join(pTSSelPath, "..", "built");
 
-    // Copy dialect files - only types, shared, and provider-specific
-    const dialectFiles = ["types.js", "shared.js", `${provider}.js`];
+    // Copy dialect files - both .js and .d.ts for types, shared, and provider-specific
+    const dialectFiles = ["types", "shared", provider];
     const dialectOutDir = path.join(outputPath, "dialects");
     fs.mkdirSync(dialectOutDir, {recursive: true});
-    for (const file of dialectFiles) {
-      const src = path.join(pTSSelPath, "extend", "dialects", file);
-      const dest = path.join(dialectOutDir, file);
-      if (fs.existsSync(src)) {
-        fs.copyFileSync(src, dest);
+
+    for (const baseName of dialectFiles) {
+      for (const ext of ['.js', '.d.ts']) {
+        const src = path.join(pTSSelPath, "extend", "dialects", `${baseName}${ext}`);
+        const dest = path.join(dialectOutDir, `${baseName}${ext}`);
+        if (fs.existsSync(src)) {
+          fs.copyFileSync(src, dest);
+        }
       }
     }
 
     // Generate dialects/index.js that exports the correct dialect
-    const dialectIndexContent = `export { ${provider}Dialect as dialect } from './${provider}.js';\n`;
-    fs.writeFileSync(path.join(dialectOutDir, "index.js"), dialectIndexContent);
+    const dialectIndexJs = `export { ${provider}Dialect as dialect } from './${provider}.js';\n`;
+    fs.writeFileSync(path.join(dialectOutDir, "index.js"), dialectIndexJs);
 
-    // Helper to process dialect replacement for both .js and .cjs files
-    function processDialectReplacement(file: string): void {
-      const extension = file.split('.').pop();
-      const contents = fs.readFileSync(path.join(srcDir, file), {encoding: "utf-8"});
+    // Generate dialects/index.d.ts with proper type exports
+    const dialectIndexDts = `export { type Dialect, type FunctionRegistry, SUPPORTED_PROVIDERS, type SupportedProvider } from './types.js';
+export { sharedFunctions } from './shared.js';
+export { ${provider}Dialect as dialect, ${provider}Dialect } from './${provider}.js';
+`;
+    fs.writeFileSync(path.join(dialectOutDir, "index.d.ts"), dialectIndexDts);
 
-      // Extract dialect object: var {provider}Dialect = { ... }
-      const dialectFile = fs.readFileSync(
-        path.join(srcDir, `dialects/${provider}.${extension}`),
-        {encoding: "utf-8"}
-      );
-
-      const dialectMatch = dialectFile.match(/var \w+Dialect = \{[\s\S]*?\n\};/);
-      if (!dialectMatch) {
-        throw new Error(`Could not extract dialect definition from ${provider}.${extension}`);
-      }
-
-      let dialectDef = dialectMatch[0].replace(/var \w+Dialect/, `var ${provider}Dialect`);
-
-      writeFileSafely(
-        path.join(outputPath, file),
-        contents
-          .replace(/var sqliteDialect = \{[\s\S]*?\n\};/, dialectDef)
-          .replace(/sqliteDialect/g, `${provider}Dialect`)
-          .replace("var DB = {};", `var DB = ${JSON.stringify(models, null, 2)};`)
-      );
-    }
-
-    processDialectReplacement("extend.js");
-    processDialectReplacement("extend.cjs");
-
-
-    // await writeFileSafely(path.join(pTSSelPath,"generator-build","db.d.ts"), `export const DB = ${JSON.stringify(models, null, 2)} as const satisfies Record<string, { fields: Record<string, string>; relations: Record<string, Record<string, Array<string>>> }>`+";");
+    // Copy extend.js and inject DB model (ESM-only)
+    const extendContents = fs.readFileSync(path.join(srcDir, 'extend.js'), {encoding: 'utf-8'});
+    writeFileSafely(
+      path.join(outputPath, 'extend.js'),
+      extendContents.replace('var DB = {};', `var DB = ${JSON.stringify(models, null, 2)};`)
+    );
 
     const declaration = generateReadonlyDeclaration(models);
 
-    { //d.ts
-      const file = "extend.d.ts";
-      const contents = fs.readFileSync(path.join(srcDir, file), {encoding: "utf-8"});
-
-      writeFileSafely(path.join(outputPath, file),
-          contents
-              .replace("declare const DB: DBType;",declaration)
-      );
-    }
-
-    { //d.ts
-      const file = "extend.d.cts";
-      const contents = fs.readFileSync(path.join(srcDir, file), {encoding: "utf-8"});
-
-      writeFileSafely(path.join(outputPath, file),
-          contents
-              .replace("declare const DB: DBType;",declaration)
-      );
-    }
+    // Copy extend.d.ts and inject DB model (ESM-only)
+    const extendDts = fs.readFileSync(path.join(srcDir, 'extend.d.ts'), {encoding: 'utf-8'});
+    writeFileSafely(
+      path.join(outputPath, 'extend.d.ts'),
+      extendDts.replace('declare const DB: DBType;', declaration)
+    );
     function isManyToManyRelationShip(field: DMMF.Field): boolean {
       if (!(field.kind === "object" && field.isList)) return false;
       const {type, relationName} = field;

@@ -9,26 +9,30 @@ import {sharedFunctions} from "./shared.js";
  */
 export const sqliteDialect: Dialect = {
   name: "sqlite",
-  quote: (id: string) => `\`${id}\``,
+  quote: (id) => id,
   functions: {
     ...sharedFunctions,
-    CONCAT: (...args: string[]) => args.join(" || "),
-    GROUP_CONCAT: (...args: string[]) => `GROUP_CONCAT(${args.join(", ")})`,
+    CONCAT: (...args) => args.join(" || "),
+    GROUP_CONCAT: (...args) => `GROUP_CONCAT(${args.join(", ")})`
   },
   needsBooleanCoercion: () => true,
-  quoteTableIdentifier: (name: string, _isAlias: boolean) => `\`${name}\``,
-  quoteQualifiedColumn: (ref: string) => {
-    if (!ref.includes('.')) return `\`${ref}\``;
-    const [table, col] = ref.split('.', 2);
-    return `\`${table}\`.\`${col}\``;
+  quoteTableIdentifier: (name, _isAlias) => {
+   if(_isAlias) return "`" + name + "`";
+    return name;
   },
-  quoteOrderByClause: (clause: string) => {
+  quoteQualifiedColumn: (ref) => {
+    if (!ref.includes(".")) return ref;
+    const [table, col] = ref.split(".", 2);
+    return `${table}.${col}`;
+  },
+  quoteOrderByClause: (clause) => {
     const parts = clause.trim().split(/\s+/);
-    const colRef = parts[0] ?? '';
-    const suffix = parts.slice(1).join(' ');
-    const quoted = colRef.includes('.')
-      ? (() => { const [table, col] = colRef.split('.', 2); return `\`${table}\`.\`${col}\``; })()
-      : `\`${colRef}\``;
-    return suffix ? `${quoted} ${suffix}` : quoted;
-  },
+    const colRef = parts[0] ?? "";
+    const suffix = parts.slice(1).join(" ");
+    const quoted = colRef.includes(".") ? (() => {
+      const [table, col] = colRef.split(".", 2);
+      return `${table}.${col}`;
+    })() : `${colRef}`;
+    return (suffix ? `${quoted} ${suffix}` : quoted);
+  }
 };

@@ -33,7 +33,7 @@ export default defineConfig((options) => [
         outDir: 'dist/extend',
         splitting: false,
         minify: false,
-        format: ['cjs', "esm"],
+        format: ['esm'],
         treeshake: true,
         sourcemap: false,
         clean: false,
@@ -41,6 +41,7 @@ export default defineConfig((options) => [
         external: [
             '@prisma/client',
             '@prisma/client/extension',
+            './dialects/index.js',
             './dialects/sqlite.js',
             './dialects/mysql.js',
             './dialects/postgresql.js',

@@ -10,18 +10,9 @@
   "types": "./dist/generator.d.cts",
   "exports": {
     "./extend": {
-      "import": {
-        "import": "./built/extend.js",
-        "require": "./built/extend.js",
-        "default": "./built/extend.js",
-        "types": "./built/extend.d.ts"
-      },
-      "require": {
-        "import": "./built/extend.cjs",
-        "require": "./built/extend.cjs",
-        "default": "./built/extend.cjs",
-        "types": "./built/extend.d.cts"
-      }
+      "types": "./dist/extend/extend.d.ts",
+      "import": "./dist/extend/extend.js",
+      "default": "./dist/extend/extend.js"
     },
     ".": {
       "import": {
@@ -177,7 +168,6 @@
   },
   "files": [
     "./dist",
-    "./built",
     "./assets",
     "README.md",
     "package.json"

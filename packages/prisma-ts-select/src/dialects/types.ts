@@ -31,7 +31,7 @@ export type FunctionRegistry = {
  */
 export type Dialect = {
   name: "sqlite" | "mysql" | "postgresql";
-  quote: (identifier: string) => string;
+  quote: (identifier: string, isAlias?: boolean) => string;
   functions: FunctionRegistry;
 
   /**

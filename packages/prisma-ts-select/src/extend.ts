@@ -1003,9 +1003,9 @@ class _fSelect<TSources extends TArrSources, TFields extends TFieldsType, TSelec
                     if (hasMultipleTables) {
                         const tableIdentifier = tableObject.alias || tableName;
                         const qualifiedCol = `${tableIdentifier}.${field}`;
-                        return `${dialect.quoteQualifiedColumn(qualifiedCol)} AS ${dialect.quote(`${tableName}.${field}`)}`;
+                        return `${dialect.quoteQualifiedColumn(qualifiedCol)} AS ${dialect.quote(`${tableName}.${field}`, true)}`;
                     }
-                    return field === "*" ? "*" : dialect.quote(field);
+                    return field === "*" ? "*" : dialect.quote(field, false);
                 });
 
                 return new _fSelect<TSources, TFields, Prettify<TSelectRT & MergeItems<TSelect, /*TablesArray2Name<TSources>*/TSources, TFields>>>(this.db, {
@@ -1034,12 +1034,12 @@ class _fSelect<TSources extends TArrSources, TFields extends TFieldsType, TSelec
                 if (currentTablesWithFields[colName] > 1) {
                     return new _fSelect(this.db, {
                         ...this.values,
-                        selects: [...this.values.selects, `${dialect.quoteQualifiedColumn(select)} AS ${dialect.quote(select)}`]
+                        selects: [...this.values.selects, `${dialect.quoteQualifiedColumn(select)} AS ${dialect.quote(select, true)}`]
                     }) as any;
                 } else {
                     return new _fSelect(this.db, {
                         ...this.values,
-                        selects: [...this.values.selects, dialect.quote(colName)]
+                        selects: [...this.values.selects, dialect.quote(colName, false)]
                     }) as any;
                 }
             }
@@ -1051,10 +1051,10 @@ class _fSelect<TSources extends TArrSources, TFields extends TFieldsType, TSelec
                 ? "*"
                 : select.includes('.')
                     ? dialect.quoteQualifiedColumn(select)
-                    : dialect.quote(select);
+                    : dialect.quote(select, false);
             return new _fSelect(this.db, {
                 ...this.values,
-                selects: [...this.values.selects, `${quotedSelect} AS ${dialect.quote(alias)}`]
+                selects: [...this.values.selects, `${quotedSelect} AS ${dialect.quote(alias, true)}`]
             }) as any;
         }
 
@@ -1063,7 +1063,7 @@ class _fSelect<TSources extends TArrSources, TFields extends TFieldsType, TSelec
             ? "*"
             : select.includes('.')
                 ? dialect.quoteQualifiedColumn(select)
-                : dialect.quote(select);
+                : dialect.quote(select, false);
         return new _fSelect<TSources, TFields, Prettify<TSelectRT & MergeItems<TSelect, /*TablesArray2Name<TSources>*/TSources, TFields>>>(this.db, {
             ...this.values,
             selects: [...this.values.selects, quotedSelect]
@@ -1108,12 +1108,12 @@ class _fSelectDistinct<TSources extends TArrSources, TFields extends TFieldsType
 
                     return acc.concat(Object.keys(DB[actualTable]!.fields).map((field) => {
                         const qualifiedCol = `${tableIdentifier}.${field}`;
-                        return `${dialect.quoteQualifiedColumn(qualifiedCol)} AS ${dialect.quote(`${tableIdentifier}.${field}`)}`;
+                        return `${dialect.quoteQualifiedColumn(qualifiedCol)} AS ${dialect.quote(`${tableIdentifier}.${field}`, true)}`;
                     }))
                 }, []);
             }
             //TODO review `!`
-            return Object.keys(DB[values.tables[0].table]!.fields).map(field => dialect.quote(field));
+            return Object.keys(DB[values.tables[0].table]!.fields).map(field => dialect.quote(field, false));
         }(this.values))
 
         return new _fOrderBy<TSources, TFields, MergeItems<"*", /*TablesArray2Name<TSources>*/TSources, TFields, TableCount extends 1 ? false : true>>(this.db, {
