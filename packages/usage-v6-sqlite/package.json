@@ -5,8 +5,8 @@
   "type": "module",
   "scripts": {
     "gen": "prisma generate",
-    "test": "pnpm test:ts && node --import ../../shared-tests/client-resolver.mjs --import ../../shared-tests/test-setup.mjs --test './tests/core/**/*.spec.ts' 'tests/readme/**/*.ts' 'tests/dialect/sqlite/**/*.ts'",
-    "test:ts": "tsc --noEmit",
+    "test": "pnpm run test:core && pnpm run test:readme && pnpm run test:dialect",
+    "lint:ts": "tsc --noEmit",
     "test:core": "node --import ../../shared-tests/client-resolver.mjs --import ../../shared-tests/test-setup.mjs --test './tests/core/**/*.spec.ts'",
     "test:readme": "node --import ../../shared-tests/client-resolver.mjs --import ../../shared-tests/test-setup.mjs --test './tests/readme/**/*.ts'",
     "test:dialect": "node --import ../../shared-tests/client-resolver.mjs --import ../../shared-tests/test-setup.mjs --test './tests/dialect/sqlite/**/*.ts'",

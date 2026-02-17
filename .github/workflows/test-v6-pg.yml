@@ -45,15 +45,15 @@ jobs:
           key: ${{ runner.os }}-node-${{ matrix.node }}-v6-pg-${{ hashFiles('**/pnpm-lock.yaml') }}
 
       - name: Install dependencies
-        run: pnpm i --no-frozen-lockfile
+        run: pnpm --filter prisma-ts-select i --no-frozen-lockfile
 
       - name: Build prisma-ts-select
         working-directory: ./packages/prisma-ts-select
-        run: pnpm exec tsup
+        run: pnpm --filter prisma-ts-select build
 
       - name: Install dependencies (v6-pg)
         working-directory: ./packages/usage-v6-pg
-        run: pnpm i --no-frozen-lockfile
+        run: pnpm --filter usage-v6-pg i --no-frozen-lockfile
 
       - name: Wait for PostgreSQL
         run: |
@@ -69,16 +69,16 @@ jobs:
 
       - name: Generate Prisma client
         working-directory: ./packages/usage-v6-pg
-        run: pnpm exec prisma generate
+        run: pnpm --filter usage-v6-pg gen
 
       - name: Reset database
         working-directory: ./packages/usage-v6-pg
-        run: pnpm p:r
+        run: pnpm --filter usage-v6-pg p:r
 
       - name: TypeScript check
         working-directory: ./packages/usage-v6-pg
-        run: pnpm test:ts
+        run: pnpm --filter usage-v6-pg lint:ts
 
       - name: Run tests
         working-directory: ./packages/usage-v6-pg
-        run: pnpm test
+        run: pnpm pnpm --filter usage-v6-pg test
