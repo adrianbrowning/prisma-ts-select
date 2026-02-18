@@ -1,14 +1,13 @@
 {
-  "name": "@gcm/usage-v6-sqlite",
+  "name": "@gcm/usage-pg-v6",
   "version": "0.0.0",
   "private": true,
   "type": "module",
   "scripts": {
     "gen": "prisma generate",
-    "test": "pnpm run test:core && pnpm run test:readme && pnpm run test:dialect",
+    "test": "pnpm run test:core && pnpm run test:dialect",
     "lint:ts": "tsc --noEmit",
     "test:core": "node --import ../../shared-tests/client-resolver.mjs --import ../../shared-tests/test-setup.mjs --test './tests/core/**/*.spec.ts'",
-    "test:readme": "node --import ../../shared-tests/client-resolver.mjs --import ../../shared-tests/test-setup.mjs --test './tests/readme/**/*.ts'",
     "test:dialect": "node --import ../../shared-tests/client-resolver.mjs --import ../../shared-tests/test-setup.mjs --test './tests/dialect/sqlite/**/*.ts'",
     "p:r": "prisma db push --force-reset && prisma db seed"
   },

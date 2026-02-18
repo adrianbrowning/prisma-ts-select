@@ -1,5 +1,5 @@
 {
-  "name": "@gcm/usage-v6-pg",
+  "name": "@gcm/usage-pg-v7",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -21,9 +21,10 @@
     "@gcm/prisma-ts-select": "workspace:*"
   },
   "devDependencies": {
-    "@prisma/client": "6.19.2",
+    "@prisma/adapter-pg": "^7.4.0",
+    "@prisma/client": "7.4.0",
     "@types/node": "^24.0.0",
-    "prisma": "6.19.2",
+    "prisma": "7.4.0",
     "tsx": "^4.21.0",
     "typescript": "^5.9.3"
   }

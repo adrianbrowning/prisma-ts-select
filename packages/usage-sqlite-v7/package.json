@@ -1,5 +1,5 @@
 {
-  "name": "@gcm/usage-v7-sqlite",
+  "name": "@gcm/usage-sqlite-v7",
   "version": "0.0.0",
   "private": true,
   "type": "module",
