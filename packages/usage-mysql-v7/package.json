@@ -1,5 +1,5 @@
 {
-  "name": "@gcm/usage-v7-mysql",
+  "name": "@gcm/usage-mysql-v7",
   "version": "0.0.0",
   "private": true,
   "type": "module",

@@ -37,21 +37,21 @@ jobs:
         run: pnpm --filter prisma-ts-select build
 
       - name: Install dependencies (v6-sqlite)
-        working-directory: ./packages/usage-v6-sqlite
-        run: pnpm --filter usage-v6-sqlite i --no-frozen-lockfile
+        working-directory: ./packages/usage-sqlite-v6
+        run: pnpm --filter usage-sqlite-v6 i --no-frozen-lockfile
 
       - name: Generate Prisma client
-        working-directory: ./packages/usage-v6-sqlite
-        run: pnpm --filter usage-v6-sqlite gen
+        working-directory: ./packages/usage-sqlite-v6
+        run: pnpm --filter usage-sqlite-v6 gen
 
       - name: Reset database
-        working-directory: ./packages/usage-v6-sqlite
-        run: pnpm --filter usage-v6-sqlite p:r
+        working-directory: ./packages/usage-sqlite-v6
+        run: pnpm --filter usage-sqlite-v6 p:r
 
       - name: TypeScript check
-        working-directory: ./packages/usage-v6-sqlite
-        run: pnpm --filter usage-v6-sqlite lint:ts
+        working-directory: ./packages/usage-sqlite-v6
+        run: pnpm --filter usage-sqlite-v6 lint:ts
 
       - name: Run tests
-        working-directory: ./packages/usage-v6-sqlite
-        run: pnpm --filter usage-v6-sqlite test
+        working-directory: ./packages/usage-sqlite-v6
+        run: pnpm --filter usage-sqlite-v6 test

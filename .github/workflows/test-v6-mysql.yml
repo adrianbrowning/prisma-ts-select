@@ -52,8 +52,8 @@ jobs:
         run: pnpm --filter prisma-ts-select build
 
       - name: Install dependencies (v6-mysql)
-        working-directory: ./packages/usage-v6-mysql
-        run: pnpm --filter usage-v6-mysql i --no-frozen-lockfile
+        working-directory: ./packages/usage-mysql-v6
+        run: pnpm --filter usage-mysql-v6 i --no-frozen-lockfile
 
       - name: Wait for MySQL
         run: |
@@ -68,17 +68,17 @@ jobs:
           exit 1
 
       - name: Generate Prisma client
-        working-directory: ./packages/usage-v6-mysql
-        run: pnpm --filter usage-v6-mysql gen
+        working-directory: ./packages/usage-mysql-v6
+        run: pnpm --filter usage-mysql-v6 gen
 
       - name: Reset database
-        working-directory: ./packages/usage-v6-mysql
-        run: pnpm --filter usage-v6-mysql p:r
+        working-directory: ./packages/usage-mysql-v6
+        run: pnpm --filter usage-mysql-v6 p:r
 
       - name: TypeScript check
-        working-directory: ./packages/usage-v6-mysql
-        run: pnpm --filter usage-v6-mysql lint:ts
+        working-directory: ./packages/usage-mysql-v6
+        run: pnpm --filter usage-mysql-v6 lint:ts
 
       - name: Run tests
-        working-directory: ./packages/usage-v6-mysql
-        run: pnpm --filter usage-v6-mysql test
+        working-directory: ./packages/usage-mysql-v6
+        run: pnpm --filter usage-mysql-v6 test

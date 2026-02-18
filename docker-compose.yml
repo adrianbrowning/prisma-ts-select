@@ -30,13 +30,13 @@ services:
   test-v6-sqlite:
     build:
       context: .
-      dockerfile: packages/usage-v6-sqlite/Dockerfile
+      dockerfile: packages/usage-sqlite-v6/Dockerfile
     profiles: ["v6", "all"]
 
   test-v6-mysql:
     build:
       context: .
-      dockerfile: packages/usage-v6-mysql/Dockerfile
+      dockerfile: packages/usage-mysql-v6/Dockerfile
     depends_on:
       mysql:
         condition: service_healthy
@@ -47,7 +47,7 @@ services:
   test-v6-pg:
     build:
       context: .
-      dockerfile: packages/usage-v6-pg/Dockerfile
+      dockerfile: packages/usage-pg-v6/Dockerfile
     depends_on:
       postgres:
         condition: service_healthy
@@ -59,13 +59,13 @@ services:
   test-v7-sqlite:
     build:
       context: .
-      dockerfile: packages/usage-v7-sqlite/Dockerfile
+      dockerfile: packages/usage-sqlite-v7/Dockerfile
     profiles: ["v7", "all"]
 
   test-v7-mysql:
     build:
       context: .
-      dockerfile: packages/usage-v7-mysql/Dockerfile
+      dockerfile: packages/usage-mysql-v7/Dockerfile
     depends_on:
       mysql:
         condition: service_healthy
@@ -76,7 +76,7 @@ services:
   test-v7-pg:
     build:
       context: .
-      dockerfile: packages/usage-v7-pg/Dockerfile
+      dockerfile: packages/usage-pg-v7/Dockerfile
     depends_on:
       postgres:
         condition: service_healthy

@@ -37,15 +37,15 @@ jobs:
         run: pnpm --filter prisma-ts-select build
 
       - name: Install dependencies (v7-sqlite)
-        working-directory: ./packages/usage-v7-sqlite
-        run: pnpm --filter usage-v7-sqlite i --no-frozen-lockfile
+        working-directory: ./packages/usage-sqlite-v7
+        run: pnpm --filter usage-sqlite-v7 i --no-frozen-lockfile
 
       - name: Generate Prisma client
-        working-directory: ./packages/usage-v7-sqlite
-        run: pnpm --filter usage-v7-sqlite gen
+        working-directory: ./packages/usage-sqlite-v7
+        run: pnpm --filter usage-sqlite-v7 gen
 
       - name: Debug TypeScript environment
-        working-directory: ./packages/usage-v7-sqlite
+        working-directory: ./packages/usage-sqlite-v7
         run: |
           echo "=== Generated files ==="
           ls -la generated/prisma-ts-select/ | head -20
@@ -63,13 +63,13 @@ jobs:
           pnpm tsc --version
 
       - name: Reset database
-        working-directory: ./packages/usage-v7-sqlite
-        run: pnpm --filter usage-v7-sqlite p:r
+        working-directory: ./packages/usage-sqlite-v7
+        run: pnpm --filter usage-sqlite-v7 p:r
 
       - name: TypeScript check
-        working-directory: ./packages/usage-v7-sqlite
-        run: pnpm --filter usage-v7-sqlite lint:ts
+        working-directory: ./packages/usage-sqlite-v7
+        run: pnpm --filter usage-sqlite-v7 lint:ts
 
       - name: Run tests
-        working-directory: ./packages/usage-v7-sqlite
-        run: pnpm --filter usage-v7-sqlite test
+        working-directory: ./packages/usage-sqlite-v7
+        run: pnpm --filter usage-sqlite-v7 test

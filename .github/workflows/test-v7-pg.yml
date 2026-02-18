@@ -52,8 +52,8 @@ jobs:
         run: pnpm --filter prisma-ts-select build
 
       - name: Install dependencies (v7-pg)
-        working-directory: ./packages/usage-v7-pg
-        run: pnpm --filter usage-v7-pg i --no-frozen-lockfile
+        working-directory: ./packages/usage-pg-v7
+        run: pnpm --filter usage-pg-v7 i --no-frozen-lockfile
 
       - name: Wait for PostgreSQL
         run: |
@@ -68,11 +68,11 @@ jobs:
           exit 1
 
       - name: Generate Prisma client
-        working-directory: ./packages/usage-v7-pg
-        run: pnpm --filter usage-v7-pg gen
+        working-directory: ./packages/usage-pg-v7
+        run: pnpm --filter usage-pg-v7 gen
 
       - name: Debug TypeScript environment
-        working-directory: ./packages/usage-v7-pg
+        working-directory: ./packages/usage-pg-v7
         run: |
           echo "=== Generated files ==="
           ls -la generated/prisma-ts-select/ | head -20
@@ -90,13 +90,13 @@ jobs:
           pnpm tsc --version
 
       - name: Reset database
-        working-directory: ./packages/usage-v7-pg
-        run: pnpm --filter usage-v7-pg p:r
+        working-directory: ./packages/usage-pg-v7
+        run: pnpm --filter usage-pg-v7 p:r
 
       - name: TypeScript check
-        working-directory: ./packages/usage-v7-pg
-        run: pnpm --filter usage-v7-pg lint:ts
+        working-directory: ./packages/usage-pg-v7
+        run: pnpm --filter usage-pg-v7 lint:ts
 
       - name: Run tests
-        working-directory: ./packages/usage-v7-pg
-        run: pnpm --filter usage-v7-pg test
+        working-directory: ./packages/usage-pg-v7
+        run: pnpm --filter usage-pg-v7 test

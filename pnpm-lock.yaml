@@ -142,7 +142,7 @@ importers:
         specifier: ^5.9.3
         version: 5.9.3
 
-  packages/usage-v6-mysql:
+  packages/usage-mysql-v6:
     dependencies:
       '@gcm/prisma-ts-select':
         specifier: workspace:*
@@ -164,57 +164,9 @@ importers:
         specifier: ^5.9.3
         version: 5.9.3
 
-  packages/usage-v6-mysql/generated/prisma: {}
+  packages/usage-mysql-v6/generated/prisma: {}
 
-  packages/usage-v6-pg:
-    dependencies:
-      '@gcm/prisma-ts-select':
-        specifier: workspace:*
-        version: link:../prisma-ts-select
-    devDependencies:
-      '@prisma/client':
-        specifier: 6.19.2
-        version: 6.19.2(prisma@6.19.2(typescript@5.9.3))(typescript@5.9.3)
-      '@types/node':
-        specifier: ^24.0.0
-        version: 24.10.13
-      prisma:
-        specifier: 6.19.2
-        version: 6.19.2(typescript@5.9.3)
-      tsx:
-        specifier: ^4.21.0
-        version: 4.21.0
-      typescript:
-        specifier: ^5.9.3
-        version: 5.9.3
-
-  packages/usage-v6-pg/generated/prisma: {}
-
-  packages/usage-v6-sqlite:
-    dependencies:
-      '@gcm/prisma-ts-select':
-        specifier: workspace:*
-        version: link:../prisma-ts-select
-    devDependencies:
-      '@prisma/client':
-        specifier: 6.19.2
-        version: 6.19.2(prisma@6.19.2(typescript@5.9.3))(typescript@5.9.3)
-      '@types/node':
-        specifier: ^24.0.0
-        version: 24.10.13
-      prisma:
-        specifier: 6.19.2
-        version: 6.19.2(typescript@5.9.3)
-      tsx:
-        specifier: ^4.21.0
-        version: 4.21.0
-      typescript:
-        specifier: ^5.9.3
-        version: 5.9.3
-
-  packages/usage-v6-sqlite/generated/prisma: {}
-
-  packages/usage-v7-mysql:
+  packages/usage-mysql-v7:
     dependencies:
       '@gcm/prisma-ts-select':
         specifier: workspace:*
@@ -239,7 +191,31 @@ importers:
         specifier: ^5.9.3
         version: 5.9.3
 
-  packages/usage-v7-pg:
+  packages/usage-pg-v6:
+    dependencies:
+      '@gcm/prisma-ts-select':
+        specifier: workspace:*
+        version: link:../prisma-ts-select
+    devDependencies:
+      '@prisma/client':
+        specifier: 6.19.2
+        version: 6.19.2(prisma@6.19.2(typescript@5.9.3))(typescript@5.9.3)
+      '@types/node':
+        specifier: ^24.0.0
+        version: 24.10.13
+      prisma:
+        specifier: 6.19.2
+        version: 6.19.2(typescript@5.9.3)
+      tsx:
+        specifier: ^4.21.0
+        version: 4.21.0
+      typescript:
+        specifier: ^5.9.3
+        version: 5.9.3
+
+  packages/usage-pg-v6/generated/prisma: {}
+
+  packages/usage-pg-v7:
     dependencies:
       '@gcm/prisma-ts-select':
         specifier: workspace:*
@@ -264,7 +240,31 @@ importers:
         specifier: ^5.9.3
         version: 5.9.3
 
-  packages/usage-v7-sqlite:
+  packages/usage-sqlite-v6:
+    dependencies:
+      '@gcm/prisma-ts-select':
+        specifier: workspace:*
+        version: link:../prisma-ts-select
+    devDependencies:
+      '@prisma/client':
+        specifier: 6.19.2
+        version: 6.19.2(prisma@6.19.2(typescript@5.9.3))(typescript@5.9.3)
+      '@types/node':
+        specifier: ^24.0.0
+        version: 24.10.13
+      prisma:
+        specifier: 6.19.2
+        version: 6.19.2(typescript@5.9.3)
+      tsx:
+        specifier: ^4.21.0
+        version: 4.21.0
+      typescript:
+        specifier: ^5.9.3
+        version: 5.9.3
+
+  packages/usage-sqlite-v6/generated/prisma: {}
+
+  packages/usage-sqlite-v7:
     dependencies:
       '@gcm/prisma-ts-select':
         specifier: workspace:*
@@ -3978,10 +3978,6 @@ packages:
 
   long@5.3.2:
     resolution: {integrity: sha512-mNAgZ1GmyNhD7AuqnTG3/VQ26o760+ZYBPKjPvugO8+nLbYfX6TVpJPseBvopbdY+qpZ/lKUnmEc1LeZYS3QAA==}
-
-  lru-cache@10.3.1:
-    resolution: {integrity: sha512-9/8QXrtbGeMB6LxwQd4x1tIMnsmUxMvIH/qWGsccz6bt9Uln3S+sgAaqfQNhbGA8ufzs2fHuP/yqapGgP9Hh2g==}
-    engines: {node: '>=18'}
 
   lru-cache@10.4.3:
     resolution: {integrity: sha512-JNAzZcXrCt42VGLuYz0zfAzDfAvJWW6AfYlDBQyDV5DClI2m5sAmK+OIO7s59XfsRsWHp02jAJrRadPRGTt6SQ==}
@@ -9348,7 +9344,7 @@ snapshots:
 
   glob@10.4.3:
     dependencies:
-      foreground-child: 3.2.1
+      foreground-child: 3.3.1
       jackspeak: 3.4.1
       minimatch: 9.0.5
       minipass: 7.1.2
@@ -10395,8 +10391,6 @@ snapshots:
 
   long@5.3.2: {}
 
-  lru-cache@10.3.1: {}
-
   lru-cache@10.4.3: {}
 
   lru-cache@11.0.0: {}
@@ -11033,7 +11027,7 @@ snapshots:
 
   path-scurry@1.11.1:
     dependencies:
-      lru-cache: 10.3.1
+      lru-cache: 10.4.3
       minipass: 7.1.2
 
   path-scurry@2.0.0:

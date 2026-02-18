@@ -8,19 +8,19 @@ WORKDIR /workspace
 
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY packages/prisma-ts-select/package.json ./packages/prisma-ts-select/
-COPY packages/usage-v7-mysql/package.json ./packages/usage-v7-mysql/
+COPY packages/usage-mysql-v7/package.json ./packages/usage-mysql-v7/
 
 RUN --mount=type=cache,target=/root/.local/share/pnpm/store \
-    pnpm install --filter @gcm/usage-v7-mysql... --frozen-lockfile
+    pnpm install --filter @gcm/usage-mysql-v7... --frozen-lockfile
 
 COPY packages/prisma-ts-select/ ./packages/prisma-ts-select/
 COPY shared-tests/ ./shared-tests/
-COPY packages/usage-v7-mysql/ ./packages/usage-v7-mysql/
+COPY packages/usage-mysql-v7/ ./packages/usage-mysql-v7/
 
 WORKDIR /workspace/packages/prisma-ts-select
 RUN pnpm build
 
-WORKDIR /workspace/packages/usage-v7-mysql
+WORKDIR /workspace/packages/usage-mysql-v7
 RUN pnpm gen
 
 CMD ["pnpm", "test"]

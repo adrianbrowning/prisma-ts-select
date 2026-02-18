@@ -52,8 +52,8 @@ jobs:
         run: pnpm --filter prisma-ts-select build
 
       - name: Install dependencies (v6-pg)
-        working-directory: ./packages/usage-v6-pg
-        run: pnpm --filter usage-v6-pg i --no-frozen-lockfile
+        working-directory: ./packages/usage-pg-v6
+        run: pnpm --filter usage-pg-v6 i --no-frozen-lockfile
 
       - name: Wait for PostgreSQL
         run: |
@@ -68,17 +68,17 @@ jobs:
           exit 1
 
       - name: Generate Prisma client
-        working-directory: ./packages/usage-v6-pg
-        run: pnpm --filter usage-v6-pg gen
+        working-directory: ./packages/usage-pg-v6
+        run: pnpm --filter usage-pg-v6 gen
 
       - name: Reset database
-        working-directory: ./packages/usage-v6-pg
-        run: pnpm --filter usage-v6-pg p:r
+        working-directory: ./packages/usage-pg-v6
+        run: pnpm --filter usage-pg-v6 p:r
 
       - name: TypeScript check
-        working-directory: ./packages/usage-v6-pg
-        run: pnpm --filter usage-v6-pg lint:ts
+        working-directory: ./packages/usage-pg-v6
+        run: pnpm --filter usage-pg-v6 lint:ts
 
       - name: Run tests
-        working-directory: ./packages/usage-v6-pg
-        run: pnpm --filter usage-v6-pg test
+        working-directory: ./packages/usage-pg-v6
+        run: pnpm --filter usage-pg-v6 test

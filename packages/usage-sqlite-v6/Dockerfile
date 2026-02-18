@@ -10,23 +10,23 @@ COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 
 # Copy package.json files for dependency resolution
 COPY packages/prisma-ts-select/package.json ./packages/prisma-ts-select/
-COPY packages/usage-v6-sqlite/package.json ./packages/usage-v6-sqlite/
+COPY packages/usage-sqlite-v6/package.json ./packages/usage-sqlite-v6/
 
 # Install dependencies with cache mount for pnpm store
 RUN --mount=type=cache,target=/root/.local/share/pnpm/store \
-    pnpm install --filter @gcm/usage-v6-sqlite... --frozen-lockfile
+    pnpm install --filter @gcm/usage-sqlite-v6... --frozen-lockfile
 
 # Copy source code
 COPY packages/prisma-ts-select/ ./packages/prisma-ts-select/
 COPY shared-tests/ ./shared-tests/
-COPY packages/usage-v6-sqlite/ ./packages/usage-v6-sqlite/
+COPY packages/usage-sqlite-v6/ ./packages/usage-sqlite-v6/
 
 # Build generator
 WORKDIR /workspace/packages/prisma-ts-select
 RUN pnpm build
 
 # Generate Prisma client and run tests
-WORKDIR /workspace/packages/usage-v6-sqlite
+WORKDIR /workspace/packages/usage-sqlite-v6
 RUN pnpm gen
 
 CMD ["pnpm", "test"]
