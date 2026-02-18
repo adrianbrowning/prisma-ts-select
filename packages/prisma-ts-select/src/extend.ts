@@ -2375,7 +2375,7 @@ OFFSET -
 
 
 
-export default Prisma.defineExtension({
+const extendedPrimsaClient =  {
     name: "prisma-ts-select",
     client: {
         $from<const T extends TTables | `${TTables} ${string}`,
@@ -2391,4 +2391,6 @@ export default Prisma.defineExtension({
                 .from(base!.trim() as Table, (aliases.join().trim() || undefined) as TAlias)
         },
     },
-});
+};
+
+export default extendedPrimsaClient;
