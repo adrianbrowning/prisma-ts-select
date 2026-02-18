@@ -2375,7 +2375,7 @@ OFFSET -
 
 
 
-const extendedPrimsaClient =  {
+const extendedPrismaClient =  {
     name: "prisma-ts-select",
     client: {
         $from<const T extends TTables | `${TTables} ${string}`,
@@ -2393,4 +2393,4 @@ const extendedPrimsaClient =  {
     },
 };
 
-export default extendedPrimsaClient;
+export default extendedPrismaClient;
