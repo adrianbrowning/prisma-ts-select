@@ -4,10 +4,7 @@ import {match, P} from "ts-pattern";
 // Type stub for PrismaClient to avoid DTS build issues when @prisma/client isn't generated
 // The actual PrismaClient type from @prisma/client will be used at runtime via getExtensionContext
 type PrismaClient = any;
-import {sqliteDialect} from "./dialects/sqlite.js";
-import type {Dialect} from "./dialects/types.js";
-
-const dialect: Dialect = sqliteDialect;
+import {dialect} from "./dialects/index.js";
 const DB: DBType = {} as const satisfies DBType;
 
 type TDB = typeof DB;
@@ -439,7 +436,7 @@ class _fRun<TSources extends TArrSources, TFields extends TFieldsType, TSelectRT
         ) as unknown as Array<TSelectRT>;
 
         // Coerce 0/1 → false/true for Boolean fields in SQLite/MySQL
-        if (dialect.name === 'sqlite' || dialect.name === 'mysql') {
+        if (dialect.needsBooleanCoercion()) {
             return results.map(row => {
                 const coerced = { ...row };
                 for (const key in coerced) {
@@ -448,9 +445,26 @@ class _fRun<TSources extends TArrSources, TFields extends TFieldsType, TSelectRT
 
                     // Parse key to get table and column (format: "Table.column" or "column")
                     const parts = key.split('.');
-                    const [table, column] = parts.length === 2 ? parts : [this.values.tables[0]?.table, key];
+                    let table: string;
+                    let column: string;
 
-                    if (!table || !column) continue;
+                    if (parts.length === 2 && parts[0] && parts[1]) {
+                        table = parts[0];
+                        column = parts[1];
+                    } else {
+                        // No table prefix - search all tables for this column
+                        column = key;
+                        let foundTable: string | undefined;
+                        for (const tableObj of this.values.tables) {
+                            const tableName = tableObj.table;
+                            if (DB[tableName]?.fields[column]) {
+                                foundTable = tableName;
+                                break;
+                            }
+                        }
+                        if (!foundTable) continue;
+                        table = foundTable;
+                    }
 
                     // Check if field is Boolean type in schema
                     const fieldType = DB[table]?.fields[column];
@@ -459,10 +473,10 @@ class _fRun<TSources extends TArrSources, TFields extends TFieldsType, TSelectRT
                     }
                 }
                 return coerced;
-            }) as unknown as Prisma.PrismaPromise<Array<TSelectRT>>;
+            });
         }
 
-        return results as unknown as Prisma.PrismaPromise<Array<TSelectRT>>;
+        return results;
     }
 
     getTables() {
@@ -483,41 +497,42 @@ class _fRun<TSources extends TArrSources, TFields extends TFieldsType, TSelectRT
         function processConditions(condition: BasicOpTypes, formatted: boolean): string {
             const r = Object.keys(condition).map((field) => {
                 const value = condition[field];
+                const quotedField = dialect.quoteQualifiedColumn(String(field));
 
                 if (typeof value === 'object' && value !== null && !Array.isArray(value) && "op" in value) {
                     switch (value.op) {
                         case 'IN':
                         case 'NOT IN':
                             const valuesList = value.values.map(v => (typeof v === 'string' ? `'${v}'` : v)).join(", ");
-                            return `${String(field)} ${value.op} (${valuesList})`;
+                            return `${quotedField} ${value.op} (${valuesList})`;
                         case 'BETWEEN':
                             if (value.values.length > 2) throw new Error("Too many items supplied to op BETWEEN")
                             const [start, end] = value.values;
-                            return `${String(field)} BETWEEN ${typeof start === 'string' ? `'${start}'` : start} AND ${typeof end === 'string' ? `'${end}'` : end}`;
+                            return `${quotedField} BETWEEN ${typeof start === 'string' ? `'${start}'` : start} AND ${typeof end === 'string' ? `'${end}'` : end}`;
                         case 'LIKE':
                         case 'NOT LIKE':
-                            return `${String(field)} ${value.op} '${value.value}'`;
+                            return `${quotedField} ${value.op} '${value.value}'`;
                         case 'IS NULL':
                         case 'IS NOT NULL':
-                            return `${String(field)} ${value.op}`;
+                            return `${quotedField} ${value.op}`;
                         case '>':
                         case '>=':
                         case '<':
                         case '<=':
                         case '!=':
                         case '=':
-                            return `${String(field)} ${value.op} ${typeof value.value === 'string' ? `'${value.value}'` : value.value}`;
+                            return `${quotedField} ${value.op} ${typeof value.value === 'string' ? `'${value.value}'` : value.value}`;
                         default:
                             //@ts-expect-error value.op should be never
                             throw new Error(`Unsupported operation: ${value.op}`);
                     }
                 } else if (Array.isArray(value)) {
                     const valuesList = value.map(v => (typeof v === 'string' ? `'${v}'` : v)).join(", ");
-                    return `${String(field)} IN (${valuesList})`;
+                    return `${quotedField} IN (${valuesList})`;
                 } else if (value === null) {
-                    return `${String(field)} IS NULL`;
+                    return `${quotedField} IS NULL`;
                 } else {
-                    return `${String(field)} = ${typeof value === 'string' ? `'${value}'` : value}`;
+                    return `${quotedField} = ${typeof value === 'string' ? `'${value}'` : value}`;
                 }
             });
 
@@ -591,9 +606,10 @@ class _fRun<TSources extends TArrSources, TFields extends TFieldsType, TSelectRT
 
         const [base, ...joins] = this.values.tables;
 
+        const quotedTable = dialect.quoteTableIdentifier(base.table, false);
         const baseTable = base.alias
-            ? `${base.table} AS ${dialect.quote(base.alias)}`
-            : base.table;
+            ? `${quotedTable} AS ${dialect.quoteTableIdentifier(base.alias, true)}`
+            : quotedTable;
 
 
 
@@ -613,12 +629,15 @@ class _fRun<TSources extends TArrSources, TFields extends TFieldsType, TSelectRT
                                          alias
                                      }) => {
                 const tLocal = (alias || table) + "." + local;
-                return `JOIN ${!!alias ? (table + " AS " + dialect.quote(alias)) : table} ON ${tLocal} = ${remote}`;
+                const quotedTable = dialect.quoteTableIdentifier(table, false);
+                const quotedLocal = dialect.quoteQualifiedColumn(tLocal);
+                const quotedRemote = dialect.quoteQualifiedColumn(remote);
+                return `JOIN ${alias ? `${quotedTable} AS ${dialect.quoteTableIdentifier(alias, true)}` : quotedTable} ON ${quotedLocal} = ${quotedRemote}`;
             }).join(formatted ? "\n" : " ") ?? "",
             !whereClause ? "" : `WHERE ${whereClause}`,
-            !this.values.groupBy?.length ? "" : `GROUP BY ${this.values.groupBy.join(', ')}`,
+            !this.values.groupBy?.length ? "" : `GROUP BY ${this.values.groupBy.map(g => dialect.quoteQualifiedColumn(g)).join(', ')}`,
             !havingClause ? "" : `HAVING ${havingClause}`,
-            !(this.values.orderBy && this.values.orderBy.length > 0) ? "" : "ORDER BY " + this.values.orderBy.join(', '),
+            !(this.values.orderBy && this.values.orderBy.length > 0) ? "" : "ORDER BY " + this.values.orderBy.map(o => dialect.quoteOrderByClause(o)).join(', '),
             !this.values.limit ? "" : `LIMIT ${this.values.limit}`,
             !this.values.offset ? "" : `OFFSET ${this.values.offset}`
         ]
@@ -982,13 +1001,11 @@ class _fSelect<TSources extends TArrSources, TFields extends TFieldsType, TSelec
 
                 const expandedSelects = Object.keys(tableFields.fields).map((field) => {
                     if (hasMultipleTables) {
-                        // Only quote table names for PostgreSQL, not aliases
-                        const tableIdentifier = (dialect.name === 'postgresql' && !tableObject.alias)
-                            ? dialect.quote(tableName)
-                            : tableName;
-                        return `${tableIdentifier}.${field} AS ${dialect.quote(`${tableName}.${field}`)}`;
+                        const tableIdentifier = tableObject.alias || tableName;
+                        const qualifiedCol = `${tableIdentifier}.${field}`;
+                        return `${dialect.quoteQualifiedColumn(qualifiedCol)} AS ${dialect.quote(`${tableName}.${field}`, true)}`;
                     }
-                    return `${field}`;
+                    return field === "*" ? "*" : dialect.quote(field, false);
                 });
 
                 return new _fSelect<TSources, TFields, Prettify<TSelectRT & MergeItems<TSelect, /*TablesArray2Name<TSources>*/TSources, TFields>>>(this.db, {
@@ -1017,12 +1034,12 @@ class _fSelect<TSources extends TArrSources, TFields extends TFieldsType, TSelec
                 if (currentTablesWithFields[colName] > 1) {
                     return new _fSelect(this.db, {
                         ...this.values,
-                        selects: [...this.values.selects, `${select} AS ${dialect.quote(select)}`]
+                        selects: [...this.values.selects, `${dialect.quoteQualifiedColumn(select)} AS ${dialect.quote(select, true)}`]
                     }) as any;
                 } else {
                     return new _fSelect(this.db, {
                         ...this.values,
-                        selects: [...this.values.selects, `${colName}`]
+                        selects: [...this.values.selects, dialect.quote(colName, false)]
                     }) as any;
                 }
             }
@@ -1030,15 +1047,26 @@ class _fSelect<TSources extends TArrSources, TFields extends TFieldsType, TSelec
 
         // Check if alias is provided
         if (alias !== undefined) {
+            const quotedSelect = select === "*"
+                ? "*"
+                : select.includes('.')
+                    ? dialect.quoteQualifiedColumn(select)
+                    : dialect.quote(select, false);
             return new _fSelect(this.db, {
                 ...this.values,
-                selects: [...this.values.selects, `${select} AS ${dialect.quote(alias)}`]
+                selects: [...this.values.selects, `${quotedSelect} AS ${dialect.quote(alias, true)}`]
             }) as any;
         }
 
+        // Default: quote based on whether it's qualified or not
+        const quotedSelect = select === "*"
+            ? "*"
+            : select.includes('.')
+                ? dialect.quoteQualifiedColumn(select)
+                : dialect.quote(select, false);
         return new _fSelect<TSources, TFields, Prettify<TSelectRT & MergeItems<TSelect, /*TablesArray2Name<TSources>*/TSources, TFields>>>(this.db, {
             ...this.values,
-            selects: [...this.values.selects, select]
+            selects: [...this.values.selects, quotedSelect]
         }) as any;
     }
 }
@@ -1078,18 +1106,14 @@ class _fSelectDistinct<TSources extends TArrSources, TFields extends TFieldsType
                     const tableIdentifier = tableObj.alias || tableObj.table;
                     const actualTable = tableObj.table;
 
-                    // Only quote table names for PostgreSQL when not using alias
-                    const quotedIdentifier = (dialect.name === 'postgresql' && !tableObj.alias)
-                        ? dialect.quote(tableIdentifier)
-                        : tableIdentifier;
-
-                    return acc.concat(Object.keys(DB[actualTable]!.fields).map((field) =>
-                        `${quotedIdentifier}.${field} AS ${dialect.quote(`${tableIdentifier}.${field}`)}`
-                    ))
+                    return acc.concat(Object.keys(DB[actualTable]!.fields).map((field) => {
+                        const qualifiedCol = `${tableIdentifier}.${field}`;
+                        return `${dialect.quoteQualifiedColumn(qualifiedCol)} AS ${dialect.quote(`${tableIdentifier}.${field}`, true)}`;
+                    }))
                 }, []);
             }
             //TODO review `!`
-            return Object.keys(DB[values.tables[0].table]!.fields);
+            return Object.keys(DB[values.tables[0].table]!.fields).map(field => dialect.quote(field, false));
         }(this.values))
 
         return new _fOrderBy<TSources, TFields, MergeItems<"*", /*TablesArray2Name<TSources>*/TSources, TFields, TableCount extends 1 ? false : true>>(this.db, {
@@ -1113,11 +1137,16 @@ LIMIT - the returned data is limited to row count.
 OFFSET -
 */
 
-class _fHaving<TSources extends TArrSources, TFields extends TFieldsType> extends _fSelectDistinct<TSources, TFields> {
+class _fHaving<TSources extends TArrSources, TFields extends TFieldsType> extends _fSelect<TSources, TFields> {
+    // Keep selectDistinct() available after groupBy(), but not selectAll()
+    selectDistinct() {
+        return new _fSelect<TSources, TFields>(this.db, {...this.values, selectDistinct: true});
+    }
+
     // TODO Allowed Fields
     //  - specified in groupBy
     having<const TCriteria extends WhereCriteria<TSources, TFields>>(criteria: TCriteria) {
-        return new _fSelectDistinct<TSources, TFields>(this.db, {
+        return new _fSelect<TSources, TFields>(this.db, {
             ...this.values,
             having: [criteria]
         });
@@ -1133,7 +1162,15 @@ LIMIT - the returned data is limited to row count.
 OFFSET -
 */
 
-class _fGroupBy<TSources extends TArrSources, TFields extends TFieldsType> extends _fHaving<TSources, TFields> {
+class _fGroupBy<TSources extends TArrSources, TFields extends TFieldsType> extends _fSelectDistinct<TSources, TFields> {
+
+    // having() method for queries without GROUP BY - allows selectAll()
+    having<const TCriteria extends WhereCriteria<TSources, TFields>>(criteria: TCriteria) {
+        return new _fSelectDistinct<TSources, TFields>(this.db, {
+            ...this.values,
+            having: [criteria]
+        });
+    }
 
     //TODO this should only accept columns for tables in play
     groupBy<TSelect extends GetOtherColumns<TSources>>(groupBy: Array<TSelect>) {
@@ -2338,7 +2375,7 @@ OFFSET -
 
 
 
-export default Prisma.defineExtension({
+const extendedPrismaClient =  {
     name: "prisma-ts-select",
     client: {
         $from<const T extends TTables | `${TTables} ${string}`,
@@ -2354,4 +2391,6 @@ export default Prisma.defineExtension({
                 .from(base!.trim() as Table, (aliases.join().trim() || undefined) as TAlias)
         },
     },
-});
+};
+
+export default extendedPrismaClient;

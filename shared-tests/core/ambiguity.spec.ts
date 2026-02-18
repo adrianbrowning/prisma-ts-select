@@ -1,8 +1,12 @@
-import {describe, test, before} from "node:test";
+import {describe, test} from "node:test";
 import assert from "node:assert/strict";
 import {type Equal, type Expect, type Prettify, typeCheck} from "../utils.ts";
 import type {PostRow, UserPostJoinRow, UserPostQualifiedJoinRow, UserRow, UserRowQualified} from "../types.js";
+import { expectSQL } from "../test-utils.ts";
 import { prisma } from '#client';
+import {dialect} from "#dialect";
+
+
 
 // Database is seeded via `pnpm p:r` which runs before all tests
 describe("Ambiguous column detection", () => {
@@ -16,9 +20,9 @@ describe("Ambiguous column detection", () => {
             const result = await query.run();
             typeCheck({} as Expect<Equal<typeof result, Array<Pick<UserRow, "id" | "email">>>>);
 
-            assert.strictEqual(
+            expectSQL(
                 query.getSQL(),
-                "SELECT id, email FROM User;"
+                `SELECT ${dialect.quote("id")}, ${dialect.quote("email")} FROM ${dialect.quote("User")};`
             );
         });
 
@@ -30,9 +34,9 @@ describe("Ambiguous column detection", () => {
             const result = await query.run();
             typeCheck({} as Expect<Equal<typeof result, Array<Pick<UserRow, "id" | "email">>>>);
 
-            assert.strictEqual(
+            expectSQL(
                 query.getSQL(),
-                "SELECT id, email FROM User;"
+                `SELECT ${dialect.quote("id")}, ${dialect.quote("email")} FROM ${dialect.quote("User")};`
             );
         });
     });
@@ -46,9 +50,9 @@ describe("Ambiguous column detection", () => {
             const result = await query.run();
             typeCheck({} as Expect<Equal<typeof result, Array<Pick<UserRow, "email">>>>);
 
-            assert.strictEqual(
+            expectSQL(
                 query.getSQL(),
-                "SELECT email FROM User JOIN Post ON Post.authorId = User.id;"
+                `SELECT ${dialect.quote("email")} FROM ${dialect.quote("User")} JOIN ${dialect.quote("Post")} ON ${dialect.quoteQualifiedColumn("Post.authorId")} = ${dialect.quoteQualifiedColumn("User.id")};`
             );
         });
 
@@ -61,9 +65,9 @@ describe("Ambiguous column detection", () => {
                 const result = await query.run();
                 typeCheck({} as Expect<Equal<typeof result, Array<Pick<UserPostJoinRow, "email"| "title">>>>);
             }
-            assert.strictEqual(
+            expectSQL(
                 query.getSQL(),
-                "SELECT email, title FROM User JOIN Post ON Post.authorId = User.id;"
+                `SELECT ${dialect.quote("email")}, ${dialect.quote("title")} FROM ${dialect.quote("User")} JOIN ${dialect.quote("Post")} ON ${dialect.quoteQualifiedColumn("Post.authorId")} = ${dialect.quoteQualifiedColumn("User.id")};`
             );
         });
     });
@@ -101,9 +105,9 @@ describe("Ambiguous column detection", () => {
                     postId: PostRow['id']
                 }>>>);
             }
-            assert.strictEqual(
+            expectSQL(
                 query.getSQL(),
-                "SELECT User.id AS `User.id`, Post.id AS `postId` FROM User JOIN Post ON Post.authorId = User.id;"
+                `SELECT ${dialect.quoteQualifiedColumn("User.id")} AS ${dialect.quote("User.id", true)}, ${dialect.quoteQualifiedColumn("Post.id")} AS ${dialect.quote("postId", true)} FROM ${dialect.quote("User")} JOIN ${dialect.quote("Post")} ON ${dialect.quoteQualifiedColumn("Post.authorId")} = ${dialect.quoteQualifiedColumn("User.id")};`
             );
         });
 
@@ -160,9 +164,9 @@ describe("Ambiguous column detection", () => {
                 postId: PostRow['id']
             }>>>);
 
-            assert.strictEqual(
+            expectSQL(
                 query.getSQL(),
-                "SELECT u.id AS `userId`, p.id AS `postId` FROM User AS `u` JOIN Post AS `p` ON p.authorId = u.id;"
+                `SELECT ${dialect.quoteQualifiedColumn("u.id")} AS ${dialect.quote("userId", true)}, ${dialect.quoteQualifiedColumn("p.id")} AS ${dialect.quote("postId", true)} FROM ${dialect.quote("User")} AS ${dialect.quote("u", true)} JOIN ${dialect.quote("Post")} AS ${dialect.quote("p", true)} ON ${dialect.quoteQualifiedColumn("p.authorId")} = ${dialect.quoteQualifiedColumn("u.id")};`
             );
         });
     });

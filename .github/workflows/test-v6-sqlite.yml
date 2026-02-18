@@ -30,28 +30,28 @@ jobs:
           key: ${{ runner.os }}-node-${{ matrix.node }}-v6-sqlite-${{ hashFiles('**/pnpm-lock.yaml') }}
 
       - name: Install dependencies
-        run: pnpm i --no-frozen-lockfile
+        run: pnpm --filter prisma-ts-select i --no-frozen-lockfile
 
       - name: Build prisma-ts-select
         working-directory: ./packages/prisma-ts-select
-        run: pnpm exec tsup
+        run: pnpm --filter prisma-ts-select build
 
       - name: Install dependencies (v6-sqlite)
-        working-directory: ./packages/usage-v6-sqlite
-        run: pnpm i --no-frozen-lockfile
+        working-directory: ./packages/usage-sqlite-v6
+        run: pnpm --filter usage-sqlite-v6 i --no-frozen-lockfile
 
       - name: Generate Prisma client
-        working-directory: ./packages/usage-v6-sqlite
-        run: pnpm exec prisma generate
+        working-directory: ./packages/usage-sqlite-v6
+        run: pnpm --filter usage-sqlite-v6 gen
 
       - name: Reset database
-        working-directory: ./packages/usage-v6-sqlite
-        run: pnpm p:r
+        working-directory: ./packages/usage-sqlite-v6
+        run: pnpm --filter usage-sqlite-v6 p:r
 
       - name: TypeScript check
-        working-directory: ./packages/usage-v6-sqlite
-        run: pnpm test:ts
+        working-directory: ./packages/usage-sqlite-v6
+        run: pnpm --filter usage-sqlite-v6 lint:ts
 
       - name: Run tests
-        working-directory: ./packages/usage-v6-sqlite
-        run: pnpm test
+        working-directory: ./packages/usage-sqlite-v6
+        run: pnpm --filter usage-sqlite-v6 test

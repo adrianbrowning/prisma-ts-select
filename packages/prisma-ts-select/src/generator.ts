@@ -25,12 +25,21 @@ generatorHandler({
   onManifest() {
     logger.info(`${GENERATOR_NAME}:Registered`);
     return {
-      defaultOutput: '../generated',
+      defaultOutput: '',
       prettyName: GENERATOR_NAME,
     }
   },
   onGenerate: async (options: GeneratorOptions) => {
     const provider = options.datasources[0]?.provider;
+    const output = options.generator.output?.value;
+
+    if(!output) throw new Error(`${GENERATOR_NAME}: No output directory found. Please add an output directory to your schema.prisma file.`)
+
+    const outputPath = path.resolve(output);
+
+    fs.mkdirSync(outputPath, { recursive: true });
+
+    console.log(`${GENERATOR_NAME}: Generating to ${outputPath}`);
 
     const validDS = options
         .datasources
@@ -58,7 +67,6 @@ generatorHandler({
         relations: {},
       } as InnerOutType);
 
-      // if (model.name === "MFId_Post") debugger;
 
       for (const field of model.fields) {
         if (field.kind !== "object") {
@@ -89,7 +97,6 @@ generatorHandler({
 
             if (!isManyToManyRelationShip(field)) continue;
 
-            debugger;
             const joinTableName = "_"+field.relationName;
 
             const joinTableModel = acc[joinTableName] = acc[joinTableName] ?? ({
@@ -118,62 +125,6 @@ generatorHandler({
             const m = modelObj.relations[joinTableName] = modelObj.relations[joinTableName] ?? {};
             const mf = m[idName] = m[idName] ?? [];
             mf.push(abJoin);
-
-            // TODO
-            // const fieldObj = modelObj.relations[joinTableName] = modelObj.relations[joinTableName] ?? {};
-            //
-            // fieldObj[relationFromField] = fieldObj[relationFromField] || [];
-            // fieldObj[relationFromField].push(relationToField);
-            //
-            // const accModel = acc[field.type] = acc[field.type] ?? ({} as InnerOutType);
-            // const accModelRelations = accModel.relations = accModel.relations ?? {};
-            // const accModelRelationToModel = accModelRelations[model.name] = accModelRelations[model.name] ?? {};
-            // const relationFromFieldList = accModelRelationToModel[relationToField] = accModelRelationToModel[relationToField] ?? [];
-            // relationFromFieldList.push(relationFromField);
-
-            // if(model.name === "User") debugger;
-
-            /*let relationString = "";
-            if (!modelToId[model.name]) {
-              for (const f of model.fields) {
-                if (f.isId) {
-                  modelToId[model.name] = f.name;
-                  break;
-                }
-              }
-            }
-            const localId = modelToId[model.name];
-            if (!localId) {
-              logger.info(`Skipping MF: ${model.name}.${field.name} [${field.relationName}]`);
-              continue;
-            }
-            if (!localId) throw new Error(`Local: Unable to find @id field for model, ${model.name}`);
-            // relationString += localId + ".";
-            const abJoin = [field.type.toLowerCase(), model.name.toLowerCase()].sort().indexOf(field.type.toLowerCase()) === 0 ? "A" : "B";
-            relationString +=  abJoin + "._" + field.relationName + "." + (abJoin === "A" ? "B" : "A") + ".";
-
-            if (!modelToId[field.type]) {
-              for (const m of options.dmmf.datamodel.models) {
-                if (m.name !== field.type) continue;
-                for (const f of m.fields) {
-                  if (f.isId) {
-                    modelToId[m.name] = f.name;
-                    break;
-                  }
-                }
-              }
-            }
-            const remoteId = modelToId[field.type];
-            if (!remoteId) {
-              logger.info(`Skipping FM:  ${model.name}.${field.name} > ${field.type}  [${field.relationName}] -> ${relationString}`);
-              continue;
-            }
-            if (!remoteId) throw new Error(`Remote: Unable to find @id field for model, ${field.type}`);
-            relationString += remoteId;
-
-            const fieldObj = modelObj.relations[field.type] = modelObj.relations[field.type] ?? {};
-            fieldObj[localId] = fieldObj[localId] || [];
-            fieldObj[localId].push(relationString);*/
           }
 
         }
@@ -187,74 +138,49 @@ generatorHandler({
     logger.info("pTSSelPath", pTSSelPath);
 
     const srcDir = path.join(pTSSelPath, "extend");
-    const outDir = path.join(pTSSelPath, "..", "built");
+    // const outDir = path.join(pTSSelPath, "..", "built");
 
-    // Copy dialect files
-    const dialectFiles = ["types.js", "shared.js", "sqlite.js", "mysql.js", "postgresql.js", "index.js"];
-    const dialectOutDir = path.join(outDir, "dialects");
-    if (!fs.existsSync(dialectOutDir)) {
-      fs.mkdirSync(dialectOutDir, {recursive: true});
-    }
-    for (const file of dialectFiles) {
-      const src = path.join(pTSSelPath, "extend", "dialects", file);
-      const dest = path.join(dialectOutDir, file);
-      if (fs.existsSync(src)) {
-        fs.copyFileSync(src, dest);
+    // Copy dialect files - both .js and .d.ts for types, shared, and provider-specific
+    const dialectFiles = ["types", "shared", provider];
+    const dialectOutDir = path.join(outputPath, "dialects");
+    fs.mkdirSync(dialectOutDir, {recursive: true});
+
+    for (const baseName of dialectFiles) {
+      for (const ext of ['.js', '.d.ts']) {
+        const src = path.join(pTSSelPath, "extend", "dialects", `${baseName}${ext}`);
+        const dest = path.join(dialectOutDir, `${baseName}${ext}`);
+        if (fs.existsSync(src)) {
+          fs.copyFileSync(src, dest);
+        }
       }
     }
 
-    { //mjs
-      const file = "extend.js";
-      const contents = fs.readFileSync(path.join(srcDir, file), {encoding: "utf-8"});
+    // Generate dialects/index.js that exports the correct dialect
+    const dialectIndexJs = `export { ${provider}Dialect as dialect } from './${provider}.js';\n`;
+    fs.writeFileSync(path.join(dialectOutDir, "index.js"), dialectIndexJs);
 
-      writeFileSafely(path.join(outDir, file),
-          contents
-              .replace(
-                  "import { sqliteDialect } from './dialects/sqlite.js';",
-                  `import { ${provider}Dialect } from './dialects/${provider}.js';`
-              )
-              .replace("const dialect = sqliteDialect;", `const dialect = ${provider}Dialect;`)
-              .replace("const DB = {};", `const DB = ${JSON.stringify(models, null, 2)};`));
-    }
+    // Generate dialects/index.d.ts with proper type exports
+    const dialectIndexDts = `export { type Dialect, type FunctionRegistry, SUPPORTED_PROVIDERS, type SupportedProvider } from './types.js';
+export { sharedFunctions } from './shared.js';
+export { ${provider}Dialect as dialect, ${provider}Dialect } from './${provider}.js';
+`;
+    fs.writeFileSync(path.join(dialectOutDir, "index.d.ts"), dialectIndexDts);
 
-    { //cjs
-      const file = "extend.cjs";
-      const contents = fs.readFileSync(path.join(srcDir, file), {encoding: "utf-8"});
-
-      writeFileSafely(path.join(outDir, file),
-          contents
-              .replace(
-                  'const { sqliteDialect } = require("./dialects/sqlite.cjs");',
-                  `const { ${provider}Dialect } = require("./dialects/${provider}.cjs");`
-              )
-              .replace("const dialect = sqliteDialect;", `const dialect = ${provider}Dialect;`)
-              .replace("const DB = {};", `const DB = ${JSON.stringify(models, null, 2)};`));
-    }
-
-
-    // await writeFileSafely(path.join(pTSSelPath,"generator-build","db.d.ts"), `export const DB = ${JSON.stringify(models, null, 2)} as const satisfies Record<string, { fields: Record<string, string>; relations: Record<string, Record<string, Array<string>>> }>`+";");
+    // Copy extend.js and inject DB model (ESM-only)
+    const extendContents = fs.readFileSync(path.join(srcDir, 'extend.js'), {encoding: 'utf-8'});
+    writeFileSafely(
+      path.join(outputPath, 'extend.js'),
+      extendContents.replace('var DB = {};', `var DB = ${JSON.stringify(models, null, 2)};`)
+    );
 
     const declaration = generateReadonlyDeclaration(models);
 
-    { //d.ts
-      const file = "extend.d.ts";
-      const contents = fs.readFileSync(path.join(srcDir, file), {encoding: "utf-8"});
-
-      writeFileSafely(path.join(outDir, file),
-          contents
-              .replace("declare const DB: DBType;",declaration)
-      );
-    }
-
-    { //d.ts
-      const file = "extend.d.cts";
-      const contents = fs.readFileSync(path.join(srcDir, file), {encoding: "utf-8"});
-
-      writeFileSafely(path.join(outDir, file),
-          contents
-              .replace("declare const DB: DBType;",declaration)
-      );
-    }
+    // Copy extend.d.ts and inject DB model (ESM-only)
+    const extendDts = fs.readFileSync(path.join(srcDir, 'extend.d.ts'), {encoding: 'utf-8'});
+    writeFileSafely(
+      path.join(outputPath, 'extend.d.ts'),
+      extendDts.replace('declare const DB: DBType;', declaration)
+    );
     function isManyToManyRelationShip(field: DMMF.Field): boolean {
       if (!(field.kind === "object" && field.isList)) return false;
       const {type, relationName} = field;

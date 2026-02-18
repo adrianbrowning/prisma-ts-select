@@ -35,7 +35,7 @@ services:
   test-v6-sqlite:
     build:
       context: .
-      dockerfile: packages/usage-v6-sqlite/Dockerfile
+      dockerfile: packages/usage-sqlite-v6/Dockerfile
     image: prisma-ts-select-v6-sqlite:latest
     environment:
       PRISMA_PROVIDER: sqlite
@@ -46,7 +46,7 @@ services:
   test-v6-mysql:
     build:
       context: .
-      dockerfile: packages/usage-v6-mysql/Dockerfile
+      dockerfile: packages/usage-mysql-v6/Dockerfile
     image: prisma-ts-select-v6-mysql:latest
     environment:
       PRISMA_PROVIDER: mysql
@@ -60,7 +60,7 @@ services:
   test-v6-pg:
     build:
       context: .
-      dockerfile: packages/usage-v6-pg/Dockerfile
+      dockerfile: packages/usage-pg-v6/Dockerfile
     image: prisma-ts-select-v6-pg:latest
     environment:
       PRISMA_PROVIDER: postgresql
@@ -75,7 +75,7 @@ services:
   test-v7-sqlite:
     build:
       context: .
-      dockerfile: packages/usage-v7-sqlite/Dockerfile
+      dockerfile: packages/usage-sqlite-v7/Dockerfile
     image: prisma-ts-select-v7-sqlite:latest
     environment:
       PRISMA_PROVIDER: sqlite
@@ -86,7 +86,7 @@ services:
   test-v7-mysql:
     build:
       context: .
-      dockerfile: packages/usage-v7-mysql/Dockerfile
+      dockerfile: packages/usage-mysql-v7/Dockerfile
     image: prisma-ts-select-v7-mysql:latest
     environment:
       PRISMA_PROVIDER: mysql
@@ -100,7 +100,7 @@ services:
   test-v7-pg:
     build:
       context: .
-      dockerfile: packages/usage-v7-pg/Dockerfile
+      dockerfile: packages/usage-pg-v7/Dockerfile
     image: prisma-ts-select-v7-pg:latest
     environment:
       PRISMA_PROVIDER: postgresql

@@ -10,18 +10,9 @@
   "types": "./dist/generator.d.cts",
   "exports": {
     "./extend": {
-      "import": {
-        "import": "./built/extend.js",
-        "require": "./built/extend.js",
-        "default": "./built/extend.js",
-        "types": "./built/extend.d.ts"
-      },
-      "require": {
-        "import": "./built/extend.cjs",
-        "require": "./built/extend.cjs",
-        "default": "./built/extend.cjs",
-        "types": "./built/extend.d.cts"
-      }
+      "types": "./dist/extend/extend.d.ts",
+      "import": "./dist/extend/extend.js",
+      "default": "./dist/extend/extend.js"
     },
     ".": {
       "import": {
@@ -52,7 +43,7 @@
     "p:dbp": "pnpm exec prisma db push",
     "p:migrate": "pnpm exec prisma migrate dev",
     "p:update": "pnpm add -D prisma@latest && pnpm add @prisma/client@latest",
-    "test": "echo 'TODO call package/usage'",
+    "test": "node --test tests/**/*.spec.ts",
     "test:jest": "jest",
     "2postinstall": "node src/scripts/postinstall.js",
     "doc": "pnpm exec markdown-toc -i README.md",
@@ -120,7 +111,7 @@
     "ts-jest": "27.1.4",
     "tsup": "^8.1.0",
     "tsx": "^4.16.0",
-    "typescript": "^5.5.3"
+    "typescript": "^5.9.3"
   },
   "keywords": [
     "prisma",
@@ -177,7 +168,6 @@
   },
   "files": [
     "./dist",
-    "./built",
     "./assets",
     "README.md",
     "package.json"

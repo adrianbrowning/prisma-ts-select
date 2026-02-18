@@ -9,10 +9,27 @@ import {sharedFunctions} from "./shared.js";
  */
 export const mysqlDialect: Dialect = {
   name: "mysql",
-  quote: (id: string) => `\`${id}\``,
+  //@ts-expect-error isAlias currently unused
+  quote: (id, isAlias) => `\`${id}\``,
   functions: {
     ...sharedFunctions,
-    CONCAT: (...args: string[]) => `CONCAT(${args.join(", ")})`,
-    GROUP_CONCAT: (...args: string[]) => `GROUP_CONCAT(${args.join(", ")})`,
+    CONCAT: (...args) => `CONCAT(${args.join(", ")})`,
+    GROUP_CONCAT: (...args) => `GROUP_CONCAT(${args.join(", ")})`,
+  },
+  needsBooleanCoercion: () => true,
+  quoteTableIdentifier: (name, _isAlias) => `\`${name}\``,
+  quoteQualifiedColumn: (ref) => {
+    if (!ref.includes('.')) return `\`${ref}\``;
+    const [table, col] = ref.split('.', 2);
+    return `\`${table}\`.\`${col}\``;
+  },
+  quoteOrderByClause: (clause) => {
+    const parts = clause.trim().split(/\s+/);
+    const colRef = parts[0] ?? '';
+    const suffix = parts.slice(1).join(' ');
+    const quoted = colRef.includes('.')
+      ? (() => { const [table, col] = colRef.split('.', 2); return `\`${table}\`.\`${col}\``; })()
+      : `\`${colRef}\``;
+    return suffix ? `${quoted} ${suffix}` : quoted;
   },
 };

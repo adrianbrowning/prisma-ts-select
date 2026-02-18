@@ -30,28 +30,46 @@ jobs:
           key: ${{ runner.os }}-node-${{ matrix.node }}-v7-sqlite-${{ hashFiles('**/pnpm-lock.yaml') }}
 
       - name: Install dependencies
-        run: pnpm i --no-frozen-lockfile
+        run: pnpm --filter prisma-ts-select i --no-frozen-lockfile
 
       - name: Build prisma-ts-select
         working-directory: ./packages/prisma-ts-select
-        run: pnpm exec tsup
+        run: pnpm --filter prisma-ts-select build
 
       - name: Install dependencies (v7-sqlite)
-        working-directory: ./packages/usage-v7-sqlite
-        run: pnpm i --no-frozen-lockfile
+        working-directory: ./packages/usage-sqlite-v7
+        run: pnpm --filter usage-sqlite-v7 i --no-frozen-lockfile
 
       - name: Generate Prisma client
-        working-directory: ./packages/usage-v7-sqlite
-        run: pnpm exec prisma generate
+        working-directory: ./packages/usage-sqlite-v7
+        run: pnpm --filter usage-sqlite-v7 gen
+
+      - name: Debug TypeScript environment
+        working-directory: ./packages/usage-sqlite-v7
+        run: |
+          echo "=== Generated files ==="
+          ls -la generated/prisma-ts-select/ | head -20
+          echo ""
+          echo "=== extend.d.ts header ==="
+          head -30 generated/prisma-ts-select/extend.d.ts
+          echo ""
+          echo "=== extend.js header ==="
+          head -10 generated/prisma-ts-select/extend.js
+          echo ""
+          echo "=== TypeScript config ==="
+          pnpm tsc --showConfig | head -50
+          echo ""
+          echo "=== TypeScript version ==="
+          pnpm tsc --version
 
       - name: Reset database
-        working-directory: ./packages/usage-v7-sqlite
-        run: pnpm p:r
+        working-directory: ./packages/usage-sqlite-v7
+        run: pnpm --filter usage-sqlite-v7 p:r
 
       - name: TypeScript check
-        working-directory: ./packages/usage-v7-sqlite
-        run: pnpm test:ts
+        working-directory: ./packages/usage-sqlite-v7
+        run: pnpm --filter usage-sqlite-v7 lint:ts
 
       - name: Run tests
-        working-directory: ./packages/usage-v7-sqlite
-        run: pnpm test
+        working-directory: ./packages/usage-sqlite-v7
+        run: pnpm --filter usage-sqlite-v7 test

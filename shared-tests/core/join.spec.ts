@@ -1,9 +1,11 @@
 import assert from "node:assert/strict"
-import { describe, test, before } from "node:test"
-import type {SafeJoins} from '@gcm/prisma-ts-select/extend'
+import { describe, test } from "node:test"
+import type {SafeJoins} from '#extend'
 import type {Equal, Expect, GetUnionOfRelations, Prettify, TestUnion} from "../utils.ts";
 import { typeCheck} from "../utils.ts";
+import { expectSQL } from "../test-utils.ts";
 import { prisma } from '#client';
+import { dialect } from '#dialect';
 
 // Database is seeded via `pnpm p:r` which runs before all tests
 describe("join", () => {
@@ -14,7 +16,7 @@ describe("join", () => {
             const query = prisma.$from("User")
                 .join("Post", "authorId", "User.id");
 
-            assert.equal(query.getSQL(), "FROM User JOIN Post ON Post.authorId = User.id;");
+            expectSQL(query.getSQL(), `FROM ${dialect.quote("User")} JOIN ${dialect.quote("Post")} ON ${dialect.quoteQualifiedColumn("Post.authorId")} = ${dialect.quoteQualifiedColumn("User.id")};`);
 
             // Verify join returns actual data
             const result = await query.select("User.name").select("Post.title").run();
@@ -39,7 +41,7 @@ describe("join", () => {
                 .join("User", "id", "LikedPosts.authorId")
                 .join("Post", "authorId", "User.id")
                 .getSQL();
-            assert.equal(sql, "FROM LikedPosts JOIN User ON User.id = LikedPosts.authorId JOIN Post ON Post.authorId = User.id;");
+            expectSQL(sql, `FROM ${dialect.quote("LikedPosts")} JOIN ${dialect.quote("User")} ON ${dialect.quoteQualifiedColumn("User.id")} = ${dialect.quoteQualifiedColumn("LikedPosts.authorId")} JOIN ${dialect.quote("Post")} ON ${dialect.quoteQualifiedColumn("Post.authorId")} = ${dialect.quoteQualifiedColumn("User.id")};`);
         }
 
         prisma.$from("LikedPosts")
@@ -51,7 +53,7 @@ describe("join", () => {
             .join("Post", "id", "LikedPosts.postId")
             .join("User", "id", "Post.authorId")
             .getSQL();
-            assert.equal(sql, "FROM LikedPosts JOIN Post ON Post.id = LikedPosts.postId JOIN User ON User.id = Post.authorId;");
+            expectSQL(sql, `FROM ${dialect.quote("LikedPosts")} JOIN ${dialect.quote("Post")} ON ${dialect.quoteQualifiedColumn("Post.id")} = ${dialect.quoteQualifiedColumn("LikedPosts.postId")} JOIN ${dialect.quote("User")} ON ${dialect.quoteQualifiedColumn("User.id")} = ${dialect.quoteQualifiedColumn("Post.authorId")};`);
 
         }
 
@@ -131,7 +133,7 @@ describe("join", () => {
             const sql = prisma.$from("User")
                 .joinUnsafeTypeEnforced("Post", "id", "User.id")
                 .getSQL();
-            assert.equal(sql, "FROM User JOIN Post ON Post.id = User.id;");
+            expectSQL(sql, `FROM ${dialect.quote("User")} JOIN ${dialect.quote("Post")} ON ${dialect.quoteQualifiedColumn("Post.id")} = ${dialect.quoteQualifiedColumn("User.id")};`);
         }
 
         {
@@ -139,7 +141,7 @@ describe("join", () => {
                 .joinUnsafeTypeEnforced("Post", "authorId", "Post.lastModifiedById")
                 .joinUnsafeTypeEnforced("PostsImages", "id", "Post.id")
                 .getSQL();
-            assert.equal(sql, "FROM User JOIN Post ON Post.authorId = Post.lastModifiedById JOIN PostsImages ON PostsImages.id = Post.id;");
+            expectSQL(sql, `FROM ${dialect.quote("User")} JOIN ${dialect.quote("Post")} ON ${dialect.quoteQualifiedColumn("Post.authorId")} = ${dialect.quoteQualifiedColumn("Post.lastModifiedById")} JOIN ${dialect.quote("PostsImages")} ON ${dialect.quoteQualifiedColumn("PostsImages.id")} = ${dialect.quoteQualifiedColumn("Post.id")};`);
         }
 
 
@@ -155,7 +157,7 @@ describe("join", () => {
             const sql = prisma.$from("User")
                 .joinUnsafeIgnoreType("Post", "id", "User.email")
                 .getSQL();
-            assert.equal(sql, "FROM User JOIN Post ON Post.id = User.email;");
+            expectSQL(sql, `FROM ${dialect.quote("User")} JOIN ${dialect.quote("Post")} ON ${dialect.quoteQualifiedColumn("Post.id")} = ${dialect.quoteQualifiedColumn("User.email")};`);
         }
 
         {
@@ -163,7 +165,7 @@ describe("join", () => {
                 .joinUnsafeIgnoreType("Post", "authorId", "User.email")
                 .joinUnsafeIgnoreType("PostsImages", "id", "Post.published")
                 .getSQL();
-            assert.equal(sql, "FROM User JOIN Post ON Post.authorId = User.email JOIN PostsImages ON PostsImages.id = Post.published;");
+            expectSQL(sql, `FROM ${dialect.quote("User")} JOIN ${dialect.quote("Post")} ON ${dialect.quoteQualifiedColumn("Post.authorId")} = ${dialect.quoteQualifiedColumn("User.email")} JOIN ${dialect.quote("PostsImages")} ON ${dialect.quoteQualifiedColumn("PostsImages.id")} = ${dialect.quoteQualifiedColumn("Post.published")};`);
         }
     });
 
@@ -173,7 +175,7 @@ describe("join", () => {
             .join("MFId_Post", "id", "MFId_CategoryPost.postId")
             .getSQL();
 
-        assert.equal(sql, "FROM MFId_Category JOIN MFId_CategoryPost ON MFId_CategoryPost.categoryId = MFId_Category.id JOIN MFId_Post ON MFId_Post.id = MFId_CategoryPost.postId;");
+        expectSQL(sql, `FROM ${dialect.quote("MFId_Category")} JOIN ${dialect.quote("MFId_CategoryPost")} ON ${dialect.quoteQualifiedColumn("MFId_CategoryPost.categoryId")} = ${dialect.quoteQualifiedColumn("MFId_Category.id")} JOIN ${dialect.quote("MFId_Post")} ON ${dialect.quoteQualifiedColumn("MFId_Post.id")} = ${dialect.quoteQualifiedColumn("MFId_CategoryPost.postId")};`);
     });
 
     test("Many To Many Link; Default Name", ()=> {
@@ -181,7 +183,7 @@ describe("join", () => {
             .join("_M2M_CategoryToM2M_Post", "A", "M2M_Category.id" )
             .join("M2M_Post", "id", "_M2M_CategoryToM2M_Post.B" )
             .getSQL();
-        assert.equal(sql, "FROM M2M_Category JOIN _M2M_CategoryToM2M_Post ON _M2M_CategoryToM2M_Post.A = M2M_Category.id JOIN M2M_Post ON M2M_Post.id = _M2M_CategoryToM2M_Post.B;");
+        expectSQL(sql, `FROM ${dialect.quote("M2M_Category")} JOIN ${dialect.quote("_M2M_CategoryToM2M_Post")} ON ${dialect.quoteQualifiedColumn("_M2M_CategoryToM2M_Post.A")} = ${dialect.quoteQualifiedColumn("M2M_Category.id")} JOIN ${dialect.quote("M2M_Post")} ON ${dialect.quoteQualifiedColumn("M2M_Post.id")} = ${dialect.quoteQualifiedColumn("_M2M_CategoryToM2M_Post.B")};`);
     });
 
     test("Many To Many Link; Name Change", ()=> {
@@ -189,7 +191,7 @@ describe("join", () => {
             .join("_M2M_NC", "A", "M2M_NC_Category.id" )
             .join("M2M_NC_Post", "id", "_M2M_NC.B" )
             .getSQL();
-        assert.equal(sql, "FROM M2M_NC_Category JOIN _M2M_NC ON _M2M_NC.A = M2M_NC_Category.id JOIN M2M_NC_Post ON M2M_NC_Post.id = _M2M_NC.B;");
+        expectSQL(sql, `FROM ${dialect.quote("M2M_NC_Category")} JOIN ${dialect.quote("_M2M_NC")} ON ${dialect.quoteQualifiedColumn("_M2M_NC.A")} = ${dialect.quoteQualifiedColumn("M2M_NC_Category.id")} JOIN ${dialect.quote("M2M_NC_Post")} ON ${dialect.quoteQualifiedColumn("M2M_NC_Post.id")} = ${dialect.quoteQualifiedColumn("_M2M_NC.B")};`);
     });
 
     test("2 Many-To-Many Links", ()=> {
@@ -198,7 +200,7 @@ describe("join", () => {
                 .join("_M2M_NC_M1", "A", "MMM_Category.id")
                 .join("MMM_Post", "id", "_M2M_NC_M1.B" )
                 .getSQL();
-            assert.equal(sql, "FROM MMM_Category JOIN _M2M_NC_M1 ON _M2M_NC_M1.A = MMM_Category.id JOIN MMM_Post ON MMM_Post.id = _M2M_NC_M1.B;");
+            expectSQL(sql, `FROM ${dialect.quote("MMM_Category")} JOIN ${dialect.quote("_M2M_NC_M1")} ON ${dialect.quoteQualifiedColumn("_M2M_NC_M1.A")} = ${dialect.quoteQualifiedColumn("MMM_Category.id")} JOIN ${dialect.quote("MMM_Post")} ON ${dialect.quoteQualifiedColumn("MMM_Post.id")} = ${dialect.quoteQualifiedColumn("_M2M_NC_M1.B")};`);
         }
 
         {
@@ -206,7 +208,7 @@ describe("join", () => {
                 .join("_M2M_NC_M2", "B", "MMM_Post.id")
                 .join("MMM_Category", "id", "_M2M_NC_M2.A" )
                 .getSQL();
-            assert.equal(sql, "FROM MMM_Post JOIN _M2M_NC_M2 ON _M2M_NC_M2.B = MMM_Post.id JOIN MMM_Category ON MMM_Category.id = _M2M_NC_M2.A;");
+            expectSQL(sql, `FROM ${dialect.quote("MMM_Post")} JOIN ${dialect.quote("_M2M_NC_M2")} ON ${dialect.quoteQualifiedColumn("_M2M_NC_M2.B")} = ${dialect.quoteQualifiedColumn("MMM_Post.id")} JOIN ${dialect.quote("MMM_Category")} ON ${dialect.quoteQualifiedColumn("MMM_Category.id")} = ${dialect.quoteQualifiedColumn("_M2M_NC_M2.A")};`);
         }
     });
 });

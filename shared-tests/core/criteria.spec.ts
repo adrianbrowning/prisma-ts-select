@@ -1,9 +1,10 @@
 import assert from "node:assert/strict"
-import {describe, it, before} from "node:test"
+import {describe, it} from "node:test"
 import {type Equal, type Expect, typeCheck} from "../utils.ts";
 import type {PostRow, UserPostQualifiedJoinRow, UserRow} from "../types.ts";
 import { expectSQL } from "../test-utils.ts";
 import { prisma } from '#client';
+import { dialect } from '#dialect';
 
 describe("where", () => {
 
@@ -114,7 +115,7 @@ describe("where", () => {
             const sql = createQuery()
                 .getSQL();
 
-            const expectedSQL = `SELECT User.id AS \`User.id\`, User.email AS \`User.email\`, User.name AS \`User.name\`, User.age AS \`User.age\`, Post.id AS \`Post.id\`, Post.title AS \`Post.title\`, Post.content AS \`Post.content\`, Post.published AS \`Post.published\`, Post.authorId AS \`Post.authorId\`, Post.lastModifiedById AS \`Post.lastModifiedById\` FROM User JOIN Post ON Post.authorId = User.id WHERE (NOT(User.name LIKE 'something' OR User.name LIKE 'something else')) AND (NOT((User.id = 2))) AND ((User.id = 1 AND Post.id = 1)) AND (User.id = 2 OR Post.content IS NOT NULL);`;
+            const expectedSQL = `SELECT ${dialect.quoteQualifiedColumn("User.id")} AS ${dialect.quote("User.id", true)}, ${dialect.quoteQualifiedColumn("User.email")} AS ${dialect.quote("User.email", true)}, ${dialect.quoteQualifiedColumn("User.name")} AS ${dialect.quote("User.name", true)}, ${dialect.quoteQualifiedColumn("User.age")} AS ${dialect.quote("User.age", true)}, ${dialect.quoteQualifiedColumn("Post.id")} AS ${dialect.quote("Post.id", true)}, ${dialect.quoteQualifiedColumn("Post.title")} AS ${dialect.quote("Post.title", true)}, ${dialect.quoteQualifiedColumn("Post.content")} AS ${dialect.quote("Post.content", true)}, ${dialect.quoteQualifiedColumn("Post.published")} AS ${dialect.quote("Post.published", true)}, ${dialect.quoteQualifiedColumn("Post.authorId")} AS ${dialect.quote("Post.authorId", true)}, ${dialect.quoteQualifiedColumn("Post.lastModifiedById")} AS ${dialect.quote("Post.lastModifiedById", true)} FROM ${dialect.quote("User")} JOIN ${dialect.quote("Post")} ON ${dialect.quoteQualifiedColumn("Post.authorId")} = ${dialect.quoteQualifiedColumn("User.id")} WHERE (NOT(${dialect.quoteQualifiedColumn("User.name")} LIKE 'something' OR ${dialect.quoteQualifiedColumn("User.name")} LIKE 'something else')) AND (NOT((${dialect.quoteQualifiedColumn("User.id")} = 2))) AND ((${dialect.quoteQualifiedColumn("User.id")} = 1 AND ${dialect.quoteQualifiedColumn("Post.id")} = 1)) AND (${dialect.quoteQualifiedColumn("User.id")} = 2 OR ${dialect.quoteQualifiedColumn("Post.content")} IS NOT NULL);`;
 
             expectSQL(sql, expectedSQL);
         });
@@ -124,7 +125,9 @@ describe("where", () => {
 
     describe("Where Raw", () => {
 
-        const rawWhere = "(User.id = 1 AND Post.id = 1) OR (User.id = 2 OR Post.content IS NOT NULL)";
+        const rawWhere = dialect.name === "postgresql"
+            ? `("User"."id" = 1 AND "Post"."id" = 1) OR ("User"."id" = 2 OR "Post"."content" IS NOT NULL)`
+            : "(User.id = 1 AND Post.id = 1) OR (User.id = 2 OR Post.content IS NOT NULL)";
 
         function createQuery() {
             return prisma.$from("User")
@@ -183,7 +186,7 @@ describe("where", () => {
 
         it("should match SQL", () => {
             const sql = createQuery().getSQL();
-            const expectedSQL = `SELECT User.id AS \`User.id\`, User.email AS \`User.email\`, User.name AS \`User.name\`, User.age AS \`User.age\`, Post.id AS \`Post.id\`, Post.title AS \`Post.title\`, Post.content AS \`Post.content\`, Post.published AS \`Post.published\`, Post.authorId AS \`Post.authorId\`, Post.lastModifiedById AS \`Post.lastModifiedById\` FROM User JOIN Post ON Post.authorId = User.id WHERE ${rawWhere};`;
+            const expectedSQL = `SELECT ${dialect.quoteQualifiedColumn("User.id")} AS ${dialect.quote("User.id", true)}, ${dialect.quoteQualifiedColumn("User.email")} AS ${dialect.quote("User.email", true)}, ${dialect.quoteQualifiedColumn("User.name")} AS ${dialect.quote("User.name", true)}, ${dialect.quoteQualifiedColumn("User.age")} AS ${dialect.quote("User.age", true)}, ${dialect.quoteQualifiedColumn("Post.id")} AS ${dialect.quote("Post.id", true)}, ${dialect.quoteQualifiedColumn("Post.title")} AS ${dialect.quote("Post.title", true)}, ${dialect.quoteQualifiedColumn("Post.content")} AS ${dialect.quote("Post.content", true)}, ${dialect.quoteQualifiedColumn("Post.published")} AS ${dialect.quote("Post.published", true)}, ${dialect.quoteQualifiedColumn("Post.authorId")} AS ${dialect.quote("Post.authorId", true)}, ${dialect.quoteQualifiedColumn("Post.lastModifiedById")} AS ${dialect.quote("Post.lastModifiedById", true)} FROM ${dialect.quote("User")} JOIN ${dialect.quote("Post")} ON ${dialect.quoteQualifiedColumn("Post.authorId")} = ${dialect.quoteQualifiedColumn("User.id")} WHERE ${rawWhere};`;
             expectSQL(sql, expectedSQL);
         });
 
@@ -218,7 +221,7 @@ describe("where", () => {
 
         it("should match SQL", () => {
             const sql = createQuery().getSQL();
-            const expectedSQL = `SELECT name, content FROM User JOIN Post ON Post.authorId = User.id WHERE (Post.content IS NOT NULL) AND (User.name IS NULL);`;
+            const expectedSQL = `SELECT ${dialect.quote("name")}, ${dialect.quote("content")} FROM ${dialect.quote("User")} JOIN ${dialect.quote("Post")} ON ${dialect.quoteQualifiedColumn("Post.authorId")} = ${dialect.quoteQualifiedColumn("User.id")} WHERE (${dialect.quoteQualifiedColumn("Post.content")} IS NOT NULL) AND (${dialect.quoteQualifiedColumn("User.name")} IS NULL);`;
             expectSQL(sql, expectedSQL);
         });
 
@@ -239,38 +242,18 @@ describe("having", () => {
                         value: "John%"
                     }
                 })
-                .selectAll();
+                .select("User.name");
         }
 
         it("should run", async () => {
             const result = await createQuery().run();
 
-            typeCheck({} as Expect<Equal<typeof result, Array<UserPostQualifiedJoinRow>>>);
-
-            const expected: Array<UserPostQualifiedJoinRow> = [
+            const expected: Array<{ name: string }> = [
                 {
-                  'Post.authorId': 1,
-                  'Post.content': 'Something',
-                  'Post.id': 1,
-                  'Post.lastModifiedById': 1,
-                  'Post.published': false,
-                  'Post.title': 'Blog 1',
-                  'User.email': 'johndoe@example.com',
-                  'User.id': 1,
-                  'User.name': 'John Doe',
-                    "User.age":25,
+                  name: 'John Doe',
             },
             {
-              'Post.authorId': 2,
-                  'Post.content': null,
-                  'Post.id': 3,
-                  'Post.lastModifiedById': 2,
-                  'Post.published': false,
-                  'Post.title': 'blog 3',
-                  'User.email': 'smith@example.com',
-                  'User.id': 2,
-                  'User.name': 'John Smith',
-                "User.age":30,
+                  name: 'John Smith',
             }
              ];
 
@@ -279,7 +262,7 @@ describe("having", () => {
 
         it("should match SQL", () => {
             const sql = createQuery().getSQL();
-            const expectedSQL = `SELECT User.id AS \`User.id\`, User.email AS \`User.email\`, User.name AS \`User.name\`, User.age AS \`User.age\`, Post.id AS \`Post.id\`, Post.title AS \`Post.title\`, Post.content AS \`Post.content\`, Post.published AS \`Post.published\`, Post.authorId AS \`Post.authorId\`, Post.lastModifiedById AS \`Post.lastModifiedById\` FROM User JOIN Post ON Post.authorId = User.id GROUP BY User.name HAVING User.name LIKE 'John%';`;
+            const expectedSQL = `SELECT ${dialect.quote("name")} FROM ${dialect.quote("User")} JOIN ${dialect.quote("Post")} ON ${dialect.quoteQualifiedColumn("Post.authorId")} = ${dialect.quoteQualifiedColumn("User.id")} GROUP BY ${dialect.quoteQualifiedColumn("User.name")} HAVING ${dialect.quoteQualifiedColumn("User.name")} LIKE 'John%';`;
             expectSQL(sql, expectedSQL);
         });
 
@@ -306,7 +289,7 @@ describe("having", () => {
 
             const sql = createQuery()
                 .getSQL();
-            const expectedSQL = `SELECT User.id AS \`User.id\`, User.email AS \`User.email\`, User.name AS \`User.name\`, User.age AS \`User.age\`, Post.id AS \`Post.id\`, Post.title AS \`Post.title\`, Post.content AS \`Post.content\`, Post.published AS \`Post.published\`, Post.authorId AS \`Post.authorId\`, Post.lastModifiedById AS \`Post.lastModifiedById\` FROM User JOIN Post ON Post.authorId = User.id HAVING User.name LIKE 'Stuart%';`;
+            const expectedSQL = `SELECT ${dialect.quoteQualifiedColumn("User.id")} AS ${dialect.quote("User.id", true)}, ${dialect.quoteQualifiedColumn("User.email")} AS ${dialect.quote("User.email", true)}, ${dialect.quoteQualifiedColumn("User.name")} AS ${dialect.quote("User.name", true)}, ${dialect.quoteQualifiedColumn("User.age")} AS ${dialect.quote("User.age", true)}, ${dialect.quoteQualifiedColumn("Post.id")} AS ${dialect.quote("Post.id", true)}, ${dialect.quoteQualifiedColumn("Post.title")} AS ${dialect.quote("Post.title", true)}, ${dialect.quoteQualifiedColumn("Post.content")} AS ${dialect.quote("Post.content", true)}, ${dialect.quoteQualifiedColumn("Post.published")} AS ${dialect.quote("Post.published", true)}, ${dialect.quoteQualifiedColumn("Post.authorId")} AS ${dialect.quote("Post.authorId", true)}, ${dialect.quoteQualifiedColumn("Post.lastModifiedById")} AS ${dialect.quote("Post.lastModifiedById", true)} FROM ${dialect.quote("User")} JOIN ${dialect.quote("Post")} ON ${dialect.quoteQualifiedColumn("Post.authorId")} = ${dialect.quoteQualifiedColumn("User.id")} HAVING ${dialect.quoteQualifiedColumn("User.name")} LIKE 'Stuart%';`;
             expectSQL(sql, expectedSQL);
 
             // Verify type is correct even though we don't run it
@@ -343,40 +326,31 @@ describe("having", () => {
                         }
                     ]
                 })
-                .selectAll();
+                .select("User.id")
+                .select("User.name")
+                .select("User.email")
+                .select("User.age");
         }
 
         it("should run", async () => {
             const result = await createQuery().run();
 
-            type TExpected = Array<UserPostQualifiedJoinRow>;
+            type TExpected = Array<{ "User.id": number, name: string | null, email: string, age: number | null }>;
 
             typeCheck({} as Expect<Equal<typeof result, TExpected>>);
 
             const expected: TExpected =  [
                 {
-                  'Post.authorId': 1,
-                  'Post.content': 'Something',
-                  'Post.id': 1,
-                  'Post.lastModifiedById': 1,
-                  'Post.published': false,
-                  'Post.title': 'Blog 1',
-                  'User.email': 'johndoe@example.com',
+                  email: 'johndoe@example.com',
                   'User.id': 1,
-                  'User.name': 'John Doe',
-                  'User.age':25,
+                  name: 'John Doe',
+                  age:25,
             },
             {
-              'Post.authorId': 2,
-                  'Post.content': null,
-                  'Post.id': 3,
-                  'Post.lastModifiedById': 2,
-                  'Post.published': false,
-                  'Post.title': 'blog 3',
-                  'User.email': 'smith@example.com',
+                  email: 'smith@example.com',
                   'User.id': 2,
-                  'User.name': 'John Smith',
-                "User.age":30,
+                  name: 'John Smith',
+                  age:30,
             }
              ];
 
@@ -386,9 +360,33 @@ describe("having", () => {
         it("should match SQL", () => {
             const sql = createQuery().getSQL();
             // Should have both GROUP BY and HAVING
-            assert.equal(sql,
-            "SELECT User.id AS `User.id`, User.email AS `User.email`, User.name AS `User.name`, User.age AS `User.age`, Post.id AS `Post.id`, Post.title AS `Post.title`, Post.content AS `Post.content`, Post.published AS `Post.published`, Post.authorId AS `Post.authorId`, Post.lastModifiedById AS `Post.lastModifiedById` FROM User JOIN Post ON Post.authorId = User.id GROUP BY User.id, User.name HAVING (User.name LIKE 'J%') AND (User.id = 1 OR User.id = 2);" );
+            expectSQL(sql,
+            `SELECT ${dialect.quoteQualifiedColumn("User.id")} AS ${dialect.quote("User.id", true)}, ${dialect.quote("name")}, ${dialect.quote("email")}, ${dialect.quote("age")} FROM ${dialect.quote("User")} JOIN ${dialect.quote("Post")} ON ${dialect.quoteQualifiedColumn("Post.authorId")} = ${dialect.quoteQualifiedColumn("User.id")} GROUP BY ${dialect.quoteQualifiedColumn("User.id")}, ${dialect.quoteQualifiedColumn("User.name")} HAVING (${dialect.quoteQualifiedColumn("User.name")} LIKE 'J%') AND (${dialect.quoteQualifiedColumn("User.id")} = 1 OR ${dialect.quoteQualifiedColumn("User.id")} = 2);` );
 
+        });
+    });
+
+    describe("GROUP BY type safety", () => {
+        it("should prevent selectAll() after groupBy()", () => {
+            // Runtime check: selectAll should not exist after groupBy
+            const query = prisma.$from("User").groupBy(["User.id"]);
+            const hasSelectAll = 'selectAll' in query;
+            assert.ok(!hasSelectAll, "selectAll should not exist after groupBy()");
+        });
+
+        it("should allow select() after groupBy()", () => {
+            const query = prisma.$from("User")
+                .groupBy(["User.id"])
+                .select("User.id")
+                .select("User.name");
+            // Should compile without errors
+        });
+
+        it("should allow selectDistinct() after groupBy()", () => {
+            const query = prisma.$from("User")
+                .groupBy(["User.id"])
+                .selectDistinct();
+            // Should compile without errors
         });
     });
 });

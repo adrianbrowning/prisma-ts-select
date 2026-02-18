@@ -1,0 +1,31 @@
+{
+  "name": "@gcm/usage-mysql-v7",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "gen": "prisma generate",
+    "test": "pnpm run test:core && pnpm run test:dialect",
+    "lint:ts": "tsc --noEmit",
+    "test:core": "node --import ../../shared-tests/client-resolver.mjs --import ../../shared-tests/test-setup.mjs --test './tests/core/**/*.spec.ts'",
+    "test:dialect": "node --import ../../shared-tests/client-resolver.mjs --import ../../shared-tests/test-setup.mjs --test './tests/dialect/sqlite/**/*.ts'",
+    "p:r": "prisma db push --force-reset && prisma db seed"
+  },
+  "imports": {
+    "#client": "./src/client.ts",
+    "#prisma-ts-select": "./generated/prisma-ts-select/*",
+    "#dialect": "./generated/prisma-ts-select/dialects/index.js",
+    "#extend": "./generated/prisma-ts-select/extend.js"
+  },
+  "dependencies": {
+    "@gcm/prisma-ts-select": "workspace:*"
+  },
+  "devDependencies": {
+    "@prisma/adapter-mariadb": "^7.4.0",
+    "@prisma/client": "7.4.0",
+    "@types/node": "^24.0.0",
+    "prisma": "7.4.0",
+    "tsx": "^4.21.0",
+    "typescript": "^5.9.3"
+  }
+}
