@@ -1088,6 +1088,12 @@ class _fSelect<TSources extends TArrSources, TFields extends TFieldsType, TSelec
  */
 type CountKeys<T extends Array<TTableSources>, acc extends Array<true> = []> = T extends [string, ...infer R extends Array<string>] ? CountKeys<R, [...acc, true]> : acc["length"];
 
+// "User.email" → "email"
+type StripTablePrefix<S extends string> = S extends `${string}.${infer Col}` ? Col : S
+
+// Handles both single-table (unqualified keys) and multi-table (qualified keys)
+type OmitFromSelectAll<TBase, TOmit extends string> = Prettify<Omit<TBase, TOmit | StripTablePrefix<TOmit>>>
+
 class _fSelectDistinct<TSources extends TArrSources, TFields extends TFieldsType, TSelectRT extends Record<string, any> = {}> extends _fSelect<TSources, TFields, TSelectRT> {
     selectDistinct() {
         return new _fSelect<TSources, TFields, TSelectRT>(this.db, {...this.values, selectDistinct: true});
@@ -1122,11 +1128,43 @@ class _fSelectDistinct<TSources extends TArrSources, TFields extends TFieldsType
         });
     }
 
-    //TODO
-    // selectAllOmit() {
-    //     throw new Error("Not implemented yet")
-    // }
-}
+
+
+    selectAllOmit<
+        const TSelect extends GetOtherColumns<TSources>,
+        TableCount = CountKeys<TSources>
+    >(omit: Array<TSelect>) {
+        const omitSet = new Set(omit as Array<string>);
+        const selects = (function(values: Values) {
+
+            if (values.tables.length === 1) {
+                const t = values.tables[0];
+                const tableIdentifier = t.alias || t.table;
+                return Object.keys(DB[t.table]!.fields)
+                    .filter(f => !omitSet.has(f) && !omitSet.has(`${tableIdentifier}.${f}`))
+                    .map(f => dialect.quote(f, false));
+            }
+
+            return values.tables.reduce<Array<string>>((acc, tableObj) => {
+                const tableIdentifier = tableObj.alias || tableObj.table;
+                return acc.concat(
+                    Object.keys(DB[tableObj.table]!.fields)
+                        .filter(f => !omitSet.has(f) && !omitSet.has(`${tableIdentifier}.${f}`))
+                        .map(f => {
+                            const q = `${tableIdentifier}.${f}`;
+                            return `${dialect.quoteQualifiedColumn(q)} AS ${dialect.quote(q, true)}`;
+                        })
+                );
+            }, []);
+
+        })(this.values);
+
+        type Base = MergeItems<"*", TSources, TFields, TableCount extends 1 ? false : true>;
+        return new _fOrderBy<TSources, TFields, OmitFromSelectAll<Base, TSelect>>(this.db, {
+            ...this.values,
+            selects
+        });
+    }}
 
 
 /*
