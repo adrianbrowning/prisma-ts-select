@@ -5,6 +5,8 @@ import {match, P} from "ts-pattern";
 // The actual PrismaClient type from @prisma/client will be used at runtime via getExtensionContext
 type PrismaClient = any;
 import {dialect} from "./dialects/index.js";
+import type {SQLExpr} from "./sql-expr.js";
+import {buildContext, type SelectFnContext} from "./fn-context.js";
 const DB: DBType = {} as const satisfies DBType;
 
 type TDB = typeof DB;
@@ -526,12 +528,12 @@ class _fRun<TSources extends TArrSources, TFields extends TFieldsType, TSelectRT
                             //@ts-expect-error value.op should be never
                             throw new Error(`Unsupported operation: ${value.op}`);
                     }
+                } else if (value === null) {
+                    return `${quotedField} IS NULL`;
                 } else if (Array.isArray(value)) {
                     const valuesList = value.map(v => (typeof v === 'string' ? `'${v}'` : v)).join(", ");
                     return `${quotedField} IN (${valuesList})`;
-                } else if (value === null) {
-                    return `${quotedField} IS NULL`;
-                } else {
+                }  else {
                     return `${quotedField} = ${typeof value === 'string' ? `'${value}'` : value}`;
                 }
             });
@@ -971,17 +973,37 @@ type GetOtherColumns<Tables extends TArrSources> =
     | GetJoinCols<Tables[number]>;
 
 class _fSelect<TSources extends TArrSources, TFields extends TFieldsType, TSelectRT extends Record<string, any> = {}> extends _fOrderBy<TSources, TFields, TSelectRT> {
-    select<
-        const TSelect extends ValidSelect<TSources>,
-        TAlias extends string = never>
-    (
-        select: TSelect,
-        alias?: TAlias
-    ): [TAlias] extends [never]
-        ? _fSelect<TSources, TFields, Prettify<TSelectRT & MergeItems<TSelect, TSources, TFields>>>
+    // Fn overload — no alias → key is widened to `string`
+    select<T>(fn: (ctx: SelectFnContext<TSources, TFields>) => SQLExpr<T>)
+        : _fSelect<TSources, TFields, Prettify<TSelectRT & Record<string, T>>>
+    // Fn overload — with alias → key is the literal alias
+    select<T, A extends string>(fn: (ctx: SelectFnContext<TSources, TFields>) => SQLExpr<T>, alias: A)
+        : _fSelect<TSources, TFields, Prettify<TSelectRT & Record<A, T>>>
+    // String column — no alias
+    select<const TSelect extends ValidSelect<TSources>>(select: TSelect)
+        : _fSelect<TSources, TFields, Prettify<TSelectRT & MergeItems<TSelect, TSources, TFields>>>
+    // String column — with alias
+    select<const TSelect extends ValidSelect<TSources>, TAlias extends string>(select: TSelect, alias: TAlias)
         : _fSelect<TSources, TFields, Prettify<TSelectRT & Record<TAlias, ExtractColumnType<TSelect, TSources, TFields>>>>
+    // Implementation (not visible to callers)
+    select(
+        select: ((ctx: SelectFnContext<TSources, TFields>) => SQLExpr<any>) | ValidSelect<TSources>,
+        alias?: string
+    ): _fSelect<TSources, TFields, any>
     {
-
+        // Function overload: first arg is a callback
+        if (typeof select === 'function') {
+            const ctx = buildContext<TSources, TFields>(dialect);
+            const expr = (select as (ctx: SelectFnContext<TSources, TFields>) => SQLExpr<any>)(ctx);
+            const aliasArg = alias as string | undefined;
+            const sqlStr = aliasArg !== undefined
+                ? `${expr.sql} AS ${dialect.quote(aliasArg, true)}`
+                : expr.sql;
+            return new _fSelect(this.db, {
+                ...this.values,
+                selects: [...this.values.selects, sqlStr]
+            }) as any;
+        }
 
         // Check if select is "Table.*" pattern
         const tableColMatch = select.match(/^(\w+)\.(.*?)$/);
@@ -1008,7 +1030,7 @@ class _fSelect<TSources extends TArrSources, TFields extends TFieldsType, TSelec
                     return field === "*" ? "*" : dialect.quote(field, false);
                 });
 
-                return new _fSelect<TSources, TFields, Prettify<TSelectRT & MergeItems<TSelect, /*TablesArray2Name<TSources>*/TSources, TFields>>>(this.db, {
+                return new _fSelect(this.db, {
                     ...this.values,
                     selects: [...this.values.selects, ...expandedSelects]
                 }) as any;
@@ -1064,7 +1086,7 @@ class _fSelect<TSources extends TArrSources, TFields extends TFieldsType, TSelec
             : select.includes('.')
                 ? dialect.quoteQualifiedColumn(select)
                 : dialect.quote(select, false);
-        return new _fSelect<TSources, TFields, Prettify<TSelectRT & MergeItems<TSelect, /*TablesArray2Name<TSources>*/TSources, TFields>>>(this.db, {
+        return new _fSelect(this.db, {
             ...this.values,
             selects: [...this.values.selects, quotedSelect]
         }) as any;

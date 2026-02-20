@@ -28,7 +28,7 @@ describe("selectAllOmit Tests", () => {
             const result = await createQuery().run();
 
             type TExpected = Array<Omit<UserRow, "email">>;
-               //  ^?
+
             typeCheck({} as Expect<Equal<typeof result, TExpected>>);
 
             const expected: TExpected = [
