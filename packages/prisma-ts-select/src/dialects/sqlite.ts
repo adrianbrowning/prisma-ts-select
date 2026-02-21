@@ -1,5 +1,4 @@
 import type {Dialect} from "./types.js";
-import {sharedFunctions} from "./shared.js";
 import {resolveArg, sqlExpr, type SQLExpr} from "../sql-expr.js";
 
 export const sqliteContextFns = <TCol extends string = string>(quoteFn: (ref: string) => string) => ({
@@ -20,11 +19,6 @@ export type DialectFns<TCol extends string = string> = ReturnType<typeof sqliteC
  */
 export const sqliteDialect: Dialect = {
   name: "sqlite",
-  functions: {
-    ...sharedFunctions,
-    CONCAT: (...args) => args.join(" || "),
-    GROUP_CONCAT: (...args) => `GROUP_CONCAT(${args.join(", ")})`
-  },
   needsBooleanCoercion: () => true,
   quote: (name, _isAlias) => {
     if (_isAlias) return "`" + name + "`";

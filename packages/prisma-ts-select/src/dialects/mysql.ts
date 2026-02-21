@@ -1,5 +1,4 @@
 import type {Dialect} from "./types.js";
-import {sharedFunctions} from "./shared.js";
 import {resolveArg, sqlExpr, type SQLExpr} from "../sql-expr.js";
 import type {JSONValue} from "../utils/types.js";
 import type {Decimal} from "@prisma/client/runtime/library";
@@ -35,14 +34,9 @@ export type DialectFns<TCol extends string = string> = ReturnType<typeof mysqlCo
  */
 export const mysqlDialect: Dialect = {
   name: "mysql",
+  needsBooleanCoercion: () => true,
   //@ts-expect-error isAlias currently unused
   quote: (id, isAlias) => `\`${id}\``,
-  functions: {
-    ...sharedFunctions,
-    CONCAT: (...args) => `CONCAT(${args.join(", ")})`,
-    GROUP_CONCAT: (...args) => `GROUP_CONCAT(${args.join(", ")})`,
-  },
-  needsBooleanCoercion: () => true,
   quoteTableIdentifier: (name, _isAlias) => `\`${name}\``,
   quoteQualifiedColumn: (ref) => {
     if (!ref.includes('.')) return `\`${ref}\``;

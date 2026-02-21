@@ -1,5 +1,4 @@
 import type {Dialect} from "./types.js";
-import {sharedFunctions} from "./shared.js";
 import {resolveArg, sqlExpr, type SQLExpr} from "../sql-expr.js";
 import type {JSONValue} from "../utils/types.js";
 
@@ -34,14 +33,9 @@ export type DialectFns<TCol extends string = string> = ReturnType<typeof postgre
  */
 export const postgresqlDialect: Dialect = {
   name: "postgresql",
+  needsBooleanCoercion: () => false,
   //@ts-expect-error isAlias currently unused
   quote: (id, isAlias) => `"${id}"`,
-  functions: {
-    ...sharedFunctions,
-    CONCAT: (...args) => `CONCAT(${args.join(", ")})`,
-    GROUP_CONCAT: (...args) => `STRING_AGG(${args.join(", ")})`,
-  },
-  needsBooleanCoercion: () => false,
   quoteTableIdentifier: (name, _isAlias) => `"${name}"`,
   quoteQualifiedColumn: (ref) => {
     if (!ref.includes('.')) return `"${ref}"`; // Quote unqualified column
