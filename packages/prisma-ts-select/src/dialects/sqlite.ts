@@ -1,14 +1,16 @@
 import type {Dialect} from "./types.js";
 import {sharedFunctions} from "./shared.js";
-import {sqlExpr, type SQLExpr} from "../sql-expr.js";
+import {resolveArg, sqlExpr, type SQLExpr} from "../sql-expr.js";
 
-export const sqliteContextFns = (quoteFn: (ref: string) => string) => ({
-  groupConcat: (col: string, sep?: string): SQLExpr<string> =>
+export const sqliteContextFns = <TCol extends string = string>(quoteFn: (ref: string) => string) => ({
+  avg: (col: TCol | SQLExpr<number>): SQLExpr<number> => sqlExpr(`AVG(${resolveArg(col, quoteFn)})`),
+  sum: (col: TCol | SQLExpr<number>): SQLExpr<number> => sqlExpr(`SUM(${resolveArg(col, quoteFn)})`),
+  groupConcat: (col: TCol, sep?: string): SQLExpr<string> =>
     sqlExpr(`GROUP_CONCAT(${quoteFn(col)}${sep !== undefined ? `, '${sep.replace(/'/g, "''")}'` : ''})`),
-  total: (col: string): SQLExpr<number> => sqlExpr(`TOTAL(${quoteFn(col)})`),
+  total: (col: TCol): SQLExpr<number> => sqlExpr(`TOTAL(${quoteFn(col)})`),
 });
 
-export type DialectFns = ReturnType<typeof sqliteContextFns>;
+export type DialectFns<TCol extends string = string> = ReturnType<typeof sqliteContextFns<TCol>>;
 
 /**
  * SQLite dialect configuration.
@@ -18,16 +20,16 @@ export type DialectFns = ReturnType<typeof sqliteContextFns>;
  */
 export const sqliteDialect: Dialect = {
   name: "sqlite",
-  quote: (name, _isAlias) => {
-    if (_isAlias) return "`" + name + "`";
-    return name;
-  },
   functions: {
     ...sharedFunctions,
     CONCAT: (...args) => args.join(" || "),
     GROUP_CONCAT: (...args) => `GROUP_CONCAT(${args.join(", ")})`
   },
   needsBooleanCoercion: () => true,
+  quote: (name, _isAlias) => {
+    if (_isAlias) return "`" + name + "`";
+    return name;
+  },
   quoteTableIdentifier: (name, _isAlias) => {
    if(_isAlias) return "`" + name + "`";
     return name;

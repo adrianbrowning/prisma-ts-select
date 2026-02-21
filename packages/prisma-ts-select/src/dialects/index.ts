@@ -10,6 +10,7 @@ import {postgresqlDialect} from "./postgresql.js";
 
 // Default dialect export (overwritten by generator at runtime)
 export {sqliteDialect as dialect};
+export {sqliteContextFns as dialectContextFns} from "./sqlite.js";
 
 /**
  * Get dialect configuration by provider name.

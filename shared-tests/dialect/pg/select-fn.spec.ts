@@ -1,5 +1,7 @@
 import assert from "node:assert/strict"
 import { describe, it } from "node:test"
+import type { Equal, Expect } from "../../utils.ts"
+import { typeCheck } from "../../utils.ts"
 import { expectSQL } from "../../test-utils.ts"
 import { prisma } from '#client'
 import { dialect } from '#dialect'
@@ -79,25 +81,25 @@ describe("PostgreSQL dialect fns", () => {
 
     describe("boolAnd(col)", () => {
         function createQuery() {
-            return prisma.$from("User")
-                .select(({ boolAnd }) => boolAnd("User.isActive"), "allActive");
+            return prisma.$from("Post")
+                .select(({ boolAnd }) => boolAnd("Post.published"), "allPublished");
         }
 
         it("should match SQL", () => {
             expectSQL(createQuery().getSQL(),
-                `SELECT BOOL_AND("User"."isActive") AS ${dialect.quote("allActive", true)} FROM ${dialect.quote("User")};`);
+                `SELECT BOOL_AND("Post"."published") AS ${dialect.quote("allPublished", true)} FROM ${dialect.quote("Post")};`);
         });
     });
 
     describe("boolOr(col)", () => {
         function createQuery() {
-            return prisma.$from("User")
-                .select(({ boolOr }) => boolOr("User.isActive"), "anyActive");
+            return prisma.$from("Post")
+                .select(({ boolOr }) => boolOr("Post.published"), "anyPublished");
         }
 
         it("should match SQL", () => {
             expectSQL(createQuery().getSQL(),
-                `SELECT BOOL_OR("User"."isActive") AS ${dialect.quote("anyActive", true)} FROM ${dialect.quote("User")};`);
+                `SELECT BOOL_OR("Post"."published") AS ${dialect.quote("anyPublished", true)} FROM ${dialect.quote("Post")};`);
         });
     });
 
@@ -146,6 +148,20 @@ describe("PostgreSQL dialect fns", () => {
         it("should match SQL", () => {
             expectSQL(createQuery().getSQL(),
                 `SELECT JSON_OBJECT_AGG("User"."id", "User"."name") AS ${dialect.quote("obj", true)} FROM ${dialect.quote("User")};`);
+        });
+    });
+
+    describe("sum(col) — type", () => {
+        it("type: number", async () => {
+            const result = await prisma.$from("User").select(({ sum }) => sum("User.age"), "total").run();
+            typeCheck({} as Expect<Equal<typeof result, Array<{ total: number }>>>);
+        });
+    });
+
+    describe("avg(col) — type", () => {
+        it("type: number", async () => {
+            const result = await prisma.$from("User").select(({ avg }) => avg("User.age"), "average").run();
+            typeCheck({} as Expect<Equal<typeof result, Array<{ average: number }>>>);
         });
     });
 });

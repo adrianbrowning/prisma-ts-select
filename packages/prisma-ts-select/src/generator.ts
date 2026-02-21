@@ -156,13 +156,13 @@ generatorHandler({
     }
 
     // Generate dialects/index.js that exports the correct dialect
-    const dialectIndexJs = `export { ${provider}Dialect as dialect } from './${provider}.js';\n`;
+    const dialectIndexJs = `export { ${provider}Dialect as dialect, ${provider}ContextFns as dialectContextFns } from './${provider}.js';\n`;
     fs.writeFileSync(path.join(dialectOutDir, "index.js"), dialectIndexJs);
 
     // Generate dialects/index.d.ts with proper type exports
     const dialectIndexDts = `export { type Dialect, type FunctionRegistry, SUPPORTED_PROVIDERS, type SupportedProvider } from './types.js';
 export { sharedFunctions } from './shared.js';
-export { ${provider}Dialect as dialect, ${provider}Dialect } from './${provider}.js';
+export { ${provider}Dialect as dialect, ${provider}Dialect, ${provider}ContextFns as dialectContextFns } from './${provider}.js';
 `;
     fs.writeFileSync(path.join(dialectOutDir, "index.d.ts"), dialectIndexDts);
 
@@ -184,7 +184,7 @@ export { ${provider}Dialect as dialect, ${provider}Dialect } from './${provider}
         .replace('declare const DB: DBType;', declaration)
         .replace(
           PLACEHOLDER,
-          `type SelectFnContext<_TSources extends TArrSources, _TFields extends TFieldsType> = BaseSelectFnContext<_TSources, _TFields> & DialectFns;`
+          `type SelectFnContext<_TSources extends TArrSources, _TFields extends TFieldsType> = BaseSelectFnContext<_TSources, _TFields> & DialectFns<GetOtherColumns<_TSources>>;`
         );
     writeFileSafely(path.join(outputPath, 'extend.d.ts'), dtsWithDialect);
 

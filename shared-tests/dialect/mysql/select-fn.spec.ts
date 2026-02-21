@@ -1,5 +1,8 @@
 import assert from "node:assert/strict"
 import { describe, it } from "node:test"
+import type { Decimal } from "@prisma/client/runtime/library"
+import type { Equal, Expect } from "../../utils.ts"
+import { typeCheck } from "../../utils.ts"
 import { expectSQL } from "../../test-utils.ts"
 import { prisma } from '#client'
 import { dialect } from '#dialect'
@@ -136,6 +139,20 @@ describe("MySQL dialect fns", () => {
         it("should match SQL", () => {
             expectSQL(createQuery().getSQL(),
                 `SELECT JSON_OBJECTAGG(${dialect.quoteQualifiedColumn("User.id")}, ${dialect.quoteQualifiedColumn("User.name")}) AS ${dialect.quote("obj", true)} FROM ${dialect.quote("User")};`);
+        });
+    });
+
+    describe("sum(col) — type", () => {
+        it("type: Decimal", async () => {
+            const result = await prisma.$from("User").select(({ sum }) => sum("User.age"), "total").run();
+            typeCheck({} as Expect<Equal<typeof result, Array<{ total: Decimal }>>>);
+        });
+    });
+
+    describe("avg(col) — type", () => {
+        it("type: Decimal", async () => {
+            const result = await prisma.$from("User").select(({ avg }) => avg("User.age"), "average").run();
+            typeCheck({} as Expect<Equal<typeof result, Array<{ average: Decimal }>>>);
         });
     });
 });

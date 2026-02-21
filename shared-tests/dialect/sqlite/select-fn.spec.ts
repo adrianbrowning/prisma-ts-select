@@ -1,5 +1,7 @@
 import assert from "node:assert/strict"
 import { describe, it } from "node:test"
+import type { Equal, Expect } from "../../utils.ts"
+import { typeCheck } from "../../utils.ts"
 import { expectSQL } from "../../test-utils.ts"
 import { prisma } from '#client'
 import { dialect } from '#dialect'
@@ -52,6 +54,20 @@ describe("SQLite dialect fns", () => {
             const result = await createQuery().run();
             assert.ok(Array.isArray(result));
             assert.ok(result.length === 1 && typeof result[0]!.t === "number");
+        });
+    });
+
+    describe("sum(col) — type", () => {
+        it("type: number", async () => {
+            const result = await prisma.$from("User").select(({ sum }) => sum("User.age"), "total").run();
+            typeCheck({} as Expect<Equal<typeof result, Array<{ total: number }>>>);
+        });
+    });
+
+    describe("avg(col) — type", () => {
+        it("type: number", async () => {
+            const result = await prisma.$from("User").select(({ avg }) => avg("User.age"), "average").run();
+            typeCheck({} as Expect<Equal<typeof result, Array<{ average: number }>>>);
         });
     });
 });
