@@ -6,6 +6,9 @@ import {match, P} from "ts-pattern";
 type PrismaClient = any;
 import {dialect} from "./dialects/index.js";
 import type {Dialect} from "./dialects/types.js";
+import {sqliteContextFns} from "./dialects/sqlite.js";
+import {mysqlContextFns} from "./dialects/mysql.js";
+import {postgresqlContextFns} from "./dialects/postgresql.js";
 import {lit as _lit, sqlExpr, resolveArg, type SQLExpr, type LitToType} from "./sql-expr.js";
 const DB: DBType = {} as const satisfies DBType;
 
@@ -2215,6 +2218,7 @@ type LitValue = string | number | boolean | null;
 
 type BaseSelectFnContext<_TSources extends TArrSources, _TFields extends TFieldsType> = {
   lit: <T extends LitValue>(v: T) => SQLExpr<LitToType<T>>;
+  countAll: () => SQLExpr<number>;
   count: (col: string) => SQLExpr<number>;
   countDistinct: (col: string) => SQLExpr<number>;
   sum: (col: string | SQLExpr<number>) => SQLExpr<number>;
@@ -2228,33 +2232,11 @@ export type SelectFnContext<_TSources extends TArrSources, _TFields extends TFie
   BaseSelectFnContext<_TSources, _TFields>;
 
 function getDialectContextFns(d: Dialect, quoteFn: (col: string) => string) {
-  const esc = (s: string) => s.replace(/'/g, "''");
   switch (d.name) {
-    case "sqlite":
-      return {
-        groupConcat: (col: string, sep?: string): SQLExpr<string> =>
-          sqlExpr(`GROUP_CONCAT(${quoteFn(col)}${sep !== undefined ? `, '${esc(sep)}'` : ''})`),
-      };
-    case "mysql":
-      return {
-        groupConcat: (col: string, sep?: string): SQLExpr<string> =>
-          sqlExpr(`GROUP_CONCAT(${quoteFn(col)}${sep !== undefined ? ` SEPARATOR '${esc(sep)}'` : ''})`),
-        bitAnd:   (col: string): SQLExpr<number> => sqlExpr(`BIT_AND(${quoteFn(col)})`),
-        bitOr:    (col: string): SQLExpr<number> => sqlExpr(`BIT_OR(${quoteFn(col)})`),
-        bitXor:   (col: string): SQLExpr<number> => sqlExpr(`BIT_XOR(${quoteFn(col)})`),
-        stddev:   (col: string): SQLExpr<number> => sqlExpr(`STDDEV(${quoteFn(col)})`),
-        variance: (col: string): SQLExpr<number> => sqlExpr(`VARIANCE(${quoteFn(col)})`),
-      };
-    case "postgresql":
-      return {
-        stringAgg: (col: string, sep: string): SQLExpr<string> =>
-          sqlExpr(`STRING_AGG(${quoteFn(col)}, '${esc(sep)}')`),
-        arrayAgg:  (col: string): SQLExpr<unknown[]> => sqlExpr(`ARRAY_AGG(${quoteFn(col)})`),
-        stddevPop: (col: string): SQLExpr<number> => sqlExpr(`STDDEV_POP(${quoteFn(col)})`),
-        varPop:    (col: string): SQLExpr<number> => sqlExpr(`VAR_POP(${quoteFn(col)})`),
-      };
-    default:
-      return {};
+    case "sqlite":    return sqliteContextFns(quoteFn);
+    case "mysql":     return mysqlContextFns(quoteFn);
+    case "postgresql": return postgresqlContextFns(quoteFn);
+    default:          return {};
   }
 }
 
@@ -2264,6 +2246,7 @@ function buildContext<TSources extends TArrSources, TFields extends TFieldsType>
   const quoteFn = (col: string) => d.quoteQualifiedColumn(col);
   return {
     lit: _lit,
+    countAll:      () => sqlExpr('COUNT(*)'),
     count:         (col) => sqlExpr(col === "*" ? "COUNT(*)" : `COUNT(${quoteFn(col)})`),
     countDistinct: (col) => sqlExpr(`COUNT(DISTINCT ${quoteFn(col)})`),
     sum:           (col) => sqlExpr(`SUM(${resolveArg(col, quoteFn)})`),

@@ -971,19 +971,139 @@ LIMIT 1
 OFFSET 1;
 ```
 
+## Select Functions
+
+Pass a callback to `.select()` to use SQL expressions and aggregate functions. The callback receives a context object with all available functions for the active dialect.
+
+### Shared (all dialects)
+
+#### `lit(value)` — SQL literal
+
+Produces a typed SQL literal from a JS value.
+
+##### Example
+```typescript file=../usage-sqlite-v7/tests/readme/select-fns.ts region=lit-string
+prisma.$from("User")
+      .select(({ lit }) => lit("hello"), "greeting");
+```
+
+#### `countAll()` — COUNT(*)
+
+The most common aggregate. Always produces `COUNT(*)`.
+
+##### Example
+```typescript file=../usage-sqlite-v7/tests/readme/select-fns.ts region=count-all
+prisma.$from("User")
+      .select(({ countAll }) => countAll(), "total");
+```
+
+##### SQL
+```sql file=../usage-sqlite-v7/tests/readme/select-fns.ts region=count-all-sql
+SELECT COUNT(*) AS `total` FROM User;
+```
+
+#### `count(col)` — COUNT(col)
+
+```typescript file=../usage-sqlite-v7/tests/readme/select-fns.ts region=count-col
+prisma.$from("User")
+      .select(({ count }) => count("User.id"), "cnt");
+```
+
+#### `countDistinct(col)` — COUNT(DISTINCT col)
+
+```typescript file=../usage-sqlite-v7/tests/readme/select-fns.ts region=count-distinct
+prisma.$from("User")
+      .select(({ countDistinct }) => countDistinct("User.id"), "cnt");
+```
+
+#### `sum(col)` / `avg(col)` / `min(col)` / `max(col)`
+
+Standard numeric aggregates.
+
+```typescript file=../usage-sqlite-v7/tests/readme/select-fns.ts region=sum
+prisma.$from("User")
+      .select(({ sum }) => sum("User.age"), "total");
+```
+
+#### Combining with `.groupBy()`
+
+```typescript file=../usage-sqlite-v7/tests/readme/select-fns.ts region=count-groupby
+prisma.$from("User")
+      .join("Post", "authorId", "User.id")
+      .groupBy(["User.name"])
+      .select("User.name")
+      .select(({ countAll }) => countAll(), "postCount");
+```
+
+##### SQL
+```sql
+SELECT User.name, COUNT(*) AS `postCount`
+FROM User
+JOIN Post ON Post.authorId = User.id
+GROUP BY User.name;
+```
+
+---
+
+### MySQL-specific
+
+| Function | SQL | Returns |
+|---|---|---|
+| `groupConcat(col, sep?)` | `GROUP_CONCAT(col SEPARATOR sep)` | `string` |
+| `bitAnd(col)` | `BIT_AND(col)` | `number` |
+| `bitOr(col)` | `BIT_OR(col)` | `number` |
+| `bitXor(col)` | `BIT_XOR(col)` | `number` |
+| `stddev(col)` | `STDDEV(col)` | `number` |
+| `stddevSamp(col)` | `STDDEV_SAMP(col)` | `number` |
+| `variance(col)` | `VARIANCE(col)` | `number` |
+| `varSamp(col)` | `VAR_SAMP(col)` | `number` |
+| `jsonArrayAgg(col)` | `JSON_ARRAYAGG(col)` | `JSONValue` |
+| `jsonObjectAgg(key, val)` | `JSON_OBJECTAGG(key, val)` | `JSONValue` |
+
+> **Note:** `jsonArrayAgg` and `jsonObjectAgg` require MySQL 5.7.22+.
+
+---
+
+### PostgreSQL-specific
+
+| Function | SQL | Returns |
+|---|---|---|
+| `stringAgg(col, sep)` | `STRING_AGG(col, sep)` | `string` |
+| `arrayAgg(col)` | `ARRAY_AGG(col)` | `unknown[]` |
+| `stddevPop(col)` | `STDDEV_POP(col)` | `number` |
+| `stddevSamp(col)` | `STDDEV_SAMP(col)` | `number` |
+| `varPop(col)` | `VAR_POP(col)` | `number` |
+| `varSamp(col)` | `VAR_SAMP(col)` | `number` |
+| `boolAnd(col)` | `BOOL_AND(col)` | `boolean` |
+| `boolOr(col)` | `BOOL_OR(col)` | `boolean` |
+| `jsonAgg(col)` | `JSON_AGG(col)` | `JSONValue[]` |
+| `bitAnd(col)` | `BIT_AND(col)` | `number` |
+| `bitOr(col)` | `BIT_OR(col)` | `number` |
+| `jsonObjectAgg(key, val)` | `JSON_OBJECT_AGG(key, val)` | `JSONValue` |
+
+---
+
+### SQLite-specific
+
+| Function | SQL | Returns |
+|---|---|---|
+| `groupConcat(col, sep?)` | `GROUP_CONCAT(col, sep)` | `string` |
+| `total(col)` | `TOTAL(col)` | `number` |
+
+> **Note:** `total()` behaves like `SUM()` but returns `0.0` instead of `NULL` for empty sets.
+
+---
+
 ## Future updates
 
 - Support specifying `JOIN` type [issue#2](https://github.com/adrianbrowning/prisma-ts-select/issues/2)
-- Support Select Functions
-  - [Aggregation #4](https://github.com/adrianbrowning/prisma-ts-select/issues/4)
+- Support additional Select Functions
   - [String #5](https://github.com/adrianbrowning/prisma-ts-select/issues/5)
   - [Date & Time #6](https://github.com/adrianbrowning/prisma-ts-select/issues/6)
   - [Math #7](https://github.com/adrianbrowning/prisma-ts-select/issues/7)
   - [Control Flow #8](https://github.com/adrianbrowning/prisma-ts-select/issues/8)
   - [JSON #9](https://github.com/adrianbrowning/prisma-ts-select/issues/9)
 - [Support a `Many-To-Many` join #19](https://github.com/adrianbrowning/prisma-ts-select/issues/19)
-- [Select column alias #27](https://github.com/adrianbrowning/prisma-ts-select/issues/27)
-- [Table name alias #28](https://github.com/adrianbrowning/prisma-ts-select/issues/28)
 - [whereRaw supporting Prisma.sql](https://github.com/adrianbrowning/prisma-ts-select/issues/29)
 
 ## Changelog / Versioning

@@ -1,13 +1,25 @@
 import type {Dialect} from "./types.js";
 import {sharedFunctions} from "./shared.js";
 import {sqlExpr, type SQLExpr} from "../sql-expr.js";
+import type {JSONValue} from "../utils/types.js";
+
+const esc = (s: string) => s.replace(/'/g, "''");
 
 export const postgresqlContextFns = (quoteFn: (ref: string) => string) => ({
-  stringAgg: (col: string, sep: string): SQLExpr<string> =>
-    sqlExpr(`STRING_AGG(${quoteFn(col)}, '${sep.replace(/'/g, "''")}')`),
-  arrayAgg:  (col: string): SQLExpr<unknown[]> => sqlExpr(`ARRAY_AGG(${quoteFn(col)})`),
-  stddevPop: (col: string): SQLExpr<number> => sqlExpr(`STDDEV_POP(${quoteFn(col)})`),
-  varPop:    (col: string): SQLExpr<number> => sqlExpr(`VAR_POP(${quoteFn(col)})`),
+  stringAgg:     (col: string, sep: string): SQLExpr<string> =>
+    sqlExpr(`STRING_AGG(${quoteFn(col)}, '${esc(sep)}')`),
+  arrayAgg:      (col: string): SQLExpr<unknown[]> => sqlExpr(`ARRAY_AGG(${quoteFn(col)})`),
+  stddevPop:     (col: string): SQLExpr<number> => sqlExpr(`STDDEV_POP(${quoteFn(col)})`),
+  stddevSamp:    (col: string): SQLExpr<number> => sqlExpr(`STDDEV_SAMP(${quoteFn(col)})`),
+  varPop:        (col: string): SQLExpr<number> => sqlExpr(`VAR_POP(${quoteFn(col)})`),
+  varSamp:       (col: string): SQLExpr<number> => sqlExpr(`VAR_SAMP(${quoteFn(col)})`),
+  boolAnd:       (col: string): SQLExpr<boolean> => sqlExpr(`BOOL_AND(${quoteFn(col)})`),
+  boolOr:        (col: string): SQLExpr<boolean> => sqlExpr(`BOOL_OR(${quoteFn(col)})`),
+  jsonAgg:       (col: string): SQLExpr<JSONValue[]> => sqlExpr(`JSON_AGG(${quoteFn(col)})`),
+  bitAnd:        (col: string): SQLExpr<number> => sqlExpr(`BIT_AND(${quoteFn(col)})`),
+  bitOr:         (col: string): SQLExpr<number> => sqlExpr(`BIT_OR(${quoteFn(col)})`),
+  jsonObjectAgg: (key: string, val: string): SQLExpr<JSONValue> =>
+    sqlExpr(`JSON_OBJECT_AGG(${quoteFn(key)}, ${quoteFn(val)})`),
 });
 
 export type DialectFns = ReturnType<typeof postgresqlContextFns>;

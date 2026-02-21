@@ -113,6 +113,27 @@ describe("select() fn context", () => {
 
     // ── Aggregate functions ──────────────────────────────────────────────
 
+    describe("countAll()", () => {
+        function createQuery() {
+            return prisma.$from("User").select(({countAll}) => countAll(), "total");
+        }
+
+        it("should match SQL", () => {
+            expectSQL(createQuery().getSQL(),
+                `SELECT COUNT(*) AS ${dialect.quote("total", true)} FROM ${dialect.quote("User")};`);
+        });
+
+        it("type: number", async () => {
+            const result = await createQuery().run();
+            typeCheck({} as Expect<Equal<typeof result, Array<{ total: number }>>>);
+        });
+
+        it("should run and return correct count", async () => {
+            const result = await createQuery().run();
+            assert.deepEqual(result.map(r => ({ total: Number(r.total) })), [{ total: 3 }]);
+        });
+    });
+
     describe("count(*)", () => {
         function createQuery() {
             const sql =  prisma.$from("User")

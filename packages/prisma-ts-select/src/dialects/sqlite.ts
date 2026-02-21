@@ -5,6 +5,7 @@ import {sqlExpr, type SQLExpr} from "../sql-expr.js";
 export const sqliteContextFns = (quoteFn: (ref: string) => string) => ({
   groupConcat: (col: string, sep?: string): SQLExpr<string> =>
     sqlExpr(`GROUP_CONCAT(${quoteFn(col)}${sep !== undefined ? `, '${sep.replace(/'/g, "''")}'` : ''})`),
+  total: (col: string): SQLExpr<number> => sqlExpr(`TOTAL(${quoteFn(col)})`),
 });
 
 export type DialectFns = ReturnType<typeof sqliteContextFns>;
