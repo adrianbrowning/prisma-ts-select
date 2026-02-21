@@ -132,3 +132,8 @@ Always ask if unsure about anything.
 If you break these, say:
 “Correction: I previously made an unverified claim. That was incorrect and should have been labeled.”
 
+## When in plan mode
+Interview me relentlessly about every aspect of this plan until we reach a shared understanding. Walk down each branch of the design tree, resolving dependencies between decisions one-by-one. 
+
+## When in edit mode
+If I ask for code edits, avoid repeating large blocks—just show the diff with context.
