@@ -1,5 +1,16 @@
 import type {Dialect} from "./types.js";
 import {sharedFunctions} from "./shared.js";
+import {sqlExpr, type SQLExpr} from "../sql-expr.js";
+
+export const postgresqlContextFns = (quoteFn: (ref: string) => string) => ({
+  stringAgg: (col: string, sep: string): SQLExpr<string> =>
+    sqlExpr(`STRING_AGG(${quoteFn(col)}, '${sep.replace(/'/g, "''")}')`),
+  arrayAgg:  (col: string): SQLExpr<unknown[]> => sqlExpr(`ARRAY_AGG(${quoteFn(col)})`),
+  stddevPop: (col: string): SQLExpr<number> => sqlExpr(`STDDEV_POP(${quoteFn(col)})`),
+  varPop:    (col: string): SQLExpr<number> => sqlExpr(`VAR_POP(${quoteFn(col)})`),
+});
+
+export type DialectFns = ReturnType<typeof postgresqlContextFns>;
 
 /**
  * PostgreSQL dialect configuration.

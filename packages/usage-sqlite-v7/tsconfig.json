@@ -17,5 +17,5 @@
     }
   },
   "include": ["**/*.ts"],
-  "exclude": ["node_modules", "generated"]
+  "exclude": ["node_modules", "generated", "tests/dialect/mysql", "tests/dialect/pg"]
 }

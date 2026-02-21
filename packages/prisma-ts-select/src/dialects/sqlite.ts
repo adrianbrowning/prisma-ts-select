@@ -1,5 +1,13 @@
 import type {Dialect} from "./types.js";
 import {sharedFunctions} from "./shared.js";
+import {sqlExpr, type SQLExpr} from "../sql-expr.js";
+
+export const sqliteContextFns = (quoteFn: (ref: string) => string) => ({
+  groupConcat: (col: string, sep?: string): SQLExpr<string> =>
+    sqlExpr(`GROUP_CONCAT(${quoteFn(col)}${sep !== undefined ? `, '${sep.replace(/'/g, "''")}'` : ''})`),
+});
+
+export type DialectFns = ReturnType<typeof sqliteContextFns>;
 
 /**
  * SQLite dialect configuration.

@@ -177,10 +177,23 @@ export { ${provider}Dialect as dialect, ${provider}Dialect } from './${provider}
 
     // Copy extend.d.ts and inject DB model (ESM-only)
     const extendDts = fs.readFileSync(path.join(srcDir, 'extend.d.ts'), {encoding: 'utf-8'});
-    writeFileSafely(
-      path.join(outputPath, 'extend.d.ts'),
-      extendDts.replace('declare const DB: DBType;', declaration)
-    );
+    const PLACEHOLDER = 'type SelectFnContext<_TSources extends TArrSources, _TFields extends TFieldsType> = BaseSelectFnContext<_TSources, _TFields>;';
+    const dtsWithDialect =
+      `import type { DialectFns } from './dialects/${provider}.js';\n` +
+      extendDts
+        .replace('declare const DB: DBType;', declaration)
+        .replace(
+          PLACEHOLDER,
+          `type SelectFnContext<_TSources extends TArrSources, _TFields extends TFieldsType> = BaseSelectFnContext<_TSources, _TFields> & DialectFns;`
+        );
+    writeFileSafely(path.join(outputPath, 'extend.d.ts'), dtsWithDialect);
+
+    // Copy chunk .d.ts files (e.g. sql-expr-HASH.d.ts) that extend.d.ts imports
+    for (const file of fs.readdirSync(srcDir)) {
+      if (file !== 'extend.d.ts' && file !== 'extend.js' && file.endsWith('.d.ts')) {
+        fs.copyFileSync(path.join(srcDir, file), path.join(outputPath, file));
+      }
+    }
     function isManyToManyRelationShip(field: DMMF.Field): boolean {
       if (!(field.kind === "object" && field.isList)) return false;
       const {type, relationName} = field;

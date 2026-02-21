@@ -5,8 +5,8 @@ import {match, P} from "ts-pattern";
 // The actual PrismaClient type from @prisma/client will be used at runtime via getExtensionContext
 type PrismaClient = any;
 import {dialect} from "./dialects/index.js";
-import type {SQLExpr} from "./sql-expr.js";
-import {buildContext, type SelectFnContext} from "./fn-context.js";
+import type {Dialect} from "./dialects/types.js";
+import {lit as _lit, sqlExpr, resolveArg, type SQLExpr, type LitToType} from "./sql-expr.js";
 const DB: DBType = {} as const satisfies DBType;
 
 type TDB = typeof DB;
@@ -2200,6 +2200,81 @@ type GetJoinColsType<TDBBase extends TTableSources, Type extends string> = Itera
  * };
  */
 type TFieldsType = Record<string, Record<string, any>>;
+
+// ── SelectFnContext ──────────────────────────────────────────────────────────
+
+/** Columns of type T (respects nullable via NonNullable). */
+export type GetColumnsOfType<TSources extends TArrSources, TFields extends TFieldsType, T> =
+  GetOtherColumns<TSources> extends infer K
+    ? K extends string
+      ? NonNullable<ExtractColumnType<K, TSources, TFields>> extends T ? K : never
+      : never
+    : never;
+
+type LitValue = string | number | boolean | null;
+
+type BaseSelectFnContext<_TSources extends TArrSources, _TFields extends TFieldsType> = {
+  lit: <T extends LitValue>(v: T) => SQLExpr<LitToType<T>>;
+  count: (col: string) => SQLExpr<number>;
+  countDistinct: (col: string) => SQLExpr<number>;
+  sum: (col: string | SQLExpr<number>) => SQLExpr<number>;
+  avg: (col: string | SQLExpr<number>) => SQLExpr<number>;
+  min: <TTable extends string, TCol extends string & keyof _TFields[TTable]>(col: `${TTable}.${TCol}`) => SQLExpr<_TFields[TTable][TCol]>;
+  max: <TTable extends string, TCol extends string & keyof _TFields[TTable]>(col: `${TTable}.${TCol}`) => SQLExpr<_TFields[TTable][TCol]>;
+};
+
+/** Replaced by generator to inject dialect-specific fns via intersection. */
+export type SelectFnContext<_TSources extends TArrSources, _TFields extends TFieldsType> =
+  BaseSelectFnContext<_TSources, _TFields>;
+
+function getDialectContextFns(d: Dialect, quoteFn: (col: string) => string) {
+  const esc = (s: string) => s.replace(/'/g, "''");
+  switch (d.name) {
+    case "sqlite":
+      return {
+        groupConcat: (col: string, sep?: string): SQLExpr<string> =>
+          sqlExpr(`GROUP_CONCAT(${quoteFn(col)}${sep !== undefined ? `, '${esc(sep)}'` : ''})`),
+      };
+    case "mysql":
+      return {
+        groupConcat: (col: string, sep?: string): SQLExpr<string> =>
+          sqlExpr(`GROUP_CONCAT(${quoteFn(col)}${sep !== undefined ? ` SEPARATOR '${esc(sep)}'` : ''})`),
+        bitAnd:   (col: string): SQLExpr<number> => sqlExpr(`BIT_AND(${quoteFn(col)})`),
+        bitOr:    (col: string): SQLExpr<number> => sqlExpr(`BIT_OR(${quoteFn(col)})`),
+        bitXor:   (col: string): SQLExpr<number> => sqlExpr(`BIT_XOR(${quoteFn(col)})`),
+        stddev:   (col: string): SQLExpr<number> => sqlExpr(`STDDEV(${quoteFn(col)})`),
+        variance: (col: string): SQLExpr<number> => sqlExpr(`VARIANCE(${quoteFn(col)})`),
+      };
+    case "postgresql":
+      return {
+        stringAgg: (col: string, sep: string): SQLExpr<string> =>
+          sqlExpr(`STRING_AGG(${quoteFn(col)}, '${esc(sep)}')`),
+        arrayAgg:  (col: string): SQLExpr<unknown[]> => sqlExpr(`ARRAY_AGG(${quoteFn(col)})`),
+        stddevPop: (col: string): SQLExpr<number> => sqlExpr(`STDDEV_POP(${quoteFn(col)})`),
+        varPop:    (col: string): SQLExpr<number> => sqlExpr(`VAR_POP(${quoteFn(col)})`),
+      };
+    default:
+      return {};
+  }
+}
+
+function buildContext<TSources extends TArrSources, TFields extends TFieldsType>(
+  d: Dialect
+): SelectFnContext<TSources, TFields> {
+  const quoteFn = (col: string) => d.quoteQualifiedColumn(col);
+  return {
+    lit: _lit,
+    count:         (col) => sqlExpr(col === "*" ? "COUNT(*)" : `COUNT(${quoteFn(col)})`),
+    countDistinct: (col) => sqlExpr(`COUNT(DISTINCT ${quoteFn(col)})`),
+    sum:           (col) => sqlExpr(`SUM(${resolveArg(col, quoteFn)})`),
+    avg:           (col) => sqlExpr(`AVG(${resolveArg(col, quoteFn)})`),
+    min:           (col) => sqlExpr(`MIN(${resolveArg(col, quoteFn)})`),
+    max:           (col) => sqlExpr(`MAX(${resolveArg(col, quoteFn)})`),
+    ...getDialectContextFns(d, quoteFn),
+  } as SelectFnContext<TSources, TFields>;
+}
+
+// ────────────────────────────────────────────────────────────────────────────
 
 class _fJoin<
     TSources extends TArrSources,

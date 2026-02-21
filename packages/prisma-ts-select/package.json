@@ -101,6 +101,7 @@
     "knip": "^5.9.4",
     "log-with-statusbar": "^1.2.0",
     "markdown-toc": "^1.2.0",
+    "mdcode-ts": "0.0.3-9",
     "prisma": "6.19.2",
     "prisma-dbml-generator": "^0.10.0",
     "prisma-docs-generator": "^0.8.0",

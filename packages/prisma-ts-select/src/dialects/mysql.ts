@@ -1,5 +1,18 @@
 import type {Dialect} from "./types.js";
 import {sharedFunctions} from "./shared.js";
+import {sqlExpr, type SQLExpr} from "../sql-expr.js";
+
+export const mysqlContextFns = (quoteFn: (ref: string) => string) => ({
+  groupConcat: (col: string, sep?: string): SQLExpr<string> =>
+    sqlExpr(`GROUP_CONCAT(${quoteFn(col)}${sep !== undefined ? ` SEPARATOR '${sep.replace(/'/g, "''")}'` : ''})`),
+  bitAnd:   (col: string): SQLExpr<number> => sqlExpr(`BIT_AND(${quoteFn(col)})`),
+  bitOr:    (col: string): SQLExpr<number> => sqlExpr(`BIT_OR(${quoteFn(col)})`),
+  bitXor:   (col: string): SQLExpr<number> => sqlExpr(`BIT_XOR(${quoteFn(col)})`),
+  stddev:   (col: string): SQLExpr<number> => sqlExpr(`STDDEV(${quoteFn(col)})`),
+  variance: (col: string): SQLExpr<number> => sqlExpr(`VARIANCE(${quoteFn(col)})`),
+});
+
+export type DialectFns = ReturnType<typeof mysqlContextFns>;
 
 /**
  * MySQL dialect configuration.
