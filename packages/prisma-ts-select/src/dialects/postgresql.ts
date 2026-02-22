@@ -21,6 +21,32 @@ export const postgresqlContextFns = <TCol extends string = string>(quoteFn: (ref
   bitOr:         (col: TCol): SQLExpr<number> => sqlExpr(`BIT_OR(${quoteFn(col)})`),
   jsonObjectAgg: (key: TCol, val: TCol): SQLExpr<JSONValue> =>
     sqlExpr(`JSON_OBJECT_AGG(${quoteFn(key)}, ${quoteFn(val)})`),
+  concat: (...args: Array<TCol | SQLExpr<string>>): SQLExpr<string> =>
+    sqlExpr(`CONCAT(${args.map(a => resolveArg(a, quoteFn)).join(', ')})`),
+  substring: (col: TCol | SQLExpr<string>, start: number, len?: number): SQLExpr<string> =>
+    sqlExpr(`SUBSTRING(${resolveArg(col, quoteFn)}, ${start}${len !== undefined ? `, ${len}` : ''})`),
+  left: (col: TCol | SQLExpr<string>, n: number): SQLExpr<string> =>
+    sqlExpr(`LEFT(${resolveArg(col, quoteFn)}, ${n})`),
+  right: (col: TCol | SQLExpr<string>, n: number): SQLExpr<string> =>
+    sqlExpr(`RIGHT(${resolveArg(col, quoteFn)}, ${n})`),
+  repeat: (col: TCol | SQLExpr<string>, n: number): SQLExpr<string> =>
+    sqlExpr(`REPEAT(${resolveArg(col, quoteFn)}, ${n})`),
+  reverse: (col: TCol | SQLExpr<string>): SQLExpr<string> =>
+    sqlExpr(`REVERSE(${resolveArg(col, quoteFn)})`),
+  lpad: (col: TCol | SQLExpr<string>, len: number, pad: string): SQLExpr<string> =>
+    sqlExpr(`LPAD(${resolveArg(col, quoteFn)}, ${len}, '${esc(pad)}')`),
+  rpad: (col: TCol | SQLExpr<string>, len: number, pad: string): SQLExpr<string> =>
+    sqlExpr(`RPAD(${resolveArg(col, quoteFn)}, ${len}, '${esc(pad)}')`),
+  initcap: (col: TCol | SQLExpr<string>): SQLExpr<string> =>
+    sqlExpr(`INITCAP(${resolveArg(col, quoteFn)})`),
+  strpos: (col: TCol | SQLExpr<string>, substr: string): SQLExpr<number> =>
+    sqlExpr(`STRPOS(${resolveArg(col, quoteFn)}, '${esc(substr)}')`),
+  splitPart: (col: TCol | SQLExpr<string>, delimiter: string, field: number): SQLExpr<string> =>
+    sqlExpr(`SPLIT_PART(${resolveArg(col, quoteFn)}, '${esc(delimiter)}', ${field})`),
+  btrim: (col: TCol | SQLExpr<string>, chars?: string): SQLExpr<string> =>
+    sqlExpr(`BTRIM(${resolveArg(col, quoteFn)}${chars !== undefined ? `, '${esc(chars)}'` : ''})`),
+  md5: (col: TCol | SQLExpr<string>): SQLExpr<string> =>
+    sqlExpr(`MD5(${resolveArg(col, quoteFn)})`),
 });
 
 export type DialectFns<TCol extends string = string> = ReturnType<typeof postgresqlContextFns<TCol>>;

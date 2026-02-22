@@ -2221,6 +2221,13 @@ type BaseSelectFnContext<_TSources extends TArrSources, _TFields extends TFields
   countDistinct: <TCol extends GetOtherColumns<_TSources>>(col: TCol) => SQLExpr<number>;
   min: <TTable extends string, TCol extends string & keyof _TFields[TTable]>(col: `${TTable}.${TCol}`) => SQLExpr<_TFields[TTable][TCol]>;
   max: <TTable extends string, TCol extends string & keyof _TFields[TTable]>(col: `${TTable}.${TCol}`) => SQLExpr<_TFields[TTable][TCol]>;
+  replace: <TCol extends GetOtherColumns<_TSources>>(col: TCol | SQLExpr<string>, from: string, to: string) => SQLExpr<string>;
+  length: <TCol extends GetOtherColumns<_TSources>>(col: TCol | SQLExpr<string>) => SQLExpr<number>;
+  upper: <TCol extends GetOtherColumns<_TSources>>(col: TCol | SQLExpr<string>) => SQLExpr<string>;
+  lower: <TCol extends GetOtherColumns<_TSources>>(col: TCol | SQLExpr<string>) => SQLExpr<string>;
+  trim: <TCol extends GetOtherColumns<_TSources>>(col: TCol | SQLExpr<string>) => SQLExpr<string>;
+  ltrim: <TCol extends GetOtherColumns<_TSources>>(col: TCol | SQLExpr<string>) => SQLExpr<string>;
+  rtrim: <TCol extends GetOtherColumns<_TSources>>(col: TCol | SQLExpr<string>) => SQLExpr<string>;
 };
 
 /** Replaced by generator to inject dialect-specific fns via intersection. */
@@ -2238,6 +2245,13 @@ function buildContext<TSources extends TArrSources, TFields extends TFieldsType>
     countDistinct: (col) => sqlExpr(`COUNT(DISTINCT ${quoteFn(col)})`),
     min:           (col) => sqlExpr(`MIN(${resolveArg(col, quoteFn)})`),
     max:           (col) => sqlExpr(`MAX(${resolveArg(col, quoteFn)})`),
+    replace:       (col, from, to) => sqlExpr(`REPLACE(${resolveArg(col, quoteFn)}, '${from.replace(/'/g, "''")}', '${to.replace(/'/g, "''")}')`),
+    length:        (col) => sqlExpr(`LENGTH(${resolveArg(col, quoteFn)})`),
+    upper:         (col) => sqlExpr(`UPPER(${resolveArg(col, quoteFn)})`),
+    lower:         (col) => sqlExpr(`LOWER(${resolveArg(col, quoteFn)})`),
+    trim:          (col) => sqlExpr(`TRIM(${resolveArg(col, quoteFn)})`),
+    ltrim:         (col) => sqlExpr(`LTRIM(${resolveArg(col, quoteFn)})`),
+    rtrim:         (col) => sqlExpr(`RTRIM(${resolveArg(col, quoteFn)})`),
     ...dialectContextFns(quoteFn),
   } as SelectFnContext<TSources, TFields>;
 }
