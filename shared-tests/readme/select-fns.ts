@@ -143,6 +143,71 @@ prisma.$from("User")
     expectSQL(sql, `SELECT MAX(User.age) AS \`oldest\` FROM User;`);
   });
 
+  // ── upper() ─────────────────────────────────────────────────────────────
+
+  test("upper(col)", () => {
+    const sql =
+// #region upper
+prisma.$from("User")
+      .select(({ upper }) => upper("User.name"), "uname")
+      // #endregion upper
+.getSQL();
+
+    expectSQL(sql, `SELECT UPPER(User.name) AS \`uname\` FROM User;`);
+  });
+
+  // ── lower() ─────────────────────────────────────────────────────────────
+
+  test("lower(col)", () => {
+    const sql =
+// #region lower
+prisma.$from("User")
+      .select(({ lower }) => lower("User.name"), "lname")
+      // #endregion lower
+.getSQL();
+
+    expectSQL(sql, `SELECT LOWER(User.name) AS \`lname\` FROM User;`);
+  });
+
+  // ── length() ─────────────────────────────────────────────────────────────
+
+  test("length(col)", () => {
+    const sql =
+// #region length
+prisma.$from("User")
+      .select(({ length }) => length("User.email"), "elen")
+      // #endregion length
+.getSQL();
+
+    expectSQL(sql, `SELECT LENGTH(User.email) AS \`elen\` FROM User;`);
+  });
+
+  // ── trim() ─────────────────────────────────────────────────────────────
+
+  test("trim(col)", () => {
+    const sql =
+// #region trim
+prisma.$from("User")
+      .select(({ trim }) => trim("User.email"), "email")
+      // #endregion trim
+.getSQL();
+
+    expectSQL(sql, `SELECT TRIM(User.email) AS \`email\` FROM User;`);
+  });
+
+  // ── replace() ─────────────────────────────────────────────────────────────
+
+  test("replace(col, from, to)", () => {
+    const sql =
+// #region replace
+prisma.$from("User")
+      .select(({ replace }) => replace("User.email", "@example.com", ""), "handle")
+      // #endregion replace
+.getSQL();
+
+    expectSQL(sql, `SELECT REPLACE(User.email, '@example.com', '') AS \`handle\` FROM User;`);
+  });
+
   // ── mixed: count + group ─────────────────────────────────────────────────
 
   test("countAll + groupBy", () => {

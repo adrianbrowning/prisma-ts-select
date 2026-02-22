@@ -7,6 +7,18 @@ export const sqliteContextFns = <TCol extends string = string>(quoteFn: (ref: st
   groupConcat: (col: TCol, sep?: string): SQLExpr<string> =>
     sqlExpr(`GROUP_CONCAT(${quoteFn(col)}${sep !== undefined ? `, '${sep.replace(/'/g, "''")}'` : ''})`),
   total: (col: TCol): SQLExpr<number> => sqlExpr(`TOTAL(${quoteFn(col)})`),
+  concat: (...args: Array<TCol | SQLExpr<string>>): SQLExpr<string> =>
+    sqlExpr(args.map(a => resolveArg(a, quoteFn)).join(' || ')),
+  substr: (col: TCol | SQLExpr<string>, start: number, len?: number): SQLExpr<string> =>
+    sqlExpr(`SUBSTR(${resolveArg(col, quoteFn)}, ${start}${len !== undefined ? `, ${len}` : ''})`),
+  instr: (col: TCol | SQLExpr<string>, substr: string): SQLExpr<number> =>
+    sqlExpr(`INSTR(${resolveArg(col, quoteFn)}, '${substr.replace(/'/g, "''")}')`),
+  char: (...codes: number[]): SQLExpr<string> =>
+    sqlExpr(`CHAR(${codes.join(', ')})`),
+  hex: (col: TCol | SQLExpr<string>): SQLExpr<string> =>
+    sqlExpr(`HEX(${resolveArg(col, quoteFn)})`),
+  unicode: (col: TCol | SQLExpr<string>): SQLExpr<number> =>
+    sqlExpr(`UNICODE(${resolveArg(col, quoteFn)})`),
 });
 
 export type DialectFns<TCol extends string = string> = ReturnType<typeof sqliteContextFns<TCol>>;

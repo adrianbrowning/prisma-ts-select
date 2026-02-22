@@ -1063,6 +1063,37 @@ prisma.$from("User")
       .select(({ sum }) => sum("User.age"), "total");
 ```
 
+#### String Functions (all dialects)
+
+| Function | SQL | Returns |
+|---|---|---|
+| `upper(col)` | `UPPER(col)` | `string` |
+| `lower(col)` | `LOWER(col)` | `string` |
+| `length(col)` | `LENGTH(col)` | `number` |
+| `trim(col)` | `TRIM(col)` | `string` |
+| `ltrim(col)` | `LTRIM(col)` | `string` |
+| `rtrim(col)` | `RTRIM(col)` | `string` |
+| `replace(col, from, to)` | `REPLACE(col, 'from', 'to')` | `string` |
+
+> **Note:** MySQL `LENGTH()` returns byte-length (not char-length). For character-length on multi-byte strings use a dialect-specific fn.
+
+```typescript file=../usage-sqlite-v7/tests/readme/select-fns.ts region=upper
+prisma.$from("User")
+      .select(({ upper }) => upper("User.name"), "uname");
+```
+
+String fns accept a `SQLExpr<string>` as input, enabling composition:
+
+```typescript file=../usage-sqlite-v7/tests/readme/select-fns.ts region=lower
+prisma.$from("User")
+      .select(({ lower }) => lower("User.name"), "lname");
+```
+
+```typescript file=../usage-sqlite-v7/tests/readme/select-fns.ts region=replace
+prisma.$from("User")
+      .select(({ replace }) => replace("User.email", "@example.com", ""), "handle");
+```
+
 #### Combining with `.groupBy()`
 
 ```typescript file=../usage-sqlite-v7/tests/readme/select-fns.ts region=count-groupby
@@ -1097,6 +1128,16 @@ GROUP BY User.name;
 | `varSamp(col)` | `VAR_SAMP(col)` | `number` |
 | `jsonArrayAgg(col)` | `JSON_ARRAYAGG(col)` | `JSONValue` |
 | `jsonObjectAgg(key, val)` | `JSON_OBJECTAGG(key, val)` | `JSONValue` |
+| `concat(...cols)` | `CONCAT(a, b, ...)` | `string` |
+| `substring(col, start, len?)` | `SUBSTRING(col, start, len)` | `string` |
+| `left(col, n)` | `LEFT(col, n)` | `string` |
+| `right(col, n)` | `RIGHT(col, n)` | `string` |
+| `repeat(col, n)` | `REPEAT(col, n)` | `string` |
+| `reverse(col)` | `REVERSE(col)` | `string` |
+| `lpad(col, len, pad)` | `LPAD(col, len, 'pad')` | `string` |
+| `rpad(col, len, pad)` | `RPAD(col, len, 'pad')` | `string` |
+| `locate(substr, col)` | `LOCATE('substr', col)` | `number` |
+| `space(n)` | `SPACE(n)` | `string` |
 
 > **Note:** `jsonArrayAgg` and `jsonObjectAgg` require MySQL 5.7.22+.
 
@@ -1118,6 +1159,19 @@ GROUP BY User.name;
 | `bitAnd(col)` | `BIT_AND(col)` | `number` |
 | `bitOr(col)` | `BIT_OR(col)` | `number` |
 | `jsonObjectAgg(key, val)` | `JSON_OBJECT_AGG(key, val)` | `JSONValue` |
+| `concat(...cols)` | `CONCAT(a, b, ...)` | `string` |
+| `substring(col, start, len?)` | `SUBSTRING(col, start, len)` | `string` |
+| `left(col, n)` | `LEFT(col, n)` | `string` |
+| `right(col, n)` | `RIGHT(col, n)` | `string` |
+| `repeat(col, n)` | `REPEAT(col, n)` | `string` |
+| `reverse(col)` | `REVERSE(col)` | `string` |
+| `lpad(col, len, pad)` | `LPAD(col, len, 'pad')` | `string` |
+| `rpad(col, len, pad)` | `RPAD(col, len, 'pad')` | `string` |
+| `initcap(col)` | `INITCAP(col)` | `string` |
+| `strpos(col, substr)` | `STRPOS(col, 'substr')` | `number` |
+| `splitPart(col, delimiter, field)` | `SPLIT_PART(col, 'delimiter', field)` | `string` |
+| `btrim(col, chars?)` | `BTRIM(col)` / `BTRIM(col, 'chars')` | `string` |
+| `md5(col)` | `MD5(col)` | `string` |
 
 ---
 
@@ -1127,8 +1181,14 @@ GROUP BY User.name;
 |---|---|---|
 | `groupConcat(col, sep?)` | `GROUP_CONCAT(col, sep)` | `string` |
 | `total(col)` | `TOTAL(col)` | `number` |
+| `concat(...cols)` | `a \|\| b \|\| ...` | `string` |
+| `substr(col, start, len?)` | `SUBSTR(col, start, len)` | `string` |
+| `instr(col, substr)` | `INSTR(col, 'substr')` | `number` |
+| `char(...codes)` | `CHAR(n1, n2, ...)` | `string` |
+| `hex(col)` | `HEX(col)` | `string` |
+| `unicode(col)` | `UNICODE(col)` | `number` |
 
-> **Note:** `total()` behaves like `SUM()` but returns `0.0` instead of `NULL` for empty sets.
+> **Note:** `total()` behaves like `SUM()` but returns `0.0` instead of `NULL` for empty sets. SQLite uses the `||` operator for string concatenation.
 
 ---
 
@@ -1136,7 +1196,6 @@ GROUP BY User.name;
 
 - Support specifying `JOIN` type [issue#2](https://github.com/adrianbrowning/prisma-ts-select/issues/2)
 - Support additional Select Functions
-  - [String #5](https://github.com/adrianbrowning/prisma-ts-select/issues/5)
   - [Date & Time #6](https://github.com/adrianbrowning/prisma-ts-select/issues/6)
   - [Math #7](https://github.com/adrianbrowning/prisma-ts-select/issues/7)
   - [Control Flow #8](https://github.com/adrianbrowning/prisma-ts-select/issues/8)

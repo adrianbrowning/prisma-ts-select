@@ -22,6 +22,26 @@ export const mysqlContextFns = <TCol extends string = string>(quoteFn: (ref: str
   jsonArrayAgg:  (col: TCol): SQLExpr<JSONValue> => sqlExpr(`JSON_ARRAYAGG(${quoteFn(col)})`),
   jsonObjectAgg: (key: TCol, val: TCol): SQLExpr<JSONValue> =>
     sqlExpr(`JSON_OBJECTAGG(${quoteFn(key)}, ${quoteFn(val)})`),
+  concat: (...args: Array<TCol | SQLExpr<string>>): SQLExpr<string> =>
+    sqlExpr(`CONCAT(${args.map(a => resolveArg(a, quoteFn)).join(', ')})`),
+  substring: (col: TCol | SQLExpr<string>, start: number, len?: number): SQLExpr<string> =>
+    sqlExpr(`SUBSTRING(${resolveArg(col, quoteFn)}, ${start}${len !== undefined ? `, ${len}` : ''})`),
+  left: (col: TCol | SQLExpr<string>, n: number): SQLExpr<string> =>
+    sqlExpr(`LEFT(${resolveArg(col, quoteFn)}, ${n})`),
+  right: (col: TCol | SQLExpr<string>, n: number): SQLExpr<string> =>
+    sqlExpr(`RIGHT(${resolveArg(col, quoteFn)}, ${n})`),
+  repeat: (col: TCol | SQLExpr<string>, n: number): SQLExpr<string> =>
+    sqlExpr(`REPEAT(${resolveArg(col, quoteFn)}, ${n})`),
+  reverse: (col: TCol | SQLExpr<string>): SQLExpr<string> =>
+    sqlExpr(`REVERSE(${resolveArg(col, quoteFn)})`),
+  lpad: (col: TCol | SQLExpr<string>, len: number, pad: string): SQLExpr<string> =>
+    sqlExpr(`LPAD(${resolveArg(col, quoteFn)}, ${len}, '${pad.replace(/'/g, "''")}')`),
+  rpad: (col: TCol | SQLExpr<string>, len: number, pad: string): SQLExpr<string> =>
+    sqlExpr(`RPAD(${resolveArg(col, quoteFn)}, ${len}, '${pad.replace(/'/g, "''")}')`),
+  locate: (substr: string, col: TCol | SQLExpr<string>): SQLExpr<number> =>
+    sqlExpr(`LOCATE('${esc(substr)}', ${resolveArg(col, quoteFn)})`),
+  space: (n: number): SQLExpr<string> =>
+    sqlExpr(`SPACE(${n})`),
 });
 
 export type DialectFns<TCol extends string = string> = ReturnType<typeof mysqlContextFns<TCol>>;
