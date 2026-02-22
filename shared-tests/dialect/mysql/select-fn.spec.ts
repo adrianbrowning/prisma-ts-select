@@ -1,6 +1,6 @@
 import assert from "node:assert/strict"
 import { describe, it } from "node:test"
-import type { Decimal } from "@prisma/client/runtime/library"
+import type { Decimal } from "@prisma/client/runtime/client"
 import type { Equal, Expect } from "../../utils.ts"
 import { typeCheck } from "../../utils.ts"
 import { expectSQL } from "../../test-utils.ts"

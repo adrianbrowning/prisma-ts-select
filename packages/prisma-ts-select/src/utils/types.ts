@@ -1,4 +1,4 @@
-import type {JsonValue} from "@prisma/client/runtime/library";
+import type {JsonValue} from "@prisma/client/runtime/client";
 export type RemoveNullChar<str extends string> = str extends `?${infer s}` ? s : str;
 
 export type DBType = Record<string, {

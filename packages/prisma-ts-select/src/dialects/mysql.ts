@@ -1,7 +1,7 @@
 import type {Dialect} from "./types.js";
 import {resolveArg, sqlExpr, type SQLExpr} from "../sql-expr.js";
 import type {JSONValue} from "../utils/types.js";
-import type {Decimal} from "@prisma/client/runtime/library";
+import type {Decimal} from "@prisma/client/runtime/client";
 
 const esc = (s: string) => s.replace(/'/g, "''");
 
