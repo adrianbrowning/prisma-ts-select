@@ -82,6 +82,7 @@
         * [SQL](#sql-15)
       - [Example - Join table](#example---join-table)
         * [SQL](#sql-16)
+      - [`.selectAllOmit`](#selectallomit)
       - [`.select`](#select)
       - [Example - `*`](#example---)
         * [SQL](#sql-17)
@@ -109,6 +110,11 @@
     + [Offset](#offset)
       - [Example](#example-12)
         * [SQL](#sql-27)
+  * [Select Functions](#select-functions)
+    + [Shared (all dialects)](#shared-all-dialects)
+    + [MySQL-specific](#mysql-specific)
+    + [PostgreSQL-specific](#postgresql-specific)
+    + [SQLite-specific](#sqlite-specific)
   * [Future updates](#future-updates)
   * [Changelog / Versioning](#changelog--versioning)
   * [License](#license)
@@ -145,14 +151,11 @@ pnpm add prisma-ts-select
 ```
 
 ## Supported DBs
- 
-I have tested this currently on the following databases.
+
+Fully tested on:
 
 - SQLite
 - MySQL
-
-Most items should also work for
-
 - PostgreSQL
 
 Other DBs will be added when I have chance.
@@ -697,7 +700,35 @@ FROM User
 JOIN Post ON Post.authorId = User.id;
 ```
 
-[//]: # (#### `.selectAllOmit`)
+#### `.selectAllOmit`
+
+Like `.selectAll`, but excludes specific columns. Accepts `Table.column` or bare `column` references.
+
+#### Example - Single Table
+```typescript file=../usage-sqlite-v7/tests/readme/select-all-omit.ts region=single-omit
+prisma.$from("User")
+      .selectAllOmit(["User.email"]);
+```
+
+##### SQL
+```sql file=../usage-sqlite-v7/tests/readme/select-all-omit.ts region=single-omit-sql
+SELECT id, name, age FROM User;
+```
+
+#### Example - Multiple Columns
+```typescript file=../usage-sqlite-v7/tests/readme/select-all-omit.ts region=multi-omit
+prisma.$from("User")
+      .selectAllOmit(["User.email", "User.age"]);
+```
+
+#### Example - With Join
+```typescript file=../usage-sqlite-v7/tests/readme/select-all-omit.ts region=join-omit
+prisma.$from("User")
+      .join("Post", "authorId", "User.id")
+      .selectAllOmit(["User.email", "Post.content"]);
+```
+
+> **Note:** `*` and `Table.*` are not valid arguments — use `Table.column` or bare `column` references.
 
 #### `.select`
 
@@ -1018,7 +1049,14 @@ prisma.$from("User")
 
 #### `sum(col)` / `avg(col)` / `min(col)` / `max(col)`
 
-Standard numeric aggregates.
+Standard numeric aggregates. **Return types vary by dialect** — `sum` and `avg` return `Decimal` on MySQL (matching Prisma's numeric precision model), `number` on SQLite and PostgreSQL. `min`/`max` always return `T | null` (NULL for empty sets) where `T` is the column's TypeScript type.
+
+| Function | SQLite | MySQL | PostgreSQL |
+|---|---|---|---|
+| `sum(col)` | `number` | `Decimal` | `number` |
+| `avg(col)` | `number` | `Decimal` | `number` |
+| `min(col)` | `T \| null` | `T \| null` | `T \| null` |
+| `max(col)` | `T \| null` | `T \| null` | `T \| null` |
 
 ```typescript file=../usage-sqlite-v7/tests/readme/select-fns.ts region=sum
 prisma.$from("User")
@@ -1111,35 +1149,5 @@ Changelog is available [here](https://github.com/adrianbrowning/prisma-ts-select
 
 ## License
 This project is licensed under the MIT License. See the LICENSE file for details.
-
-Things of note!!!!
-
-- remove typeof from 
-  - `type _db = DeepWriteable<typeof DB>;`
-  - `}[keyof typeof DB];`
-- Merge Items missing //@ts-expect-error - might not be needed
-- groupBy -> having, 
-  - missing @deprecated
-  - ts-exptect-error  - might not be needed
-- GetColsFromTableType missing ts-expect-error - might not be needed
-- DB needs to be in the same file.
-
-
-
-# prisma-ts-select
-
-## Install
-
-```shell
-npm i prisma-ts-select
-pnpm add prisma-ts-select
-```
-
-## Setup
-
-### Extract
-
-
-## Usage
 
 
