@@ -4,9 +4,9 @@ import {match, P} from "ts-pattern";
 // Type stub for PrismaClient to avoid DTS build issues when @prisma/client isn't generated
 // The actual PrismaClient type from @prisma/client will be used at runtime via getExtensionContext
 type PrismaClient = any;
-import {dialect} from "./dialects/index.js";
-import type {SQLExpr} from "./sql-expr.js";
-import {buildContext, type SelectFnContext} from "./fn-context.js";
+import {dialect, dialectContextFns} from "./dialects/index.js";
+import type {Dialect} from "./dialects/types.js";
+import {lit as _lit, sqlExpr, resolveArg, type SQLExpr, type LitToType} from "./sql-expr.js";
 const DB: DBType = {} as const satisfies DBType;
 
 type TDB = typeof DB;
@@ -971,6 +971,7 @@ type IsColumnUnique<Col extends string, Tables extends TArrSources> =
 type GetOtherColumns<Tables extends TArrSources> =
     Exclude<GetColumnsFromTables<Tables>, GetDuplicateColumnsPairwise<Tables>>
     | GetJoinCols<Tables[number]>;
+
 
 class _fSelect<TSources extends TArrSources, TFields extends TFieldsType, TSelectRT extends Record<string, any> = {}> extends _fOrderBy<TSources, TFields, TSelectRT> {
     // Fn overload — no alias → key is widened to `string`
@@ -2200,6 +2201,48 @@ type GetJoinColsType<TDBBase extends TTableSources, Type extends string> = Itera
  * };
  */
 type TFieldsType = Record<string, Record<string, any>>;
+
+// ── SelectFnContext ──────────────────────────────────────────────────────────
+
+/** Columns of type T (respects nullable via NonNullable). */
+export type GetColumnsOfType<TSources extends TArrSources, TFields extends TFieldsType, T> =
+  GetOtherColumns<TSources> extends infer K
+    ? K extends string
+      ? NonNullable<ExtractColumnType<K, TSources, TFields>> extends T ? K : never
+      : never
+    : never;
+
+type LitValue = string | number | boolean | null;
+
+type BaseSelectFnContext<_TSources extends TArrSources, _TFields extends TFieldsType> = {
+  lit: <T extends LitValue>(v: T) => SQLExpr<LitToType<T>>;
+  countAll: () => SQLExpr<number>;
+  count: <TCol extends GetOtherColumns<_TSources> | "*">(col: TCol) => SQLExpr<number>;
+  countDistinct: <TCol extends GetOtherColumns<_TSources>>(col: TCol) => SQLExpr<number>;
+  min: <TTable extends string, TCol extends string & keyof _TFields[TTable]>(col: `${TTable}.${TCol}`) => SQLExpr<_TFields[TTable][TCol]>;
+  max: <TTable extends string, TCol extends string & keyof _TFields[TTable]>(col: `${TTable}.${TCol}`) => SQLExpr<_TFields[TTable][TCol]>;
+};
+
+/** Replaced by generator to inject dialect-specific fns via intersection. */
+export type SelectFnContext<_TSources extends TArrSources, _TFields extends TFieldsType> =
+  BaseSelectFnContext<_TSources, _TFields>;
+
+function buildContext<TSources extends TArrSources, TFields extends TFieldsType>(
+  d: Dialect
+): SelectFnContext<TSources, TFields> {
+  const quoteFn = (col: string) => d.quoteQualifiedColumn(col);
+  return {
+    lit: _lit,
+    countAll:      () => sqlExpr('COUNT(*)'),
+    count:         (col) => sqlExpr(col === "*" ? "COUNT(*)" : `COUNT(${quoteFn(col)})`),
+    countDistinct: (col) => sqlExpr(`COUNT(DISTINCT ${quoteFn(col)})`),
+    min:           (col) => sqlExpr(`MIN(${resolveArg(col, quoteFn)})`),
+    max:           (col) => sqlExpr(`MAX(${resolveArg(col, quoteFn)})`),
+    ...dialectContextFns(quoteFn),
+  } as SelectFnContext<TSources, TFields>;
+}
+
+// ────────────────────────────────────────────────────────────────────────────
 
 class _fJoin<
     TSources extends TArrSources,

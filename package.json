@@ -10,7 +10,13 @@
     "test:v6": "./run-tests-v6.sh",
     "test:v7": "./run-tests-v7.sh",
     "test:isolated": "./run-tests-isolated.sh",
-    "test:all": "./run-all-tests.sh"
+    "test:all": "./run-all-tests.sh",
+    "sqlite-v6": "pnpm --filter usage-sqlite-v6 gen; pnpm --filter usage-sqlite-v6 test",
+    "sqlite-v7": "pnpm --filter usage-sqlite-v7 gen; pnpm --filter usage-sqlite-v7 test",
+    "mysql-v6": "pnpm --filter usage-mysql-v6 gen; pnpm --filter usage-mysql-v6 test",
+    "mysql-v7": "pnpm --filter usage-mysql-v7 gen; pnpm --filter usage-mysql-v7 test",
+    "pg-v6": "pnpm --filter usage-pg-v6 gen; pnpm --filter usage-pg-v6 test",
+    "pg-v7": "pnpm --filter usage-pg-v7 gen; pnpm --filter usage-pg-v7 test"
   },
   "pnpm": {
     "onlyBuiltDependencies": [

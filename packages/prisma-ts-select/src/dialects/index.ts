@@ -1,5 +1,4 @@
 export * from "./types.js";
-export {sharedFunctions} from "./shared.js";
 export {sqliteDialect} from "./sqlite.js";
 export {mysqlDialect} from "./mysql.js";
 export {postgresqlDialect} from "./postgresql.js";
@@ -11,6 +10,7 @@ import {postgresqlDialect} from "./postgresql.js";
 
 // Default dialect export (overwritten by generator at runtime)
 export {sqliteDialect as dialect};
+export {sqliteContextFns as dialectContextFns} from "./sqlite.js";
 
 /**
  * Get dialect configuration by provider name.

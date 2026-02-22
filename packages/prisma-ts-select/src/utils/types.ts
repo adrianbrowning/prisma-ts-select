@@ -1,3 +1,4 @@
+import type {JsonValue} from "@prisma/client/runtime/client";
 export type RemoveNullChar<str extends string> = str extends `?${infer s}` ? s : str;
 
 export type DBType = Record<string, {
@@ -6,3 +7,7 @@ export type DBType = Record<string, {
 }>;
 
 export type TSExtract<T, U extends T> = T extends U ? T : never;
+
+
+//JSON
+export type JSONValue = JsonValue;
