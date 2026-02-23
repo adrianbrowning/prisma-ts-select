@@ -279,4 +279,50 @@ describe("select() fn context", () => {
         });
     });
 
+    describe("column type safety", () => {
+        it("year() rejects string col", () => {
+            // @ts-expect-error title is string, not DateTime
+            prisma.$from("Post").select(({ year }) => year("title"), "y");
+        });
+
+        it("year() rejects number col", () => {
+            // @ts-expect-error User.age is number, not DateTime
+            prisma.$from("User").select(({ year }) => year("User.age"), "y");
+        });
+
+        it("year() rejects SQLExpr<string> from lit", () => {
+            // @ts-expect-error lit("hello") is SQLExpr<string>, not SQLExpr<Date>
+            prisma.$from("Post").select(({ year, lit }) => year(lit("hello")), "y");
+        });
+
+        it("year() rejects SQLExpr<number> from lit", () => {
+            // @ts-expect-error lit(42) is SQLExpr<number>, not SQLExpr<Date>
+            prisma.$from("Post").select(({ year, lit }) => year(lit(42)), "y");
+        });
+
+        it("month() rejects string col", () => {
+            // @ts-expect-error title is string, not DateTime
+            prisma.$from("Post").select(({ month }) => month("title"), "m");
+        });
+
+        it("day() rejects number col", () => {
+            // @ts-expect-error User.age is number, not DateTime
+            prisma.$from("User").select(({ day }) => day("User.age"), "d");
+        });
+
+        it("hour() rejects string lit", () => {
+            // @ts-expect-error lit("x") is SQLExpr<string>, not SQLExpr<Date>
+            prisma.$from("Post").select(({ hour, lit }) => hour(lit("x")), "h");
+        });
+
+        it("accepts DateTime col in year()", () => {
+            prisma.$from("Post").select(({ year }) => year("createdAt"), "y");
+            prisma.$from("Post").select(({ year }) => year("Post.createdAt"), "y");
+        });
+
+        it("accepts now() in year()", () => {
+            prisma.$from("Post").select(({ year, now }) => year(now()), "y");
+        });
+    });
+
 });

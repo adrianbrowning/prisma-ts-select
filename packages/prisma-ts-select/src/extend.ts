@@ -2212,6 +2212,14 @@ export type GetColumnsOfType<TSources extends TArrSources, TFields extends TFiel
       : never
     : never;
 
+/** Builds [colName, colType][] tuple union from all columns in scope. */
+export type ColEntries<TSources extends TArrSources, TFields extends TFieldsType> =
+  GetOtherColumns<TSources> extends infer K
+    ? K extends string
+      ? [K, ExtractColumnType<K, TSources, TFields>]
+      : never
+    : never;
+
 type LitValue = string | number | boolean | null;
 
 type BaseSelectFnContext<_TSources extends TArrSources, _TFields extends TFieldsType> = {
@@ -2221,21 +2229,13 @@ type BaseSelectFnContext<_TSources extends TArrSources, _TFields extends TFields
   countDistinct: <TCol extends GetOtherColumns<_TSources>>(col: TCol) => SQLExpr<number>;
   min: <TTable extends string, TCol extends string & keyof _TFields[TTable]>(col: `${TTable}.${TCol}`) => SQLExpr<_TFields[TTable][TCol]>;
   max: <TTable extends string, TCol extends string & keyof _TFields[TTable]>(col: `${TTable}.${TCol}`) => SQLExpr<_TFields[TTable][TCol]>;
-  replace: <TCol extends GetOtherColumns<_TSources>>(col: TCol | SQLExpr<string>, from: string, to: string) => SQLExpr<string>;
-  length: <TCol extends GetOtherColumns<_TSources>>(col: TCol | SQLExpr<string>) => SQLExpr<number>;
-  upper: <TCol extends GetOtherColumns<_TSources>>(col: TCol | SQLExpr<string>) => SQLExpr<string>;
-  lower: <TCol extends GetOtherColumns<_TSources>>(col: TCol | SQLExpr<string>) => SQLExpr<string>;
-  trim: <TCol extends GetOtherColumns<_TSources>>(col: TCol | SQLExpr<string>) => SQLExpr<string>;
-  ltrim: <TCol extends GetOtherColumns<_TSources>>(col: TCol | SQLExpr<string>) => SQLExpr<string>;
-  rtrim: <TCol extends GetOtherColumns<_TSources>>(col: TCol | SQLExpr<string>) => SQLExpr<string>;
-  now: () => SQLExpr<Date>;
-  curDate: () => SQLExpr<Date>;
-  year: <TCol extends GetOtherColumns<_TSources>>(col: TCol | SQLExpr<Date>) => SQLExpr<number>;
-  month: <TCol extends GetOtherColumns<_TSources>>(col: TCol | SQLExpr<Date>) => SQLExpr<number>;
-  day: <TCol extends GetOtherColumns<_TSources>>(col: TCol | SQLExpr<Date>) => SQLExpr<number>;
-  hour: <TCol extends GetOtherColumns<_TSources>>(col: TCol | SQLExpr<Date>) => SQLExpr<number>;
-  minute: <TCol extends GetOtherColumns<_TSources>>(col: TCol | SQLExpr<Date>) => SQLExpr<number>;
-  second: <TCol extends GetOtherColumns<_TSources>>(col: TCol | SQLExpr<Date>) => SQLExpr<number>;
+  replace: (col: GetColumnsOfType<_TSources, _TFields, string> | SQLExpr<string>, from: string, to: string) => SQLExpr<string>;
+  length: (col: GetColumnsOfType<_TSources, _TFields, string> | SQLExpr<string>) => SQLExpr<number>;
+  upper: (col: GetColumnsOfType<_TSources, _TFields, string> | SQLExpr<string>) => SQLExpr<string>;
+  lower: (col: GetColumnsOfType<_TSources, _TFields, string> | SQLExpr<string>) => SQLExpr<string>;
+  trim: (col: GetColumnsOfType<_TSources, _TFields, string> | SQLExpr<string>) => SQLExpr<string>;
+  ltrim: (col: GetColumnsOfType<_TSources, _TFields, string> | SQLExpr<string>) => SQLExpr<string>;
+  rtrim: (col: GetColumnsOfType<_TSources, _TFields, string> | SQLExpr<string>) => SQLExpr<string>;
 };
 
 /** Replaced by generator to inject dialect-specific fns via intersection. */

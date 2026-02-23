@@ -70,7 +70,7 @@ describe("SQLite datetime dialect fns", () => {
 
         it("type: string", async () => {
             const result = await createQuery().run();
-            typeCheck({} as Expect<Equal<typeof result, Array<{ y: number }>>>);
+            typeCheck({} as Expect<Equal<typeof result, Array<{ y: string }>>>);
         });
 
         it("should return correct years", async () => {
@@ -92,7 +92,7 @@ describe("SQLite datetime dialect fns", () => {
 
         it("type: string", async () => {
             const result = await createQuery().run();
-            typeCheck({} as Expect<Equal<typeof result, Array<{ m: number }>>>);
+            typeCheck({} as Expect<Equal<typeof result, Array<{ m: string }>>>);
         });
 
         it("should return correct months", async () => {
@@ -114,7 +114,7 @@ describe("SQLite datetime dialect fns", () => {
 
         it("type: string", async () => {
             const result = await createQuery().run();
-            typeCheck({} as Expect<Equal<typeof result, Array<{ d: number }>>>);
+            typeCheck({} as Expect<Equal<typeof result, Array<{ d: string }>>>);
         });
 
         it("should return correct days", async () => {
@@ -136,7 +136,7 @@ describe("SQLite datetime dialect fns", () => {
 
         it("type: string", async () => {
             const result = await createQuery().run();
-            typeCheck({} as Expect<Equal<typeof result, Array<{ h: number }>>>);
+            typeCheck({} as Expect<Equal<typeof result, Array<{ h: string }>>>);
         });
 
         it("should return correct hours", async () => {
@@ -158,7 +158,7 @@ describe("SQLite datetime dialect fns", () => {
 
         it("type: string", async () => {
             const result = await createQuery().run();
-            typeCheck({} as Expect<Equal<typeof result, Array<{ min: number }>>>);
+            typeCheck({} as Expect<Equal<typeof result, Array<{ min: string }>>>);
         });
     });
 
@@ -174,7 +174,7 @@ describe("SQLite datetime dialect fns", () => {
 
         it("type: string", async () => {
             const result = await createQuery().run();
-            typeCheck({} as Expect<Equal<typeof result, Array<{ sec: number }>>>);
+            typeCheck({} as Expect<Equal<typeof result, Array<{ sec: string }>>>);
         });
     });
 
@@ -272,6 +272,41 @@ describe("SQLite datetime dialect fns", () => {
             const result = await createQuery().run();
             const dts = result.map(r => r.dt).sort();
             assert.deepEqual(dts, ['2020-01-15 10:30:00', '2020-06-20 14:45:00', '2021-12-25 08:00:00']);
+        });
+    });
+
+    describe("column type safety", () => {
+        it("year() rejects string col", () => {
+            // @ts-expect-error title is string, not DateTime
+            prisma.$from("Post").select(({ year }) => year("title"), "y");
+        });
+
+        it("month() rejects number col", () => {
+            // @ts-expect-error User.age is number, not DateTime
+            prisma.$from("User").select(({ month }) => month("User.age"), "m");
+        });
+
+        it("strftime() rejects string lit", () => {
+            // @ts-expect-error lit("x") is SQLExpr<string>, not SQLExpr<Date>
+            prisma.$from("Post").select(({ strftime, lit }) => strftime('%Y', lit("x")), "s");
+        });
+
+        it("julianday() rejects string col", () => {
+            // @ts-expect-error title is string, not DateTime
+            prisma.$from("Post").select(({ julianday }) => julianday("title"), "j");
+        });
+
+        it("date() rejects number lit", () => {
+            // @ts-expect-error lit(42) is SQLExpr<number>, not SQLExpr<Date>
+            prisma.$from("Post").select(({ date, lit }) => date(lit(42)), "d");
+        });
+
+        it("accepts DateTime col in year()", () => {
+            prisma.$from("Post").select(({ year }) => year("Post.createdAt"), "y");
+        });
+
+        it("accepts now() in strftime()", () => {
+            prisma.$from("Post").select(({ strftime, now }) => strftime('%Y-%m', now()), "s");
         });
     });
 

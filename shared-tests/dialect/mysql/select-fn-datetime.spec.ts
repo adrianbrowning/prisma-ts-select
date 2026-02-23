@@ -10,7 +10,7 @@ describe("MySQL datetime dialect fns", () => {
 
     describe("now()", () => {
         function createQuery() {
-            return prisma.$from("Post").select(({ year }) => year("title"), "year");
+            return prisma.$from("Post").select(({ now }) => now(), "ts");
         }
 
         it("should match SQL", () => {
@@ -303,6 +303,51 @@ describe("MySQL datetime dialect fns", () => {
                 .getSQL();
             expectSQL(sql,
                 `SELECT LAST_DAY(${dialect.quoteQualifiedColumn("Post.createdAt")}) AS ${dialect.quote("ld", true)} FROM ${dialect.quote("Post")};`);
+        });
+    });
+
+    describe("column type safety", () => {
+        it("year() rejects string col", () => {
+            // @ts-expect-error title is string, not DateTime
+            prisma.$from("Post").select(({ year }) => year("title"), "y");
+        });
+
+        it("month() rejects number col", () => {
+            // @ts-expect-error User.age is number, not DateTime
+            prisma.$from("User").select(({ month }) => month("User.age"), "m");
+        });
+
+        it("dateAdd() rejects string col", () => {
+            // @ts-expect-error title is string, not DateTime
+            prisma.$from("Post").select(({ dateAdd }) => dateAdd("title", 1, 'DAY'), "d");
+        });
+
+        it("dateAdd() rejects number lit", () => {
+            // @ts-expect-error lit(42) is SQLExpr<number>, not SQLExpr<Date>
+            prisma.$from("Post").select(({ dateAdd, lit }) => dateAdd(lit(42), 1, 'DAY'), "d");
+        });
+
+        it("dateFormat() rejects string col", () => {
+            // @ts-expect-error title is string, not DateTime
+            prisma.$from("Post").select(({ dateFormat }) => dateFormat("title", '%Y'), "f");
+        });
+
+        it("dateDiff() rejects string lit as second arg", () => {
+            // @ts-expect-error lit("x") is SQLExpr<string>, not SQLExpr<Date>
+            prisma.$from("Post").select(({ dateDiff, now, lit }) => dateDiff(now(), lit("x")), "d");
+        });
+
+        it("weekOfYear() rejects string col", () => {
+            // @ts-expect-error title is string, not DateTime
+            prisma.$from("Post").select(({ weekOfYear }) => weekOfYear("title"), "w");
+        });
+
+        it("accepts DateTime col in dateAdd()", () => {
+            prisma.$from("Post").select(({ dateAdd }) => dateAdd("Post.createdAt", 7, 'DAY'), "d");
+        });
+
+        it("accepts now() in dateFormat()", () => {
+            prisma.$from("Post").select(({ dateFormat, now }) => dateFormat(now(), '%Y-%m-%d'), "f");
         });
     });
 

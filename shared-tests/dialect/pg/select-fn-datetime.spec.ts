@@ -231,4 +231,58 @@ describe("PostgreSQL datetime dialect fns", () => {
         });
     });
 
+    describe("column type safety", () => {
+        it("year() rejects string col", () => {
+            // @ts-expect-error title is string, not DateTime
+            prisma.$from("Post").select(({ year }) => year("title"), "y");
+        });
+
+        it("month() rejects number col", () => {
+            // @ts-expect-error User.age is number, not DateTime
+            prisma.$from("User").select(({ month }) => month("User.age"), "m");
+        });
+
+        it("extract() rejects string col", () => {
+            // @ts-expect-error title is string, not DateTime
+            prisma.$from("Post").select(({ extract }) => extract('YEAR', "title"), "e");
+        });
+
+        it("extract() rejects number lit", () => {
+            // @ts-expect-error lit(42) is SQLExpr<number>, not SQLExpr<Date>
+            prisma.$from("Post").select(({ extract, lit }) => extract('MONTH', lit(42)), "e");
+        });
+
+        it("dateTrunc() rejects string col", () => {
+            // @ts-expect-error title is string, not DateTime
+            prisma.$from("Post").select(({ dateTrunc }) => dateTrunc('month', "title"), "dt");
+        });
+
+        it("age() rejects string lit", () => {
+            // @ts-expect-error lit("x") is SQLExpr<string>, not SQLExpr<Date>
+            prisma.$from("Post").select(({ age, lit }) => age(lit("x")), "a");
+        });
+
+        it("toDate() rejects DateTime col — expects a string col", () => {
+            // @ts-expect-error createdAt is DateTime; toDate first arg must be a string column
+            prisma.$from("Post").select(({ toDate }) => toDate("Post.createdAt", 'YYYY-MM-DD'), "d");
+        });
+
+        it("toDate() rejects number lit", () => {
+            // @ts-expect-error lit(42) is SQLExpr<number>, not SQLExpr<string>
+            prisma.$from("Post").select(({ toDate, lit }) => toDate(lit(42), 'YYYY'), "d");
+        });
+
+        it("accepts DateTime col in year()", () => {
+            prisma.$from("Post").select(({ year }) => year("Post.createdAt"), "y");
+        });
+
+        it("accepts now() in extract()", () => {
+            prisma.$from("Post").select(({ extract, now }) => extract('YEAR', now()), "e");
+        });
+
+        it("toDate() accepts string col", () => {
+            prisma.$from("Post").select(({ toDate }) => toDate("Post.title", 'YYYY'), "d");
+        });
+    });
+
 });

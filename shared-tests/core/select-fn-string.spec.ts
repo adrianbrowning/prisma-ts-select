@@ -214,4 +214,50 @@ describe("select() string fn context", () => {
         });
     });
 
+    describe("column type safety", () => {
+        it("upper() rejects DateTime col", () => {
+            // @ts-expect-error createdAt is DateTime, not string
+            prisma.$from("Post").select(({ upper }) => upper("createdAt"), "u");
+        });
+
+        it("upper() rejects number col", () => {
+            // @ts-expect-error User.age is number, not string
+            prisma.$from("User").select(({ upper }) => upper("User.age"), "u");
+        });
+
+        it("upper() rejects SQLExpr<number> from lit", () => {
+            // @ts-expect-error lit(42) is SQLExpr<number>, not SQLExpr<string>
+            prisma.$from("Post").select(({ upper, lit }) => upper(lit(42)), "u");
+        });
+
+        it("upper() rejects SQLExpr<number> from lit(bool) — booleans map to 1/0", () => {
+            // @ts-expect-error lit(true) is SQLExpr<number> (1/0), not SQLExpr<string>
+            prisma.$from("Post").select(({ upper, lit }) => upper(lit(true)), "u");
+        });
+
+        it("lower() rejects DateTime col", () => {
+            // @ts-expect-error createdAt is DateTime, not string
+            prisma.$from("Post").select(({ lower }) => lower("Post.createdAt"), "l");
+        });
+
+        it("length() rejects number col", () => {
+            // @ts-expect-error User.age is number, not string
+            prisma.$from("User").select(({ length }) => length("User.age"), "len");
+        });
+
+        it("trim() rejects SQLExpr<number> from lit", () => {
+            // @ts-expect-error lit(0) is SQLExpr<number>, not SQLExpr<string>
+            prisma.$from("Post").select(({ trim, lit }) => trim(lit(0)), "t");
+        });
+
+        it("accepts string col in upper()", () => {
+            prisma.$from("Post").select(({ upper }) => upper("title"), "u");
+            prisma.$from("Post").select(({ upper }) => upper("Post.title"), "u");
+        });
+
+        it("accepts SQLExpr<string> from lit in upper()", () => {
+            prisma.$from("Post").select(({ upper, lit }) => upper(lit("hello")), "u");
+        });
+    });
+
 });
