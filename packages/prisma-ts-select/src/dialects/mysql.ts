@@ -38,9 +38,9 @@ export const mysqlContextFns = <TColEntries extends [string, unknown] = [string,
   reverse: (col: FilterCols<TColEntries, string> | SQLExpr<string>): SQLExpr<string> =>
     sqlExpr(`REVERSE(${resolveArg(col, quoteFn)})`),
   lpad: (col: FilterCols<TColEntries, string> | SQLExpr<string>, len: number, pad: string): SQLExpr<string> =>
-    sqlExpr(`LPAD(${resolveArg(col, quoteFn)}, ${len}, '${pad.replace(/'/g, "''")}')`),
+    sqlExpr(`LPAD(${resolveArg(col, quoteFn)}, ${len}, '${esc(pad)}')`),
   rpad: (col: FilterCols<TColEntries, string> | SQLExpr<string>, len: number, pad: string): SQLExpr<string> =>
-    sqlExpr(`RPAD(${resolveArg(col, quoteFn)}, ${len}, '${pad.replace(/'/g, "''")}')`),
+    sqlExpr(`RPAD(${resolveArg(col, quoteFn)}, ${len}, '${esc(pad)}')`),
   locate: (substr: string, col: FilterCols<TColEntries, string> | SQLExpr<string>): SQLExpr<number> =>
     sqlExpr(`LOCATE('${esc(substr)}', ${resolveArg(col, quoteFn)})`),
   space: (n: number): SQLExpr<string> =>

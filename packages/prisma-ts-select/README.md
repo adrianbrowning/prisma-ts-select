@@ -1077,6 +1077,29 @@ prisma.$from("User")
 
 > **Note:** MySQL `LENGTH()` returns byte-length (not char-length). For character-length on multi-byte strings use a dialect-specific fn.
 
+#### DateTime Functions (all dialects)
+
+All dialects provide these functions. Return types differ for `year`/`month`/`day`/`hour`/`minute`/`second` — see note below.
+
+| Function | SQL (MySQL / PG / SQLite) | Returns |
+|---|---|---|
+| `now()` | `NOW()` / `NOW()` / `datetime('now')` | `Date` |
+| `curDate()` | `CURDATE()` / `CURRENT_DATE` / `date('now')` | `Date` |
+| `year(col)` | `YEAR(col)` / `EXTRACT(YEAR FROM col)::integer` / `strftime('%Y', col)` | `number` (SQLite: `string`) |
+| `month(col)` | `MONTH(col)` / `EXTRACT(MONTH FROM col)::integer` / `strftime('%m', col)` | `number` (SQLite: `string`) |
+| `day(col)` | `DAY(col)` / `EXTRACT(DAY FROM col)::integer` / `strftime('%d', col)` | `number` (SQLite: `string`) |
+| `hour(col)` | `HOUR(col)` / `EXTRACT(HOUR FROM col)::integer` / `strftime('%H', col)` | `number` (SQLite: `string`) |
+| `minute(col)` | `MINUTE(col)` / `EXTRACT(MINUTE FROM col)::integer` / `strftime('%M', col)` | `number` (SQLite: `string`) |
+| `second(col)` | `SECOND(col)` / `EXTRACT(SECOND FROM col)::integer` / `strftime('%S', col)` | `number` (SQLite: `string`) |
+
+> **Note:** `year`, `month`, `day`, `hour`, `minute`, and `second` return `string` on SQLite because `strftime()` always returns text (e.g. `'2024'`, `'03'`). MySQL and PostgreSQL return `number`. If you need a number on SQLite, wrap with `CAST(strftime(...) AS INTEGER)` using `sqlExpr`.
+
+DateTime column args also accept `SQLExpr<Date>`, enabling composition:
+
+```typescript
+prisma.$from("Post").select(({ year, now }) => year(now()), "y");
+```
+
 ```typescript file=../usage-sqlite-v7/tests/readme/select-fns.ts region=upper
 prisma.$from("User")
       .select(({ upper }) => upper("User.name"), "uname");
@@ -1138,6 +1161,16 @@ GROUP BY User.name;
 | `rpad(col, len, pad)` | `RPAD(col, len, 'pad')` | `string` |
 | `locate(substr, col)` | `LOCATE('substr', col)` | `number` |
 | `space(n)` | `SPACE(n)` | `string` |
+| `dateAdd(col, n, unit)` | `DATE_ADD(col, INTERVAL n unit)` | `Date` |
+| `dateSub(col, n, unit)` | `DATE_SUB(col, INTERVAL n unit)` | `Date` |
+| `dateFormat(col, fmt)` | `DATE_FORMAT(col, 'fmt')` | `string` |
+| `dateDiff(d1, d2)` | `DATEDIFF(d1, d2)` | `number` |
+| `quarter(col)` | `QUARTER(col)` | `number` |
+| `weekOfYear(col)` | `WEEKOFYEAR(col)` | `number` |
+| `dayName(col)` | `DAYNAME(col)` | `string` |
+| `lastDay(col)` | `LAST_DAY(col)` | `Date` |
+
+`unit` is one of: `'MICROSECOND' | 'SECOND' | 'MINUTE' | 'HOUR' | 'DAY' | 'WEEK' | 'MONTH' | 'QUARTER' | 'YEAR'`
 
 > **Note:** `jsonArrayAgg` and `jsonObjectAgg` require MySQL 5.7.22+.
 
@@ -1172,6 +1205,14 @@ GROUP BY User.name;
 | `splitPart(col, delimiter, field)` | `SPLIT_PART(col, 'delimiter', field)` | `string` |
 | `btrim(col, chars?)` | `BTRIM(col)` / `BTRIM(col, 'chars')` | `string` |
 | `md5(col)` | `MD5(col)` | `string` |
+| `extract(field, col)` | `EXTRACT(field FROM col)` | `number` |
+| `dateTrunc(unit, col)` | `DATE_TRUNC('unit', col)` | `Date` |
+| `age(ts1, ts2?)` | `AGE(ts1)` / `AGE(ts1, ts2)` | `string` (PG `interval` mapped to string) |
+| `toDate(text, fmt)` | `TO_DATE(text, 'fmt')` | `Date` |
+
+`field` for `extract` is one of: `'YEAR' | 'MONTH' | 'DAY' | 'HOUR' | 'MINUTE' | 'SECOND' | 'DOW' | 'DOY' | 'EPOCH' | 'WEEK' | 'QUARTER'`
+
+`unit` for `dateTrunc` is one of: `'microseconds' | 'milliseconds' | 'second' | 'minute' | 'hour' | 'day' | 'week' | 'month' | 'quarter' | 'year' | 'decade' | 'century' | 'millennium'`
 
 ---
 
@@ -1187,8 +1228,14 @@ GROUP BY User.name;
 | `char(...codes)` | `CHAR(n1, n2, ...)` | `string` |
 | `hex(col)` | `HEX(col)` | `string` |
 | `unicode(col)` | `UNICODE(col)` | `number` |
+| `strftime(fmt, col)` | `strftime('fmt', col)` | `string` |
+| `julianday(col)` | `julianday(col)` | `number` |
+| `date(col)` | `date(col)` | `string` |
+| `datetime(col)` | `datetime(col)` | `string` |
 
 > **Note:** `total()` behaves like `SUM()` but returns `0.0` instead of `NULL` for empty sets. SQLite uses the `||` operator for string concatenation.
+
+> **Note:** SQLite stores `DateTime` differently between Prisma v6 (integer milliseconds) and v7 (ISO 8601 text). All SQLite datetime fns automatically normalise both formats via a `CASE WHEN typeof(...) = 'integer' THEN datetime(.../1000, 'unixepoch') ELSE ... END` wrapper, so they work correctly on both versions.
 
 ---
 
@@ -1196,7 +1243,6 @@ GROUP BY User.name;
 
 - Support specifying `JOIN` type [issue#2](https://github.com/adrianbrowning/prisma-ts-select/issues/2)
 - Support additional Select Functions
-  - [Date & Time #6](https://github.com/adrianbrowning/prisma-ts-select/issues/6)
   - [Math #7](https://github.com/adrianbrowning/prisma-ts-select/issues/7)
   - [Control Flow #8](https://github.com/adrianbrowning/prisma-ts-select/issues/8)
   - [JSON #9](https://github.com/adrianbrowning/prisma-ts-select/issues/9)

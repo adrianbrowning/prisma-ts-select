@@ -65,6 +65,11 @@ export const postgresqlContextFns = <TColEntries extends [string, unknown] = [st
     sqlExpr(`EXTRACT(${field} FROM ${resolveArg(col, quoteFn)})`),
   dateTrunc: (unit: PgDateTruncUnit, col: FilterCols<TColEntries, Date> | SQLExpr<Date>): SQLExpr<Date> =>
     sqlExpr(`DATE_TRUNC('${unit}', ${resolveArg(col, quoteFn)})`),
+  /**
+   * PG `AGE()` returns an `interval`. Typed as `string` since node-postgres serializes
+   * intervals as strings (e.g. `"1 year 2 mons 3 days"`). Arithmetic on the result
+   * must be done in SQL, not JS — use `sqlExpr` to compose further expressions.
+   */
   age:       (ts1: FilterCols<TColEntries, Date> | SQLExpr<Date>, ts2?: FilterCols<TColEntries, Date> | SQLExpr<Date>): SQLExpr<string> =>
     sqlExpr(ts2 !== undefined ? `AGE(${resolveArg(ts1, quoteFn)}, ${resolveArg(ts2, quoteFn)})` : `AGE(${resolveArg(ts1, quoteFn)})`),
   toDate:    (text: FilterCols<TColEntries, string> | SQLExpr<string>, fmt: string): SQLExpr<Date> =>

@@ -2260,6 +2260,12 @@ function buildContext<TSources extends TArrSources, TFields extends TFieldsType>
     trim:          (col) => sqlExpr(`TRIM(${resolveArg(col, quoteFn)})`),
     ltrim:         (col) => sqlExpr(`LTRIM(${resolveArg(col, quoteFn)})`),
     rtrim:         (col) => sqlExpr(`RTRIM(${resolveArg(col, quoteFn)})`),
+    // `SelectFnContext` is a stub here — the generator replaces it with
+    // `BaseSelectFnContext & DialectFns` at codegen time. The dialect fns are
+    // unknown to this file's types, so we cast via `Partial<>` to satisfy the
+    // object-literal spread. `Partial<>` is intentional: it lets extra keys
+    // through without demanding they match the (incomplete) stub type.
+    // Correctness of dialect fns is enforced in their own dialect files.
     ...(dialectContextFns(quoteFn) as unknown as Partial<SelectFnContext<TSources, TFields>>),
   } as SelectFnContext<TSources, TFields>;
 }
