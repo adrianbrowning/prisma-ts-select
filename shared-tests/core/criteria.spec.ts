@@ -99,6 +99,7 @@ describe("where", () => {
                      'Post.id': 1,
                      'Post.lastModifiedById': 1,
                      'Post.published': false,
+                     'Post.createdAt': new Date("2020-01-15T10:30:00.000Z"),
                      'Post.title': 'Blog 1',
                      'User.email': 'johndoe@example.com',
                      'User.id': 1,
@@ -115,7 +116,7 @@ describe("where", () => {
             const sql = createQuery()
                 .getSQL();
 
-            const expectedSQL = `SELECT ${dialect.quoteQualifiedColumn("User.id")} AS ${dialect.quote("User.id", true)}, ${dialect.quoteQualifiedColumn("User.email")} AS ${dialect.quote("User.email", true)}, ${dialect.quoteQualifiedColumn("User.name")} AS ${dialect.quote("User.name", true)}, ${dialect.quoteQualifiedColumn("User.age")} AS ${dialect.quote("User.age", true)}, ${dialect.quoteQualifiedColumn("Post.id")} AS ${dialect.quote("Post.id", true)}, ${dialect.quoteQualifiedColumn("Post.title")} AS ${dialect.quote("Post.title", true)}, ${dialect.quoteQualifiedColumn("Post.content")} AS ${dialect.quote("Post.content", true)}, ${dialect.quoteQualifiedColumn("Post.published")} AS ${dialect.quote("Post.published", true)}, ${dialect.quoteQualifiedColumn("Post.authorId")} AS ${dialect.quote("Post.authorId", true)}, ${dialect.quoteQualifiedColumn("Post.lastModifiedById")} AS ${dialect.quote("Post.lastModifiedById", true)} FROM ${dialect.quote("User")} JOIN ${dialect.quote("Post")} ON ${dialect.quoteQualifiedColumn("Post.authorId")} = ${dialect.quoteQualifiedColumn("User.id")} WHERE (NOT(${dialect.quoteQualifiedColumn("User.name")} LIKE 'something' OR ${dialect.quoteQualifiedColumn("User.name")} LIKE 'something else')) AND (NOT((${dialect.quoteQualifiedColumn("User.id")} = 2))) AND ((${dialect.quoteQualifiedColumn("User.id")} = 1 AND ${dialect.quoteQualifiedColumn("Post.id")} = 1)) AND (${dialect.quoteQualifiedColumn("User.id")} = 2 OR ${dialect.quoteQualifiedColumn("Post.content")} IS NOT NULL);`;
+            const expectedSQL = `SELECT ${dialect.quoteQualifiedColumn("User.id")} AS ${dialect.quote("User.id", true)}, ${dialect.quoteQualifiedColumn("User.email")} AS ${dialect.quote("User.email", true)}, ${dialect.quoteQualifiedColumn("User.name")} AS ${dialect.quote("User.name", true)}, ${dialect.quoteQualifiedColumn("User.age")} AS ${dialect.quote("User.age", true)}, ${dialect.quoteQualifiedColumn("Post.id")} AS ${dialect.quote("Post.id", true)}, ${dialect.quoteQualifiedColumn("Post.title")} AS ${dialect.quote("Post.title", true)}, ${dialect.quoteQualifiedColumn("Post.content")} AS ${dialect.quote("Post.content", true)}, ${dialect.quoteQualifiedColumn("Post.published")} AS ${dialect.quote("Post.published", true)}, ${dialect.quoteQualifiedColumn("Post.createdAt")} AS ${dialect.quote("Post.createdAt", true)}, ${dialect.quoteQualifiedColumn("Post.authorId")} AS ${dialect.quote("Post.authorId", true)}, ${dialect.quoteQualifiedColumn("Post.lastModifiedById")} AS ${dialect.quote("Post.lastModifiedById", true)} FROM ${dialect.quote("User")} JOIN ${dialect.quote("Post")} ON ${dialect.quoteQualifiedColumn("Post.authorId")} = ${dialect.quoteQualifiedColumn("User.id")} WHERE (NOT(${dialect.quoteQualifiedColumn("User.name")} LIKE 'something' OR ${dialect.quoteQualifiedColumn("User.name")} LIKE 'something else')) AND (NOT((${dialect.quoteQualifiedColumn("User.id")} = 2))) AND ((${dialect.quoteQualifiedColumn("User.id")} = 1 AND ${dialect.quoteQualifiedColumn("Post.id")} = 1)) AND (${dialect.quoteQualifiedColumn("User.id")} = 2 OR ${dialect.quoteQualifiedColumn("Post.content")} IS NOT NULL);`;
 
             expectSQL(sql, expectedSQL);
         });
@@ -148,6 +149,7 @@ describe("where", () => {
                   'Post.id': 1,
                   'Post.lastModifiedById': 1,
                   'Post.published': false,
+                    'Post.createdAt': new Date("2020-01-15T10:30:00.000Z"),
                   'Post.title': 'Blog 1',
                   'User.email': 'johndoe@example.com',
                   'User.id': 1,
@@ -160,6 +162,7 @@ describe("where", () => {
                   'Post.id': 2,
                   'Post.lastModifiedById': 1,
                   'Post.published': false,
+                  'Post.createdAt': new Date("2020-06-20T14:45:00.000Z"),
                   'Post.title': 'blog 2',
                   'User.email': 'johndoe@example.com',
                   'User.id': 1,
@@ -172,6 +175,7 @@ describe("where", () => {
                   'Post.id': 3,
                   'Post.lastModifiedById': 2,
                   'Post.published': false,
+                   'Post.createdAt': new Date("2021-12-25T08:00:00.000Z"),
                   'Post.title': 'blog 3',
                   'User.email': 'smith@example.com',
                   'User.id': 2,
@@ -186,7 +190,7 @@ describe("where", () => {
 
         it("should match SQL", () => {
             const sql = createQuery().getSQL();
-            const expectedSQL = `SELECT ${dialect.quoteQualifiedColumn("User.id")} AS ${dialect.quote("User.id", true)}, ${dialect.quoteQualifiedColumn("User.email")} AS ${dialect.quote("User.email", true)}, ${dialect.quoteQualifiedColumn("User.name")} AS ${dialect.quote("User.name", true)}, ${dialect.quoteQualifiedColumn("User.age")} AS ${dialect.quote("User.age", true)}, ${dialect.quoteQualifiedColumn("Post.id")} AS ${dialect.quote("Post.id", true)}, ${dialect.quoteQualifiedColumn("Post.title")} AS ${dialect.quote("Post.title", true)}, ${dialect.quoteQualifiedColumn("Post.content")} AS ${dialect.quote("Post.content", true)}, ${dialect.quoteQualifiedColumn("Post.published")} AS ${dialect.quote("Post.published", true)}, ${dialect.quoteQualifiedColumn("Post.authorId")} AS ${dialect.quote("Post.authorId", true)}, ${dialect.quoteQualifiedColumn("Post.lastModifiedById")} AS ${dialect.quote("Post.lastModifiedById", true)} FROM ${dialect.quote("User")} JOIN ${dialect.quote("Post")} ON ${dialect.quoteQualifiedColumn("Post.authorId")} = ${dialect.quoteQualifiedColumn("User.id")} WHERE ${rawWhere};`;
+            const expectedSQL = `SELECT ${dialect.quoteQualifiedColumn("User.id")} AS ${dialect.quote("User.id", true)}, ${dialect.quoteQualifiedColumn("User.email")} AS ${dialect.quote("User.email", true)}, ${dialect.quoteQualifiedColumn("User.name")} AS ${dialect.quote("User.name", true)}, ${dialect.quoteQualifiedColumn("User.age")} AS ${dialect.quote("User.age", true)}, ${dialect.quoteQualifiedColumn("Post.id")} AS ${dialect.quote("Post.id", true)}, ${dialect.quoteQualifiedColumn("Post.title")} AS ${dialect.quote("Post.title", true)}, ${dialect.quoteQualifiedColumn("Post.content")} AS ${dialect.quote("Post.content", true)}, ${dialect.quoteQualifiedColumn("Post.published")} AS ${dialect.quote("Post.published", true)}, ${dialect.quoteQualifiedColumn("Post.createdAt")} AS ${dialect.quote("Post.createdAt", true)}, ${dialect.quoteQualifiedColumn("Post.authorId")} AS ${dialect.quote("Post.authorId", true)}, ${dialect.quoteQualifiedColumn("Post.lastModifiedById")} AS ${dialect.quote("Post.lastModifiedById", true)} FROM ${dialect.quote("User")} JOIN ${dialect.quote("Post")} ON ${dialect.quoteQualifiedColumn("Post.authorId")} = ${dialect.quoteQualifiedColumn("User.id")} WHERE ${rawWhere};`;
             expectSQL(sql, expectedSQL);
         });
 
@@ -289,7 +293,7 @@ describe("having", () => {
 
             const sql = createQuery()
                 .getSQL();
-            const expectedSQL = `SELECT ${dialect.quoteQualifiedColumn("User.id")} AS ${dialect.quote("User.id", true)}, ${dialect.quoteQualifiedColumn("User.email")} AS ${dialect.quote("User.email", true)}, ${dialect.quoteQualifiedColumn("User.name")} AS ${dialect.quote("User.name", true)}, ${dialect.quoteQualifiedColumn("User.age")} AS ${dialect.quote("User.age", true)}, ${dialect.quoteQualifiedColumn("Post.id")} AS ${dialect.quote("Post.id", true)}, ${dialect.quoteQualifiedColumn("Post.title")} AS ${dialect.quote("Post.title", true)}, ${dialect.quoteQualifiedColumn("Post.content")} AS ${dialect.quote("Post.content", true)}, ${dialect.quoteQualifiedColumn("Post.published")} AS ${dialect.quote("Post.published", true)}, ${dialect.quoteQualifiedColumn("Post.authorId")} AS ${dialect.quote("Post.authorId", true)}, ${dialect.quoteQualifiedColumn("Post.lastModifiedById")} AS ${dialect.quote("Post.lastModifiedById", true)} FROM ${dialect.quote("User")} JOIN ${dialect.quote("Post")} ON ${dialect.quoteQualifiedColumn("Post.authorId")} = ${dialect.quoteQualifiedColumn("User.id")} HAVING ${dialect.quoteQualifiedColumn("User.name")} LIKE 'Stuart%';`;
+            const expectedSQL = `SELECT ${dialect.quoteQualifiedColumn("User.id")} AS ${dialect.quote("User.id", true)}, ${dialect.quoteQualifiedColumn("User.email")} AS ${dialect.quote("User.email", true)}, ${dialect.quoteQualifiedColumn("User.name")} AS ${dialect.quote("User.name", true)}, ${dialect.quoteQualifiedColumn("User.age")} AS ${dialect.quote("User.age", true)}, ${dialect.quoteQualifiedColumn("Post.id")} AS ${dialect.quote("Post.id", true)}, ${dialect.quoteQualifiedColumn("Post.title")} AS ${dialect.quote("Post.title", true)}, ${dialect.quoteQualifiedColumn("Post.content")} AS ${dialect.quote("Post.content", true)}, ${dialect.quoteQualifiedColumn("Post.published")} AS ${dialect.quote("Post.published", true)}, ${dialect.quoteQualifiedColumn("Post.createdAt")} AS ${dialect.quote("Post.createdAt", true)}, ${dialect.quoteQualifiedColumn("Post.authorId")} AS ${dialect.quote("Post.authorId", true)}, ${dialect.quoteQualifiedColumn("Post.lastModifiedById")} AS ${dialect.quote("Post.lastModifiedById", true)} FROM ${dialect.quote("User")} JOIN ${dialect.quote("Post")} ON ${dialect.quoteQualifiedColumn("Post.authorId")} = ${dialect.quoteQualifiedColumn("User.id")} HAVING ${dialect.quoteQualifiedColumn("User.name")} LIKE 'Stuart%';`;
             expectSQL(sql, expectedSQL);
 
             // Verify type is correct even though we don't run it

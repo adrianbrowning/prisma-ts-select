@@ -2228,6 +2228,14 @@ type BaseSelectFnContext<_TSources extends TArrSources, _TFields extends TFields
   trim: <TCol extends GetOtherColumns<_TSources>>(col: TCol | SQLExpr<string>) => SQLExpr<string>;
   ltrim: <TCol extends GetOtherColumns<_TSources>>(col: TCol | SQLExpr<string>) => SQLExpr<string>;
   rtrim: <TCol extends GetOtherColumns<_TSources>>(col: TCol | SQLExpr<string>) => SQLExpr<string>;
+  now: () => SQLExpr<Date>;
+  curDate: () => SQLExpr<Date>;
+  year: <TCol extends GetOtherColumns<_TSources>>(col: TCol | SQLExpr<Date>) => SQLExpr<number>;
+  month: <TCol extends GetOtherColumns<_TSources>>(col: TCol | SQLExpr<Date>) => SQLExpr<number>;
+  day: <TCol extends GetOtherColumns<_TSources>>(col: TCol | SQLExpr<Date>) => SQLExpr<number>;
+  hour: <TCol extends GetOtherColumns<_TSources>>(col: TCol | SQLExpr<Date>) => SQLExpr<number>;
+  minute: <TCol extends GetOtherColumns<_TSources>>(col: TCol | SQLExpr<Date>) => SQLExpr<number>;
+  second: <TCol extends GetOtherColumns<_TSources>>(col: TCol | SQLExpr<Date>) => SQLExpr<number>;
 };
 
 /** Replaced by generator to inject dialect-specific fns via intersection. */
@@ -2252,7 +2260,7 @@ function buildContext<TSources extends TArrSources, TFields extends TFieldsType>
     trim:          (col) => sqlExpr(`TRIM(${resolveArg(col, quoteFn)})`),
     ltrim:         (col) => sqlExpr(`LTRIM(${resolveArg(col, quoteFn)})`),
     rtrim:         (col) => sqlExpr(`RTRIM(${resolveArg(col, quoteFn)})`),
-    ...dialectContextFns(quoteFn),
+    ...(dialectContextFns(quoteFn) as unknown as Partial<SelectFnContext<TSources, TFields>>),
   } as SelectFnContext<TSources, TFields>;
 }
 

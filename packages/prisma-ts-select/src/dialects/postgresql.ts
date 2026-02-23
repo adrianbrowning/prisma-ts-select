@@ -4,6 +4,9 @@ import type {JSONValue} from "../utils/types.js";
 
 const esc = (s: string) => s.replace(/'/g, "''");
 
+export type PgExtractField = 'YEAR' | 'MONTH' | 'DAY' | 'HOUR' | 'MINUTE' | 'SECOND' | 'DOW' | 'DOY' | 'EPOCH' | 'WEEK' | 'QUARTER';
+export type PgDateTruncUnit = 'microseconds' | 'milliseconds' | 'second' | 'minute' | 'hour' | 'day' | 'week' | 'month' | 'quarter' | 'year' | 'decade' | 'century' | 'millennium';
+
 export const postgresqlContextFns = <TCol extends string = string>(quoteFn: (ref: string) => string) => ({
   avg: (col: TCol | SQLExpr<number>): SQLExpr<number> => sqlExpr(`AVG(${resolveArg(col, quoteFn)})`),
   sum: (col: TCol | SQLExpr<number>): SQLExpr<number> => sqlExpr(`SUM(${resolveArg(col, quoteFn)})`),
@@ -47,6 +50,24 @@ export const postgresqlContextFns = <TCol extends string = string>(quoteFn: (ref
     sqlExpr(`BTRIM(${resolveArg(col, quoteFn)}${chars !== undefined ? `, '${esc(chars)}'` : ''})`),
   md5: (col: TCol | SQLExpr<string>): SQLExpr<string> =>
     sqlExpr(`MD5(${resolveArg(col, quoteFn)})`),
+  // DateTime overrides
+  now:       (): SQLExpr<Date> => sqlExpr('NOW()'),
+  curDate:   (): SQLExpr<Date> => sqlExpr('CURRENT_DATE'),
+  year:      (col: TCol | SQLExpr<Date>): SQLExpr<number> => sqlExpr(`EXTRACT(YEAR FROM ${resolveArg(col, quoteFn)})::integer`),
+  month:     (col: TCol | SQLExpr<Date>): SQLExpr<number> => sqlExpr(`EXTRACT(MONTH FROM ${resolveArg(col, quoteFn)})::integer`),
+  day:       (col: TCol | SQLExpr<Date>): SQLExpr<number> => sqlExpr(`EXTRACT(DAY FROM ${resolveArg(col, quoteFn)})::integer`),
+  hour:      (col: TCol | SQLExpr<Date>): SQLExpr<number> => sqlExpr(`EXTRACT(HOUR FROM ${resolveArg(col, quoteFn)})::integer`),
+  minute:    (col: TCol | SQLExpr<Date>): SQLExpr<number> => sqlExpr(`EXTRACT(MINUTE FROM ${resolveArg(col, quoteFn)})::integer`),
+  second:    (col: TCol | SQLExpr<Date>): SQLExpr<number> => sqlExpr(`EXTRACT(SECOND FROM ${resolveArg(col, quoteFn)})::integer`),
+  // PG-only DateTime fns
+  extract:   (field: PgExtractField, col: TCol | SQLExpr<Date>): SQLExpr<number> =>
+    sqlExpr(`EXTRACT(${field} FROM ${resolveArg(col, quoteFn)})`),
+  dateTrunc: (unit: PgDateTruncUnit, col: TCol | SQLExpr<Date>): SQLExpr<Date> =>
+    sqlExpr(`DATE_TRUNC('${unit}', ${resolveArg(col, quoteFn)})`),
+  age:       (ts1: TCol | SQLExpr<Date>, ts2?: TCol | SQLExpr<Date>): SQLExpr<string> =>
+    sqlExpr(ts2 !== undefined ? `AGE(${resolveArg(ts1, quoteFn)}, ${resolveArg(ts2, quoteFn)})` : `AGE(${resolveArg(ts1, quoteFn)})`),
+  toDate:    (text: TCol | SQLExpr<string>, fmt: string): SQLExpr<Date> =>
+    sqlExpr(`TO_DATE(${resolveArg(text, quoteFn)}, '${esc(fmt)}')`),
 });
 
 export type DialectFns<TCol extends string = string> = ReturnType<typeof postgresqlContextFns<TCol>>;

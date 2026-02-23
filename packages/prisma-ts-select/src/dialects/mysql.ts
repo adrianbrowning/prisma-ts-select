@@ -5,6 +5,8 @@ import type {Decimal} from "@prisma/client/runtime/client";
 
 const esc = (s: string) => s.replace(/'/g, "''");
 
+export type IntervalUnit = 'MICROSECOND' | 'SECOND' | 'MINUTE' | 'HOUR' | 'DAY' | 'WEEK' | 'MONTH' | 'QUARTER' | 'YEAR';
+
 export const mysqlContextFns = <TCol extends string = string>(quoteFn: (ref: string) => string) => ({
   avg: (col: TCol | SQLExpr<number>): SQLExpr<Decimal> =>
     sqlExpr(`AVG(${resolveArg(col, quoteFn)})`),
@@ -42,6 +44,32 @@ export const mysqlContextFns = <TCol extends string = string>(quoteFn: (ref: str
     sqlExpr(`LOCATE('${esc(substr)}', ${resolveArg(col, quoteFn)})`),
   space: (n: number): SQLExpr<string> =>
     sqlExpr(`SPACE(${n})`),
+  // DateTime base fns (MySQL defaults)
+  now:       (): SQLExpr<Date> => sqlExpr('NOW()'),
+  curDate:   (): SQLExpr<Date> => sqlExpr('CURDATE()'),
+  year:      (col: TCol | SQLExpr<Date>): SQLExpr<number> => sqlExpr(`YEAR(${resolveArg(col, quoteFn)})`),
+  month:     (col: TCol | SQLExpr<Date>): SQLExpr<number> => sqlExpr(`MONTH(${resolveArg(col, quoteFn)})`),
+  day:       (col: TCol | SQLExpr<Date>): SQLExpr<number> => sqlExpr(`DAY(${resolveArg(col, quoteFn)})`),
+  hour:      (col: TCol | SQLExpr<Date>): SQLExpr<number> => sqlExpr(`HOUR(${resolveArg(col, quoteFn)})`),
+  minute:    (col: TCol | SQLExpr<Date>): SQLExpr<number> => sqlExpr(`MINUTE(${resolveArg(col, quoteFn)})`),
+  second:    (col: TCol | SQLExpr<Date>): SQLExpr<number> => sqlExpr(`SECOND(${resolveArg(col, quoteFn)})`),
+  // DateTime fns (MySQL-only)
+  dateAdd:    (col: TCol | SQLExpr<Date>, n: number, unit: IntervalUnit): SQLExpr<Date> =>
+    sqlExpr(`DATE_ADD(${resolveArg(col, quoteFn)}, INTERVAL ${n} ${unit})`),
+  dateSub:    (col: TCol | SQLExpr<Date>, n: number, unit: IntervalUnit): SQLExpr<Date> =>
+    sqlExpr(`DATE_SUB(${resolveArg(col, quoteFn)}, INTERVAL ${n} ${unit})`),
+  dateFormat: (col: TCol | SQLExpr<Date>, fmt: string): SQLExpr<string> =>
+    sqlExpr(`DATE_FORMAT(${resolveArg(col, quoteFn)}, '${esc(fmt)}')`),
+  dateDiff:   (d1: TCol | SQLExpr<Date>, d2: TCol | SQLExpr<Date>): SQLExpr<number> =>
+    sqlExpr(`DATEDIFF(${resolveArg(d1, quoteFn)}, ${resolveArg(d2, quoteFn)})`),
+  quarter:    (col: TCol | SQLExpr<Date>): SQLExpr<number> =>
+    sqlExpr(`QUARTER(${resolveArg(col, quoteFn)})`),
+  weekOfYear: (col: TCol | SQLExpr<Date>): SQLExpr<number> =>
+    sqlExpr(`WEEKOFYEAR(${resolveArg(col, quoteFn)})`),
+  dayName:    (col: TCol | SQLExpr<Date>): SQLExpr<string> =>
+    sqlExpr(`DAYNAME(${resolveArg(col, quoteFn)})`),
+  lastDay:    (col: TCol | SQLExpr<Date>): SQLExpr<Date> =>
+    sqlExpr(`LAST_DAY(${resolveArg(col, quoteFn)})`),
 });
 
 export type DialectFns<TCol extends string = string> = ReturnType<typeof mysqlContextFns<TCol>>;

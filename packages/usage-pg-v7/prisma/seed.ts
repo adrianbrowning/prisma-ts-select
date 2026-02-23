@@ -41,6 +41,7 @@ async function seed() {
                 title: 'Blog 1',
                 content: 'Something',
                 published: false,
+                createdAt: new Date('2020-01-15T10:30:00.000Z'),
                 authorId: 1,
                 lastModifiedById: 1
             },
@@ -49,6 +50,7 @@ async function seed() {
                 title: 'blog 2',
                 content: 'sql',
                 published: false,
+                createdAt: new Date('2020-06-20T14:45:00.000Z'),
                 authorId: 1,
                 lastModifiedById: 1
             },
@@ -57,6 +59,7 @@ async function seed() {
                 title: 'blog 3',
                 content: null,  // Test nullable field
                 published: false,
+                createdAt: new Date('2021-12-25T08:00:00.000Z'),
                 authorId: 2,
                 lastModifiedById: 2
             }

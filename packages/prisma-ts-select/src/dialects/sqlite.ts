@@ -1,6 +1,14 @@
 import type {Dialect} from "./types.js";
 import {resolveArg, sqlExpr, type SQLExpr} from "../sql-expr.js";
 
+// Prisma v6 stores DateTime as integer ms, v7 as ISO text in SQLite.
+// CASE normalizes both to a date string; SQLExpr args (e.g. now()) pass through unchanged.
+const dateArg = <TCol extends string>(col: TCol | SQLExpr<Date>, quoteFn: (ref: string) => string): string => {
+  if (typeof col !== 'string') return col.sql;
+  const ref = quoteFn(col);
+  return `CASE WHEN typeof(${ref}) = 'integer' THEN datetime(${ref}/1000, 'unixepoch') ELSE ${ref} END`;
+};
+
 export const sqliteContextFns = <TCol extends string = string>(quoteFn: (ref: string) => string) => ({
   avg: (col: TCol | SQLExpr<number>): SQLExpr<number> => sqlExpr(`AVG(${resolveArg(col, quoteFn)})`),
   sum: (col: TCol | SQLExpr<number>): SQLExpr<number> => sqlExpr(`SUM(${resolveArg(col, quoteFn)})`),
@@ -19,6 +27,20 @@ export const sqliteContextFns = <TCol extends string = string>(quoteFn: (ref: st
     sqlExpr(`HEX(${resolveArg(col, quoteFn)})`),
   unicode: (col: TCol | SQLExpr<string>): SQLExpr<number> =>
     sqlExpr(`UNICODE(${resolveArg(col, quoteFn)})`),
+  // DateTime overrides
+  now:       (): SQLExpr<Date> => sqlExpr(`datetime('now')`),
+  curDate:   (): SQLExpr<Date> => sqlExpr(`date('now')`),
+  year:      (col: TCol | SQLExpr<Date>): SQLExpr<string> => sqlExpr(`strftime('%Y', ${dateArg(col, quoteFn)})`),
+  month:     (col: TCol | SQLExpr<Date>): SQLExpr<string> => sqlExpr(`strftime('%m', ${dateArg(col, quoteFn)})`),
+  day:       (col: TCol | SQLExpr<Date>): SQLExpr<string> => sqlExpr(`strftime('%d', ${dateArg(col, quoteFn)})`),
+  hour:      (col: TCol | SQLExpr<Date>): SQLExpr<string> => sqlExpr(`strftime('%H', ${dateArg(col, quoteFn)})`),
+  minute:    (col: TCol | SQLExpr<Date>): SQLExpr<string> => sqlExpr(`strftime('%M', ${dateArg(col, quoteFn)})`),
+  second:    (col: TCol | SQLExpr<Date>): SQLExpr<string> => sqlExpr(`strftime('%S', ${dateArg(col, quoteFn)})`),
+  // SQLite-only DateTime fns
+  strftime:  (fmt: string, col: TCol | SQLExpr<Date>): SQLExpr<string> => sqlExpr(`strftime('${fmt.replace(/'/g, "''")}', ${dateArg(col, quoteFn)})`),
+  julianday: (col: TCol | SQLExpr<Date>): SQLExpr<number> => sqlExpr(`julianday(${dateArg(col, quoteFn)})`),
+  date:      (col: TCol | SQLExpr<Date>): SQLExpr<string> => sqlExpr(`date(${dateArg(col, quoteFn)})`),
+  datetime:  (col: TCol | SQLExpr<Date>): SQLExpr<string> => sqlExpr(`datetime(${dateArg(col, quoteFn)})`),
 });
 
 export type DialectFns<TCol extends string = string> = ReturnType<typeof sqliteContextFns<TCol>>;

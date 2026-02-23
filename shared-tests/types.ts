@@ -29,6 +29,7 @@ export type PostRow = {
     title: string;
     content: string | null;
     published: boolean;
+    createdAt: Date;
     authorId: number;
     lastModifiedById: number;
 };

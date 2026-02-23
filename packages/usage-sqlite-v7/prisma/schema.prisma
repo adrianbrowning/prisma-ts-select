@@ -27,6 +27,7 @@ model Post {
   title            String
   content          String?
   published        Boolean       @default(false)
+  createdAt        DateTime      @default(now())
   author           User          @relation(fields: [authorId], references: [id], name: "author", onDelete: Cascade)
   authorId         Int
   LastModifiedBy   User          @relation(fields: [lastModifiedById], references: [id], name: "lastModifiedBy")
