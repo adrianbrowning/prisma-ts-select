@@ -164,4 +164,78 @@ describe("PostgreSQL dialect fns", () => {
             typeCheck({} as Expect<Equal<typeof result, Array<{ average: number }>>>);
         });
     });
+
+    describe("column type safety — numeric fns", () => {
+        it("avg() rejects string col", () => {
+            // @ts-expect-error title is string, not number
+            prisma.$from("Post").select(({ avg }) => avg("title"), "a");
+        });
+
+        it("avg() rejects DateTime col", () => {
+            // @ts-expect-error createdAt is DateTime, not number
+            prisma.$from("Post").select(({ avg }) => avg("Post.createdAt"), "a");
+        });
+
+        it("avg() rejects SQLExpr<string> from lit", () => {
+            // @ts-expect-error lit("x") is SQLExpr<string>, not SQLExpr<number>
+            prisma.$from("User").select(({ avg, lit }) => avg(lit("x")), "a");
+        });
+
+        it("sum() rejects string col", () => {
+            // @ts-expect-error title is string, not number
+            prisma.$from("Post").select(({ sum }) => sum("title"), "s");
+        });
+
+        it("accepts number col in avg()", () => {
+            prisma.$from("User").select(({ avg }) => avg("User.age"), "a");
+        });
+    });
+
+    describe("column type safety — PG datetime fns", () => {
+        it("extract() rejects string col", () => {
+            // @ts-expect-error title is string, not DateTime
+            prisma.$from("Post").select(({ extract }) => extract('YEAR', "title"), "e");
+        });
+
+        it("dateTrunc() rejects number col", () => {
+            // @ts-expect-error User.age is number, not DateTime
+            prisma.$from("User").select(({ dateTrunc }) => dateTrunc('month', "User.age"), "dt");
+        });
+
+        it("age() rejects string lit", () => {
+            // @ts-expect-error lit("x") is SQLExpr<string>, not SQLExpr<Date>
+            prisma.$from("Post").select(({ age, lit }) => age(lit("x")), "a");
+        });
+
+        it("toDate() rejects DateTime col — expects string col", () => {
+            // @ts-expect-error createdAt is DateTime; toDate expects a string (text) column
+            prisma.$from("Post").select(({ toDate }) => toDate("Post.createdAt", 'YYYY-MM-DD'), "d");
+        });
+
+        it("toDate() rejects number lit", () => {
+            // @ts-expect-error lit(42) is SQLExpr<number>, not SQLExpr<string>
+            prisma.$from("Post").select(({ toDate, lit }) => toDate(lit(42), 'YYYY'), "d");
+        });
+
+        it("toDate() accepts string col", () => {
+            prisma.$from("Post").select(({ toDate }) => toDate("Post.title", 'YYYY'), "d");
+        });
+    });
+
+    describe("column type safety — PG string fns", () => {
+        it("initcap() rejects DateTime col", () => {
+            // @ts-expect-error createdAt is DateTime, not string
+            prisma.$from("Post").select(({ initcap }) => initcap("Post.createdAt"), "i");
+        });
+
+        it("md5() rejects number col", () => {
+            // @ts-expect-error User.age is number, not string
+            prisma.$from("User").select(({ md5 }) => md5("User.age"), "m");
+        });
+
+        it("splitPart() rejects SQLExpr<number> from lit", () => {
+            // @ts-expect-error lit(42) is SQLExpr<number>, not SQLExpr<string>
+            prisma.$from("Post").select(({ splitPart, lit }) => splitPart(lit(42), '-', 1), "sp");
+        });
+    });
 });

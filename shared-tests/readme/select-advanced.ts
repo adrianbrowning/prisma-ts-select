@@ -94,7 +94,7 @@ prisma.$from("User")
 
     const expectedSQL =
       // #region all-join-sql
-      "SELECT User.id AS `User.id`, User.email AS `User.email`, User.name AS `User.name`, User.age AS `User.age`, Post.id AS `Post.id`, Post.title AS `Post.title`, Post.content AS `Post.content`, Post.published AS `Post.published`, Post.authorId AS `Post.authorId`, Post.lastModifiedById AS `Post.lastModifiedById` FROM User JOIN Post ON Post.authorId = User.id;";
+      "SELECT User.id AS `User.id`, User.email AS `User.email`, User.name AS `User.name`, User.age AS `User.age`, Post.id AS `Post.id`, Post.title AS `Post.title`, Post.content AS `Post.content`, Post.published AS `Post.published`, Post.createdAt AS `Post.createdAt`, Post.authorId AS `Post.authorId`, Post.lastModifiedById AS `Post.lastModifiedById` FROM User JOIN Post ON Post.authorId = User.id;";
       // #endregion all-join-sql
 
     assert.equal(sql, expectedSQL);
@@ -168,7 +168,7 @@ prisma.$from("User")
 
     const expectedSQL =
       // #region table-star-join-sql
-      "SELECT User.id AS `User.id`, User.email AS `User.email`, User.name AS `User.name`, User.age AS `User.age`, Post.id AS `Post.id`, Post.title AS `Post.title`, Post.content AS `Post.content`, Post.published AS `Post.published`, Post.authorId AS `Post.authorId`, Post.lastModifiedById AS `Post.lastModifiedById` FROM User JOIN Post ON Post.authorId = User.id;";
+      "SELECT User.id AS `User.id`, User.email AS `User.email`, User.name AS `User.name`, User.age AS `User.age`, Post.id AS `Post.id`, Post.title AS `Post.title`, Post.content AS `Post.content`, Post.published AS `Post.published`, Post.createdAt AS `Post.createdAt`, Post.authorId AS `Post.authorId`, Post.lastModifiedById AS `Post.lastModifiedById` FROM User JOIN Post ON Post.authorId = User.id;";
       // #endregion table-star-join-sql
 
     assert.equal(sql, expectedSQL);
@@ -190,6 +190,7 @@ prisma.$from("User")
             'Post.id': 1,
             'Post.lastModifiedById': 1,
             'Post.published': false,
+            'Post.createdAt': new Date("2020-01-15T10:30:00.000Z"),
             'Post.title': 'Blog 1',
             'User.email': 'johndoe@example.com',
             'User.id': 1,
@@ -202,6 +203,7 @@ prisma.$from("User")
             'Post.id': 2,
             'Post.lastModifiedById': 1,
             'Post.published': false,
+          'Post.createdAt': new Date("2020-06-20T14:45:00.000Z"),
             'Post.title': 'blog 2',
             'User.email': 'johndoe@example.com',
             'User.id': 1,
@@ -214,6 +216,7 @@ prisma.$from("User")
             'Post.id': 3,
             'Post.lastModifiedById': 2,
             'Post.published': false,
+           'Post.createdAt': new Date("2021-12-25T08:00:00.000Z"),
             'Post.title': 'blog 3',
             'User.email': 'smith@example.com',
             'User.id': 2,

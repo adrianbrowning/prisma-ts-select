@@ -155,4 +155,74 @@ describe("MySQL dialect fns", () => {
             typeCheck({} as Expect<Equal<typeof result, Array<{ average: Decimal }>>>);
         });
     });
+
+    describe("column type safety — numeric fns", () => {
+        it("avg() rejects string col", () => {
+            // @ts-expect-error title is string, not number
+            prisma.$from("Post").select(({ avg }) => avg("title"), "a");
+        });
+
+        it("avg() rejects DateTime col", () => {
+            // @ts-expect-error createdAt is DateTime, not number
+            prisma.$from("Post").select(({ avg }) => avg("Post.createdAt"), "a");
+        });
+
+        it("avg() rejects SQLExpr<string> from lit", () => {
+            // @ts-expect-error lit("x") is SQLExpr<string>, not SQLExpr<number>
+            prisma.$from("User").select(({ avg, lit }) => avg(lit("x")), "a");
+        });
+
+        it("sum() rejects string col", () => {
+            // @ts-expect-error title is string, not number
+            prisma.$from("Post").select(({ sum }) => sum("title"), "s");
+        });
+
+        it("accepts number col in avg()", () => {
+            prisma.$from("User").select(({ avg }) => avg("User.age"), "a");
+        });
+    });
+
+    describe("column type safety — MySQL datetime fns", () => {
+        it("dateAdd() rejects string col", () => {
+            // @ts-expect-error title is string, not DateTime
+            prisma.$from("Post").select(({ dateAdd }) => dateAdd("title", 1, 'DAY'), "d");
+        });
+
+        it("dateFormat() rejects number col", () => {
+            // @ts-expect-error User.age is number, not DateTime
+            prisma.$from("User").select(({ dateFormat }) => dateFormat("User.age", '%Y'), "f");
+        });
+
+        it("dateDiff() rejects string lit as first arg", () => {
+            // @ts-expect-error lit("x") is SQLExpr<string>, not SQLExpr<Date>
+            prisma.$from("Post").select(({ dateDiff, lit }) => dateDiff(lit("x"), "Post.createdAt"), "d");
+        });
+
+        it("quarter() rejects string col", () => {
+            // @ts-expect-error title is string, not DateTime
+            prisma.$from("Post").select(({ quarter }) => quarter("title"), "q");
+        });
+
+        it("dayName() rejects number lit", () => {
+            // @ts-expect-error lit(42) is SQLExpr<number>, not SQLExpr<Date>
+            prisma.$from("Post").select(({ dayName, lit }) => dayName(lit(42)), "dn");
+        });
+    });
+
+    describe("column type safety — MySQL string fns", () => {
+        it("substring() rejects DateTime col", () => {
+            // @ts-expect-error createdAt is DateTime, not string
+            prisma.$from("Post").select(({ substring }) => substring("Post.createdAt", 1), "s");
+        });
+
+        it("left() rejects number col", () => {
+            // @ts-expect-error User.age is number, not string
+            prisma.$from("User").select(({ left }) => left("User.age", 3), "l");
+        });
+
+        it("reverse() rejects SQLExpr<number> from lit", () => {
+            // @ts-expect-error lit(0) is SQLExpr<number>, not SQLExpr<string>
+            prisma.$from("Post").select(({ reverse, lit }) => reverse(lit(0)), "r");
+        });
+    });
 });

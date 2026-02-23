@@ -70,4 +70,78 @@ describe("SQLite dialect fns", () => {
             typeCheck({} as Expect<Equal<typeof result, Array<{ average: number }>>>);
         });
     });
+
+    describe("column type safety — numeric fns", () => {
+        it("avg() rejects string col", () => {
+            // @ts-expect-error title is string, not number
+            prisma.$from("Post").select(({ avg }) => avg("title"), "a");
+        });
+
+        it("avg() rejects DateTime col", () => {
+            // @ts-expect-error createdAt is DateTime, not number
+            prisma.$from("Post").select(({ avg }) => avg("Post.createdAt"), "a");
+        });
+
+        it("avg() rejects SQLExpr<string> from lit", () => {
+            // @ts-expect-error lit("x") is SQLExpr<string>, not SQLExpr<number>
+            prisma.$from("User").select(({ avg, lit }) => avg(lit("x")), "a");
+        });
+
+        it("sum() rejects string col", () => {
+            // @ts-expect-error title is string, not number
+            prisma.$from("Post").select(({ sum }) => sum("title"), "s");
+        });
+
+        it("accepts number col in avg()", () => {
+            prisma.$from("User").select(({ avg }) => avg("User.age"), "a");
+        });
+
+        it("accepts SQLExpr<number> from lit in avg()", () => {
+            prisma.$from("User").select(({ avg, lit }) => avg(lit(42)), "a");
+        });
+    });
+
+    describe("column type safety — SQLite datetime fns", () => {
+        it("strftime() rejects string col", () => {
+            // @ts-expect-error title is string, not DateTime
+            prisma.$from("Post").select(({ strftime }) => strftime('%Y', "title"), "s");
+        });
+
+        it("julianday() rejects string col", () => {
+            // @ts-expect-error title is string, not DateTime
+            prisma.$from("Post").select(({ julianday }) => julianday("title"), "j");
+        });
+
+        it("julianday() rejects SQLExpr<number> from lit", () => {
+            // @ts-expect-error lit(42) is SQLExpr<number>, not SQLExpr<Date>
+            prisma.$from("Post").select(({ julianday, lit }) => julianday(lit(42)), "j");
+        });
+
+        it("date() rejects number col", () => {
+            // @ts-expect-error User.age is number, not DateTime
+            prisma.$from("User").select(({ date }) => date("User.age"), "d");
+        });
+
+        it("datetime() rejects string lit", () => {
+            // @ts-expect-error lit("x") is SQLExpr<string>, not SQLExpr<Date>
+            prisma.$from("Post").select(({ datetime, lit }) => datetime(lit("x")), "dt");
+        });
+    });
+
+    describe("column type safety — SQLite string fns", () => {
+        it("substr() rejects DateTime col", () => {
+            // @ts-expect-error createdAt is DateTime, not string
+            prisma.$from("Post").select(({ substr }) => substr("Post.createdAt", 1), "s");
+        });
+
+        it("hex() rejects number col", () => {
+            // @ts-expect-error User.age is number, not string
+            prisma.$from("User").select(({ hex }) => hex("User.age"), "h");
+        });
+
+        it("instr() rejects SQLExpr<number> from lit", () => {
+            // @ts-expect-error lit(42) is SQLExpr<number>, not SQLExpr<string>
+            prisma.$from("Post").select(({ instr, lit }) => instr(lit(42), "x"), "i");
+        });
+    });
 });
