@@ -189,6 +189,55 @@ describe("PostgreSQL dialect fns", () => {
         it("accepts number col in avg()", () => {
             prisma.$from("User").select(({ avg }) => avg("User.age"), "a");
         });
+
+        it("stddevPop() rejects string col", () => {
+            // @ts-expect-error title is string, not number
+            prisma.$from("Post").select(({ stddevPop }) => stddevPop("title"), "sd");
+        });
+
+        it("varPop() rejects string col", () => {
+            // @ts-expect-error title is string, not number
+            prisma.$from("Post").select(({ varPop }) => varPop("title"), "v");
+        });
+
+        it("bitAnd() rejects string col", () => {
+            // @ts-expect-error title is string, not number
+            prisma.$from("Post").select(({ bitAnd }) => bitAnd("title"), "b");
+        });
+
+        it("bitOr() rejects string col", () => {
+            // @ts-expect-error title is string, not number
+            prisma.$from("Post").select(({ bitOr }) => bitOr("title"), "b");
+        });
+
+        it("accepts number col in bitAnd()", () => {
+            prisma.$from("User").select(({ bitAnd }) => bitAnd("User.age"), "b");
+        });
+    });
+
+    describe("column type safety — PG boolean aggregate fns", () => {
+        it("boolAnd() rejects number col", () => {
+            // @ts-expect-error User.age is number, not boolean
+            prisma.$from("User").select(({ boolAnd }) => boolAnd("User.age"), "b");
+        });
+
+        it("boolAnd() rejects string col", () => {
+            // @ts-expect-error title is string, not boolean
+            prisma.$from("Post").select(({ boolAnd }) => boolAnd("title"), "b");
+        });
+
+        it("boolOr() rejects number col", () => {
+            // @ts-expect-error User.age is number, not boolean
+            prisma.$from("User").select(({ boolOr }) => boolOr("User.age"), "b");
+        });
+
+        it("accepts boolean col in boolAnd()", () => {
+            prisma.$from("Post").select(({ boolAnd }) => boolAnd("published"), "b");
+        });
+
+        it("accepts boolean col in boolOr()", () => {
+            prisma.$from("Post").select(({ boolOr }) => boolOr("published"), "b");
+        });
     });
 
     describe("column type safety — PG datetime fns", () => {

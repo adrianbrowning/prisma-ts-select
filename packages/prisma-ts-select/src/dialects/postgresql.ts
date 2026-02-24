@@ -8,25 +8,27 @@ const esc = (s: string) => s.replace(/'/g, "''");
 export type PgExtractField = 'YEAR' | 'MONTH' | 'DAY' | 'HOUR' | 'MINUTE' | 'SECOND' | 'DOW' | 'DOY' | 'EPOCH' | 'WEEK' | 'QUARTER';
 export type PgDateTruncUnit = 'microseconds' | 'milliseconds' | 'second' | 'minute' | 'hour' | 'day' | 'week' | 'month' | 'quarter' | 'year' | 'decade' | 'century' | 'millennium';
 
-export const postgresqlContextFns = <TColEntries extends [string, unknown] = [string, unknown]>(quoteFn: (ref: string) => string) => ({
+export const postgresqlContextFns = <TColEntries extends [string, unknown] = never>(quoteFn: (ref: string) => string) => ({
   avg: (col: FilterCols<TColEntries, number> | SQLExpr<number>): SQLExpr<number> => sqlExpr(`AVG(${resolveArg(col, quoteFn)})`),
   sum: (col: FilterCols<TColEntries, number> | SQLExpr<number>): SQLExpr<number> => sqlExpr(`SUM(${resolveArg(col, quoteFn)})`),
   stringAgg:     (col: ColName<TColEntries>, sep: string): SQLExpr<string> =>
     sqlExpr(`STRING_AGG(${quoteFn(col)}, '${esc(sep)}')`),
   arrayAgg:      (col: ColName<TColEntries>): SQLExpr<unknown[]> => sqlExpr(`ARRAY_AGG(${quoteFn(col)})`),
-  stddevPop:     (col: ColName<TColEntries>): SQLExpr<number> => sqlExpr(`STDDEV_POP(${quoteFn(col)})`),
-  stddevSamp:    (col: ColName<TColEntries>): SQLExpr<number> => sqlExpr(`STDDEV_SAMP(${quoteFn(col)})`),
-  varPop:        (col: ColName<TColEntries>): SQLExpr<number> => sqlExpr(`VAR_POP(${quoteFn(col)})`),
-  varSamp:       (col: ColName<TColEntries>): SQLExpr<number> => sqlExpr(`VAR_SAMP(${quoteFn(col)})`),
-  boolAnd:       (col: ColName<TColEntries>): SQLExpr<boolean> => sqlExpr(`BOOL_AND(${quoteFn(col)})`),
-  boolOr:        (col: ColName<TColEntries>): SQLExpr<boolean> => sqlExpr(`BOOL_OR(${quoteFn(col)})`),
+  stddevPop:     (col: FilterCols<TColEntries, number>): SQLExpr<number> => sqlExpr(`STDDEV_POP(${quoteFn(col)})`),
+  stddevSamp:    (col: FilterCols<TColEntries, number>): SQLExpr<number> => sqlExpr(`STDDEV_SAMP(${quoteFn(col)})`),
+  varPop:        (col: FilterCols<TColEntries, number>): SQLExpr<number> => sqlExpr(`VAR_POP(${quoteFn(col)})`),
+  varSamp:       (col: FilterCols<TColEntries, number>): SQLExpr<number> => sqlExpr(`VAR_SAMP(${quoteFn(col)})`),
+  boolAnd:       (col: FilterCols<TColEntries, boolean>): SQLExpr<boolean> => sqlExpr(`BOOL_AND(${quoteFn(col)})`),
+  boolOr:        (col: FilterCols<TColEntries, boolean>): SQLExpr<boolean> => sqlExpr(`BOOL_OR(${quoteFn(col)})`),
   jsonAgg:       (col: ColName<TColEntries>): SQLExpr<JSONValue[]> => sqlExpr(`JSON_AGG(${quoteFn(col)})`),
-  bitAnd:        (col: ColName<TColEntries>): SQLExpr<number> => sqlExpr(`BIT_AND(${quoteFn(col)})`),
-  bitOr:         (col: ColName<TColEntries>): SQLExpr<number> => sqlExpr(`BIT_OR(${quoteFn(col)})`),
+  bitAnd:        (col: FilterCols<TColEntries, number>): SQLExpr<number> => sqlExpr(`BIT_AND(${quoteFn(col)})`),
+  bitOr:         (col: FilterCols<TColEntries, number>): SQLExpr<number> => sqlExpr(`BIT_OR(${quoteFn(col)})`),
   jsonObjectAgg: (key: ColName<TColEntries>, val: ColName<TColEntries>): SQLExpr<JSONValue> =>
     sqlExpr(`JSON_OBJECT_AGG(${quoteFn(key)}, ${quoteFn(val)})`),
-  concat: (...args: Array<FilterCols<TColEntries, string> | SQLExpr<string>>): SQLExpr<string> =>
-    sqlExpr(`CONCAT(${args.map(a => resolveArg(a, quoteFn)).join(', ')})`),
+  concat: (...args: [FilterCols<TColEntries, string> | SQLExpr<string>, ...Array<FilterCols<TColEntries, string> | SQLExpr<string>>]): SQLExpr<string> => {
+    if (args.length === 0) throw new Error('concat: requires at least one argument');
+    return sqlExpr(`CONCAT(${args.map(a => resolveArg(a, quoteFn)).join(', ')})`);
+  },
   substring: (col: FilterCols<TColEntries, string> | SQLExpr<string>, start: number, len?: number): SQLExpr<string> =>
     sqlExpr(`SUBSTRING(${resolveArg(col, quoteFn)}, ${start}${len !== undefined ? `, ${len}` : ''})`),
   left: (col: FilterCols<TColEntries, string> | SQLExpr<string>, n: number): SQLExpr<string> =>
@@ -51,6 +53,15 @@ export const postgresqlContextFns = <TColEntries extends [string, unknown] = [st
     sqlExpr(`BTRIM(${resolveArg(col, quoteFn)}${chars !== undefined ? `, '${esc(chars)}'` : ''})`),
   md5: (col: FilterCols<TColEntries, string> | SQLExpr<string>): SQLExpr<string> =>
     sqlExpr(`MD5(${resolveArg(col, quoteFn)})`),
+  // Control flow
+  greatest: <T>(...args: [FilterCols<TColEntries, T> | SQLExpr<T>, ...Array<FilterCols<TColEntries, T> | SQLExpr<T>>]): SQLExpr<T> => {
+    if (args.length === 0) throw new Error('greatest: requires at least one argument');
+    return sqlExpr(`GREATEST(${args.map(a => resolveArg(a as string | SQLExpr<any>, quoteFn)).join(', ')})`);
+  },
+  least: <T>(...args: [FilterCols<TColEntries, T> | SQLExpr<T>, ...Array<FilterCols<TColEntries, T> | SQLExpr<T>>]): SQLExpr<T> => {
+    if (args.length === 0) throw new Error('least: requires at least one argument');
+    return sqlExpr(`LEAST(${args.map(a => resolveArg(a as string | SQLExpr<any>, quoteFn)).join(', ')})`);
+  },
   // DateTime overrides
   now:       (): SQLExpr<Date> => sqlExpr('NOW()'),
   curDate:   (): SQLExpr<Date> => sqlExpr('CURRENT_DATE'),
@@ -76,7 +87,7 @@ export const postgresqlContextFns = <TColEntries extends [string, unknown] = [st
     sqlExpr(`TO_DATE(${resolveArg(text, quoteFn)}, '${esc(fmt)}')`),
 });
 
-export type DialectFns<TColEntries extends [string, unknown] = [string, unknown]> = ReturnType<typeof postgresqlContextFns<TColEntries>>;
+export type DialectFns<TColEntries extends [string, unknown] = never, _TCriteria extends object = object> = ReturnType<typeof postgresqlContextFns<TColEntries>>;
 
 /**
  * PostgreSQL dialect configuration.

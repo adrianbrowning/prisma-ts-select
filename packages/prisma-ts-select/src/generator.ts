@@ -184,7 +184,7 @@ export { ${provider}Dialect as dialect, ${provider}Dialect, ${provider}ContextFn
         .replace('declare const DB: DBType;', declaration)
         .replace(
           PLACEHOLDER,
-          `type SelectFnContext<_TSources extends TArrSources, _TFields extends TFieldsType> = BaseSelectFnContext<_TSources, _TFields> & DialectFns<ColEntries<_TSources, _TFields>>;`
+          `type SelectFnContext<_TSources extends TArrSources, _TFields extends TFieldsType> = BaseSelectFnContext<_TSources, _TFields> & DialectFns<ColEntries<_TSources, _TFields>, WhereCriteria<_TSources, _TFields>>;`
         );
     writeFileSafely(path.join(outputPath, 'extend.d.ts'), dtsWithDialect);
 

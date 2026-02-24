@@ -180,6 +180,35 @@ describe("MySQL dialect fns", () => {
         it("accepts number col in avg()", () => {
             prisma.$from("User").select(({ avg }) => avg("User.age"), "a");
         });
+
+        it("bitAnd() rejects string col", () => {
+            // @ts-expect-error title is string, not number
+            prisma.$from("Post").select(({ bitAnd }) => bitAnd("title"), "b");
+        });
+
+        it("bitOr() rejects string col", () => {
+            // @ts-expect-error title is string, not number
+            prisma.$from("Post").select(({ bitOr }) => bitOr("title"), "b");
+        });
+
+        it("bitXor() rejects string col", () => {
+            // @ts-expect-error title is string, not number
+            prisma.$from("Post").select(({ bitXor }) => bitXor("title"), "b");
+        });
+
+        it("stddev() rejects string col", () => {
+            // @ts-expect-error title is string, not number
+            prisma.$from("Post").select(({ stddev }) => stddev("title"), "sd");
+        });
+
+        it("variance() rejects string col", () => {
+            // @ts-expect-error title is string, not number
+            prisma.$from("Post").select(({ variance }) => variance("title"), "v");
+        });
+
+        it("accepts number col in bitAnd()", () => {
+            prisma.$from("User").select(({ bitAnd }) => bitAnd("User.age"), "b");
+        });
     });
 
     describe("column type safety — MySQL datetime fns", () => {

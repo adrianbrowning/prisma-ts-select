@@ -422,6 +422,111 @@ type Values = {
     orderBy?: Array<`${string}${ "" | " DESC" | " ASC"}`>;
 };
 
+function processConditions(condition: BasicOpTypes, formatted = false): string {
+    const r = Object.keys(condition).map((field) => {
+        const value = condition[field];
+        const quotedField = dialect.quoteQualifiedColumn(String(field));
+
+        if (typeof value === 'object' && value !== null && !Array.isArray(value) && "op" in value) {
+            switch (value.op) {
+                case 'IN':
+                case 'NOT IN':
+                    const valuesList = value.values.map(v => (typeof v === 'string' ? `'${v}'` : v)).join(", ");
+                    return `${quotedField} ${value.op} (${valuesList})`;
+                case 'BETWEEN':
+                    if (value.values.length > 2) throw new Error("Too many items supplied to op BETWEEN")
+                    const [start, end] = value.values;
+                    return `${quotedField} BETWEEN ${typeof start === 'string' ? `'${start}'` : start} AND ${typeof end === 'string' ? `'${end}'` : end}`;
+                case 'LIKE':
+                case 'NOT LIKE':
+                    return `${quotedField} ${value.op} '${value.value}'`;
+                case 'IS NULL':
+                case 'IS NOT NULL':
+                    return `${quotedField} ${value.op}`;
+                case '>':
+                case '>=':
+                case '<':
+                case '<=':
+                case '!=':
+                case '=':
+                    return `${quotedField} ${value.op} ${typeof value.value === 'string' ? `'${value.value}'` : value.value}`;
+                default:
+                    //@ts-expect-error value.op should be never
+                    throw new Error(`Unsupported operation: ${value.op}`);
+            }
+        } else if (value === null) {
+            return `${quotedField} IS NULL`;
+        } else if (Array.isArray(value)) {
+            const valuesList = value.map(v => (typeof v === 'string' ? `'${v}'` : v)).join(", ");
+            return `${quotedField} IN (${valuesList})`;
+        }  else {
+            return `${quotedField} = ${typeof value === 'string' ? `'${value}'` : value}`;
+        }
+    });
+
+    return r.length === 1
+       ? r[0]!.trim()
+       : "(" + r.join(" AND " + (formatted ? "\n" : "")).trim() + ")";
+}
+
+function processCriteria(main: ClauseType, joinType: "AND" | "OR" = "AND", formatted = false): string {
+    const results: Array<string> = [];
+    for (const criteria of main) {
+        if (typeof criteria === 'string') {
+            results.push(criteria);
+            continue;
+        }
+        let toProcess: BasicOpTypes = {};
+        const processPending = () => {
+            if (Object.keys(toProcess).length > 0) {
+                results.push(processConditions(toProcess, formatted));
+                toProcess = {};
+            }
+        };
+        for (const criterion in criteria) {
+                const r = match(criterion)
+                  .returnType<string>()
+                  .with("$AND", (criterion) => {
+                      processPending();
+                    return "(" +
+                        //@ts-expect-error criterion
+                        processCriteria(criteria[criterion], "AND", formatted)
+                        + ")"
+                  })
+                  .with("$OR", (criterion) => {
+                      processPending();
+                    return "(" +
+                        //@ts-expect-error criterion
+                        processCriteria(criteria[criterion], "OR", formatted)
+                        + ")"
+                  })
+                  .with("$NOT", (criterion) => {
+                      processPending();
+                    return "(NOT(" +
+                        //@ts-expect-error criterion
+                        processCriteria(criteria[criterion], "AND", formatted)
+                        + "))"
+                  })
+                  .with("$NOR", (criterion) => {
+                      processPending();
+                    return "(NOT(" +
+                        //@ts-expect-error criterion
+                        processCriteria(criteria[criterion], "OR", formatted)
+                        + "))"
+                  })
+                .with(P.string, (key) => {
+                        //@ts-expect-error criterion
+                        toProcess[key]=  criteria[key];
+                    return "";
+                  })
+                  .exhaustive();
+                  if (r) results.push(r);
+        }
+        processPending();
+    }
+    return results.join((formatted ? "\n" : " ") + joinType + (formatted ? "\n" : " ")).trim();
+}
+
 /*
 run
  */
@@ -494,113 +599,6 @@ class _fRun<TSources extends TArrSources, TFields extends TFieldsType, TSelectRT
     }
 
     getSQL(formatted: boolean = false) {
-
-
-        function processConditions(condition: BasicOpTypes, formatted: boolean): string {
-            const r = Object.keys(condition).map((field) => {
-                const value = condition[field];
-                const quotedField = dialect.quoteQualifiedColumn(String(field));
-
-                if (typeof value === 'object' && value !== null && !Array.isArray(value) && "op" in value) {
-                    switch (value.op) {
-                        case 'IN':
-                        case 'NOT IN':
-                            const valuesList = value.values.map(v => (typeof v === 'string' ? `'${v}'` : v)).join(", ");
-                            return `${quotedField} ${value.op} (${valuesList})`;
-                        case 'BETWEEN':
-                            if (value.values.length > 2) throw new Error("Too many items supplied to op BETWEEN")
-                            const [start, end] = value.values;
-                            return `${quotedField} BETWEEN ${typeof start === 'string' ? `'${start}'` : start} AND ${typeof end === 'string' ? `'${end}'` : end}`;
-                        case 'LIKE':
-                        case 'NOT LIKE':
-                            return `${quotedField} ${value.op} '${value.value}'`;
-                        case 'IS NULL':
-                        case 'IS NOT NULL':
-                            return `${quotedField} ${value.op}`;
-                        case '>':
-                        case '>=':
-                        case '<':
-                        case '<=':
-                        case '!=':
-                        case '=':
-                            return `${quotedField} ${value.op} ${typeof value.value === 'string' ? `'${value.value}'` : value.value}`;
-                        default:
-                            //@ts-expect-error value.op should be never
-                            throw new Error(`Unsupported operation: ${value.op}`);
-                    }
-                } else if (value === null) {
-                    return `${quotedField} IS NULL`;
-                } else if (Array.isArray(value)) {
-                    const valuesList = value.map(v => (typeof v === 'string' ? `'${v}'` : v)).join(", ");
-                    return `${quotedField} IN (${valuesList})`;
-                }  else {
-                    return `${quotedField} = ${typeof value === 'string' ? `'${value}'` : value}`;
-                }
-            });
-
-
-            return r.length === 1
-               ? r[0]!.trim()
-               : "(" + r.join(" AND " + (formatted ? "\n" : "")).trim() + ")";
-        }
-
-        function processCriteria(main: ClauseType, joinType: "AND" | "OR" = "AND", formatted: boolean = false): string {
-            const results: Array<string> = [];
-            for (const criteria of main) {
-                if (typeof criteria === 'string') {
-                    results.push(criteria);
-                    continue;
-                }
-                let toProcess: BasicOpTypes = {};
-                const processPending = () => {
-                    if (Object.keys(toProcess).length > 0) {
-                        results.push(processConditions(toProcess, formatted));
-                        toProcess = {};
-                    }
-                };
-                for (const criterion in criteria) {
-                        const r = match(criterion)
-                          .returnType<string>()
-                          .with("$AND", (criterion) => {
-                              processPending();
-                            return "(" +
-                                //@ts-expect-error criterion
-                                processCriteria(criteria[criterion], "AND", formatted)
-                                + ")"
-                          })
-                          .with("$OR", (criterion) => {
-                              processPending();
-                            return "(" +
-                                //@ts-expect-error criterion
-                                processCriteria(criteria[criterion], "OR", formatted)
-                                + ")"
-                          })
-                          .with("$NOT", (criterion) => {
-                              processPending();
-                            return "(NOT(" +
-                                //@ts-expect-error criterion
-                                processCriteria(criteria[criterion], "AND", formatted)
-                                + "))"
-                          })
-                          .with("$NOR", (criterion) => {
-                              processPending();
-                            return "(NOT(" +
-                                //@ts-expect-error criterion
-                                processCriteria(criteria[criterion], "OR", formatted)
-                                + "))"
-                          })
-                        .with(P.string, (key) => {
-                                //@ts-expect-error criterion
-                                toProcess[key]=  criteria[key];
-                            return "";
-                          })
-                          .exhaustive();
-                          if (r) results.push(r);
-                }
-                processPending();
-            }
-            return results.join((formatted ? "\n" : " ") + joinType + (formatted ? "\n" : " ")).trim();
-        }
 
 
         const whereClause = this.values.where !== undefined ? processCriteria(this.values.where,  "AND", formatted) : undefined;
@@ -2236,6 +2234,14 @@ type BaseSelectFnContext<_TSources extends TArrSources, _TFields extends TFields
   trim: (col: GetColumnsOfType<_TSources, _TFields, string> | SQLExpr<string>) => SQLExpr<string>;
   ltrim: (col: GetColumnsOfType<_TSources, _TFields, string> | SQLExpr<string>) => SQLExpr<string>;
   rtrim: (col: GetColumnsOfType<_TSources, _TFields, string> | SQLExpr<string>) => SQLExpr<string>;
+  // ── Control flow ─────────────────────────────────────────────────────────
+  cond: (criteria: WhereCriteria<_TSources, _TFields>) => SQLExpr<boolean>;
+  coalesce: <T>(...args: [GetColumnsOfType<_TSources, _TFields, T> | SQLExpr<T>, ...Array<GetColumnsOfType<_TSources, _TFields, T> | SQLExpr<T>>]) => SQLExpr<T>;
+  nullif: <T>(expr1: SQLExpr<T>, expr2: SQLExpr<T>) => SQLExpr<T | null>;
+  caseWhen: <T, TElse extends SQLExpr<T> | undefined = undefined>(
+    cases: [{ when: WhereCriteria<_TSources, _TFields>; then: SQLExpr<T> }, ...Array<{ when: WhereCriteria<_TSources, _TFields>; then: SQLExpr<T> }>],
+    elseVal?: TElse
+  ) => TElse extends SQLExpr<T> ? SQLExpr<T> : SQLExpr<T | null>;
 };
 
 /** Replaced by generator to inject dialect-specific fns via intersection. */
@@ -2246,6 +2252,7 @@ function buildContext<TSources extends TArrSources, TFields extends TFieldsType>
   d: Dialect
 ): SelectFnContext<TSources, TFields> {
   const quoteFn = (col: string) => d.quoteQualifiedColumn(col);
+
   return {
     lit: _lit,
     countAll:      () => sqlExpr('COUNT(*)'),
@@ -2260,13 +2267,19 @@ function buildContext<TSources extends TArrSources, TFields extends TFieldsType>
     trim:          (col) => sqlExpr(`TRIM(${resolveArg(col, quoteFn)})`),
     ltrim:         (col) => sqlExpr(`LTRIM(${resolveArg(col, quoteFn)})`),
     rtrim:         (col) => sqlExpr(`RTRIM(${resolveArg(col, quoteFn)})`),
-    // `SelectFnContext` is a stub here — the generator replaces it with
-    // `BaseSelectFnContext & DialectFns` at codegen time. The dialect fns are
-    // unknown to this file's types, so we cast via `Partial<>` to satisfy the
-    // object-literal spread. `Partial<>` is intentional: it lets extra keys
-    // through without demanding they match the (incomplete) stub type.
-    // Correctness of dialect fns is enforced in their own dialect files.
-    ...(dialectContextFns(quoteFn) as unknown as Partial<SelectFnContext<TSources, TFields>>),
+    cond:          (criteria) => sqlExpr(processCriteria([criteria as any])),
+    coalesce:      (...args) => {
+      if (args.length === 0) throw new Error('coalesce: requires at least one argument');
+      return sqlExpr(`COALESCE(${args.map(a => resolveArg(a as any, quoteFn)).join(', ')})`);
+    },
+    nullif:        (expr1, expr2) => sqlExpr(`NULLIF(${expr1.sql}, ${expr2.sql})`),
+    caseWhen:      (cases, elseVal?) => {
+      if (cases.length === 0) throw new Error('caseWhen: requires at least one WHEN clause');
+      const parts = cases.map(c => `WHEN ${processCriteria([c.when as any])} THEN ${c.then.sql}`).join(' ');
+      return sqlExpr(`CASE ${parts}${elseVal ? ` ELSE ${elseVal.sql}` : ''} END`);
+    },
+    // Partial<> cast: SelectFnContext is a stub here; generator injects DialectFns at codegen time.
+    ...(dialectContextFns(quoteFn, (c: unknown) => processCriteria([c as any])) as unknown as Partial<SelectFnContext<TSources, TFields>>),
   } as SelectFnContext<TSources, TFields>;
 }
 
@@ -2309,7 +2322,7 @@ class _fJoin<
         tableOrOptions: TableInput | {table: TableInput, src: TCol1, on: find<TJoinCols, TCol1>, alias?: string},
         field?: TCol1,
         reference?: find<TJoinCols, TCol1>
-    ) {
+    ): any {
         let table: string;
         let local: string;
         let remote: string;
