@@ -306,6 +306,41 @@ describe("MySQL datetime dialect fns", () => {
         });
     });
 
+    describe("dateAdd/dateSub NaN/Infinity guards", () => {
+        it("dateAdd throws on NaN", () => {
+            assert.throws(
+                () => prisma.$from("Post").select(({ dateAdd }) => dateAdd("Post.createdAt", NaN, 'DAY'), "d"),
+                { message: /dateAdd: n must be a finite number/ }
+            );
+        });
+
+        it("dateAdd throws on Infinity", () => {
+            assert.throws(
+                () => prisma.$from("Post").select(({ dateAdd }) => dateAdd("Post.createdAt", Infinity, 'YEAR'), "d"),
+                { message: /dateAdd: n must be a finite number/ }
+            );
+        });
+
+        it("dateSub throws on NaN", () => {
+            assert.throws(
+                () => prisma.$from("Post").select(({ dateSub }) => dateSub("Post.createdAt", NaN, 'MONTH'), "d"),
+                { message: /dateSub: n must be a finite number/ }
+            );
+        });
+
+        it("dateSub throws on -Infinity", () => {
+            assert.throws(
+                () => prisma.$from("Post").select(({ dateSub }) => dateSub("Post.createdAt", -Infinity, 'DAY'), "d"),
+                { message: /dateSub: n must be a finite number/ }
+            );
+        });
+
+        it("dateAdd accepts negative integer (valid MySQL interval)", () => {
+            // DATE_ADD(col, INTERVAL -7 DAY) is valid SQL — equivalent to DATE_SUB(col, 7 DAY)
+            prisma.$from("Post").select(({ dateAdd }) => dateAdd("Post.createdAt", -7, 'DAY'), "d");
+        });
+    });
+
     describe("column type safety", () => {
         it("year() rejects string col", () => {
             // @ts-expect-error title is string, not DateTime

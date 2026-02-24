@@ -1,12 +1,5 @@
-# Project Guidelines
+The role of this file is to describe common mistakes and confusion points that agents might encounter as they work in this project. If you ever encounter something in the project that surprises you, please alert the developer working with you and indicate that this is the case in the Agent.MD file to help prevent future agents from having the same issue.
 
-## Project Overview
-
-- **Name**: prisma-ts-select
-- **Purpose**: Prisma generator + extension for type-safe SQL query building (joins, where, groupBy, having, etc.)
-- **Stack**: TypeScript, Prisma ORM, pnpm monorepo
-- **Packages**: `packages/prisma-ts-select` (library/generator), `packages/usage` (tests/examples)
-- **DB Support**: SQLite, MySQL (primary), PostgreSQL (secondary)
 
 ## Commands
 
@@ -18,23 +11,19 @@ pnpm --filter usage gen                 # Generate Prisma client + types
 pnpm b&g                                # Build + regenerate (from packages/usage)
 
 # Testing (from packages/usage)
-pnpm test                               # All tests (type-check + node --test)
-pnpm test:ts                            # TypeScript type checking only
-pnpm test:tsw                           # Type checking watch mode
-pnpm test:w                             # Tests watch mode
-pnpm test:readme                        # README example tests
-pnpm test:core                          # Core tests only
+pnpm -r|--filter <usage-[dialect]-v[version]> test                               # All tests (type-check + node --test)
+pnpm -r|--filter <usage-[dialect]-v[version]> test:readme                        # README example tests
+pnpm -r|--filter <usage-[dialect]-v[version]> test:core                          # Core tests only
+pnpm -r|--filter <usage-[dialect]-v[version]> test:dialect                          # Core tests only
 
 # Linting (from packages/prisma-ts-select)
-pnpm lint:ts                            # TypeScript check
-pnpm lint                               # ESLint + TypeScript
-pnpm lint:fix                           # Auto-fix
+pnpm -r|--filter <usage-[dialect]-v[version]> lint:ts                            # TypeScript check
+#pnpm -r|--filter <usage-[dialect]-v[version]> lint                               # ESLint + TypeScript
+#pnpm -r|--filter <usage-[dialect]-v[version]> lint:fix                           # Auto-fix
 
 # Prisma (from packages/usage)
-pnpm exec prisma generate               # Generate client
-pnpm exec prisma db push                # Push schema
-pnpm exec prisma migrate dev            # Create/apply migrations
-pnpm p:r                                # Reset database
+pnpm -r|--filter <usage-[dialect]-v[version]> gen               # Generate client
+pnpm -r|--filter <usage-[dialect]-v[version]> p:r                # Force Push schema, and seed
 ```
 
 ## Directory Structure
@@ -45,7 +34,7 @@ packages/
 │   └── src/
 │       ├── generator.ts     # Schema parser, DMMF → TS type defs
 │       └── extend.ts        # Runtime query builder (Prisma extension)
-└── usage/
+└── usage-<dialect>-<version>/
     ├── prisma/schema.prisma # Test schema
     └── tests/
         ├── *.spec.ts        # Feature test suites
@@ -57,8 +46,8 @@ packages/
 
 1. Modify `packages/prisma-ts-select/src/`
 2. `pnpm --filter prisma-ts-select build`
-3. `cd packages/usage && pnpm gen`
-4. `pnpm test:ts` then `pnpm test`
+3. `pnpm -r gen`
+4. `pnpm -r test:ts` then `pnpm -r test`
 
 ## Architecture
 
@@ -79,8 +68,8 @@ packages/
 
 - Node's built-in test runner (`node --test`)
 - Each `.spec.ts` covers specific feature area
-- DB reset before tests (`pnpm p:r`)
-- Type checking is critical (`pnpm test:ts`)
+- DB reset before tests (`pnpm -r p:r`)
+- Type checking is critical (`pnpm -r lint:ts`)
 - HAVING clause has SQLite-specific limitations (requires aggregate fns in SELECT or GROUP BY)
 
 ## Documentation Testing
@@ -94,46 +83,16 @@ packages/
 5. See `README_TESTING.md` for full workflow
 6. **Never add README examples without corresponding tests.**
 
-## Session Rules
+<!-- claude-knowledge-autoload -->
+## Knowledge Files
 
-ALWAYS use todo lists. Keep a file based one in-sync with the memory version encase the session dies. Make sure there is enough information to start everything off again.
-ALWAYS use sub-agents to help keep your context window cleaner/smaller.
+Auto-maintained by Claude Code hooks. Load on demand — not upfront.
 
-Be casual.
-Be terse.
-Give the answer first.
-Treat me like an expert.
-Skip restating the question unless needed.
-Anticipate my needs—suggest better or alternate solutions.
-Be accurate, thorough, and grounded.
-Prefer strong arguments over authoritative sources.
-Use cutting-edge or contrarian ideas where useful, not just best practices.
-Be extremely concise. Sacrifice grammar for the sake of concision.
+| File | Load when... |
+|------|-------------|
+| `~/.claude/skills/preferences/SKILL.md` | Starting any task — shapes how you work |
+| `~/.claude/skills/learnings/SKILL.md` | Debugging, hitting errors, or running CLI commands |
+| `.claude/patterns/SKILL.md` | Reading, writing, reviewing, or running code/tests in this repo |
 
-Use speculation or prediction freely, just flag it clearly ([Speculation], [Inference], etc).
-Only discuss safety if it’s truly critical and not obvious.
-If a content policy prevents a full reply, give the closest allowed alternative and explain the restriction.
-
-If I ask for code edits, avoid repeating large blocks—just show the diff with context.
-Multiple short code blocks are fine. Respect my Prettier settings.
-
-If anything is unverified or outside your training data, label the entire response with [Unverified].
-For LLM behavior claims, label with [Inference] or [Unverified], based on observed patterns.
-
-Never paraphrase, reword, or reinterpret my input unless I ask.
-Don’t guess or fill in missing info—ask for clarification. Never present speculation as fact.
-
-Use sources when available, but cite them at the end.
-Don't mention your training cutoff. Don’t say you’re an AI. If response quality is reduced due to these rules, say so.
-
-Always ask if unsure about anything.
-
-
-If you break these, say:
-“Correction: I previously made an unverified claim. That was incorrect and should have been labeled.”
-
-## When in plan mode
-Interview me relentlessly about every aspect of this plan until we reach a shared understanding. Walk down each branch of the design tree, resolving dependencies between decisions one-by-one. 
-
-## When in edit mode
-If I ask for code edits, avoid repeating large blocks—just show the diff with context.
+Read only the file relevant to what you are about to do. Do not load all three upfront.
+<!-- end-claude-knowledge-autoload -->

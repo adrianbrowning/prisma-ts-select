@@ -43,10 +43,10 @@ TODO
 - [ ] SQRT() | Numeric | Numeric | `SELECT SQRT(16);`
 
 ### Control Flow
-- [ ] IF() | Condition, Value if True, Value if False | Depends on values | `SELECT IF(age > 18, 'Adult', 'Minor') FROM users;`
-- [ ] CASE | Condition, Result, ELSE Result | Depends on values | `SELECT CASE WHEN age > 18 THEN 'Adult' ELSE 'Minor' END FROM users;`
-- [ ] IFNULL() | Any, Any | Same as input | `SELECT IFNULL(middle_name, 'N/A') FROM users;`
-- [ ] COALESCE() | Any, Any, ... | First non-null | `SELECT COALESCE(middle_name, first_name) FROM users;`
+- [x] IF() | Condition, Value if True, Value if False | Depends on values | `SELECT IF(age > 18, 'Adult', 'Minor') FROM users;`
+- [x] CASE | Condition, Result, ELSE Result | Depends on values | `SELECT CASE WHEN age > 18 THEN 'Adult' ELSE 'Minor' END FROM users;`
+- [x] IFNULL() | Any, Any | Same as input | `SELECT IFNULL(middle_name, 'N/A') FROM users;`
+- [x] COALESCE() | Any, Any, ... | First non-null | `SELECT COALESCE(middle_name, first_name) FROM users;`
 
 ### JSON
 - [ ] JSON_EXTRACT() | JSON, String | JSON Value | `SELECT JSON_EXTRACT(data, '$.name') FROM json_table;`

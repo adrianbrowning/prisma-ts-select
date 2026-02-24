@@ -1117,6 +1117,39 @@ prisma.$from("User")
       .select(({ replace }) => replace("User.email", "@example.com", ""), "handle");
 ```
 
+#### Control Flow Functions (all dialects)
+
+| Function | SQL | Returns |
+|---|---|---|
+| `cond(criteria)` | *(WhereCriteria → SQL condition string)* | `SQLExpr<boolean>` |
+| `coalesce(...args)` | `COALESCE(a, b, ...)` | `SQLExpr<T>` |
+| `nullif(expr1, expr2)` | `NULLIF(a, b)` | `SQLExpr<T \| null>` |
+| `caseWhen(cases, elseVal?)` | `CASE WHEN ... THEN ... END` | `SQLExpr<T \| null>` |
+
+`cond()` converts a `WhereCriteria` object into a `SQLExpr<unknown>` — useful when you need a condition expression outside of a dedicated function. Note: `$if()`/`iif()` and `caseWhen()` all accept `WhereCriteria` directly, so `cond()` is rarely needed.
+
+```typescript file=../usage-sqlite-v7/tests/readme/select-fns-control-flow.ts region=coalesce
+prisma.$from("User")
+      .select(({ coalesce, lit }) => coalesce("User.email", lit("unknown")), "contact")
+```
+
+```typescript file=../usage-sqlite-v7/tests/readme/select-fns-control-flow.ts region=nullif
+prisma.$from("User")
+      .select(({ nullif, lit }) => nullif(lit(0), lit(0)), "val")
+```
+
+```typescript file=../usage-sqlite-v7/tests/readme/select-fns-control-flow.ts region=case-when
+prisma.$from("User")
+      .select(({ caseWhen, lit }) => caseWhen([
+        { when: { age: { op: ">=", value: 18 } }, then: lit("adult") },
+      ], lit("minor")), "status")
+```
+
+```typescript file=../usage-sqlite-v7/tests/readme/select-fns-control-flow.ts region=cond
+prisma.$from("User")
+      .select(({ cond }) => cond({ age: { op: ">", value: 0 } }), "flag")
+```
+
 #### Combining with `.groupBy()`
 
 ```typescript file=../usage-sqlite-v7/tests/readme/select-fns.ts region=count-groupby
@@ -1161,6 +1194,10 @@ GROUP BY User.name;
 | `rpad(col, len, pad)` | `RPAD(col, len, 'pad')` | `string` |
 | `locate(substr, col)` | `LOCATE('substr', col)` | `number` |
 | `space(n)` | `SPACE(n)` | `string` |
+| `$if(cond, trueVal, falseVal)` | `IF(cond, a, b)` | `T` |
+| `ifNull(col, fallback)` | `IFNULL(col, fallback)` | `NonNullable<T>` |
+| `greatest(...args)` | `GREATEST(a, b, ...)` | `T \| null` |
+| `least(...args)` | `LEAST(a, b, ...)` | `T \| null` |
 | `dateAdd(col, n, unit)` | `DATE_ADD(col, INTERVAL n unit)` | `Date` |
 | `dateSub(col, n, unit)` | `DATE_SUB(col, INTERVAL n unit)` | `Date` |
 | `dateFormat(col, fmt)` | `DATE_FORMAT(col, 'fmt')` | `string` |
@@ -1180,6 +1217,8 @@ GROUP BY User.name;
 
 | Function | SQL | Returns |
 |---|---|---|
+| `greatest(...args)` | `GREATEST(a, b, ...)` | `T` |
+| `least(...args)` | `LEAST(a, b, ...)` | `T` |
 | `stringAgg(col, sep)` | `STRING_AGG(col, sep)` | `string` |
 | `arrayAgg(col)` | `ARRAY_AGG(col)` | `unknown[]` |
 | `stddevPop(col)` | `STDDEV_POP(col)` | `number` |
@@ -1220,6 +1259,8 @@ GROUP BY User.name;
 
 | Function | SQL | Returns |
 |---|---|---|
+| `iif(cond, trueVal, falseVal)` | `IIF(cond, a, b)` | `T` |
+| `ifNull(col, fallback)` | `IFNULL(col, fallback)` | `NonNullable<T>` |
 | `groupConcat(col, sep?)` | `GROUP_CONCAT(col, sep)` | `string` |
 | `total(col)` | `TOTAL(col)` | `number` |
 | `concat(...cols)` | `a \|\| b \|\| ...` | `string` |
@@ -1244,7 +1285,6 @@ GROUP BY User.name;
 - Support specifying `JOIN` type [issue#2](https://github.com/adrianbrowning/prisma-ts-select/issues/2)
 - Support additional Select Functions
   - [Math #7](https://github.com/adrianbrowning/prisma-ts-select/issues/7)
-  - [Control Flow #8](https://github.com/adrianbrowning/prisma-ts-select/issues/8)
   - [JSON #9](https://github.com/adrianbrowning/prisma-ts-select/issues/9)
 - [Support a `Many-To-Many` join #19](https://github.com/adrianbrowning/prisma-ts-select/issues/19)
 - [whereRaw supporting Prisma.sql](https://github.com/adrianbrowning/prisma-ts-select/issues/29)
