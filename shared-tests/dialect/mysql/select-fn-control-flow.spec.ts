@@ -72,33 +72,6 @@ describe("MySQL control flow dialect fns", () => {
         });
     });
 
-    describe("iif(cond, true, false)", () => {
-        function createQuery() {
-            return prisma.$from("User")
-                .select(({ iif, cond, lit }) => iif(
-                    cond({ age: { op: ">=", value: 18 } }),
-                    lit(1),
-                    lit(0)
-                ), "is_adult");
-        }
-
-        it("should emit IF() SQL", () => {
-            expectSQL(createQuery().getSQL(),
-                `SELECT IF(${dialect.quoteQualifiedColumn("age")} >= 18, 1, 0) AS ${dialect.quote("is_adult", true)} FROM ${dialect.quote("User")};`);
-        });
-
-        it("type: number", async () => {
-            const result = await createQuery().run();
-            typeCheck({} as Expect<Equal<typeof result, Array<{ is_adult: number }>>>);
-        });
-
-        it("should run and return 0 or 1 per age", async () => {
-            const result = await createQuery().run();
-            // MySQL returns IF() integers as BigInt via $queryRawUnsafe
-            assert.ok(result.every(r => Number(r.is_adult) === 0 || Number(r.is_adult) === 1));
-        });
-    });
-
     describe("greatest(...args)", () => {
         function createQuery() {
             return prisma.$from("User")

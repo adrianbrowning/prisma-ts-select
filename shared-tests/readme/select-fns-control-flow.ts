@@ -67,7 +67,7 @@ prisma.$from("User")
   // ── cond() ──────────────────────────────────────────────────────────────
 
   test("cond() — convert WhereCriteria to SQL condition", () => {
-    // cond() is used with dialect-specific $if()/iif() as a condition bridge
+    // cond() is used with dialect-specific $if() as a condition bridge
     const sql =
 // #region cond
 prisma.$from("User")
