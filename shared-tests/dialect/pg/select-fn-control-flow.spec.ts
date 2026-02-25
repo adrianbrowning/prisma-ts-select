@@ -20,7 +20,7 @@ describe("PostgreSQL control flow dialect fns", () => {
         it("should run and return max values", async () => {
             const result = await createQuery().run();
             assert.ok(result.length > 0);
-            assert.ok(result.every(r => Number(r.maxAge) >= 30));
+            assert.ok(result.every(r => (r.maxAge) >= 30));
         });
     });
 
@@ -38,7 +38,7 @@ describe("PostgreSQL control flow dialect fns", () => {
         it("should run and return min values", async () => {
             const result = await createQuery().run();
             assert.ok(result.length > 0);
-            assert.ok(result.every(r => Number(r.minAge) <= 30));
+            assert.ok(result.every(r => (r.minAge) <= 30));
         });
     });
 

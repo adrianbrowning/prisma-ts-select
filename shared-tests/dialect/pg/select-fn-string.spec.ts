@@ -104,6 +104,24 @@ describe("PostgreSQL string dialect fns", () => {
     });
 
 
+    describe("length(col)", () => {
+        function createQuery() {
+            return prisma.$from("User").select(({ length }) => length("User.email"), "elen");
+        }
+
+        it("type: number", async () => {
+            const result = await createQuery().run();
+            typeCheck({} as Expect<Equal<typeof result, Array<{ elen: number }>>>);
+        });
+
+        it("should return correct lengths", async () => {
+            const result = await createQuery().run();
+            const lengths = result.map(r => r.elen).sort((a, b) => a - b);
+            // johndoe@example.com = 19, smith@example.com = 17, alice@example.com = 17
+            assert.deepEqual(lengths, [17, 17, 19]);
+        });
+    });
+
     describe("left(col, n)", () => {
         it("should match SQL", () => {
             const sql = prisma.$from("User")

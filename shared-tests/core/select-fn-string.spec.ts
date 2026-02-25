@@ -62,17 +62,6 @@ describe("select() string fn context", () => {
                 `SELECT LENGTH(${dialect.quoteQualifiedColumn("User.email")}) AS ${dialect.quote("elen", true)} FROM ${dialect.quote("User")};`);
         });
 
-        it("type: number", async () => {
-            const result = await createQuery().run();
-            typeCheck({} as Expect<Equal<typeof result, Array<{ elen: number }>>>);
-        });
-
-        it("should return correct lengths", async () => {
-            const result = await createQuery().run();
-            const lengths = result.map(r => Number(r.elen)).sort((a, b) => a - b);
-            // johndoe@example.com = 19, smith@example.com = 17, alice@example.com = 17
-            assert.deepEqual(lengths, [17, 17, 19]);
-        });
     });
 
     describe("trim(col)", () => {

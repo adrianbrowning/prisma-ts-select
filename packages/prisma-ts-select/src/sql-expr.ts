@@ -36,7 +36,7 @@ export function lit<T extends LitValue>(value: T): SQLExpr<LitToType<T>> {
  * - string → treated as a column ref, quoted via `quoteFn`
  */
 export function resolveArg(
-  arg: string | SQLExpr<any>,
+  arg: string | { sql: string },
   quoteFn: (ref: string) => string
 ): string {
   if (typeof arg !== 'string') return arg.sql;

@@ -16,5 +16,5 @@
     }
   },
   "include": ["**/*.ts"],
-  "exclude": ["node_modules", "generated", "tests/dialect/mysql", "tests/dialect/pg"]
+  "exclude": ["node_modules", "generated", "tests/dialect/mysql", "tests/dialect/pg", "tests/dialect/sqlite-v7", "tests/dialect/mysql-v6", "tests/dialect/mysql-v7", "tests/dialect/pg-v6", "tests/dialect/pg-v7"]
 }

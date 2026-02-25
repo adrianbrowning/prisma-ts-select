@@ -2,6 +2,12 @@ import type {Dialect} from "./types.js";
 import {resolveArg, sqlExpr, type SQLExpr} from "../sql-expr.js";
 import type {FilterCols, ColName} from "./shared.js";
 
+/** SQLite MIN/MAX return bigint for integer columns, unchanged for other types. */
+type SqliteMinMaxResult<TColEntries extends [string, unknown], Col extends string> =
+  TColEntries extends [Col, infer V]
+    ? NonNullable<V> extends number ? bigint | null : V | null
+    : never;
+
 // Prisma v6 stores DateTime as integer ms, v7 as ISO text in SQLite.
 // CASE normalizes both to a date string; SQLExpr args (e.g. now()) pass through unchanged.
 const dateArg = (col: string | SQLExpr<Date>, quoteFn: (ref: string) => string): string => {
@@ -15,23 +21,33 @@ export const sqliteContextFns = <TColEntries extends [string, unknown] = never, 
   condFn: (criteria: TCriteria) => string,
 ) => ({
   avg: (col: FilterCols<TColEntries, number> | SQLExpr<number>): SQLExpr<number> => sqlExpr(`AVG(${resolveArg(col, quoteFn)})`),
-  sum: (col: FilterCols<TColEntries, number> | SQLExpr<number>): SQLExpr<number> => sqlExpr(`SUM(${resolveArg(col, quoteFn)})`),
+  // SQLite SUM returns INTEGER (→ bigint) for integer columns, REAL (→ number) for float columns
+  sum: (col: FilterCols<TColEntries, number> | SQLExpr<number>): SQLExpr<bigint | number> => sqlExpr(`SUM(${resolveArg(col, quoteFn)})`),
+  // Aggregate integer-result fns — SQLite returns INTEGER → bigint
+  countAll:      (): SQLExpr<bigint> => sqlExpr('COUNT(*)'),
+  count:         (col: ColName<TColEntries> | '*'): SQLExpr<bigint> => sqlExpr(col === '*' ? 'COUNT(*)' : `COUNT(${quoteFn(col)})`),
+  countDistinct: (col: ColName<TColEntries>): SQLExpr<bigint> => sqlExpr(`COUNT(DISTINCT ${quoteFn(col)})`),
+  // LENGTH returns INTEGER → bigint in SQLite
+  length: (col: FilterCols<TColEntries, string> | SQLExpr<string>): SQLExpr<bigint> => sqlExpr(`LENGTH(${resolveArg(col, quoteFn)})`),
   groupConcat: (col: ColName<TColEntries>, sep?: string): SQLExpr<string> =>
     sqlExpr(`GROUP_CONCAT(${quoteFn(col)}${sep !== undefined ? `, '${sep.replace(/'/g, "''")}'` : ''})`),
   total: (col: ColName<TColEntries>): SQLExpr<number> => sqlExpr(`TOTAL(${quoteFn(col)})`),
+  // SQLite MIN/MAX return bigint for integer columns — override base (number) return types
+  min: <Col extends ColName<TColEntries>>(col: Col): SQLExpr<SqliteMinMaxResult<TColEntries, Col>> => sqlExpr(`MIN(${quoteFn(col)})`),
+  max: <Col extends ColName<TColEntries>>(col: Col): SQLExpr<SqliteMinMaxResult<TColEntries, Col>> => sqlExpr(`MAX(${quoteFn(col)})`),
   concat: (...args: [FilterCols<TColEntries, string> | SQLExpr<string>, ...Array<FilterCols<TColEntries, string> | SQLExpr<string>>]): SQLExpr<string> => {
     if (args.length === 0) throw new Error('concat: requires at least one argument');
     return sqlExpr(args.map(a => resolveArg(a, quoteFn)).join(' || '));
   },
   substr: (col: FilterCols<TColEntries, string> | SQLExpr<string>, start: number, len?: number): SQLExpr<string> =>
     sqlExpr(`SUBSTR(${resolveArg(col, quoteFn)}, ${start}${len !== undefined ? `, ${len}` : ''})`),
-  instr: (col: FilterCols<TColEntries, string> | SQLExpr<string>, substr: string): SQLExpr<number> =>
+  instr: (col: FilterCols<TColEntries, string> | SQLExpr<string>, substr: string): SQLExpr<bigint> =>
     sqlExpr(`INSTR(${resolveArg(col, quoteFn)}, '${substr.replace(/'/g, "''")}')`),
   char: (...codes: number[]): SQLExpr<string> =>
     sqlExpr(`CHAR(${codes.join(', ')})`),
   hex: (col: FilterCols<TColEntries, string> | SQLExpr<string>): SQLExpr<string> =>
     sqlExpr(`HEX(${resolveArg(col, quoteFn)})`),
-  unicode: (col: FilterCols<TColEntries, string> | SQLExpr<string>): SQLExpr<number> =>
+  unicode: (col: FilterCols<TColEntries, string> | SQLExpr<string>): SQLExpr<bigint> =>
     sqlExpr(`UNICODE(${resolveArg(col, quoteFn)})`),
   // Control flow
   // Note: SQLite has no GREATEST()/LEAST() functions — it uses scalar MAX(a,b)/MIN(a,b) instead.
@@ -43,7 +59,7 @@ export const sqliteContextFns = <TColEntries extends [string, unknown] = never, 
     return sqlExpr(`IIF(${condSql}, ${trueVal.sql}, ${falseVal.sql})`);
   },
   ifNull: <T>(col: FilterCols<TColEntries, T> | SQLExpr<T>, fallback: SQLExpr<NonNullable<T>>): SQLExpr<NonNullable<T>> =>
-    sqlExpr(`IFNULL(${resolveArg(col as string | SQLExpr<any>, quoteFn)}, ${fallback.sql})`),
+    sqlExpr(`IFNULL(${resolveArg(col, quoteFn)}, ${fallback.sql})`),
   // DateTime overrides
   now:       (): SQLExpr<Date> => sqlExpr(`datetime('now')`),
   curDate:   (): SQLExpr<Date> => sqlExpr(`date('now')`),
@@ -62,6 +78,26 @@ export const sqliteContextFns = <TColEntries extends [string, unknown] = never, 
   julianday: (col: FilterCols<TColEntries, Date> | SQLExpr<Date>): SQLExpr<number> => sqlExpr(`julianday(${dateArg(col, quoteFn)})`),
   date:      (col: FilterCols<TColEntries, Date> | SQLExpr<Date>): SQLExpr<string> => sqlExpr(`date(${dateArg(col, quoteFn)})`),
   datetime:  (col: FilterCols<TColEntries, Date> | SQLExpr<Date>): SQLExpr<string> => sqlExpr(`datetime(${dateArg(col, quoteFn)})`),
+  // ── Math ─────────────────────────────────────────────────────────────────
+  // SQLite returns bigint for integer results (ceil, floor, sign, mod) and number for floats.
+  // All inputs accept SQLExpr<number | bigint> so composed calls (e.g. sqrt(power(...))) type-check.
+  // sqrt/exp always return REAL, so they are typed as number.
+  abs:   (col: FilterCols<TColEntries, number> | SQLExpr<number | bigint>): SQLExpr<bigint | number> => sqlExpr(`ABS(${resolveArg(col, quoteFn)})`),
+  ceil:  (col: FilterCols<TColEntries, number> | SQLExpr<number | bigint>): SQLExpr<bigint | number> => sqlExpr(`CEIL(${resolveArg(col, quoteFn)})`),
+  floor: (col: FilterCols<TColEntries, number> | SQLExpr<number | bigint>): SQLExpr<bigint | number> => sqlExpr(`FLOOR(${resolveArg(col, quoteFn)})`),
+  round: (col: FilterCols<TColEntries, number> | SQLExpr<number | bigint>, decimals?: number): SQLExpr<bigint | number> => sqlExpr(decimals !== undefined ? `ROUND(${resolveArg(col, quoteFn)}, ${decimals})` : `ROUND(${resolveArg(col, quoteFn)})`),
+  // SQLite's POWER() always returns REAL regardless of input type
+  power: (base: FilterCols<TColEntries, number> | SQLExpr<number | bigint>, exp: number | SQLExpr<number | bigint>): SQLExpr<number> => sqlExpr(`POWER(${resolveArg(base, quoteFn)}, ${typeof exp === 'number' ? exp : exp.sql})`),
+  sqrt:  (col: FilterCols<TColEntries, number> | SQLExpr<number | bigint>): SQLExpr<number> => sqlExpr(`SQRT(${resolveArg(col, quoteFn)})`),
+  mod:   (col: FilterCols<TColEntries, number> | SQLExpr<number | bigint>, divisor: number): SQLExpr<bigint | number> => sqlExpr(`MOD(${resolveArg(col, quoteFn)}, ${divisor})`),
+  sign:  (col: FilterCols<TColEntries, number> | SQLExpr<number | bigint>): SQLExpr<bigint | number> => sqlExpr(`SIGN(${resolveArg(col, quoteFn)})`),
+  exp:   (col: FilterCols<TColEntries, number> | SQLExpr<number | bigint>): SQLExpr<number> => sqlExpr(`EXP(${resolveArg(col, quoteFn)})`),
+  // ── Math (SQLite 3.35+) ──────────────────────────────────────────────────
+  // SQLite RANDOM() returns a 64-bit signed integer — always bigint
+  random: (): SQLExpr<bigint> => sqlExpr('RANDOM()'),
+  log:   (x: FilterCols<TColEntries, number> | SQLExpr<number>): SQLExpr<number> => sqlExpr(`LOG(${resolveArg(x, quoteFn)})`),
+  log2:  (x: FilterCols<TColEntries, number> | SQLExpr<number>): SQLExpr<number> => sqlExpr(`LOG2(${resolveArg(x, quoteFn)})`),
+  log10: (x: FilterCols<TColEntries, number> | SQLExpr<number>): SQLExpr<number> => sqlExpr(`LOG10(${resolveArg(x, quoteFn)})`),
 });
 
 export type DialectFns<TColEntries extends [string, unknown] = never, TCriteria extends object = object> = ReturnType<typeof sqliteContextFns<TColEntries, TCriteria>>;

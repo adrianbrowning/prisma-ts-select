@@ -1117,6 +1117,36 @@ prisma.$from("User")
       .select(({ replace }) => replace("User.email", "@example.com", ""), "handle");
 ```
 
+#### Math Functions (all dialects)
+
+| Function | SQL | Returns |
+|---|---|---|
+| `abs(col)` | `ABS(col)` | `number` |
+| `ceil(col)` | `CEIL(col)` | `number` |
+| `floor(col)` | `FLOOR(col)` | `number` |
+| `round(col, decimals?)` | `ROUND(col)` / `ROUND(col, n)` | `number` |
+| `power(base, exp)` | `POWER(base, exp)` | `number` |
+| `sqrt(col)` | `SQRT(col)` | `number` |
+| `mod(col, divisor)` | `MOD(col, divisor)` | `number` |
+| `sign(col)` | `SIGN(col)` | `number` |
+| `exp(col)` | `EXP(col)` | `number` |
+
+Math fns accept `SQLExpr<number>` or a column reference, enabling composition:
+
+```typescript
+// Absolute value of a literal
+prisma.$from("User")
+      .select(({ abs, lit }) => abs(lit(-5)), "absVal");
+
+// Round to 2 decimal places
+prisma.$from("User")
+      .select(({ round, lit }) => round(lit(4.567), 2), "val");
+
+// Compose: sqrt(power(x, 2))
+prisma.$from("User")
+      .select(({ sqrt, power }) => sqrt(power("User.age", 2)), "val");
+```
+
 #### Control Flow Functions (all dialects)
 
 | Function | SQL | Returns |
@@ -1206,6 +1236,15 @@ GROUP BY User.name;
 | `weekOfYear(col)` | `WEEKOFYEAR(col)` | `number` |
 | `dayName(col)` | `DAYNAME(col)` | `string` |
 | `lastDay(col)` | `LAST_DAY(col)` | `Date` |
+| `pi()` | `PI()` | `number` |
+| `ln(x)` | `LN(x)` | `number` |
+| `log(x)` | `LOG(x)` | `number` |
+| `log2(x)` | `LOG2(x)` | `number` |
+| `log10(x)` | `LOG10(x)` | `number` |
+| `truncate(x, n)` | `TRUNCATE(x, n)` | `number` |
+| `rand(seed?)` | `RAND()` / `RAND(seed)` | `number` |
+
+> **Note:** MySQL `LOG(x)` is natural log (ln). `rand()` returns a float in [0, 1).
 
 `unit` is one of: `'MICROSECOND' | 'SECOND' | 'MINUTE' | 'HOUR' | 'DAY' | 'WEEK' | 'MONTH' | 'QUARTER' | 'YEAR'`
 
@@ -1248,6 +1287,15 @@ GROUP BY User.name;
 | `dateTrunc(unit, col)` | `DATE_TRUNC('unit', col)` | `Date` |
 | `age(ts1, ts2?)` | `AGE(ts1)` / `AGE(ts1, ts2)` | `string` (PG `interval` mapped to string) |
 | `toDate(text, fmt)` | `TO_DATE(text, 'fmt')` | `Date` |
+| `pi()` | `PI()` | `number` |
+| `ln(x)` | `LN(x)` | `number` |
+| `log(x)` | `LOG(x)` | `number` |
+| `logBase(base, x)` | `LOG(base, x)` | `number` |
+| `trunc(x, n?)` | `TRUNC(x)` / `TRUNC(x, n)` | `number` |
+| `div(x, y)` | `DIV(x, y)` | `number` |
+| `random()` | `RANDOM()` | `number` |
+
+> **Note:** PG `LOG(x)` is log base 10 (unlike MySQL where it is natural log). `random()` returns a float in [0, 1).
 
 `field` for `extract` is one of: `'YEAR' | 'MONTH' | 'DAY' | 'HOUR' | 'MINUTE' | 'SECOND' | 'DOW' | 'DOY' | 'EPOCH' | 'WEEK' | 'QUARTER'`
 
@@ -1273,8 +1321,12 @@ GROUP BY User.name;
 | `julianday(col)` | `julianday(col)` | `number` |
 | `date(col)` | `date(col)` | `string` |
 | `datetime(col)` | `datetime(col)` | `string` |
+| `random()` | `RANDOM()` | `number` |
+| `log(x)` | `LOG(x)` | `number` |
+| `log2(x)` | `LOG2(x)` | `number` |
+| `log10(x)` | `LOG10(x)` | `number` |
 
-> **Note:** `total()` behaves like `SUM()` but returns `0.0` instead of `NULL` for empty sets. SQLite uses the `||` operator for string concatenation.
+> **Note:** SQLite `random()` returns a random integer (not float). `log`, `log2`, `log10` require SQLite 3.35+. `total()` behaves like `SUM()` but returns `0.0` instead of `NULL` for empty sets. SQLite uses the `||` operator for string concatenation.
 
 > **Note:** SQLite stores `DateTime` differently between Prisma v6 (integer milliseconds) and v7 (ISO 8601 text). All SQLite datetime fns automatically normalise both formats via a `CASE WHEN typeof(...) = 'integer' THEN datetime(.../1000, 'unixepoch') ELSE ... END` wrapper, so they work correctly on both versions.
 
@@ -1284,7 +1336,6 @@ GROUP BY User.name;
 
 - Support specifying `JOIN` type [issue#2](https://github.com/adrianbrowning/prisma-ts-select/issues/2)
 - Support additional Select Functions
-  - [Math #7](https://github.com/adrianbrowning/prisma-ts-select/issues/7)
   - [JSON #9](https://github.com/adrianbrowning/prisma-ts-select/issues/9)
 - [Support a `Many-To-Many` join #19](https://github.com/adrianbrowning/prisma-ts-select/issues/19)
 - [whereRaw supporting Prisma.sql](https://github.com/adrianbrowning/prisma-ts-select/issues/29)
