@@ -140,8 +140,13 @@ generatorHandler({
     const srcDir = path.join(pTSSelPath, "extend");
     // const outDir = path.join(pTSSelPath, "..", "built");
 
+    const hasVersions = provider !== 'sqlite'; // mysql + pg only
+
     // Copy dialect files - both .js and .d.ts for types, shared, and provider-specific
-    const dialectFiles = ["types", "shared", provider];
+    const dialectFiles = [
+      "types", "shared", provider,
+      ...(hasVersions ? [`${provider}-v6`, `${provider}-v7`] : [])
+    ];
     const dialectOutDir = path.join(outputPath, "dialects");
     fs.mkdirSync(dialectOutDir, {recursive: true});
 
@@ -155,16 +160,32 @@ generatorHandler({
       }
     }
 
-    // Generate dialects/index.js that exports the correct dialect
-    const dialectIndexJs = `export { ${provider}Dialect as dialect, ${provider}ContextFns as dialectContextFns } from './${provider}.js';\n`;
+    // Generate dialects/index.js — default = v7 for mysql/pg, base for sqlite
+    const defaultCtxFns = hasVersions ? `${provider}V7ContextFns` : `${provider}ContextFns`;
+    const defaultSrc = hasVersions ? `${provider}-v7` : provider;
+    const dialectIndexJs = `export { ${provider}Dialect as dialect, ${defaultCtxFns} as dialectContextFns } from './${defaultSrc}.js';\n`;
     fs.writeFileSync(path.join(dialectOutDir, "index.js"), dialectIndexJs);
 
-    // Generate dialects/index.d.ts with proper type exports
     const dialectIndexDts = `export { type Dialect, type FunctionRegistry, SUPPORTED_PROVIDERS, type SupportedProvider } from './types.js';
 export { sharedFunctions } from './shared.js';
-export { ${provider}Dialect as dialect, ${provider}Dialect, ${provider}ContextFns as dialectContextFns } from './${provider}.js';
+export { ${provider}Dialect as dialect, ${provider}Dialect, ${defaultCtxFns} as dialectContextFns } from './${defaultSrc}.js';
 `;
     fs.writeFileSync(path.join(dialectOutDir, "index.d.ts"), dialectIndexDts);
+
+    // Generate versioned v6/v7 dialect files (all providers)
+    for (const ver of ['v6', 'v7'] as const) {
+      const ctxName = hasVersions
+        ? `${provider}${ver === 'v6' ? 'V6' : 'V7'}ContextFns`
+        : `${provider}ContextFns`;
+      const srcFile = hasVersions ? `${provider}-${ver}` : provider;
+      const js = `export { ${provider}Dialect as dialect, ${ctxName} as dialectContextFns } from './${srcFile}.js';\n`;
+      const dts = `export { type Dialect, type FunctionRegistry, SUPPORTED_PROVIDERS, type SupportedProvider } from './types.js';
+export { sharedFunctions } from './shared.js';
+export { ${provider}Dialect as dialect, ${provider}Dialect, ${ctxName} as dialectContextFns } from './${srcFile}.js';
+`;
+      fs.writeFileSync(path.join(dialectOutDir, `${ver}.js`), js);
+      fs.writeFileSync(path.join(dialectOutDir, `${ver}.d.ts`), dts);
+    }
 
     // Copy extend.js and inject DB model (ESM-only)
     const extendContents = fs.readFileSync(path.join(srcDir, 'extend.js'), {encoding: 'utf-8'});
@@ -178,15 +199,23 @@ export { ${provider}Dialect as dialect, ${provider}Dialect, ${provider}ContextFn
     // Copy extend.d.ts and inject DB model (ESM-only)
     const extendDts = fs.readFileSync(path.join(srcDir, 'extend.d.ts'), {encoding: 'utf-8'});
     const PLACEHOLDER = 'type SelectFnContext<_TSources extends TArrSources, _TFields extends TFieldsType> = BaseSelectFnContext<_TSources, _TFields>;';
-    const dtsWithDialect =
-      `import type { DialectFns } from './dialects/${provider}.js';\n` +
-      extendDts
-        .replace('declare const DB: DBType;', declaration)
-        .replace(
-          PLACEHOLDER,
-          `type SelectFnContext<_TSources extends TArrSources, _TFields extends TFieldsType> = BaseSelectFnContext<_TSources, _TFields> & DialectFns<ColEntries<_TSources, _TFields>, WhereCriteria<_TSources, _TFields>>;`
-        );
+    const replacedExtendDts = extendDts
+      .replace('declare const DB: DBType;', declaration)
+      .replace(
+        PLACEHOLDER,
+        `type SelectFnContext<_TSources extends TArrSources, _TFields extends TFieldsType> = Omit<BaseSelectFnContext<_TSources, _TFields>, keyof DialectFns<ColEntries<_TSources, _TFields>, WhereCriteria<_TSources, _TFields>>> & DialectFns<ColEntries<_TSources, _TFields>, WhereCriteria<_TSources, _TFields>>;`
+      );
+
+    const dtsWithDialect = `import type { DialectFns } from './dialects/${provider}.js';\n` + replacedExtendDts;
     writeFileSafely(path.join(outputPath, 'extend.d.ts'), dtsWithDialect);
+
+    // Generate versioned extend files (all providers)
+    for (const ver of ['v6', 'v7'] as const) {
+      const srcFile = hasVersions ? `${provider}-${ver}` : provider;
+      writeFileSafely(path.join(outputPath, `extend-${ver}.js`), `export * from './extend.js';\nexport { default } from './extend.js';\n`);
+      const vDts = `import type { DialectFns } from './dialects/${srcFile}.js';\n` + replacedExtendDts;
+      writeFileSafely(path.join(outputPath, `extend-${ver}.d.ts`), vDts);
+    }
 
     // Copy chunk .d.ts files (e.g. sql-expr-HASH.d.ts) that extend.d.ts imports
     for (const file of fs.readdirSync(srcDir)) {

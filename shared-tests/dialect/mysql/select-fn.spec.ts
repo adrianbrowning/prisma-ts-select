@@ -142,10 +142,50 @@ describe("MySQL dialect fns", () => {
         });
     });
 
+    describe("countAll()", () => {
+        it("type: bigint", async () => {
+            const result = await prisma.$from("User").select(({ countAll }) => countAll(), "n").run();
+            typeCheck({} as Expect<Equal<typeof result, Array<{ n: bigint }>>>);
+            assert.equal(result[0]!.n, 3n);
+        });
+    });
+
+    describe("count(col)", () => {
+        it("type: bigint", async () => {
+            const result = await prisma.$from("User").select(({ count }) => count("User.id"), "n").run();
+            typeCheck({} as Expect<Equal<typeof result, Array<{ n: bigint }>>>);
+            assert.equal(result[0]!.n, 3n);
+        });
+    });
+
+    describe("countDistinct(col)", () => {
+        it("type: bigint", async () => {
+            const result = await prisma.$from("User").select(({ countDistinct }) => countDistinct("User.id"), "n").run();
+            typeCheck({} as Expect<Equal<typeof result, Array<{ n: bigint }>>>);
+            assert.equal(result[0]!.n, 3n);
+        });
+    });
+
+    describe("length(col)", () => {
+        it("type: bigint", async () => {
+            const result = await prisma.$from("User").select(({ length }) => length("User.email"), "l").run();
+            typeCheck({} as Expect<Equal<typeof result, Array<{ l: bigint }>>>);
+        });
+        it("should return correct lengths", async () => {
+            const result = await prisma.$from("User").select(({ length }) => length("User.email"), "l").run();
+            const lengths = result.map(r => r.l).sort((a, b) => (a < b ? -1 : a > b ? 1 : 0));
+            assert.deepEqual(lengths, [17n, 17n, 19n]);
+        });
+    });
+
     describe("sum(col) — type", () => {
         it("type: Decimal", async () => {
             const result = await prisma.$from("User").select(({ sum }) => sum("User.age"), "total").run();
             typeCheck({} as Expect<Equal<typeof result, Array<{ total: Decimal }>>>);
+        });
+        it("runtime value: Decimal(55)", async () => {
+            const result = await prisma.$from("User").select(({ sum }) => sum("User.age"), "total").run();
+            assert.ok(result[0]!.total.equals(55), `Expected Decimal 55, got ${result[0]!.total}`);
         });
     });
 
@@ -235,6 +275,22 @@ describe("MySQL dialect fns", () => {
         it("dayName() rejects number lit", () => {
             // @ts-expect-error lit(42) is SQLExpr<number>, not SQLExpr<Date>
             prisma.$from("Post").select(({ dayName, lit }) => dayName(lit(42)), "dn");
+        });
+    });
+
+    describe("min(col) — numeric column", () => {
+        it("type: number | null", async () => {
+            const result = await prisma.$from("User").select(({ min }) => min("User.age"), "youngest").run();
+            typeCheck({} as Expect<Equal<typeof result, Array<{ youngest: number | null }>>>);
+            assert.equal(result[0]!.youngest, 25);
+        });
+    });
+
+    describe("max(col) — numeric column", () => {
+        it("type: number | null", async () => {
+            const result = await prisma.$from("User").select(({ max }) => max("User.age"), "oldest").run();
+            typeCheck({} as Expect<Equal<typeof result, Array<{ oldest: number | null }>>>);
+            assert.equal(result[0]!.oldest, 30);
         });
     });
 

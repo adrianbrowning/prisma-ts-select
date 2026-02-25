@@ -62,15 +62,15 @@ describe("MySQL datetime dialect fns", () => {
                 `SELECT YEAR(${dialect.quoteQualifiedColumn("Post.createdAt")}) AS ${dialect.quote("y", true)} FROM ${dialect.quote("Post")};`);
         });
 
-        it("type: number", async () => {
+        it("type: bigint", async () => {
             const result = await createQuery().run();
-            typeCheck({} as Expect<Equal<typeof result, Array<{ y: number }>>>);
+            typeCheck({} as Expect<Equal<typeof result, Array<{ y: bigint }>>>);
         });
 
         it("should return correct years", async () => {
             const result = await createQuery().run();
-            const years = result.map(r => Number(r.y)).sort((a, b) => a - b);
-            assert.deepEqual(years, [2020, 2020, 2021]);
+            const years = result.map(r => r.y).sort((a, b) => (a < b ? -1 : a > b ? 1 : 0));
+            assert.deepEqual(years, [2020n, 2020n, 2021n]);
         });
     });
 
@@ -84,15 +84,15 @@ describe("MySQL datetime dialect fns", () => {
                 `SELECT MONTH(${dialect.quoteQualifiedColumn("Post.createdAt")}) AS ${dialect.quote("m", true)} FROM ${dialect.quote("Post")};`);
         });
 
-        it("type: number", async () => {
+        it("type: bigint", async () => {
             const result = await createQuery().run();
-            typeCheck({} as Expect<Equal<typeof result, Array<{ m: number }>>>);
+            typeCheck({} as Expect<Equal<typeof result, Array<{ m: bigint }>>>);
         });
 
         it("should return correct months", async () => {
             const result = await createQuery().run();
-            const months = result.map(r => Number(r.m)).sort((a, b) => a - b);
-            assert.deepEqual(months, [1, 6, 12]);
+            const months = result.map(r => r.m).sort((a, b) => (a < b ? -1 : a > b ? 1 : 0));
+            assert.deepEqual(months, [1n, 6n, 12n]);
         });
     });
 
@@ -106,15 +106,15 @@ describe("MySQL datetime dialect fns", () => {
                 `SELECT DAY(${dialect.quoteQualifiedColumn("Post.createdAt")}) AS ${dialect.quote("d", true)} FROM ${dialect.quote("Post")};`);
         });
 
-        it("type: number", async () => {
+        it("type: bigint", async () => {
             const result = await createQuery().run();
-            typeCheck({} as Expect<Equal<typeof result, Array<{ d: number }>>>);
+            typeCheck({} as Expect<Equal<typeof result, Array<{ d: bigint }>>>);
         });
 
         it("should return correct days", async () => {
             const result = await createQuery().run();
-            const days = result.map(r => Number(r.d)).sort((a, b) => a - b);
-            assert.deepEqual(days, [15, 20, 25]);
+            const days = result.map(r => r.d).sort((a, b) => (a < b ? -1 : a > b ? 1 : 0));
+            assert.deepEqual(days, [15n, 20n, 25n]);
         });
     });
 
@@ -128,15 +128,15 @@ describe("MySQL datetime dialect fns", () => {
                 `SELECT HOUR(${dialect.quoteQualifiedColumn("Post.createdAt")}) AS ${dialect.quote("h", true)} FROM ${dialect.quote("Post")};`);
         });
 
-        it("type: number", async () => {
+        it("type: bigint", async () => {
             const result = await createQuery().run();
-            typeCheck({} as Expect<Equal<typeof result, Array<{ h: number }>>>);
+            typeCheck({} as Expect<Equal<typeof result, Array<{ h: bigint }>>>);
         });
 
         it("should return correct hours", async () => {
             const result = await createQuery().run();
-            const hours = result.map(r => Number(r.h)).sort((a, b) => a - b);
-            assert.deepEqual(hours, [8, 10, 14]);
+            const hours = result.map(r => r.h).sort((a, b) => (a < b ? -1 : a > b ? 1 : 0));
+            assert.deepEqual(hours, [8n, 10n, 14n]);
         });
     });
 
@@ -250,16 +250,16 @@ describe("MySQL datetime dialect fns", () => {
                 `SELECT QUARTER(${dialect.quoteQualifiedColumn("Post.createdAt")}) AS ${dialect.quote("q", true)} FROM ${dialect.quote("Post")};`);
         });
 
-        it("type: number", async () => {
+        it("type: bigint", async () => {
             const result = await createQuery().run();
-            typeCheck({} as Expect<Equal<typeof result, Array<{ q: number }>>>);
+            typeCheck({} as Expect<Equal<typeof result, Array<{ q: bigint }>>>);
         });
 
         it("should return correct quarters", async () => {
             const result = await createQuery().run();
-            const quarters = result.map(r => Number(r.q)).sort((a, b) => a - b);
+            const quarters = result.map(r => r.q).sort((a, b) => (a < b ? -1 : a > b ? 1 : 0));
             // Jan=Q1, Jun=Q2, Dec=Q4
-            assert.deepEqual(quarters, [1, 2, 4]);
+            assert.deepEqual(quarters, [1n, 2n, 4n]);
         });
     });
 

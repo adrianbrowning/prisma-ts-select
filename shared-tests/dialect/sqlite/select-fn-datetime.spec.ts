@@ -75,8 +75,8 @@ describe("SQLite datetime dialect fns", () => {
 
         it("should return correct years", async () => {
             const result = await createQuery().run();
-            const years = result.map(r => Number(r.y)).sort((a, b) => a - b);
-            assert.deepEqual(years, [2020, 2020, 2021]);
+            const years = result.map(r => r.y).sort((a, b) => a.localeCompare(b));
+            assert.deepEqual(years, ["2020", "2020", "2021"]);
         });
     });
 
@@ -97,8 +97,8 @@ describe("SQLite datetime dialect fns", () => {
 
         it("should return correct months", async () => {
             const result = await createQuery().run();
-            const months = result.map(r => Number(r.m)).sort((a, b) => a - b);
-            assert.deepEqual(months, [1, 6, 12]);
+            const months = result.map(r => r.m).sort((a, b) => a.localeCompare(b));
+            assert.deepEqual(months, ["01", "06", "12"]);
         });
     });
 
@@ -119,8 +119,8 @@ describe("SQLite datetime dialect fns", () => {
 
         it("should return correct days", async () => {
             const result = await createQuery().run();
-            const days = result.map(r => Number(r.d)).sort((a, b) => a - b);
-            assert.deepEqual(days, [15, 20, 25]);
+            const days = result.map(r => (r.d)).sort((a, b) => a.localeCompare(b));
+            assert.deepEqual(days, ["15", "20", "25"]);
         });
     });
 
@@ -141,8 +141,8 @@ describe("SQLite datetime dialect fns", () => {
 
         it("should return correct hours", async () => {
             const result = await createQuery().run();
-            const hours = result.map(r => Number(r.h)).sort((a, b) => a - b);
-            assert.deepEqual(hours, [8, 10, 14]);
+            const hours = result.map(r => r.h).sort((a, b) => a.localeCompare(b));
+            assert.deepEqual(hours, ["08", "10", "14"]);
         });
     });
 

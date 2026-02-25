@@ -151,6 +151,38 @@ describe("PostgreSQL dialect fns", () => {
         });
     });
 
+    // count return types differ by Prisma version — see dialect/pg-v6/ and dialect/pg-v7/
+
+    describe("countAll() — runtime", () => {
+        it("returns a row", async () => {
+            const result = await prisma.$from("User").select(({ countAll }) => countAll(), "n").run();
+            assert.ok(result.length > 0);
+        });
+    });
+
+    describe("count(col) — runtime", () => {
+        it("returns a row", async () => {
+            const result = await prisma.$from("User").select(({ count }) => count("User.id"), "n").run();
+            assert.ok(result.length > 0);
+        });
+    });
+
+    describe("countDistinct(col) — runtime", () => {
+        it("returns a row", async () => {
+            const result = await prisma.$from("User").select(({ countDistinct }) => countDistinct("User.id"), "n").run();
+            assert.ok(result.length > 0);
+        });
+    });
+
+    describe("length(col) — type", () => {
+        it("type: number", async () => {
+            const result = await prisma.$from("User").select(({ length }) => length("User.email"), "l").run();
+            typeCheck({} as Expect<Equal<typeof result, Array<{ l: number }>>>);
+            const lengths = result.map(r => r.l).sort((a, b) => a - b);
+            assert.deepEqual(lengths, [17, 17, 19]);
+        });
+    });
+
     describe("sum(col) — type", () => {
         it("type: number", async () => {
             const result = await prisma.$from("User").select(({ sum }) => sum("User.age"), "total").run();
@@ -268,6 +300,22 @@ describe("PostgreSQL dialect fns", () => {
 
         it("toDate() accepts string col", () => {
             prisma.$from("Post").select(({ toDate }) => toDate("Post.title", 'YYYY'), "d");
+        });
+    });
+
+    describe("min(col) — numeric column", () => {
+        it("type: number | null", async () => {
+            const result = await prisma.$from("User").select(({ min }) => min("User.age"), "youngest").run();
+            typeCheck({} as Expect<Equal<typeof result, Array<{ youngest: number | null }>>>);
+            assert.equal(result[0]!.youngest, 25);
+        });
+    });
+
+    describe("max(col) — numeric column", () => {
+        it("type: number | null", async () => {
+            const result = await prisma.$from("User").select(({ max }) => max("User.age"), "oldest").run();
+            typeCheck({} as Expect<Equal<typeof result, Array<{ oldest: number | null }>>>);
+            assert.equal(result[0]!.oldest, 30);
         });
     });
 

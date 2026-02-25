@@ -116,6 +116,24 @@ describe("SQLite string dialect fns", () => {
     });
 
 
+    describe("length(col)", () => {
+        function createQuery() {
+            return prisma.$from("User").select(({ length }) => length("User.email"), "elen");
+        }
+
+        it("type: bigint", async () => {
+            const result = await createQuery().run();
+            typeCheck({} as Expect<Equal<typeof result, Array<{ elen: bigint }>>>);
+        });
+
+        it("should return correct lengths", async () => {
+            const result = await createQuery().run();
+            const lengths = result.map(r => r.elen).sort((a, b) => (a < b ? -1 : a > b ? 1 : 0));
+            // johndoe@example.com = 19, smith@example.com = 17, alice@example.com = 17
+            assert.deepEqual(lengths, [17n, 17n, 19n]);
+        });
+    });
+
     describe("instr(col, substr)", () => {
         it("should match SQL", () => {
             const sql = prisma.$from("User")
@@ -124,11 +142,11 @@ describe("SQLite string dialect fns", () => {
             expectSQL(sql, `SELECT INSTR(${dialect.quoteQualifiedColumn("User.email")}, '@') AS ${dialect.quote("pos", true)} FROM ${dialect.quote("User")};`);
         });
 
-        it("type: number", async () => {
+        it("type: bigint", async () => {
             const result = await prisma.$from("User")
                 .select(({ instr }) => instr("User.email", "@"), "pos")
                 .run();
-            typeCheck({} as Expect<Equal<typeof result, Array<{ pos: number }>>>);
+            typeCheck({} as Expect<Equal<typeof result, Array<{ pos: bigint }>>>);
         });
 
         it("should return position of @", async () => {
@@ -136,8 +154,8 @@ describe("SQLite string dialect fns", () => {
                 .select(({ instr }) => instr("User.email", "@"), "pos")
                 .run();
             // johndoe@example.com → 8, smith@example.com → 6, alice@example.com → 6
-            const positions = result.map(r => Number(r.pos)).sort((a, b) => a - b);
-            assert.deepEqual(positions, [6, 6, 8]);
+            const positions = result.map(r => (r.pos)).sort((a, b) => Number(a - b));
+            assert.deepEqual(positions, [6n, 6n, 8n]);
         });
 
         it("should escape single quotes", () => {
@@ -204,11 +222,11 @@ describe("SQLite string dialect fns", () => {
             expectSQL(sql, `SELECT UNICODE(${dialect.quoteQualifiedColumn("User.name")}) AS ${dialect.quote("code", true)} FROM ${dialect.quote("User")};`);
         });
 
-        it("type: number", async () => {
+        it("type: bigint", async () => {
             const result = await prisma.$from("User")
                 .select(({ unicode }) => unicode("User.name"), "code")
                 .run();
-            typeCheck({} as Expect<Equal<typeof result, Array<{ code: number }>>>);
+            typeCheck({} as Expect<Equal<typeof result, Array<{ code: bigint }>>>);
         });
 
         it("should return unicode code point of first char", async () => {

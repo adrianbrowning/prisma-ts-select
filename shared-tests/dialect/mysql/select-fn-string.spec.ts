@@ -223,19 +223,19 @@ describe("MySQL string dialect fns", () => {
             expectSQL(sql, `SELECT LOCATE('@', ${dialect.quoteQualifiedColumn("User.email")}) AS ${dialect.quote("pos", true)} FROM ${dialect.quote("User")};`);
         });
 
-        it("type: number", async () => {
+        it("type: bigint", async () => {
             const result = await prisma.$from("User")
                 .select(({ locate }) => locate("@", "User.email"), "pos")
                 .run();
-            typeCheck({} as Expect<Equal<typeof result, Array<{ pos: number }>>>);
+            typeCheck({} as Expect<Equal<typeof result, Array<{ pos: bigint }>>>);
         });
 
         it("should return position of @", async () => {
             const result = await prisma.$from("User")
                 .select(({ locate }) => locate("@", "User.email"), "pos")
                 .run();
-            const positions = result.map(r => Number(r.pos)).sort((a, b) => a - b);
-            assert.deepEqual(positions, [6, 6, 8]);
+            const positions = result.map(r => r.pos).sort((a, b) => (a < b ? -1 : a > b ? 1 : 0));
+            assert.deepEqual(positions, [6n, 6n, 8n]);
         });
     });
 

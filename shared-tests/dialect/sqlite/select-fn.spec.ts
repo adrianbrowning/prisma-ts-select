@@ -57,10 +57,60 @@ describe("SQLite dialect fns", () => {
         });
     });
 
+    describe("countAll() — type", () => {
+        it("type: bigint", async () => {
+            const result = await prisma.$from("User").select(({ countAll }) => countAll(), "n").run();
+            typeCheck({} as Expect<Equal<typeof result, Array<{ n: bigint }>>>);
+            assert.equal(result[0]!.n, 3n);
+        });
+    });
+
+    describe("count(col) — type", () => {
+        it("type: bigint", async () => {
+            const result = await prisma.$from("User").select(({ count }) => count("User.id"), "n").run();
+            typeCheck({} as Expect<Equal<typeof result, Array<{ n: bigint }>>>);
+            assert.equal(result[0]!.n, 3n);
+        });
+    });
+
+    describe("countDistinct(col) — type", () => {
+        it("type: bigint", async () => {
+            const result = await prisma.$from("User").select(({ countDistinct }) => countDistinct("User.id"), "n").run();
+            typeCheck({} as Expect<Equal<typeof result, Array<{ n: bigint }>>>);
+            assert.equal(result[0]!.n, 3n);
+        });
+    });
+
+    describe("length(col) — type", () => {
+        it("type: bigint", async () => {
+            const result = await prisma.$from("User").select(({ length }) => length("User.email"), "l").run();
+            typeCheck({} as Expect<Equal<typeof result, Array<{ l: bigint }>>>);
+            // johndoe@example.com=19, smith@example.com=17, alice@example.com=17
+            const lengths = result.map(r => r.l).sort();
+            assert.deepEqual(lengths, [17n, 17n, 19n]);
+        });
+    });
+
     describe("sum(col) — type", () => {
-        it("type: number", async () => {
+        it("type: bigint | number", async () => {
             const result = await prisma.$from("User").select(({ sum }) => sum("User.age"), "total").run();
-            typeCheck({} as Expect<Equal<typeof result, Array<{ total: number }>>>);
+            typeCheck({} as Expect<Equal<typeof result, Array<{ total: bigint | number }>>>);
+        });
+    });
+
+    describe("min(col) — numeric column", () => {
+        it("type: bigint | null", async () => {
+            const result = await prisma.$from("User").select(({ min }) => min("User.age"), "youngest").run();
+            typeCheck({} as Expect<Equal<typeof result, Array<{ youngest: bigint | null }>>>);
+            assert.equal(result[0]!.youngest, 25n);
+        });
+    });
+
+    describe("max(col) — numeric column", () => {
+        it("type: bigint | null", async () => {
+            const result = await prisma.$from("User").select(({ max }) => max("User.age"), "oldest").run();
+            typeCheck({} as Expect<Equal<typeof result, Array<{ oldest: bigint | null }>>>);
+            assert.equal(result[0]!.oldest, 30n);
         });
     });
 

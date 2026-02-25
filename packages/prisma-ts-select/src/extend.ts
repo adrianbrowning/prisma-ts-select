@@ -2222,13 +2222,9 @@ type LitValue = string | number | boolean | null;
 
 type BaseSelectFnContext<_TSources extends TArrSources, _TFields extends TFieldsType> = {
   lit: <T extends LitValue>(v: T) => SQLExpr<LitToType<T>>;
-  countAll: () => SQLExpr<number>;
-  count: <TCol extends GetOtherColumns<_TSources> | "*">(col: TCol) => SQLExpr<number>;
-  countDistinct: <TCol extends GetOtherColumns<_TSources>>(col: TCol) => SQLExpr<number>;
   min: <TTable extends string, TCol extends string & keyof _TFields[TTable]>(col: `${TTable}.${TCol}`) => SQLExpr<_TFields[TTable][TCol]>;
   max: <TTable extends string, TCol extends string & keyof _TFields[TTable]>(col: `${TTable}.${TCol}`) => SQLExpr<_TFields[TTable][TCol]>;
   replace: (col: GetColumnsOfType<_TSources, _TFields, string> | SQLExpr<string>, from: string, to: string) => SQLExpr<string>;
-  length: (col: GetColumnsOfType<_TSources, _TFields, string> | SQLExpr<string>) => SQLExpr<number>;
   upper: (col: GetColumnsOfType<_TSources, _TFields, string> | SQLExpr<string>) => SQLExpr<string>;
   lower: (col: GetColumnsOfType<_TSources, _TFields, string> | SQLExpr<string>) => SQLExpr<string>;
   trim: (col: GetColumnsOfType<_TSources, _TFields, string> | SQLExpr<string>) => SQLExpr<string>;
@@ -2255,13 +2251,9 @@ function buildContext<TSources extends TArrSources, TFields extends TFieldsType>
 
   return {
     lit: _lit,
-    countAll:      () => sqlExpr('COUNT(*)'),
-    count:         (col) => sqlExpr(col === "*" ? "COUNT(*)" : `COUNT(${quoteFn(col)})`),
-    countDistinct: (col) => sqlExpr(`COUNT(DISTINCT ${quoteFn(col)})`),
     min:           (col) => sqlExpr(`MIN(${resolveArg(col, quoteFn)})`),
     max:           (col) => sqlExpr(`MAX(${resolveArg(col, quoteFn)})`),
     replace:       (col, from, to) => sqlExpr(`REPLACE(${resolveArg(col, quoteFn)}, '${from.replace(/'/g, "''")}', '${to.replace(/'/g, "''")}')`),
-    length:        (col) => sqlExpr(`LENGTH(${resolveArg(col, quoteFn)})`),
     upper:         (col) => sqlExpr(`UPPER(${resolveArg(col, quoteFn)})`),
     lower:         (col) => sqlExpr(`LOWER(${resolveArg(col, quoteFn)})`),
     trim:          (col) => sqlExpr(`TRIM(${resolveArg(col, quoteFn)})`),
