@@ -86,10 +86,24 @@ async function seed() {
         ]
     });
 
+    // Create M2M seed data (for many-to-many join tests)
+    await prisma.m2M_Post.deleteMany({});
+    await prisma.m2M_Category.deleteMany({});
+    await prisma.m2M_Post.create({
+        data: {
+            id: 1,
+            title: "M2M Post 1",
+            cat1: {
+                create: { id: 1, name: "M2M Category 1" }
+            }
+        }
+    });
+
     console.log('Seeding complete! Created:');
     console.log('- 3 users');
     console.log('- 3 posts');
     console.log('- 3 employees');
+    console.log('- 1 M2M_Post + 1 M2M_Category (M2M join tests)');
 }
 
 async function main() {

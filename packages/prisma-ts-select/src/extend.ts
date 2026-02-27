@@ -2276,6 +2276,32 @@ function buildContext<TSources extends TArrSources, TFields extends TFieldsType>
 }
 
 // ────────────────────────────────────────────────────────────────────────────
+// M2M type helpers
+
+/** True if T is a union type (e.g. "A" | "B" → true, "A" → false). Uses distribution. */
+type IsUnion<T, _T extends T = T> = _T extends _T ? ([T] extends [_T] ? false : true) : never
+
+/** Implicit (_-prefixed) junction tables reachable from current sources */
+type ImplicitJoinsFrom<TSources extends TArrSources> =
+    AvailableJoins<TSources> & `_${string}`
+
+/** Non-_-prefixed tables reachable through junction tables from current sources */
+type AvailableM2MTargets<TSources extends TArrSources> =
+    keyof Relations<ImplicitJoinsFrom<TSources>> extends infer T
+        ? T extends TTables & string
+            ? T extends `_${string}` ? never : T
+            : never
+        : never
+
+/** Junction table shared by source + target (literal or union if ambiguous) */
+type GetJunctionTable<TSource extends TTables, TTarget extends TTables> =
+    keyof Relations<TSource> & keyof Relations<TTarget> & `_${string}` & TTables
+
+/** Valid refName strings (part after `_` in junction table names from sources) */
+type AvailableRefNames<TSources extends TArrSources> =
+    ImplicitJoinsFrom<TSources> extends `_${infer R}` ? R : never
+
+// ────────────────────────────────────────────────────────────────────────────
 
 class _fJoin<
     TSources extends TArrSources,
@@ -2474,6 +2500,52 @@ joinUnsafeTypeEnforced<const Table extends TTables | `${TTables} ${string}`,
                 alias: tableAlias
             }]
         });*/
+    }
+
+    manyToManyJoin<
+        const TTableInput extends
+            `${AvailableM2MTargets<TSources>}` |
+            `${AvailableM2MTargets<TSources>} ${string}`,
+        TTarget extends AvailableM2MTargets<TSources> =
+            ExtractTableName<TTableInput> & AvailableM2MTargets<TSources>,
+        TSource extends GetRealTableNames<TSources[number]> =
+            GetRealTableNames<TSources[number]>,
+        TJunction extends TTables = GetJunctionTable<TSource, TTarget>
+    >(
+        targetTable: TTableInput,
+        // rest param: required when junction is ambiguous (union), optional otherwise
+        ...args: IsUnion<TJunction> extends true
+            ? [refName: AvailableRefNames<TSources>]
+            : [refName?: AvailableRefNames<TSources>]
+    ): _fJoin<
+        [...TSources, TJunction, TTarget],
+        Prettify<TFields &
+            Record<TJunction, GetFieldsFromTable<TJunction>> &
+            Record<TTarget, GetFieldsFromTable<TTarget>>>
+    > {
+        const refName = args[0] as string | undefined;
+        const sourceTable = this.values.tables[0]!.table as string;
+        const [tbl, alias] = (targetTable as string).split(" ");
+
+        // Derive junction from DB schema (schema-driven, not alphabetical)
+        const srcRelations = (DB as any)[sourceTable].relations as Record<string, Record<string, string[]>>;
+        const junctionTable = refName
+            ? `_${refName}`
+            : Object.keys(srcRelations).find(k => k.startsWith("_") && (DB as any)[k]?.relations?.[tbl!] !== undefined)!;
+
+        // Source side: { localCol: [junctionCol] }
+        const srcRelEntry = srcRelations[junctionTable!];
+        const srcLocalCol = srcRelEntry ? Object.keys(srcRelEntry)[0]! : "id";
+        const srcJunctionCol = srcRelEntry?.[srcLocalCol]?.[0] ?? "A";
+
+        // Target side: { junctionCol: [targetCol] }
+        const tgtRelEntry = (DB as any)[junctionTable!]?.relations?.[tbl!] as Record<string, string[]> | undefined;
+        const tgtJunctionCol = tgtRelEntry ? Object.keys(tgtRelEntry)[0]! : "B";
+        const tgtLocalCol = tgtRelEntry?.[tgtJunctionCol]?.[0] ?? "id";
+
+        return (this as any)
+            .joinUnsafeIgnoreType(junctionTable, srcJunctionCol, `${sourceTable}.${srcLocalCol}`)
+            .joinUnsafeIgnoreType(alias ? `${tbl} ${alias}` : tbl, tgtLocalCol, `${junctionTable!}.${tgtJunctionCol}`);
     }
 
     // innerJoin(table: TTableSources, col1:string, col2:string){
