@@ -196,15 +196,54 @@ export { ${provider}Dialect as dialect, ${provider}Dialect, ${ctxName} as dialec
 
     const declaration = generateReadonlyDeclaration(models);
 
+    // Dialect join method support matrix (mirrors supportedJoinMethods in each dialect file)
+    const ALL_JOIN_METHODS = [
+      "join", "joinUnsafeTypeEnforced", "joinUnsafeIgnoreType",
+      "innerJoin", "innerJoinUnsafeTypeEnforced", "innerJoinUnsafeIgnoreType",
+      "leftJoin", "leftJoinUnsafeTypeEnforced", "leftJoinUnsafeIgnoreType",
+      "rightJoin", "rightJoinUnsafeTypeEnforced", "rightJoinUnsafeIgnoreType",
+      "fullJoin", "fullJoinUnsafeTypeEnforced", "fullJoinUnsafeIgnoreType",
+      "crossJoin", "crossJoinUnsafeTypeEnforced", "crossJoinUnsafeIgnoreType",
+      "manyToManyJoin",
+    ] as const;
+
+    const SUPPORTED_JOIN_METHODS: Partial<Record<ConnectorType, readonly string[]>> = {
+      sqlite: [
+        "join", "joinUnsafeTypeEnforced", "joinUnsafeIgnoreType",
+        "innerJoin", "innerJoinUnsafeTypeEnforced", "innerJoinUnsafeIgnoreType",
+        "leftJoin", "leftJoinUnsafeTypeEnforced", "leftJoinUnsafeIgnoreType",
+        "crossJoin", "crossJoinUnsafeTypeEnforced", "crossJoinUnsafeIgnoreType",
+        "manyToManyJoin",
+      ],
+      mysql: [
+        "join", "joinUnsafeTypeEnforced", "joinUnsafeIgnoreType",
+        "innerJoin", "innerJoinUnsafeTypeEnforced", "innerJoinUnsafeIgnoreType",
+        "leftJoin", "leftJoinUnsafeTypeEnforced", "leftJoinUnsafeIgnoreType",
+        "rightJoin", "rightJoinUnsafeTypeEnforced", "rightJoinUnsafeIgnoreType",
+        "crossJoin", "crossJoinUnsafeTypeEnforced", "crossJoinUnsafeIgnoreType",
+        "manyToManyJoin",
+      ],
+      postgresql: ALL_JOIN_METHODS,
+    };
+
+    const supportedMethods = (provider ? SUPPORTED_JOIN_METHODS[provider] : undefined) ?? ALL_JOIN_METHODS;
+    const omittedMethods = ALL_JOIN_METHODS.filter(m => !supportedMethods.includes(m));
+
     // Copy extend.d.ts and inject DB model (ESM-only)
     const extendDts = fs.readFileSync(path.join(srcDir, 'extend.d.ts'), {encoding: 'utf-8'});
     const PLACEHOLDER = 'type SelectFnContext<_TSources extends TArrSources, _TFields extends TFieldsType> = BaseSelectFnContext<_TSources, _TFields>;';
+    const JOIN_RETURN_PLACEHOLDER = 'type _fJoinReturn<TSources extends TArrSources, TFields extends TFieldsType> = _fJoin<TSources, TFields>;';
+    const joinReturnReplacement = omittedMethods.length > 0
+      ? `type _fJoinReturn<TSources extends TArrSources, TFields extends TFieldsType> = Omit<_fJoin<TSources, TFields>, ${omittedMethods.map(m => `"${m}"`).join(' | ')}>;`
+      : `type _fJoinReturn<TSources extends TArrSources, TFields extends TFieldsType> = _fJoin<TSources, TFields>;`;
+
     const replacedExtendDts = extendDts
       .replace('declare const DB: DBType;', declaration)
       .replace(
         PLACEHOLDER,
         `type SelectFnContext<_TSources extends TArrSources, _TFields extends TFieldsType> = Omit<BaseSelectFnContext<_TSources, _TFields>, keyof DialectFns<ColEntries<_TSources, _TFields>, WhereCriteria<_TSources, _TFields>>> & DialectFns<ColEntries<_TSources, _TFields>, WhereCriteria<_TSources, _TFields>>;`
-      );
+      )
+      .replace(JOIN_RETURN_PLACEHOLDER, joinReturnReplacement);
 
     const dtsWithDialect = `import type { DialectFns } from './dialects/${provider}.js';\n` + replacedExtendDts;
     writeFileSafely(path.join(outputPath, 'extend.d.ts'), dtsWithDialect);

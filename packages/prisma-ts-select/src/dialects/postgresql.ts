@@ -109,6 +109,17 @@ export const postgresqlContextFns = <TColEntries extends [string, unknown] = nev
 
 export type DialectFns<TColEntries extends [string, unknown] = never, _TCriteria extends object = object> = ReturnType<typeof postgresqlContextFns<TColEntries>>;
 
+/** Join methods supported by PostgreSQL (all join types). */
+export const supportedJoinMethods = [
+  "join", "joinUnsafeTypeEnforced", "joinUnsafeIgnoreType",
+  "innerJoin", "innerJoinUnsafeTypeEnforced", "innerJoinUnsafeIgnoreType",
+  "leftJoin", "leftJoinUnsafeTypeEnforced", "leftJoinUnsafeIgnoreType",
+  "rightJoin", "rightJoinUnsafeTypeEnforced", "rightJoinUnsafeIgnoreType",
+  "fullJoin", "fullJoinUnsafeTypeEnforced", "fullJoinUnsafeIgnoreType",
+  "crossJoin", "crossJoinUnsafeTypeEnforced", "crossJoinUnsafeIgnoreType",
+  "manyToManyJoin",
+] as const;
+
 /**
  * PostgreSQL dialect configuration.
  * - Identifier quoting: double quotes

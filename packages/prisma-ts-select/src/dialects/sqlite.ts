@@ -102,6 +102,15 @@ export const sqliteContextFns = <TColEntries extends [string, unknown] = never, 
 
 export type DialectFns<TColEntries extends [string, unknown] = never, TCriteria extends object = object> = ReturnType<typeof sqliteContextFns<TColEntries, TCriteria>>;
 
+/** Join methods supported by SQLite (no RIGHT JOIN or FULL JOIN). */
+export const supportedJoinMethods = [
+  "join", "joinUnsafeTypeEnforced", "joinUnsafeIgnoreType",
+  "innerJoin", "innerJoinUnsafeTypeEnforced", "innerJoinUnsafeIgnoreType",
+  "leftJoin", "leftJoinUnsafeTypeEnforced", "leftJoinUnsafeIgnoreType",
+  "crossJoin", "crossJoinUnsafeTypeEnforced", "crossJoinUnsafeIgnoreType",
+  "manyToManyJoin",
+] as const;
+
 /**
  * SQLite dialect configuration.
  * - Identifier quoting: backticks

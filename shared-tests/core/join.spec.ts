@@ -213,3 +213,126 @@ describe("join", () => {
     });
 });
 
+describe("join type variations", () => {
+
+    test("innerJoin emits INNER JOIN", () => {
+        const sql = prisma.$from("User")
+            .innerJoin("Post", "authorId", "User.id")
+            .getSQL();
+        expectSQL(sql, `FROM ${dialect.quote("User")} INNER JOIN ${dialect.quote("Post")} ON ${dialect.quoteQualifiedColumn("Post.authorId")} = ${dialect.quoteQualifiedColumn("User.id")};`);
+    });
+
+    test("leftJoin emits LEFT JOIN", () => {
+        const sql = prisma.$from("User")
+            .leftJoin("Post", "authorId", "User.id")
+            .getSQL();
+        expectSQL(sql, `FROM ${dialect.quote("User")} LEFT JOIN ${dialect.quote("Post")} ON ${dialect.quoteQualifiedColumn("Post.authorId")} = ${dialect.quoteQualifiedColumn("User.id")};`);
+    });
+
+    test("crossJoin emits CROSS JOIN (no ON clause)", () => {
+        const sql = prisma.$from("User")
+            .crossJoin("Post")
+            .getSQL();
+        expectSQL(sql, `FROM ${dialect.quote("User")} CROSS JOIN ${dialect.quote("Post")};`);
+    });
+
+    test("innerJoin object syntax", () => {
+        const sql = prisma.$from("User")
+            .innerJoin({ table: "Post", src: "authorId", on: "User.id" })
+            .getSQL();
+        expectSQL(sql, `FROM ${dialect.quote("User")} INNER JOIN ${dialect.quote("Post")} ON ${dialect.quoteQualifiedColumn("Post.authorId")} = ${dialect.quoteQualifiedColumn("User.id")};`);
+    });
+
+    test("leftJoin object syntax", () => {
+        const sql = prisma.$from("User")
+            .leftJoin({ table: "Post", src: "authorId", on: "User.id" })
+            .getSQL();
+        expectSQL(sql, `FROM ${dialect.quote("User")} LEFT JOIN ${dialect.quote("Post")} ON ${dialect.quoteQualifiedColumn("Post.authorId")} = ${dialect.quoteQualifiedColumn("User.id")};`);
+    });
+
+    test("chained mixed join types", () => {
+        const sql = prisma.$from("User")
+            .innerJoin("Post", "authorId", "User.id")
+            .leftJoin("LikedPosts", "authorId", "User.id")
+            .getSQL();
+        expectSQL(sql, `FROM ${dialect.quote("User")} INNER JOIN ${dialect.quote("Post")} ON ${dialect.quoteQualifiedColumn("Post.authorId")} = ${dialect.quoteQualifiedColumn("User.id")} LEFT JOIN ${dialect.quote("LikedPosts")} ON ${dialect.quoteQualifiedColumn("LikedPosts.authorId")} = ${dialect.quoteQualifiedColumn("User.id")};`);
+    });
+});
+
+describe("join unsafe variants", () => {
+
+    test("innerJoinUnsafeTypeEnforced emits INNER JOIN", () => {
+        const sql = prisma.$from("User")
+            .innerJoinUnsafeTypeEnforced("Post", "id", "User.id")
+            .getSQL();
+        expectSQL(sql, `FROM ${dialect.quote("User")} INNER JOIN ${dialect.quote("Post")} ON ${dialect.quoteQualifiedColumn("Post.id")} = ${dialect.quoteQualifiedColumn("User.id")};`);
+    });
+
+    test("innerJoinUnsafeIgnoreType emits INNER JOIN", () => {
+        const sql = prisma.$from("User")
+            .innerJoinUnsafeIgnoreType("Post", "id", "User.email")
+            .getSQL();
+        expectSQL(sql, `FROM ${dialect.quote("User")} INNER JOIN ${dialect.quote("Post")} ON ${dialect.quoteQualifiedColumn("Post.id")} = ${dialect.quoteQualifiedColumn("User.email")};`);
+    });
+
+    test("leftJoinUnsafeTypeEnforced emits LEFT JOIN", () => {
+        const sql = prisma.$from("User")
+            .leftJoinUnsafeTypeEnforced("Post", "id", "User.id")
+            .getSQL();
+        expectSQL(sql, `FROM ${dialect.quote("User")} LEFT JOIN ${dialect.quote("Post")} ON ${dialect.quoteQualifiedColumn("Post.id")} = ${dialect.quoteQualifiedColumn("User.id")};`);
+    });
+
+    test("leftJoinUnsafeIgnoreType emits LEFT JOIN", () => {
+        const sql = prisma.$from("User")
+            .leftJoinUnsafeIgnoreType("Post", "id", "User.email")
+            .getSQL();
+        expectSQL(sql, `FROM ${dialect.quote("User")} LEFT JOIN ${dialect.quote("Post")} ON ${dialect.quoteQualifiedColumn("Post.id")} = ${dialect.quoteQualifiedColumn("User.email")};`);
+    });
+
+    test("crossJoinUnsafeTypeEnforced emits CROSS JOIN", () => {
+        const sql = prisma.$from("User")
+            .crossJoinUnsafeTypeEnforced("Post")
+            .getSQL();
+        expectSQL(sql, `FROM ${dialect.quote("User")} CROSS JOIN ${dialect.quote("Post")};`);
+    });
+
+    test("crossJoinUnsafeIgnoreType emits CROSS JOIN", () => {
+        const sql = prisma.$from("User")
+            .crossJoinUnsafeIgnoreType("Post")
+            .getSQL();
+        expectSQL(sql, `FROM ${dialect.quote("User")} CROSS JOIN ${dialect.quote("Post")};`);
+    });
+});
+
+describe("join nullability types", () => {
+
+    test("leftJoin makes new table fields nullable", () => {
+        const q = prisma.$from("User").leftJoin("Post", "authorId", "User.id").select("Post.title");
+        type TitleType = Awaited<ReturnType<typeof q.run>>[0]["title"];
+        typeCheck({} as Expect<Equal<TitleType, string | null>>);
+    });
+
+    test("leftJoinUnsafeTypeEnforced makes new table fields nullable", () => {
+        const q = prisma.$from("User").leftJoinUnsafeTypeEnforced("Post", "id", "User.id").select("Post.title");
+        type TitleType = Awaited<ReturnType<typeof q.run>>[0]["title"];
+        typeCheck({} as Expect<Equal<TitleType, string | null>>);
+    });
+
+    test("leftJoinUnsafeIgnoreType makes new table fields nullable", () => {
+        const q = prisma.$from("User").leftJoinUnsafeIgnoreType("Post", "id", "User.email").select("Post.title");
+        type TitleType = Awaited<ReturnType<typeof q.run>>[0]["title"];
+        typeCheck({} as Expect<Equal<TitleType, string | null>>);
+    });
+
+    test("innerJoin preserves field types unchanged", () => {
+        const q = prisma.$from("User").innerJoin("Post", "authorId", "User.id").select("Post.title");
+        type TitleType = Awaited<ReturnType<typeof q.run>>[0]["title"];
+        typeCheck({} as Expect<Equal<TitleType, string>>);
+    });
+
+    test("join (default) preserves field types unchanged", () => {
+        const q = prisma.$from("User").join("Post", "authorId", "User.id").select("Post.title");
+        type TitleType = Awaited<ReturnType<typeof q.run>>[0]["title"];
+        typeCheck({} as Expect<Equal<TitleType, string>>);
+    });
+});
