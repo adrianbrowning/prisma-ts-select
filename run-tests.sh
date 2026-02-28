@@ -1,21 +1,24 @@
 #!/usr/bin/env bash
 # Usage:
-#   ./run-tests.sh                          # all 6 packages
-#   ./run-tests.sh --version 6              # v6 only (sqlite + mysql + pg)
-#   ./run-tests.sh --db sqlite              # sqlite only (v6 + v7)
-#   ./run-tests.sh --version 6 --db sqlite  # sqlite-v6 only
-#   ./run-tests.sh --skip-build             # skip prisma-ts-select build step
+#   ./run-tests.sh                                    # all 6 packages
+#   ./run-tests.sh --version 6                        # v6 only (sqlite + mysql + pg)
+#   ./run-tests.sh --db sqlite                        # sqlite only (v6 + v7)
+#   ./run-tests.sh --version 6 --db sqlite            # sqlite-v6 only
+#   ./run-tests.sh --skip-build                       # skip prisma-ts-select build step
+#   ./run-tests.sh --test './tests/core/foo.spec.ts'  # run specific file/glob (skips lint:ts)
 
 # ── Argument parsing ──────────────────────────────────────────────────────────
 VERSION=""
 DB=""
 SKIP_BUILD=false
+TEST_PATTERN=""
 
 while [[ $# -gt 0 ]]; do
   case $1 in
-    --version)    VERSION="$2"; shift 2 ;;
-    --db)         DB="$2";      shift 2 ;;
-    --skip-build) SKIP_BUILD=true; shift ;;
+    --version)    VERSION="$2";      shift 2 ;;
+    --db)         DB="$2";           shift 2 ;;
+    --skip-build) SKIP_BUILD=true;   shift ;;
+    --test)       TEST_PATTERN="$2"; shift 2 ;;
     *) echo "Unknown flag: $1" >&2; exit 1 ;;
   esac
 done
@@ -103,8 +106,15 @@ for ver in "${VERSIONS[@]}"; do
       # sqlite: each version has its own file — reset per package
       # mysql/pg: shared server — already reset once above
       [[ "$db" == "sqlite" ]] && pnpm --filter "${pkg}" p:r
-      pnpm --filter "${pkg}" lint:ts
-      pnpm --filter "${pkg}" test
+      if [[ -n "$TEST_PATTERN" ]]; then
+        (cd "packages/${pkg}" && node \
+          --import ../../shared-tests/client-resolver.mjs \
+          --import ../../shared-tests/test-setup.mjs \
+          --test "${TEST_PATTERN}")
+      else
+        pnpm --filter "${pkg}" lint:ts
+        pnpm --filter "${pkg}" test
+      fi
     ) > "${log}" 2>&1 &
 
     PIDS+=($!)
