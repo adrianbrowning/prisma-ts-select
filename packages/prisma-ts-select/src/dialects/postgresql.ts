@@ -1,9 +1,7 @@
 import type {Dialect} from "./types.js";
 import {resolveArg, sqlExpr, type SQLExpr} from "../sql-expr.js";
 import type {JSONValue} from "../utils/types.js";
-import type {FilterCols, ColName} from "./shared.js";
-
-const esc = (s: string) => s.replace(/'/g, "''");
+import {esc, type FilterCols, type ColName} from "./shared.js";
 
 export type PgExtractField = 'YEAR' | 'MONTH' | 'DAY' | 'HOUR' | 'MINUTE' | 'SECOND' | 'DOW' | 'DOY' | 'EPOCH' | 'WEEK' | 'QUARTER';
 export type PgDateTruncUnit = 'microseconds' | 'milliseconds' | 'second' | 'minute' | 'hour' | 'day' | 'week' | 'month' | 'quarter' | 'year' | 'decade' | 'century' | 'millennium';
@@ -120,8 +118,7 @@ export type DialectFns<TColEntries extends [string, unknown] = never, _TCriteria
 export const postgresqlDialect: Dialect = {
   name: "postgresql",
   needsBooleanCoercion: () => false,
-  //@ts-expect-error isAlias currently unused
-  quote: (id, isAlias) => `"${id}"`,
+  quote: (id, _isAlias) => `"${id}"`,
   quoteTableIdentifier: (name, _isAlias) => `"${name}"`,
   quoteQualifiedColumn: (ref) => {
     if (!ref.includes('.')) return `"${ref}"`; // Quote unqualified column

@@ -5,8 +5,10 @@ import {match, P} from "ts-pattern";
 // The actual PrismaClient type from @prisma/client will be used at runtime via getExtensionContext
 type PrismaClient = any;
 import {dialect, dialectContextFns} from "./dialects/index.js";
+import {esc} from "./dialects/shared.js";
 import type {Dialect} from "./dialects/types.js";
 import {lit as _lit, sqlExpr, resolveArg, type SQLExpr, type LitToType} from "./sql-expr.js";
+
 const DB: DBType = {} as const satisfies DBType;
 
 type TDB = typeof DB;
@@ -413,15 +415,15 @@ function processConditions(condition: BasicOpTypes, formatted = false): string {
             switch (value.op) {
                 case 'IN':
                 case 'NOT IN':
-                    const valuesList = value.values.map(v => (typeof v === 'string' ? `'${v}'` : v)).join(", ");
+                    const valuesList = value.values.map(v => (typeof v === 'string' ? `'${esc(v)}'` : v)).join(", ");
                     return `${quotedField} ${value.op} (${valuesList})`;
                 case 'BETWEEN':
                     if (value.values.length > 2) throw new Error("Too many items supplied to op BETWEEN")
                     const [start, end] = value.values;
-                    return `${quotedField} BETWEEN ${typeof start === 'string' ? `'${start}'` : start} AND ${typeof end === 'string' ? `'${end}'` : end}`;
+                    return `${quotedField} BETWEEN ${typeof start === 'string' ? `'${esc(start)}'` : start} AND ${typeof end === 'string' ? `'${esc(end)}'` : end}`;
                 case 'LIKE':
                 case 'NOT LIKE':
-                    return `${quotedField} ${value.op} '${value.value}'`;
+                    return `${quotedField} ${value.op} '${esc(value.value)}'`;
                 case 'IS NULL':
                 case 'IS NOT NULL':
                     return `${quotedField} ${value.op}`;
@@ -431,7 +433,7 @@ function processConditions(condition: BasicOpTypes, formatted = false): string {
                 case '<=':
                 case '!=':
                 case '=':
-                    return `${quotedField} ${value.op} ${typeof value.value === 'string' ? `'${value.value}'` : value.value}`;
+                    return `${quotedField} ${value.op} ${typeof value.value === 'string' ? `'${esc(value.value)}'` : value.value}`;
                 default:
                     //@ts-expect-error value.op should be never
                     throw new Error(`Unsupported operation: ${value.op}`);
@@ -439,14 +441,15 @@ function processConditions(condition: BasicOpTypes, formatted = false): string {
         } else if (value === null) {
             return `${quotedField} IS NULL`;
         } else if (Array.isArray(value)) {
-            if (value.length > 0 && typeof value[0] === 'object' && value[0] !== null && 'op' in value[0]) {
+            if (value.length === 0) throw new Error(`where(): empty array is not allowed for field "${String(field)}"`);
+            if (typeof value[0] === 'object' && value[0] !== null && 'op' in value[0]) {
                 const parts = (value as Array<{ op: string; value: SUPPORTED_TYPES }>).map(opObj => processConditions({ [field]: opObj } as BasicOpTypes, formatted));
                 return parts.length === 1 ? parts[0]! : "(" + parts.join(" OR ") + ")";
             }
-            const valuesList = value.map(v => (typeof v === 'string' ? `'${v}'` : v)).join(", ");
+            const valuesList = value.map(v => (typeof v === 'string' ? `'${esc(v)}'` : v)).join(", ");
             return `${quotedField} IN (${valuesList})`;
         }  else {
-            return `${quotedField} = ${typeof value === 'string' ? `'${value}'` : value}`;
+            return `${quotedField} = ${typeof value === 'string' ? `'${esc(value)}'` : value}`;
         }
     });
 
@@ -1230,6 +1233,10 @@ type OptionalRecord<K extends PropertyKey, V> = { [key in K]?: V; }
  */
 type OptionalObject<K extends Record<PropertyKey, unknown>> = { [key in keyof K]?: K[key]; }
 
+type NonEmptyArray<T> = [T, ...Array<T>];
+
+type COND_NUMERIC_OP = '>' | '>=' | '<' | '<=' | '!=' | '=';
+
 /**
  * Defines all valid SQL condition patterns for numeric types (number, bigint).
  * Supports equality, IN/NOT IN, BETWEEN, and comparison operators (>, >=, <, <=, !=).
@@ -1245,11 +1252,11 @@ type OptionalObject<K extends Record<PropertyKey, unknown>> = { [key in keyof K]
  */
 type COND_NUMERIC<key extends PropertyKey, keyType> =
     | OptionalRecord<key, keyType>
-    | OptionalRecord<key, Array<keyType>>
+    | OptionalRecord<key, NonEmptyArray<keyType>>
     | OptionalRecord<key, { op: 'IN' | 'NOT IN'; values: Array<keyType> }>
     | OptionalRecord<key, { op: 'BETWEEN'; values: [keyType, keyType] }>
-    | OptionalRecord<key, { op: '>' | '>=' | '<' | '<=' | '!=' | '='; value: keyType }>
-    | OptionalRecord<key, Array<{ op: '>' | '>=' | '<' | '<=' | '!=' | '='; value: keyType }>>;
+    | OptionalRecord<key, { op: COND_NUMERIC_OP; value: keyType }>
+    | OptionalRecord<key, NonEmptyArray<{ op: COND_NUMERIC_OP; value: keyType }>>;
 
 /**
  * Defines all valid SQL condition patterns for string types.
@@ -1265,11 +1272,11 @@ type COND_NUMERIC<key extends PropertyKey, keyType> =
  */
 type COND_STRING<key extends PropertyKey> =
     | OptionalRecord<key, string>
-    | OptionalRecord<key, Array<string>>
+    | OptionalRecord<key, NonEmptyArray<string>>
     | OptionalRecord<key, { op: 'IN' | 'NOT IN'; values: Array<string> }>
     | OptionalRecord<key, { op: 'LIKE' | 'NOT LIKE'; value: string }>
     | OptionalRecord<key, { op: '!='; value: string }>
-    | OptionalRecord<key, Array<{ op: 'LIKE' | 'NOT LIKE' | '!=' | '='; value: string }>>;
+    | OptionalRecord<key, NonEmptyArray<{ op: 'LIKE' | 'NOT LIKE' | '!=' | '='; value: string }>>;
 
 /**
  * Defines all valid SQL condition patterns for DateTime/Date types.
@@ -1286,11 +1293,11 @@ type COND_STRING<key extends PropertyKey> =
  */
 type COND_DATETIME<key extends PropertyKey, keyType> =
     | OptionalRecord<key, keyType>
-    | OptionalRecord<key, Array<keyType>>
+    | OptionalRecord<key, NonEmptyArray<keyType>>
     | OptionalRecord<key, { op: 'IN' | 'NOT IN'; values: Array<keyType> }>
     | OptionalRecord<key, { op: 'BETWEEN'; values: [keyType, keyType] }>
-    | OptionalRecord<key, { op: '>' | '>=' | '<' | '<=' | '!='; value: keyType }>
-    | OptionalRecord<key, Array<{ op: '>' | '>=' | '<' | '<=' | '!='; value: keyType }>>;
+    | OptionalRecord<key, { op: COND_NUMERIC_OP; value: keyType }>
+    | OptionalRecord<key, NonEmptyArray<{ op: COND_NUMERIC_OP; value: keyType }>>;
 
 /**
  * Defines all valid SQL condition patterns for boolean types.
@@ -1355,13 +1362,13 @@ type SQLCondition<T> = Prettify<{
 
 type BasicOpTypes =
     | OptionalRecord<PropertyKey, SUPPORTED_TYPES>
-    | OptionalRecord<PropertyKey, Array<SUPPORTED_TYPES>>
+    | OptionalRecord<PropertyKey, NonEmptyArray<SUPPORTED_TYPES>>
     | OptionalRecord<PropertyKey, { op: 'IN' | 'NOT IN'; values: Array<SUPPORTED_TYPES> }>
     | OptionalRecord<PropertyKey, { op: 'BETWEEN'; values: [SUPPORTED_TYPES, SUPPORTED_TYPES] }>
     | OptionalRecord<PropertyKey, { op: 'LIKE' | 'NOT LIKE'; value: string }>
     | OptionalRecord<PropertyKey, { op: 'IS NULL' | 'IS NOT NULL' }>
-    | OptionalRecord<PropertyKey, { op: '>' | '>=' | '<' | '<=' | '!=' | '='; value: SUPPORTED_TYPES }>
-    | OptionalRecord<PropertyKey, Array<{ op: string; value: SUPPORTED_TYPES }>>;
+    | OptionalRecord<PropertyKey, { op: COND_NUMERIC_OP; value: SUPPORTED_TYPES }>
+    | OptionalRecord<PropertyKey, NonEmptyArray<{ op: COND_NUMERIC_OP | 'LIKE' | 'NOT LIKE'; value: SUPPORTED_TYPES }>>;
 
 /**
  * Transforms a table's fields into a record where keys are prefixed with the table name ("Table.field").

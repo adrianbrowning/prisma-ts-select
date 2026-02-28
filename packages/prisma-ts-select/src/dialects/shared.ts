@@ -6,6 +6,9 @@ export const sharedFunctions = {
 
 };
 
+/** Escapes single quotes in SQL string literals. */
+export const esc = (s: string) => s.replace(/'/g, "''");
+
 /** Filters col-entry tuple union to names whose type matches T. */
 export type FilterCols<TEntries extends [string, unknown], T> =
   TEntries extends [infer N extends string, infer V]

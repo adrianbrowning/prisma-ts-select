@@ -2,9 +2,7 @@ import type {Dialect} from "./types.js";
 import {resolveArg, sqlExpr, type SQLExpr} from "../sql-expr.js";
 import type {JSONValue} from "../utils/types.js";
 import type {Decimal} from "@prisma/client/runtime/client";
-import type {FilterCols, ColName} from "./shared.js";
-
-const esc = (s: string) => s.replace(/'/g, "''");
+import {esc, type FilterCols, type ColName} from "./shared.js";
 
 export type IntervalUnit = 'MICROSECOND' | 'SECOND' | 'MINUTE' | 'HOUR' | 'DAY' | 'WEEK' | 'MONTH' | 'QUARTER' | 'YEAR';
 
@@ -139,8 +137,7 @@ export type DialectFns<TColEntries extends [string, unknown] = never, TCriteria 
 export const mysqlDialect: Dialect = {
   name: "mysql",
   needsBooleanCoercion: () => true,
-  //@ts-expect-error isAlias currently unused
-  quote: (id, isAlias) => `\`${id}\``,
+  quote: (id, _isAlias) => `\`${id}\``,
   quoteTableIdentifier: (name, _isAlias) => `\`${name}\``,
   quoteQualifiedColumn: (ref) => {
     if (!ref.includes('.')) return `\`${ref}\``;
