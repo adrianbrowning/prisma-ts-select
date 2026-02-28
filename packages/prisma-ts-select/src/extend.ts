@@ -227,24 +227,6 @@ type ValidSelect<Tables extends TArrSources> =
     | GetTableStar<Tables>;// | GetColsFromTable<Tables[number]>; // TODO
 
 /**
- * Extracts all available column names from base table and joined tables.
- * Returns column names from the base table (without prefix) and qualified column names
- * from all tables (with "Table.column" prefix).
- *
- * @template Tables - Array of table sources, first element is base table
- * @returns Union of column names: base table columns | "Table.column" for all tables
- *
- * @example
- * // For tables ["User", "Post"]
- * GetOtherColumns<["User", "Post"]>
- * // Returns: "id" | "name" | "User.id" | "User.name" | "Post.id" | "Post.title"
- */
-//@ts-expect-error using a never version
-type GetOtherColumns_old<Tables extends TArrSources> = Tables extends [infer T extends TTableSources, ...Array<TTableSources>]
-    ? GetColsBaseTable<T> | GetJoinCols<Tables[number]>
-    : never
-
-/**
  * Generates "Table.*" patterns for all tables in the query.
  * Handles both simple table names and table aliases.
  *
@@ -457,6 +439,10 @@ function processConditions(condition: BasicOpTypes, formatted = false): string {
         } else if (value === null) {
             return `${quotedField} IS NULL`;
         } else if (Array.isArray(value)) {
+            if (value.length > 0 && typeof value[0] === 'object' && value[0] !== null && 'op' in value[0]) {
+                const parts = (value as Array<{ op: string; value: SUPPORTED_TYPES }>).map(opObj => processConditions({ [field]: opObj } as BasicOpTypes, formatted));
+                return parts.length === 1 ? parts[0]! : "(" + parts.join(" OR ") + ")";
+            }
             const valuesList = value.map(v => (typeof v === 'string' ? `'${v}'` : v)).join(", ");
             return `${quotedField} IN (${valuesList})`;
         }  else {
@@ -703,36 +689,6 @@ class _fOrderBy<TSources extends TArrSources, TFields extends TFieldsType, TSele
     }
 }
 
-
-/*
-SELECT - the final data is returned.
-ORDER BY - the final data is sorted.
-LIMIT - the returned data is limited to row count.
-OFFSET -
-run
-*/
-//@ts-expect-error yeah old version for comp
-type MergeItemsOld<Field extends string,
-    TSources extends [TTables,...Array<TTables>],
-    TFields extends TFieldsType,
-    IncTName extends boolean = false,
-    TLTables = TSources[number]> =
-    Field extends "*"
-        ? Prettify<IterateTables<TSources, TFields, IncTName>>
-        : Field extends `${infer T}.*`
-            ? T extends keyof TFields
-                ? [TSources] extends [[T]]
-                    // Single table - no prefix
-                    ? TFields[T]
-                    // Multiple tables - with prefix
-                    : T extends string ? IterateTablesFromFields<T, TFields[T], true> : never
-                : never
-            //@ts-expect-error T not a string?
-            : Field extends `${infer T extends TLTables}.${infer F extends string}`
-                //@ts-expect-error F is part of T, but can't tell TS that
-                ? Pick<TFields[T], F>
-                //@-ts-expect-error Field is part of the from, but can't tell TS that.
-                : Pick<TFields[TSources[0]], Field>;
 
 /**
  * Transforms a field selection pattern into its corresponding TypeScript type structure.
@@ -1289,9 +1245,11 @@ type OptionalObject<K extends Record<PropertyKey, unknown>> = { [key in keyof K]
  */
 type COND_NUMERIC<key extends PropertyKey, keyType> =
     | OptionalRecord<key, keyType>
+    | OptionalRecord<key, Array<keyType>>
     | OptionalRecord<key, { op: 'IN' | 'NOT IN'; values: Array<keyType> }>
     | OptionalRecord<key, { op: 'BETWEEN'; values: [keyType, keyType] }>
-    | OptionalRecord<key, { op: '>' | '>=' | '<' | '<=' | '!=' | '='; value: keyType }>;
+    | OptionalRecord<key, { op: '>' | '>=' | '<' | '<=' | '!=' | '='; value: keyType }>
+    | OptionalRecord<key, Array<{ op: '>' | '>=' | '<' | '<=' | '!=' | '='; value: keyType }>>;
 
 /**
  * Defines all valid SQL condition patterns for string types.
@@ -1307,9 +1265,11 @@ type COND_NUMERIC<key extends PropertyKey, keyType> =
  */
 type COND_STRING<key extends PropertyKey> =
     | OptionalRecord<key, string>
+    | OptionalRecord<key, Array<string>>
     | OptionalRecord<key, { op: 'IN' | 'NOT IN'; values: Array<string> }>
     | OptionalRecord<key, { op: 'LIKE' | 'NOT LIKE'; value: string }>
-    | OptionalRecord<key, { op: '!='; value: string }>;
+    | OptionalRecord<key, { op: '!='; value: string }>
+    | OptionalRecord<key, Array<{ op: 'LIKE' | 'NOT LIKE' | '!=' | '='; value: string }>>;
 
 /**
  * Defines all valid SQL condition patterns for DateTime/Date types.
@@ -1326,9 +1286,11 @@ type COND_STRING<key extends PropertyKey> =
  */
 type COND_DATETIME<key extends PropertyKey, keyType> =
     | OptionalRecord<key, keyType>
+    | OptionalRecord<key, Array<keyType>>
     | OptionalRecord<key, { op: 'IN' | 'NOT IN'; values: Array<keyType> }>
     | OptionalRecord<key, { op: 'BETWEEN'; values: [keyType, keyType] }>
-    | OptionalRecord<key, { op: '>' | '>=' | '<' | '<=' | '!='; value: keyType }>;
+    | OptionalRecord<key, { op: '>' | '>=' | '<' | '<=' | '!='; value: keyType }>
+    | OptionalRecord<key, Array<{ op: '>' | '>=' | '<' | '<=' | '!='; value: keyType }>>;
 
 /**
  * Defines all valid SQL condition patterns for boolean types.
@@ -1393,11 +1355,13 @@ type SQLCondition<T> = Prettify<{
 
 type BasicOpTypes =
     | OptionalRecord<PropertyKey, SUPPORTED_TYPES>
+    | OptionalRecord<PropertyKey, Array<SUPPORTED_TYPES>>
     | OptionalRecord<PropertyKey, { op: 'IN' | 'NOT IN'; values: Array<SUPPORTED_TYPES> }>
     | OptionalRecord<PropertyKey, { op: 'BETWEEN'; values: [SUPPORTED_TYPES, SUPPORTED_TYPES] }>
     | OptionalRecord<PropertyKey, { op: 'LIKE' | 'NOT LIKE'; value: string }>
     | OptionalRecord<PropertyKey, { op: 'IS NULL' | 'IS NOT NULL' }>
-    | OptionalRecord<PropertyKey, { op: '>' | '>=' | '<' | '<=' | '!=' | '='; value: SUPPORTED_TYPES }>;
+    | OptionalRecord<PropertyKey, { op: '>' | '>=' | '<' | '<=' | '!=' | '='; value: SUPPORTED_TYPES }>
+    | OptionalRecord<PropertyKey, Array<{ op: string; value: SUPPORTED_TYPES }>>;
 
 /**
  * Transforms a table's fields into a record where keys are prefixed with the table name ("Table.field").

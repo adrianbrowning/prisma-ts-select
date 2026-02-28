@@ -232,6 +232,76 @@ describe("where", () => {
     });
 });
 
+describe("where array shorthand", () => {
+
+    describe("Stage 1: scalar array → IN", () => {
+
+        const q = () => prisma.$from("User").where({ "name": ["John Doe", "John Smith"] }).selectAll();
+
+        it("should match SQL", () => {
+            const cols = ["id", "email", "name", "age"].map(c => dialect.quote(c)).join(", ");
+            expectSQL(
+                q().getSQL(),
+                `SELECT ${cols} FROM ${dialect.quote("User")} WHERE ${dialect.quote("name")} IN ('John Doe', 'John Smith');`
+            );
+        });
+
+        it("should run and return matching users", async () => {
+            const result = await q().run();
+            assert.equal(result.length, 2);
+            assert.ok(result.some(u => u.name === "John Doe"));
+            assert.ok(result.some(u => u.name === "John Smith"));
+        });
+
+        it("type: numeric array compiles", () => {
+            prisma.$from("User").where({ "age": [25, 30] });
+        });
+
+        it("type: mixed array is error", () => {
+            prisma.$from("User").where({
+                //@ts-expect-error mixed string/number array not allowed for numeric field
+                "age": ["a", 25]
+            });
+        });
+
+    });
+
+    describe("Stage 2: op-object array → OR chain", () => {
+
+        const q = () => prisma.$from("User")
+            .where({ "name": [{ op: "LIKE", value: "John D%" }, { op: "LIKE", value: "John S%" }] })
+            .selectAll();
+
+        it("should match SQL", () => {
+            const cols = ["id", "email", "name", "age"].map(c => dialect.quote(c)).join(", ");
+            expectSQL(
+                q().getSQL(),
+                `SELECT ${cols} FROM ${dialect.quote("User")} WHERE (${dialect.quote("name")} LIKE 'John D%' OR ${dialect.quote("name")} LIKE 'John S%');`
+            );
+        });
+
+        it("should run and return both Johns", async () => {
+            const result = await q().run();
+            assert.equal(result.length, 2);
+            assert.ok(result.some(u => u.name === "John Doe"));
+            assert.ok(result.some(u => u.name === "John Smith"));
+        });
+
+        it("type: numeric op-array compiles", () => {
+            prisma.$from("User").where({ "age": [{ op: ">=", value: 18 }, { op: "<=", value: 65 }] });
+        });
+
+        it("type: IN op in array is error", () => {
+            prisma.$from("User").where({
+                //@ts-expect-error IN uses 'values', not valid in op-array
+                "name": [{ op: "IN", values: ["a"] }]
+            });
+        });
+
+    });
+
+});
+
 describe("having", () => {
 
     describe("HAVING with GROUP BY", () => {
@@ -379,7 +449,7 @@ describe("having", () => {
         });
 
         it("should allow select() after groupBy()", () => {
-            const query = prisma.$from("User")
+            prisma.$from("User")
                 .groupBy(["User.id"])
                 .select("User.id")
                 .select("User.name");
@@ -387,7 +457,7 @@ describe("having", () => {
         });
 
         it("should allow selectDistinct() after groupBy()", () => {
-            const query = prisma.$from("User")
+            prisma.$from("User")
                 .groupBy(["User.id"])
                 .selectDistinct();
             // Should compile without errors
