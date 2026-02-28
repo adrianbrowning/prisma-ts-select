@@ -49,7 +49,7 @@ describe("manyToManyJoin", () => {
     describe("named M2M via refName", () => {
         it("uses explicit junction table", () => {
             const sql = prisma.$from("M2M_NC_Post")
-                .manyToManyJoin("M2M_NC_Category", "M2M_NC")
+                .manyToManyJoin("M2M_NC_Category", { refName: "M2M_NC" })
                 .getSQL()
             expectSQL(sql,
                 `FROM ${dialect.quote("M2M_NC_Post")} JOIN ${dialect.quote("_M2M_NC")} ON ${dialect.quoteQualifiedColumn("_M2M_NC.B")} = ${dialect.quoteQualifiedColumn("M2M_NC_Post.id")} JOIN ${dialect.quote("M2M_NC_Category")} ON ${dialect.quoteQualifiedColumn("M2M_NC_Category.id")} = ${dialect.quoteQualifiedColumn("_M2M_NC.A")};`
@@ -60,7 +60,7 @@ describe("manyToManyJoin", () => {
     describe("multi-M2M — refName selects correct junction", () => {
         it("M1 junction", () => {
             const sql = prisma.$from("MMM_Post")
-                .manyToManyJoin("MMM_Category", "M2M_NC_M1")
+                .manyToManyJoin("MMM_Category", { refName: "M2M_NC_M1" })
                 .getSQL()
             expectSQL(sql,
                 `FROM ${dialect.quote("MMM_Post")} JOIN ${dialect.quote("_M2M_NC_M1")} ON ${dialect.quoteQualifiedColumn("_M2M_NC_M1.B")} = ${dialect.quoteQualifiedColumn("MMM_Post.id")} JOIN ${dialect.quote("MMM_Category")} ON ${dialect.quoteQualifiedColumn("MMM_Category.id")} = ${dialect.quoteQualifiedColumn("_M2M_NC_M1.A")};`
@@ -69,7 +69,7 @@ describe("manyToManyJoin", () => {
 
         it("M2 junction", () => {
             const sql = prisma.$from("MMM_Post")
-                .manyToManyJoin("MMM_Category", "M2M_NC_M2")
+                .manyToManyJoin("MMM_Category", { refName: "M2M_NC_M2" })
                 .getSQL()
             expectSQL(sql,
                 `FROM ${dialect.quote("MMM_Post")} JOIN ${dialect.quote("_M2M_NC_M2")} ON ${dialect.quoteQualifiedColumn("_M2M_NC_M2.B")} = ${dialect.quoteQualifiedColumn("MMM_Post.id")} JOIN ${dialect.quote("MMM_Category")} ON ${dialect.quoteQualifiedColumn("MMM_Category.id")} = ${dialect.quoteQualifiedColumn("_M2M_NC_M2.A")};`
@@ -88,6 +88,29 @@ describe("manyToManyJoin", () => {
         })
     })
 
+    describe("explicit source override", () => {
+        it("uses source alias.col to determine source table", () => {
+            const sql = prisma.$from("MMM_Post mp")
+                .manyToManyJoin("MMM_Category mmc1", { refName: "M2M_NC_M1", source: "mp.id" })
+                .getSQL()
+            expectSQL(sql,
+                `FROM ${dialect.quote("MMM_Post")} AS ${dialect.quote("mp", true)} JOIN ${dialect.quote("_M2M_NC_M1")} ON ${dialect.quoteQualifiedColumn("_M2M_NC_M1.B")} = ${dialect.quoteQualifiedColumn("mp.id")} JOIN ${dialect.quote("MMM_Category")} AS ${dialect.quote("mmc1", true)} ON ${dialect.quoteQualifiedColumn("mmc1.id")} = ${dialect.quoteQualifiedColumn("_M2M_NC_M1.A")};`
+            )
+        })
+    })
+
+    describe("branching M2M from same source", () => {
+        it("two M2M joins to same target via different junctions", () => {
+            const sql = prisma.$from("MMM_Post mp")
+                .manyToManyJoin("MMM_Category mmc1", { refName: "M2M_NC_M1", source: "mp.id" })
+                .manyToManyJoin("MMM_Category mmc2", { refName: "M2M_NC_M2", source: "mp.id" })
+                .getSQL()
+            expectSQL(sql,
+                `FROM ${dialect.quote("MMM_Post")} AS ${dialect.quote("mp", true)} JOIN ${dialect.quote("_M2M_NC_M1")} ON ${dialect.quoteQualifiedColumn("_M2M_NC_M1.B")} = ${dialect.quoteQualifiedColumn("mp.id")} JOIN ${dialect.quote("MMM_Category")} AS ${dialect.quote("mmc1", true)} ON ${dialect.quoteQualifiedColumn("mmc1.id")} = ${dialect.quoteQualifiedColumn("_M2M_NC_M1.A")} JOIN ${dialect.quote("_M2M_NC_M2")} ON ${dialect.quoteQualifiedColumn("_M2M_NC_M2.B")} = ${dialect.quoteQualifiedColumn("mp.id")} JOIN ${dialect.quote("MMM_Category")} AS ${dialect.quote("mmc2", true)} ON ${dialect.quoteQualifiedColumn("mmc2.id")} = ${dialect.quoteQualifiedColumn("_M2M_NC_M2.A")};`
+            )
+        })
+    })
+
     // ──────────────────────────────────────────
     // Type safety
     // ──────────────────────────────────────────
@@ -96,7 +119,15 @@ describe("manyToManyJoin", () => {
         it("rejects invalid refName string", () => {
             prisma.$from("MMM_Post")
                 // @ts-expect-error "NotAValidRef" is not in AvailableRefNames
-                .manyToManyJoin("MMM_Category", "NotAValidRef")
+                .manyToManyJoin("MMM_Category", { refName: "NotAValidRef" })
+        })
+
+        it("rejects invalid source table", () => {
+            assert.throws(() => {
+                prisma.$from("M2M_Post")
+                    // @ts-expect-error "NotATable" is not a valid alias
+                    .manyToManyJoin("M2M_Category", { source: "NotATable.id" })
+            })
         })
     })
 
@@ -112,6 +143,15 @@ describe("manyToManyJoin", () => {
                 .run()
 
             assert.deepStrictEqual(result, [{ name: "M2M Category 1" }])
+        })
+
+        it("explicit source override returns correct rows", async () => {
+            const result = await prisma.$from("MMM_Post mp")
+                .manyToManyJoin("MMM_Category mmc1", { refName: "M2M_NC_M1", source: "mp.id" })
+                .select("mmc1.name")
+                .run()
+
+            assert.deepStrictEqual(result, [{ name: "MMM Category M1" }])
         })
     })
 })
