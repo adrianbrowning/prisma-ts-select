@@ -51,6 +51,10 @@
         * [Example](#example-3)
         * [SQL](#sql-9)
         * [Parameters](#parameters-2)
+      - [`.manyToManyJoin`](#manytomanyjoin)
+        * [Example](#example-4)
+        * [SQL](#sql-10)
+        * [Parameters](#parameters-3)
     + [Where](#where)
       - [`.where`](#where)
         * [TypeSyntax](#typesyntax)
@@ -432,6 +436,64 @@ JOIN Post ON Post.id = User.name;
 | `table`     | The table to join on (supports inline alias: `"Post p"` or `"Post", "p"`). <br/>TS autocomplete will show tables that can join with previously defined tables on. |
 | `field`     | Column on table. <br/>TS autocomplete will show known columns that this table, can join with previously defined tables on.                                     |
 | `reference` | `Table.Column` to a previously defined table (either the base, or another join). Referencing any column, of any type.                                          |
+
+#### `.manyToManyJoin`
+
+Joins through Prisma's implicit or explicit many-to-many junction tables. Automatically detects the junction table and join columns from the generated schema.
+
+##### Example
+```typescript file=../usage-sqlite-v7/tests/readme/join-many-to-many.ts region=m2m-basic
+prisma.$from("M2M_Post")
+      .manyToManyJoin("M2M_Category");
+```
+
+##### SQL
+```sql file=../usage-sqlite-v7/tests/readme/join-many-to-many.ts region=m2m-basic-sql
+FROM M2M_Post JOIN _M2M_CategoryToM2M_Post ON _M2M_CategoryToM2M_Post.B = M2M_Post.id JOIN M2M_Category ON M2M_Category.id = _M2M_CategoryToM2M_Post.A;
+```
+
+##### Parameters
+| Param | Type | Description |
+|-------|------|-------------|
+| `targetTable` | `string` | Target table, optionally with alias: `"M2M_Category"` or `"M2M_Category mc"` |
+| `options.refName` | `string?` | Junction ref name — required when multiple M2M relations point to the same target |
+| `options.source` | `string?` | Explicit source as `"alias.column"` — useful when the source table is aliased |
+
+##### With Alias
+```typescript file=../usage-sqlite-v7/tests/readme/join-many-to-many.ts region=m2m-alias
+prisma.$from("M2M_Post")
+      .manyToManyJoin("M2M_Category mc");
+```
+
+```sql file=../usage-sqlite-v7/tests/readme/join-many-to-many.ts region=m2m-alias-sql
+FROM M2M_Post JOIN _M2M_CategoryToM2M_Post ON _M2M_CategoryToM2M_Post.B = M2M_Post.id JOIN M2M_Category AS `mc` ON mc.id = _M2M_CategoryToM2M_Post.A;
+```
+
+##### Named Junction (`refName`)
+
+Use `refName` when a model has multiple M2M relations to the same target:
+
+```typescript file=../usage-sqlite-v7/tests/readme/join-many-to-many.ts region=m2m-refname
+prisma.$from("MMM_Post")
+      .manyToManyJoin("MMM_Category", { refName: "M2M_NC_M1" });
+```
+
+```sql file=../usage-sqlite-v7/tests/readme/join-many-to-many.ts region=m2m-refname-sql
+FROM MMM_Post JOIN _M2M_NC_M1 ON _M2M_NC_M1.B = MMM_Post.id JOIN MMM_Category ON MMM_Category.id = _M2M_NC_M1.A;
+```
+
+##### Explicit Source (`source`)
+
+Use `source` to pin the source alias and column when the source table is aliased:
+
+```typescript file=../usage-sqlite-v7/tests/readme/join-many-to-many.ts region=m2m-source
+prisma.$from("M2M_Post mp")
+      .manyToManyJoin("M2M_Category mc", { source: "mp.id" });
+```
+
+```sql file=../usage-sqlite-v7/tests/readme/join-many-to-many.ts region=m2m-source-sql
+FROM M2M_Post AS `mp` JOIN _M2M_CategoryToM2M_Post ON _M2M_CategoryToM2M_Post.B = mp.id JOIN M2M_Category AS `mc` ON mc.id = _M2M_CategoryToM2M_Post.A;
+```
 
 ### Where
 
@@ -1358,8 +1420,7 @@ GROUP BY User.name;
 - Support specifying `JOIN` type [issue#2](https://github.com/adrianbrowning/prisma-ts-select/issues/2)
 - Support additional Select Functions
   - [JSON #9](https://github.com/adrianbrowning/prisma-ts-select/issues/9)
-- [Support a `Many-To-Many` join #19](https://github.com/adrianbrowning/prisma-ts-select/issues/19)
-- [whereRaw supporting Prisma.sql](https://github.com/adrianbrowning/prisma-ts-select/issues/29)
+-[whereRaw supporting Prisma.sql](https://github.com/adrianbrowning/prisma-ts-select/issues/29)
 
 ## Changelog / Versioning
 Changelog is available [here](https://github.com/adrianbrowning/prisma-ts-select/releases). We use [semantic versioning](https://semver.org/) for versioning.
