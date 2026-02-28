@@ -101,11 +101,33 @@ async function seed() {
         }
     });
 
+    // Create MMM (multi-M2M) seed data
+    await prisma.mMM_Post.deleteMany({});
+    await prisma.mMM_Category.deleteMany({});
+    await prisma.mMM_Post.create({
+        data: {
+            id: 1,
+            title: "MMM Post 1",
+            cat1: {
+                create: { id: 1, name: "MMM Category M1" }
+            }
+        }
+    });
+    await prisma.mMM_Post.update({
+        where: { id: 1 },
+        data: {
+            cat2: {
+                create: { id: 2, name: "MMM Category M2" }
+            }
+        }
+    });
+
     console.log('Seeding complete! Created:');
     console.log('- 3 users');
     console.log('- 3 posts');
     console.log('- 3 employees');
     console.log('- 1 M2M_Post + 1 M2M_Category (M2M join tests)');
+    console.log('- 1 MMM_Post + 2 MMM_Category (multi-M2M join tests)');
 }
 
 async function main() {
