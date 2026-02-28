@@ -17,3 +17,5 @@ pnpm-debug.log
 .idea
 **/.DS_Store
 /packages/usage-v7/generated/
+test-results/
+sorted-seeking-hoare.md

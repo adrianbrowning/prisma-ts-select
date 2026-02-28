@@ -1438,7 +1438,7 @@ type WhereCriteria_Fields<T extends Array<TTableSources>, TFields extends TField
  * @example
  * OnlyNull<null, "nullable"> // "nullable"
  * OnlyNull<string, "nullable"> // never
- * OnlyNull<string | null, "nullable"> // never (not exactly null)
+ * OnlyNull<string | null, "nullable"> // "nullable" (distributes over union — null branch matches)
  */
 type OnlyNull<T, R> = T extends null ? R : never;
 
@@ -1500,8 +1500,7 @@ class _fWhere<TSources extends TArrSources, TFields extends TFieldsType> extends
                 {
 
                     $AND:
-                    //@ts-expect-error todo comeback to, col is a string or never
-                        [{[col]: {op: "IS NOT NULL"}}]
+                        [{[(col as unknown as string)]: {op: "IS NOT NULL"}}]
                 }
             ],
         });
@@ -1520,8 +1519,7 @@ class _fWhere<TSources extends TArrSources, TFields extends TFieldsType> extends
                 {
 
                     $AND:
-                    //@ts-expect-error todo comeback to, col is a string or never
-                        [{[col]: {op: "IS NULL"}}]
+                        [{[(col as unknown as string)]: {op: "IS NULL"}}]
                 }
             ],
         });
