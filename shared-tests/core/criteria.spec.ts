@@ -248,6 +248,7 @@ describe("where array shorthand", () => {
 
         it("should run and return matching users", async () => {
             const result = await q().run();
+            typeCheck({} as Expect<Equal<typeof result, Array<UserRow>>>);
             assert.equal(result.length, 2);
             assert.ok(result.some(u => u.name === "John Doe"));
             assert.ok(result.some(u => u.name === "John Smith"));
@@ -282,6 +283,7 @@ describe("where array shorthand", () => {
 
         it("should run and return both Johns", async () => {
             const result = await q().run();
+            typeCheck({} as Expect<Equal<typeof result, Array<UserRow>>>);
             assert.equal(result.length, 2);
             assert.ok(result.some(u => u.name === "John Doe"));
             assert.ok(result.some(u => u.name === "John Smith"));
@@ -296,6 +298,152 @@ describe("where array shorthand", () => {
                 //@ts-expect-error IN uses 'values', not valid in op-array
                 "name": [{ op: "IN", values: ["a"] }]
             });
+        });
+
+    });
+
+    describe("Stage 3: escaping", () => {
+
+        it("should escape single quotes in scalar array", () => {
+            const q = prisma.$from("User").where({ "name": ["O'Brien"] }).selectAll();
+            expectSQL(
+                q.getSQL(),
+                `SELECT ${["id", "email", "name", "age"].map(c => dialect.quote(c)).join(", ")} FROM ${dialect.quote("User")} WHERE ${dialect.quote("name")} IN ('O''Brien');`
+            );
+        });
+
+    });
+
+    describe("Stage 4: empty array guard", () => {
+
+        it("should throw at runtime on empty scalar array", () => {
+            const w = [] as unknown as [string, ...string[]];
+            assert.throws(
+                () => prisma.$from("User").where({ "name": w }).selectAll().getSQL(),
+                /empty array is not allowed/
+            );
+        });
+
+        it("should throw at runtime on empty op-array", () => {
+            const w = [] as unknown as [{ op: "LIKE"; value: string }, ...{ op: "LIKE"; value: string }[]];
+            assert.throws(
+                () => prisma.$from("User").where({ "name": w }).selectAll().getSQL(),
+                /empty array is not allowed/
+            );
+        });
+
+    });
+
+    describe("Stage 5: single-element op-array — no parens", () => {
+
+        it("should produce no surrounding parens for single op", () => {
+            const q = prisma.$from("User").where({ "name": [{ op: "LIKE", value: "John D%" }] }).selectAll();
+            expectSQL(
+                q.getSQL(),
+                `SELECT ${["id", "email", "name", "age"].map(c => dialect.quote(c)).join(", ")} FROM ${dialect.quote("User")} WHERE ${dialect.quote("name")} LIKE 'John D%';`
+            );
+        });
+
+    });
+
+    describe("Stage 6: numeric op-array", () => {
+
+        const q = () => prisma.$from("User").where({ "age": [{ op: "=", value: 25 }, { op: "=", value: 30 }] }).selectAll();
+
+        it("should match SQL", () => {
+            const cols = ["id", "email", "name", "age"].map(c => dialect.quote(c)).join(", ");
+            expectSQL(
+                q().getSQL(),
+                `SELECT ${cols} FROM ${dialect.quote("User")} WHERE (${dialect.quote("age")} = 25 OR ${dialect.quote("age")} = 30);`
+            );
+        });
+
+        it("should run and return both users", async () => {
+            const result = await q().run();
+            typeCheck({} as Expect<Equal<typeof result, UserRow[]>>);
+            assert.equal(result.length, 2);
+            assert.ok(result.some(u => u.age === 25));
+            assert.ok(result.some(u => u.age === 30));
+        });
+
+    });
+
+    describe("Stage 7: qualified column via join", () => {
+
+        const q = () => prisma.$from("User")
+            .join("Post", "authorId", "User.id")
+            .where({ "User.name": ["John Doe", "John Smith"] })
+            .select("User.name");
+
+        it("should produce qualified IN SQL", () => {
+            expectSQL(
+                q().getSQL(),
+                `SELECT ${dialect.quote("name")} FROM ${dialect.quote("User")} JOIN ${dialect.quote("Post")} ON ${dialect.quoteQualifiedColumn("Post.authorId")} = ${dialect.quoteQualifiedColumn("User.id")} WHERE ${dialect.quoteQualifiedColumn("User.name")} IN ('John Doe', 'John Smith');`
+            );
+        });
+
+        it("should run and contain both user names in results", async () => {
+            const result = await q().run();
+            assert.ok(result.some(u => u.name === "John Doe"));
+            assert.ok(result.some(u => u.name === "John Smith"));
+        });
+
+    });
+
+    describe("Stage 9: NOT LIKE in op-array", () => {
+
+        const q = () => prisma.$from("User")
+            .where({ "name": [{ op: "NOT LIKE", value: "Jane%" }, { op: "NOT LIKE", value: "Alice%" }] })
+            .selectAll();
+
+        it("should match SQL", () => {
+            const cols = ["id", "email", "name", "age"].map(c => dialect.quote(c)).join(", ");
+            expectSQL(
+                q().getSQL(),
+                `SELECT ${cols} FROM ${dialect.quote("User")} WHERE (${dialect.quote("name")} NOT LIKE 'Jane%' OR ${dialect.quote("name")} NOT LIKE 'Alice%');`
+            );
+        });
+
+        it("should run and return users not named Jane or Alice", async () => {
+            const result = await q().run();
+            typeCheck({} as Expect<Equal<typeof result, UserRow[]>>);
+            assert.ok(result.every(u => u.name === null || (!u.name.startsWith("Jane") && !u.name.startsWith("Alice"))));
+        });
+
+    });
+
+    describe("Stage 10: DateTime scalar array (SQL shape)", () => {
+
+        it("should produce IN SQL for date array (type check)", () => {
+            const d1 = new Date("2024-01-01");
+            const d2 = new Date("2024-06-01");
+            const q = prisma.$from("Post").where({ "createdAt": [d1, d2] }).selectAll();
+            // Type check: Date array accepted
+            prisma.$from("Post").where({ "createdAt": [d1, d2] });
+            // SQL shape includes IN
+            assert.ok(q.getSQL().includes("IN ("));
+        });
+
+    });
+
+    describe("Stage 8: array where with table alias FROM", () => {
+
+        const q = () => prisma.$from("User u")
+            .where({ "name": ["John Doe", "John Smith"] })
+            .select("name");
+
+        it("should produce correct SQL with alias in FROM and IN in WHERE", () => {
+            expectSQL(
+                q().getSQL(),
+                `SELECT ${dialect.quote("name")} FROM ${dialect.quote("User")} AS ${dialect.quote("u", true)} WHERE ${dialect.quote("name")} IN ('John Doe', 'John Smith');`
+            );
+        });
+
+        it("should run and return both users", async () => {
+            const result = await q().run();
+            assert.equal(result.length, 2);
+            assert.ok(result.some(u => u.name === "John Doe"));
+            assert.ok(result.some(u => u.name === "John Smith"));
         });
 
     });

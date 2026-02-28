@@ -1,4 +1,5 @@
 export * from "./types.js";
+export {esc} from "./shared.js";
 export {sqliteDialect} from "./sqlite.js";
 export {mysqlDialect} from "./mysql.js";
 export {postgresqlDialect} from "./postgresql.js";
