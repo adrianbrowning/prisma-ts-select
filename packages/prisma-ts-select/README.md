@@ -15,6 +15,10 @@
 
   * [Summary](#summary)
   * [Installation](#installation)
+  * [Setup](#setup)
+    + [Schema](#schema)
+    + [Client — Prisma v6](#client--prisma-v6)
+    + [Client — Prisma v7](#client--prisma-v7)
   * [Supported DBs](#supported-dbs)
   * [Usage](#usage)
     + [Generator](#generator)
@@ -122,12 +126,6 @@
   * [Future updates](#future-updates)
   * [Changelog / Versioning](#changelog--versioning)
   * [License](#license)
-- [prisma-ts-select](#prisma-ts-select)
-  * [Install](#install)
-  * [Setup](#setup)
-    + [Extract](#extract)
-  * [Usage](#usage-1)
-
 <!-- tocstop -->
 
 ## Summary
@@ -136,13 +134,9 @@
 It simplifies the selection of fields in Prisma queries, ensuring type safety and reducing boilerplate when working with nested fields. 
 Ideal for developers seeking an efficient, type-safe way to select data with Prisma in TypeScript.
 
-[!NOTE]
-> This has been built mostly around MySQL. Most methods should work across the board.<br/>
-> Known exceptions include:
-> - HAVING
->   - SQLite 
->     - Requires you to have either an aggregate function in the `SELECT` or make use of `GROUP BY`
->     - Can only use columns that are specified in `SELECT` or `GROUP BY`
+> [!NOTE]
+> Fully tested on SQLite, MySQL, and PostgreSQL. Known exceptions:
+> - HAVING on SQLite requires either an aggregate function in `SELECT` or a `GROUP BY` clause, and can only reference columns from `SELECT` or `GROUP BY`.
 
 
 ## Installation
@@ -152,6 +146,102 @@ Install via:
 ```bash
 npm install prisma-ts-select
 pnpm add prisma-ts-select
+```
+
+## Setup
+
+### Schema
+
+Add both generators to `prisma/schema.prisma`. The `output` path is relative to the schema file.
+
+```prisma
+generator prisma-ts-select {
+  provider = "prisma-ts-select"
+  output   = "../generated/prisma-ts-select"
+}
+```
+
+The client generator differs between Prisma versions:
+
+**Prisma v6**
+```prisma
+generator client {
+  provider = "prisma-client-js"
+  output   = "../generated/prisma"
+}
+```
+
+**Prisma v7**
+```prisma
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+}
+```
+
+Then generate:
+
+```shell
+pnpm exec prisma generate
+```
+
+### Client — Prisma v6
+
+No driver adapter needed. Import from the generated `extend-v6.js`:
+
+```typescript
+import { PrismaClient } from './generated/prisma/index.js'
+import tsSelectExtend from './generated/prisma-ts-select/extend-v6.js'
+
+export const prisma = new PrismaClient().$extends(tsSelectExtend)
+```
+
+### Client — Prisma v7
+
+Prisma v7 requires a driver adapter. Install the adapter for your database and import from the generated `extend-v7.js`:
+
+**SQLite**
+```shell
+pnpm add @prisma/adapter-better-sqlite3
+```
+```typescript
+import { PrismaClient } from './generated/prisma/client.ts'
+import tsSelectExtend from './generated/prisma-ts-select/extend-v7.js'
+import { PrismaBetterSqlite3 } from '@prisma/adapter-better-sqlite3'
+
+const adapter = new PrismaBetterSqlite3({ url: process.env.DATABASE_URL })
+export const prisma = new PrismaClient({ adapter }).$extends(tsSelectExtend)
+```
+
+**MySQL**
+```shell
+pnpm add @prisma/adapter-mariadb
+```
+```typescript
+import { PrismaClient } from './generated/prisma/client.ts'
+import tsSelectExtend from './generated/prisma-ts-select/extend-v7.js'
+import { PrismaMariaDb } from '@prisma/adapter-mariadb'
+
+const url = new URL(process.env.DATABASE_URL!)
+const adapter = new PrismaMariaDb({
+  host: url.hostname, port: +url.port,
+  user: url.username, password: url.password,
+  database: url.pathname.slice(1),
+})
+export const prisma = new PrismaClient({ adapter }).$extends(tsSelectExtend)
+```
+
+**PostgreSQL**
+```shell
+pnpm add @prisma/adapter-pg
+```
+```typescript
+import { PrismaClient } from './generated/prisma/client.ts'
+import tsSelectExtend from './generated/prisma-ts-select/extend-v7.js'
+import { PrismaPg } from '@prisma/adapter-pg'
+
+const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL })
+export const prisma = new PrismaClient({ adapter }).$extends(tsSelectExtend)
 ```
 
 ## Supported DBs
@@ -876,7 +966,7 @@ FROM User
 JOIN Post ON Post.authorId = User.id;
 ```
 
-[!NOTE]
+> [!NOTE]
 > When using `Table.*` with joins, all columns are automatically aliased with the table name prefix to avoid column name conflicts.
 
 #### Example - Chained
@@ -972,7 +1062,7 @@ FROM User
 JOIN Post ON Post.authorId = User.id;
 ```
 
-[!NOTE]
+> [!NOTE]
 > When using column aliases, you can reference the alias in `ORDER BY` clauses. The returned type will use the alias names instead of the original column names.
 
 ### Having
@@ -1175,7 +1265,7 @@ All dialects provide these functions. Return types differ for `year`/`month`/`da
 | `minute(col)` | `MINUTE(col)` / `EXTRACT(MINUTE FROM col)::integer` / `strftime('%M', col)` | `number` (SQLite: `string`) |
 | `second(col)` | `SECOND(col)` / `EXTRACT(SECOND FROM col)::integer` / `strftime('%S', col)` | `number` (SQLite: `string`) |
 
-> **Note:** `year`, `month`, `day`, `hour`, `minute`, and `second` return `string` on SQLite because `strftime()` always returns text (e.g. `'2024'`, `'03'`). MySQL and PostgreSQL return `number`. If you need a number on SQLite, wrap with `CAST(strftime(...) AS INTEGER)` using `sqlExpr`.
+> **Note:** `year`, `month`, `day`, `hour`, `minute`, and `second` return `string` on SQLite because `strftime()` always returns text (e.g. `'2024'`, `'03'`). MySQL and PostgreSQL return `number`.
 
 DateTime column args also accept `SQLExpr<Date>`, enabling composition:
 
@@ -1420,7 +1510,8 @@ GROUP BY User.name;
 - Support specifying `JOIN` type [issue#2](https://github.com/adrianbrowning/prisma-ts-select/issues/2)
 - Support additional Select Functions
   - [JSON #9](https://github.com/adrianbrowning/prisma-ts-select/issues/9)
--[whereRaw supporting Prisma.sql](https://github.com/adrianbrowning/prisma-ts-select/issues/29)
+  - [CAST #71](https://github.com/adrianbrowning/prisma-ts-select/issues/71)
+- [whereRaw supporting Prisma.sql](https://github.com/adrianbrowning/prisma-ts-select/issues/29)
 
 ## Changelog / Versioning
 Changelog is available [here](https://github.com/adrianbrowning/prisma-ts-select/releases). We use [semantic versioning](https://semver.org/) for versioning.
