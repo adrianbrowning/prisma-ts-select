@@ -2276,6 +2276,29 @@ function buildContext<TSources extends TArrSources, TFields extends TFieldsType>
 }
 
 // ────────────────────────────────────────────────────────────────────────────
+// M2M type helpers
+
+/** Implicit (_-prefixed) junction tables reachable from current sources */
+type ImplicitJoinsFrom<TSources extends TArrSources> =
+    AvailableJoins<TSources> & `_${string}`
+
+/** Non-_-prefixed tables reachable through junction tables from current sources */
+type AvailableM2MTargets<TSources extends TArrSources> =
+    keyof Relations<ImplicitJoinsFrom<TSources>> extends infer T
+        ? T extends TTables & string
+            ? T extends `_${string}` ? never : T
+            : never
+        : never
+
+/** Junction table shared by source + target (literal or union if ambiguous) */
+type GetJunctionTable<TSource extends TTables, TTarget extends TTables> =
+    keyof Relations<TSource> & keyof Relations<TTarget> & `_${string}` & TTables
+
+/** Valid refName strings (part after `_` in junction table names from sources) */
+type AvailableRefNames<TSources extends TArrSources> =
+    ImplicitJoinsFrom<TSources> extends `_${infer R}` ? R : never
+
+// ────────────────────────────────────────────────────────────────────────────
 
 class _fJoin<
     TSources extends TArrSources,
@@ -2474,6 +2497,93 @@ joinUnsafeTypeEnforced<const Table extends TTables | `${TTables} ${string}`,
                 alias: tableAlias
             }]
         });*/
+    }
+
+    manyToManyJoin<
+        const TTableInput extends
+            `${AvailableM2MTargets<TSources>}` |
+            `${AvailableM2MTargets<TSources>} ${string}`,
+        TTarget extends AvailableM2MTargets<TSources> =
+            ExtractTableName<TTableInput> & AvailableM2MTargets<TSources>,
+        TAlias extends string | never = ExtractAlias<TTableInput>,
+        const TRefName extends AvailableRefNames<TSources> | undefined = undefined,
+        TJunction extends TTables = TRefName extends string
+            ? `_${TRefName}` & TTables
+            : GetJunctionTable<GetRealTableNames<TSources[number]>, TTarget>
+    >(
+        targetTable: TTableInput,
+        options?: {
+            source?: `${GetAliasTableNames<TSources[number]>}.${string}`;
+            refName?: TRefName;
+        }
+    ): _fJoin<
+        [...TSources, TJunction, [TAlias] extends [never] ? TTarget : [TTarget, TAlias]],
+        Prettify<TFields &
+            Record<TJunction, GetFieldsFromTable<TJunction>> &
+            Record<[TAlias] extends [never] ? TTarget : TAlias, GetFieldsFromTable<TTarget>>>
+    > {
+        const opts = options;
+        const refName = opts?.refName as string | undefined;
+        const [tbl, alias] = (targetTable as string).split(" ");
+
+        let sourceTableName: string;
+        let sourceAlias: string;
+        let srcLocalCol: string;
+
+        if (opts?.source) {
+            const [srcAliasOrTable, col] = (opts.source as string).split('.');
+            const entry = this.values.tables.find(t => (t.alias || t.table) === srcAliasOrTable);
+            sourceTableName = entry?.table ?? srcAliasOrTable!;
+            sourceAlias = srcAliasOrTable!;
+            srcLocalCol = col!;
+        } else {
+            const candidates = this.values.tables.filter(entry => {
+                const relations = (DB as any)[entry.table]?.relations;
+                return relations && Object.keys(relations).some(
+                    k => k.startsWith('_') && (DB as any)[k]?.relations?.[tbl!] !== undefined
+                );
+            });
+            if (candidates.length === 0) throw new Error(
+                `manyToManyJoin: no source with junction to "${tbl}" among joined tables`
+            );
+            if (candidates.length > 1) {
+                const names = candidates.map(c => c.alias ?? c.table).join(', ');
+                throw new Error(`manyToManyJoin: ambiguous source for "${tbl}" (${names}). Pass { source: "alias.col" }.`);
+            }
+            const found = candidates[0]!;
+            sourceTableName = found.table as string;
+            sourceAlias = (found.alias || found.table) as string;
+            const srcRelations = (DB as any)[sourceTableName]?.relations as Record<string, Record<string, string[]>>;
+            const junctionKey = refName
+                ? `_${refName}`
+                : Object.keys(srcRelations ?? {}).find(k =>
+                    k.startsWith('_') && (DB as any)[k]?.relations?.[tbl!] !== undefined
+                );
+            const junctionRelEntry = junctionKey ? srcRelations[junctionKey] : undefined;
+            srcLocalCol = junctionRelEntry ? Object.keys(junctionRelEntry)[0]! : "id";
+        }
+
+        const srcEntry = (DB as any)[sourceTableName];
+        if (!srcEntry) throw new Error(`manyToManyJoin: unknown source table "${sourceTableName}"`);
+        const srcRelations = srcEntry.relations as Record<string, Record<string, string[]>>;
+        const junctionTable = refName
+            ? `_${refName}`
+            : Object.keys(srcRelations).find(k =>
+                k.startsWith("_") && (DB as any)[k]?.relations?.[tbl!] !== undefined
+            );
+        if (!junctionTable) throw new Error(
+            `manyToManyJoin: no junction between "${sourceTableName}" and "${tbl}"`
+        );
+
+        const srcJunctionCol = srcRelations[junctionTable]?.[srcLocalCol]?.[0] ?? "A";
+        const tgtRelEntry = (DB as any)[junctionTable]?.relations?.[tbl!] as Record<string, string[]> | undefined;
+        const tgtJunctionCol = tgtRelEntry ? Object.keys(tgtRelEntry)[0]! : "B";
+        const tgtLocalCol = tgtRelEntry?.[tgtJunctionCol]?.[0] ?? "id";
+        const remoteRef = `${sourceAlias}.${srcLocalCol}`;
+
+        return (this as any)
+            .joinUnsafeIgnoreType(junctionTable, srcJunctionCol, remoteRef)
+            .joinUnsafeIgnoreType(alias ? `${tbl} ${alias}` : tbl, tgtLocalCol, `${junctionTable}.${tgtJunctionCol}`);
     }
 
     // innerJoin(table: TTableSources, col1:string, col2:string){
