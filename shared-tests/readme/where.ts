@@ -113,6 +113,45 @@ prisma.$from("User")
     assert.equal(query.getSQL(), expectedSQL);
   });
 
+  test("where array (scalar → IN)", () => {
+    const query =
+// #region array-scalar
+prisma.$from("User")
+      .joinUnsafeIgnoreType("Post", "id", "User.name")
+      .where({
+        "User.name": ["Alice", "Bob"],
+      });
+    // #endregion array-scalar
+
+    const expectedSQL =
+      // #region array-scalar-sql
+      "FROM User JOIN Post ON Post.id = User.name WHERE User.name IN ('Alice', 'Bob');";
+      // #endregion array-scalar-sql
+
+    assert.equal(query.getSQL(), expectedSQL);
+  });
+
+  test("where array (op-objects → OR)", () => {
+    const query =
+// #region array-op
+prisma.$from("User")
+      .joinUnsafeIgnoreType("Post", "id", "User.name")
+      .where({
+        "User.name": [
+          { op: "LIKE", value: "A%" },
+          { op: "LIKE", value: "B%" },
+        ],
+      });
+    // #endregion array-op
+
+    const expectedSQL =
+      // #region array-op-sql
+      "FROM User JOIN Post ON Post.id = User.name WHERE (User.name LIKE 'A%' OR User.name LIKE 'B%');";
+      // #endregion array-op-sql
+
+    assert.equal(query.getSQL(), expectedSQL);
+  });
+
   test("whereNotNull - should generate correct SQL", () => {
     const sql =
 // #region not-null
