@@ -57,7 +57,7 @@
   "dependencies": {
     "@prisma/generator-helper": "^6.0.0",
     "@prisma/internals": "^6.0.0",
-    "ts-pattern": "^5.3.1"
+    "ts-pattern": "^5.9.0"
   },
   "peerDependencies": {
     "@prisma/client": ">=6.0.0 <8.0.0"
