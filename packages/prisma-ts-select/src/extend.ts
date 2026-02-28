@@ -4,7 +4,8 @@ import {match, P} from "ts-pattern";
 // Type stub for PrismaClient to avoid DTS build issues when @prisma/client isn't generated
 // The actual PrismaClient type from @prisma/client will be used at runtime via getExtensionContext
 type PrismaClient = any;
-import {dialect, dialectContextFns, esc} from "./dialects/index.js";
+import {dialect, dialectContextFns} from "./dialects/index.js";
+import {esc} from "./dialects/shared.js";
 import type {Dialect} from "./dialects/types.js";
 import {lit as _lit, sqlExpr, resolveArg, type SQLExpr, type LitToType} from "./sql-expr.js";
 
