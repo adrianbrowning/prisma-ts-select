@@ -128,6 +128,16 @@ export const mysqlContextFns = <TColEntries extends [string, unknown] = never, T
 
 export type DialectFns<TColEntries extends [string, unknown] = never, TCriteria extends object = object> = ReturnType<typeof mysqlContextFns<TColEntries, TCriteria>>;
 
+/** Join methods supported by MySQL (no FULL JOIN). */
+export const supportedJoinMethods = [
+  "join", "joinUnsafeTypeEnforced", "joinUnsafeIgnoreType",
+  "innerJoin", "innerJoinUnsafeTypeEnforced", "innerJoinUnsafeIgnoreType",
+  "leftJoin", "leftJoinUnsafeTypeEnforced", "leftJoinUnsafeIgnoreType",
+  "rightJoin", "rightJoinUnsafeTypeEnforced", "rightJoinUnsafeIgnoreType",
+  "crossJoin", "crossJoinUnsafeTypeEnforced", "crossJoinUnsafeIgnoreType",
+  "manyToManyJoin",
+] as const;
+
 /**
  * MySQL dialect configuration.
  * - Identifier quoting: backticks

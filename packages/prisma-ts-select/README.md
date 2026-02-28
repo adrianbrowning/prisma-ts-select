@@ -43,6 +43,8 @@
         * [SQL](#sql-5)
         * [SQL](#sql-6)
     + [Joins](#joins)
+      - [Dialect Support](#dialect-support)
+      - [Nullability Semantics](#nullability-semantics)
       - [`.join`](#join)
         * [Example](#example-1)
         * [SQL](#sql-7)
@@ -55,6 +57,11 @@
         * [Example](#example-3)
         * [SQL](#sql-9)
         * [Parameters](#parameters-2)
+      - [`.innerJoin`](#innerjoin)
+      - [`.leftJoin`](#leftjoin)
+      - [`.crossJoin`](#crossjoin)
+      - [`.rightJoin`](#rightjoin) *(MySQL / PostgreSQL)*
+      - [`.fullJoin`](#fulljoin) *(PostgreSQL only)*
       - [`.manyToManyJoin`](#manytomanyjoin)
         * [Example](#example-4)
         * [SQL](#sql-10)
@@ -433,6 +440,26 @@ JOIN Post AS `p` ON p.authorId = u.id;
 ```
 
 ### Joins
+
+#### Dialect Support
+
+| Method | SQLite | MySQL | PostgreSQL |
+|--------|--------|-------|------------|
+| `join` / `innerJoin` / `crossJoin` / `leftJoin` | ✓ | ✓ | ✓ |
+| `rightJoin` | ✗ | ✓ | ✓ |
+| `fullJoin` | ✗ | ✗ | ✓ |
+
+Each method has `*UnsafeTypeEnforced` and `*UnsafeIgnoreType` variants with the same dialect restrictions.
+
+#### Nullability Semantics
+
+| Join type | Effect on result type |
+|-----------|----------------------|
+| `join` / `innerJoin` / `crossJoin` | No nullable change — both sides guaranteed to match |
+| `leftJoin` | Joined table fields become `T \| null` |
+| `rightJoin` | Base table fields become `T \| null` |
+| `fullJoin` | Both sides become `T \| null` |
+
 #### `.join`
 
 Using the defined links (foreign keys) defined in the schema, provides a type-safe way of joining on tables.
@@ -584,6 +611,184 @@ prisma.$from("M2M_Post mp")
 ```sql file=../usage-sqlite-v7/tests/readme/join-many-to-many.ts region=m2m-source-sql
 FROM M2M_Post AS `mp` JOIN _M2M_CategoryToM2M_Post ON _M2M_CategoryToM2M_Post.B = mp.id JOIN M2M_Category AS `mc` ON mc.id = _M2M_CategoryToM2M_Post.A;
 ```
+
+#### `.innerJoin`
+
+Alias for `.join` — explicitly emits `INNER JOIN`. Same type-safe FK constraints.
+
+##### Example
+```typescript file=../shared-tests/readme/join-inner.ts region=example
+prisma.$from("User")
+      .innerJoin("Post", "authorId", "User.id")
+```
+
+##### SQL
+```sql file=../shared-tests/readme/join-inner.ts region=sql
+FROM User INNER JOIN Post ON Post.authorId = User.id;
+```
+
+##### `.innerJoinUnsafeTypeEnforced`
+
+Same-type column join, INNER semantics.
+
+```typescript file=../shared-tests/readme/join-inner.ts region=type-enforced
+prisma.$from("User")
+      .innerJoinUnsafeTypeEnforced("Post", "title", "User.name")
+```
+
+```sql file=../shared-tests/readme/join-inner.ts region=type-enforced-sql
+FROM User INNER JOIN Post ON Post.title = User.name;
+```
+
+##### `.innerJoinUnsafeIgnoreType`
+
+Any-column join, INNER semantics.
+
+```typescript file=../shared-tests/readme/join-inner.ts region=ignore-type
+prisma.$from("User")
+      .innerJoinUnsafeIgnoreType("Post", "id", "User.name")
+```
+
+```sql file=../shared-tests/readme/join-inner.ts region=ignore-type-sql
+FROM User INNER JOIN Post ON Post.id = User.name;
+```
+
+---
+
+#### `.leftJoin`
+
+FK-safe LEFT JOIN. Joined table fields become `T | null` in the result type.
+
+##### Example
+```typescript file=../shared-tests/readme/join-left.ts region=example
+prisma.$from("User")
+      .leftJoin("Post", "authorId", "User.id")
+```
+
+##### SQL
+```sql file=../shared-tests/readme/join-left.ts region=sql
+FROM User LEFT JOIN Post ON Post.authorId = User.id;
+```
+
+##### `.leftJoinUnsafeTypeEnforced`
+
+Same-type column join, LEFT semantics.
+
+```typescript file=../shared-tests/readme/join-left.ts region=type-enforced
+prisma.$from("User")
+      .leftJoinUnsafeTypeEnforced("Post", "title", "User.name")
+```
+
+```sql file=../shared-tests/readme/join-left.ts region=type-enforced-sql
+FROM User LEFT JOIN Post ON Post.title = User.name;
+```
+
+##### `.leftJoinUnsafeIgnoreType`
+
+Any-column join, LEFT semantics.
+
+```typescript file=../shared-tests/readme/join-left.ts region=ignore-type
+prisma.$from("User")
+      .leftJoinUnsafeIgnoreType("Post", "id", "User.name")
+```
+
+```sql file=../shared-tests/readme/join-left.ts region=ignore-type-sql
+FROM User LEFT JOIN Post ON Post.id = User.name;
+```
+
+---
+
+#### `.crossJoin`
+
+Produces a cartesian product — no `ON` clause. All dialects supported.
+
+##### Example
+```typescript file=../shared-tests/readme/join-cross.ts region=example
+prisma.$from("User")
+      .crossJoin("Post")
+```
+
+##### SQL
+```sql file=../shared-tests/readme/join-cross.ts region=sql
+FROM User CROSS JOIN Post;
+```
+
+##### `.crossJoinUnsafeTypeEnforced` / `.crossJoinUnsafeIgnoreType`
+
+Type-permission variants — still emit `CROSS JOIN` with no `ON` clause (takes only a table argument).
+
+```typescript file=../shared-tests/readme/join-cross.ts region=type-enforced
+prisma.$from("User")
+      .crossJoinUnsafeTypeEnforced("Post")
+```
+
+```sql file=../shared-tests/readme/join-cross.ts region=type-enforced-sql
+FROM User CROSS JOIN Post;
+```
+
+---
+
+#### `.rightJoin`
+
+> **MySQL / PostgreSQL only** — not supported by SQLite.
+
+Base table fields become `T | null`. Use when the joined table drives the result set.
+
+##### Example
+```typescript
+prisma.$from("Post")
+      .rightJoin("User", "id", "Post.authorId")
+```
+
+##### SQL
+```sql
+FROM Post RIGHT JOIN User ON User.id = Post.authorId;
+```
+
+##### `.rightJoinUnsafeTypeEnforced`
+```typescript
+prisma.$from("Post")
+      .rightJoinUnsafeTypeEnforced("User", "name", "Post.title")
+```
+
+##### `.rightJoinUnsafeIgnoreType`
+```typescript
+prisma.$from("Post")
+      .rightJoinUnsafeIgnoreType("User", "id", "Post.title")
+```
+
+---
+
+#### `.fullJoin`
+
+> **PostgreSQL only** — not supported by SQLite or MySQL.
+
+Both sides become `T | null`. Use for outer joins where either side may have no match.
+
+##### Example
+```typescript
+prisma.$from("User")
+      .fullJoin("Post", "authorId", "User.id")
+```
+
+##### SQL
+```sql
+FROM User FULL JOIN Post ON Post.authorId = User.id;
+```
+
+##### `.fullJoinUnsafeTypeEnforced`
+```typescript
+prisma.$from("User")
+      .fullJoinUnsafeTypeEnforced("Post", "title", "User.name")
+```
+
+##### `.fullJoinUnsafeIgnoreType`
+```typescript
+prisma.$from("User")
+      .fullJoinUnsafeIgnoreType("Post", "id", "User.name")
+```
+
+---
 
 ### Where
 
