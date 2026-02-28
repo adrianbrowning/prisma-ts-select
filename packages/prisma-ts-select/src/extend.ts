@@ -2336,21 +2336,21 @@ class _fJoin<
         reference?: find<TJoinCols, TCol1>,
         _opts?: { where?: ClauseType[number], joinType?: JoinType }
     ): any {
-        return this._joinImpl(undefined, tableOrOptions as any, field as any, reference as any);
+        return this._joinImpl(undefined, tableOrOptions as any, field as any, reference as any, _opts);
     }
 
     private _joinImpl(
         joinType: JoinType | undefined,
-        tableOrOptions: string | {table: string, src: string, on: string, alias?: string},
+        tableOrOptions: string | {table: string, src: string, on: string, alias?: string, where?: ClauseType[number], joinType?: JoinType},
         field?: string,
-        reference?: string
+        reference?: string,
+        _opts?: { where?: ClauseType[number], joinType?: JoinType }
     ): _fJoin<any, any> {
         let table: string;
         let local: string;
         let remote: string;
         let tableAlias: string | undefined;
         let joinWhere: ClauseType | undefined;
-        let joinType: JoinType | undefined;
 
         if (typeof tableOrOptions === 'object' && 'table' in tableOrOptions) {
             table = tableOrOptions.table.trim();
@@ -2358,7 +2358,7 @@ class _fJoin<
             remote = tableOrOptions.on;
             tableAlias = tableOrOptions.alias?.trim();
             joinWhere = tableOrOptions.where ? [tableOrOptions.where] : undefined;
-            joinType = tableOrOptions.joinType;
+            joinType = tableOrOptions.joinType ?? joinType;
         } else {
             const parts = tableOrOptions.split(' ');
             table = parts[0]!;
@@ -2366,7 +2366,7 @@ class _fJoin<
             local = field ?? "";
             remote = reference ?? "";
             joinWhere = _opts?.where ? [_opts.where] : undefined;
-            joinType = _opts?.joinType;
+            joinType = _opts?.joinType ?? joinType;
         }
 
         return new _fJoin(this.db, {
