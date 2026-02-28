@@ -570,46 +570,41 @@ prisma.$from("User")
 
 #### `.whereNotNull`
 
-This will remove the `null` type from the union of types of the current table column.
-To use `.whereNotNull`, you need to add it before a `.where`.
+Removes `null` from the column's type union and adds an `IS NOT NULL` condition to the WHERE clause.
+Type narrowing is reflected in all downstream `.select()` calls.
 
 ##### Example
-```typescript file=../usage/tests/readme/where.ts region=not-null
+```typescript file=../usage-sqlite-v7/tests/readme/whereNotNull.ts region=whereNotNull
 prisma.$from("User")
       .join("Post", "authorId", "User.id")
-      .whereNotNull("User.name");
+      .whereNotNull("User.name")
 ```
 ![whereNotNull](./assets/whereNotNull.gif)
 
 ##### SQL
 The resulting SQL will look like:
 
-```sql file=../usage/tests/readme/where.ts region=not-null-sql
-FROM User
-JOIN Post ON Post.authorId = User.id
-WHERE (User.name IS NOT NULL);
+```sql file=../usage-sqlite-v7/tests/readme/whereNotNull.ts region=whereNotNull-sql
+FROM User JOIN Post ON Post.authorId = User.id WHERE (User.name IS NOT NULL);
 ```
 
 #### `.whereIsNull`
 
-This will remove the NonNull type from the union of types of the current table column.
-To use `.whereIsNull`, you need to add it before a `.where`.
+Narrows the column's type to exactly `null` and adds an `IS NULL` condition to the WHERE clause.
 
 ##### Example
-```typescript file=../usage/tests/readme/where.ts region=is-null
+```typescript file=../usage-sqlite-v7/tests/readme/whereNotNull.ts region=whereIsNull
 prisma.$from("User")
       .join("Post", "authorId", "User.id")
-      .whereIsNull("Post.content");
+      .whereIsNull("Post.content")
 ```
 ![whereIsNull](./assets/whereIsNull.gif)
 
 ##### SQL
 The resulting SQL will look like:
 
-```sql file=../usage/tests/readme/where.ts region=is-null-sql
-FROM User
-JOIN Post ON Post.authorId = User.id
-WHERE (Post.content IS NULL);
+```sql file=../usage-sqlite-v7/tests/readme/whereNotNull.ts region=whereIsNull-sql
+FROM User JOIN Post ON Post.authorId = User.id WHERE (Post.content IS NULL);
 ```
 
 #### `.whereRaw`
