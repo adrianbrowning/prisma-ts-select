@@ -186,6 +186,127 @@ describe("join", () => {
         expectSQL(sql, `FROM ${dialect.quote("M2M_Category")} JOIN ${dialect.quote("_M2M_CategoryToM2M_Post")} ON ${dialect.quoteQualifiedColumn("_M2M_CategoryToM2M_Post.A")} = ${dialect.quoteQualifiedColumn("M2M_Category.id")} JOIN ${dialect.quote("M2M_Post")} ON ${dialect.quoteQualifiedColumn("M2M_Post.id")} = ${dialect.quoteQualifiedColumn("_M2M_CategoryToM2M_Post.B")};`);
     });
 
+    test("join with where option - simple condition", () => {
+        const sql = prisma.$from("User")
+            .join("Post", "authorId", "User.id", { where: { "Post.published": true } })
+            .getSQL();
+        expectSQL(sql, `FROM ${dialect.quote("User")} JOIN ${dialect.quote("Post")} ON ${dialect.quoteQualifiedColumn("Post.authorId")} = ${dialect.quoteQualifiedColumn("User.id")} AND ${dialect.quoteQualifiedColumn("Post.published")} = true;`);
+    });
+
+    test("join with where option - object syntax", () => {
+        const sql = prisma.$from("User")
+            .join({ table: "Post", src: "authorId", on: "User.id", where: { "Post.published": true } })
+            .getSQL();
+        expectSQL(sql, `FROM ${dialect.quote("User")} JOIN ${dialect.quote("Post")} ON ${dialect.quoteQualifiedColumn("Post.authorId")} = ${dialect.quoteQualifiedColumn("User.id")} AND ${dialect.quoteQualifiedColumn("Post.published")} = true;`);
+    });
+
+    test("join with where option - logical ops ($AND)", () => {
+        const sql = prisma.$from("User")
+            .join("Post", "authorId", "User.id", { where: { $AND: [{ "Post.published": true }, { "Post.id": { op: ">", value: 0 } }] } })
+            .getSQL();
+        expectSQL(sql, `FROM ${dialect.quote("User")} JOIN ${dialect.quote("Post")} ON ${dialect.quoteQualifiedColumn("Post.authorId")} = ${dialect.quoteQualifiedColumn("User.id")} AND (${dialect.quoteQualifiedColumn("Post.published")} = true AND ${dialect.quoteQualifiedColumn("Post.id")} > 0);`);
+    });
+
+    test("join with where + top-level where", () => {
+        const sql = prisma.$from("User")
+            .join("Post", "authorId", "User.id", { where: { "Post.published": true } })
+            .where({ "User.id": { op: ">", value: 0 } })
+            .getSQL();
+        expectSQL(sql, `FROM ${dialect.quote("User")} JOIN ${dialect.quote("Post")} ON ${dialect.quoteQualifiedColumn("Post.authorId")} = ${dialect.quoteQualifiedColumn("User.id")} AND ${dialect.quoteQualifiedColumn("Post.published")} = true WHERE ${dialect.quoteQualifiedColumn("User.id")} > 0;`);
+    });
+
+    test("joinUnsafeTypeEnforced with where option", () => {
+        const sql = prisma.$from("User")
+            .joinUnsafeTypeEnforced("Post", "id", "User.id", { where: { "Post.published": true } })
+            .getSQL();
+        expectSQL(sql, `FROM ${dialect.quote("User")} JOIN ${dialect.quote("Post")} ON ${dialect.quoteQualifiedColumn("Post.id")} = ${dialect.quoteQualifiedColumn("User.id")} AND ${dialect.quoteQualifiedColumn("Post.published")} = true;`);
+    });
+
+    test("joinUnsafeIgnoreType with where option", () => {
+        const sql = prisma.$from("User")
+            .joinUnsafeIgnoreType("Post", "id", "User.email", { where: { "Post.published": false } })
+            .getSQL();
+        expectSQL(sql, `FROM ${dialect.quote("User")} JOIN ${dialect.quote("Post")} ON ${dialect.quoteQualifiedColumn("Post.id")} = ${dialect.quoteQualifiedColumn("User.email")} AND ${dialect.quoteQualifiedColumn("Post.published")} = false;`);
+    });
+
+    test("join where type-safety: wrong table fields rejected", () => {
+        prisma.$from("User")
+            .join("Post", "authorId", "User.id", {
+                // @ts-expect-error "User.name" is not a field of Post
+                where: { "User.name": "test" }
+            });
+    });
+
+    test("LEFT JOIN", () => {
+        const sql = prisma.$from("User")
+            .join("Post", "authorId", "User.id", { joinType: "LEFT" })
+            .getSQL();
+        expectSQL(sql, `FROM ${dialect.quote("User")} LEFT JOIN ${dialect.quote("Post")} ON ${dialect.quoteQualifiedColumn("Post.authorId")} = ${dialect.quoteQualifiedColumn("User.id")};`);
+    });
+
+    test("LEFT OUTER JOIN", () => {
+        const sql = prisma.$from("User")
+            .join("Post", "authorId", "User.id", { joinType: "LEFT OUTER" })
+            .getSQL();
+        expectSQL(sql, `FROM ${dialect.quote("User")} LEFT OUTER JOIN ${dialect.quote("Post")} ON ${dialect.quoteQualifiedColumn("Post.authorId")} = ${dialect.quoteQualifiedColumn("User.id")};`);
+    });
+
+    test("RIGHT JOIN", () => {
+        const sql = prisma.$from("User")
+            .join("Post", "authorId", "User.id", { joinType: "RIGHT" })
+            .getSQL();
+        expectSQL(sql, `FROM ${dialect.quote("User")} RIGHT JOIN ${dialect.quote("Post")} ON ${dialect.quoteQualifiedColumn("Post.authorId")} = ${dialect.quoteQualifiedColumn("User.id")};`);
+    });
+
+    test("FULL OUTER JOIN", () => {
+        const sql = prisma.$from("User")
+            .join("Post", "authorId", "User.id", { joinType: "FULL OUTER" })
+            .getSQL();
+        expectSQL(sql, `FROM ${dialect.quote("User")} FULL OUTER JOIN ${dialect.quote("Post")} ON ${dialect.quoteQualifiedColumn("Post.authorId")} = ${dialect.quoteQualifiedColumn("User.id")};`);
+    });
+
+    test("INNER JOIN (explicit)", () => {
+        const sql = prisma.$from("User")
+            .join("Post", "authorId", "User.id", { joinType: "INNER" })
+            .getSQL();
+        expectSQL(sql, `FROM ${dialect.quote("User")} INNER JOIN ${dialect.quote("Post")} ON ${dialect.quoteQualifiedColumn("Post.authorId")} = ${dialect.quoteQualifiedColumn("User.id")};`);
+    });
+
+    test("CROSS JOIN (no ON clause)", () => {
+        const sql = prisma.$from("User")
+            .joinUnsafeIgnoreType("Post", "id", "User.id", { joinType: "CROSS" })
+            .getSQL();
+        expectSQL(sql, `FROM ${dialect.quote("User")} CROSS JOIN ${dialect.quote("Post")};`);
+    });
+
+    test("LEFT JOIN + where on ON clause", () => {
+        const sql = prisma.$from("User")
+            .join("Post", "authorId", "User.id", { joinType: "LEFT", where: { "Post.published": true } })
+            .getSQL();
+        expectSQL(sql, `FROM ${dialect.quote("User")} LEFT JOIN ${dialect.quote("Post")} ON ${dialect.quoteQualifiedColumn("Post.authorId")} = ${dialect.quoteQualifiedColumn("User.id")} AND ${dialect.quoteQualifiedColumn("Post.published")} = true;`);
+    });
+
+    test("joinType object syntax", () => {
+        const sql = prisma.$from("User")
+            .join({ table: "Post", src: "authorId", on: "User.id", joinType: "LEFT" })
+            .getSQL();
+        expectSQL(sql, `FROM ${dialect.quote("User")} LEFT JOIN ${dialect.quote("Post")} ON ${dialect.quoteQualifiedColumn("Post.authorId")} = ${dialect.quoteQualifiedColumn("User.id")};`);
+    });
+
+    test("joinUnsafeTypeEnforced with joinType", () => {
+        const sql = prisma.$from("User")
+            .joinUnsafeTypeEnforced("Post", "id", "User.id", { joinType: "LEFT" })
+            .getSQL();
+        expectSQL(sql, `FROM ${dialect.quote("User")} LEFT JOIN ${dialect.quote("Post")} ON ${dialect.quoteQualifiedColumn("Post.id")} = ${dialect.quoteQualifiedColumn("User.id")};`);
+    });
+
+    test("joinUnsafeIgnoreType with joinType", () => {
+        const sql = prisma.$from("User")
+            .joinUnsafeIgnoreType("Post", "id", "User.email", { joinType: "LEFT" })
+            .getSQL();
+        expectSQL(sql, `FROM ${dialect.quote("User")} LEFT JOIN ${dialect.quote("Post")} ON ${dialect.quoteQualifiedColumn("Post.id")} = ${dialect.quoteQualifiedColumn("User.email")};`);
+    });
+
     test("Many To Many Link; Name Change", ()=> {
         const sql = prisma.$from("M2M_NC_Category")
             .join("_M2M_NC", "A", "M2M_NC_Category.id" )

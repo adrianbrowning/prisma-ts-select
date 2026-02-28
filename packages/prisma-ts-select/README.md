@@ -487,20 +487,95 @@ JOIN Post ON Post.authorId = User.id;
 | `table`     | The table to join on (supports inline alias: `"Post p"` or `"Post", "p"`). <br/>TS autocomplete will show tables that can join with previously defined tables on. |
 | `field`     | Column on table. <br/>TS autocomplete will show known columns that this table, can join with previously defined tables on.                                     |
 | `reference` | `Table.Column` to a previously defined table (either the base, or another join), with a FK that is defined in the schema definition.                           |
+| `where`     | *(optional)* Criteria added to the `ON` clause (`ON a = b AND ...`). Same syntax as `.where()`. Keys scoped to the joined table only.                         |
+| `joinType`  | *(optional)* Join variant. One of `"INNER"`, `"LEFT"`, `"LEFT OUTER"`, `"RIGHT"`, `"RIGHT OUTER"`, `"FULL"`, `"FULL OUTER"`, `"CROSS"`. Default: plain `JOIN`. |
 
 **Alternative Syntaxes:**
 ```typescript
 // Inline alias
 .join("Post p", "authorId", "User.id")
-    
+
 // Object syntax
 .join({
   table: "Post",
   src: "authorId",
   on: "User.id",
-  alias: "p"  // optional
+  alias: "p",           // optional
+  joinType: "LEFT",     // optional
+  where: { "Post.published": true }  // optional
 })
-``` 
+```
+
+##### Join Type
+
+Control the SQL join variant via the `joinType` option:
+
+```typescript file=../usage-sqlite-v7/tests/readme/join-type.ts region=join-type-left
+prisma.$from("User")
+      .join("Post", "authorId", "User.id", { joinType: "LEFT" })
+```
+
+```sql file=../usage-sqlite-v7/tests/readme/join-type.ts region=join-type-left-sql
+FROM User LEFT JOIN Post ON Post.authorId = User.id;
+```
+
+`CROSS JOIN` has no `ON` clause — it is suppressed automatically:
+
+```typescript file=../usage-sqlite-v7/tests/readme/join-type.ts region=join-type-cross
+prisma.$from("User")
+      .joinUnsafeIgnoreType("Post", "id", "User.id", { joinType: "CROSS" })
+```
+
+```sql file=../usage-sqlite-v7/tests/readme/join-type.ts region=join-type-cross-sql
+FROM User CROSS JOIN Post;
+```
+
+`joinType` and `where` can be combined — `where` is ignored for `CROSS`:
+
+```typescript file=../usage-sqlite-v7/tests/readme/join-type.ts region=join-type-with-where
+prisma.$from("User")
+      .join("Post", "authorId", "User.id", {
+        joinType: "LEFT",
+        where: { "Post.published": true }
+      })
+```
+
+```sql file=../usage-sqlite-v7/tests/readme/join-type.ts region=join-type-with-where-sql
+FROM User LEFT JOIN Post ON Post.authorId = User.id AND Post.published = true;
+```
+
+##### Join-level WHERE
+
+Conditions placed on the `ON` clause instead of the top-level `WHERE`:
+
+```typescript file=../usage-sqlite-v7/tests/readme/join-where.ts region=join-where-example
+prisma.$from("User")
+      .join("Post", "authorId", "User.id", { where: { "Post.published": true } })
+```
+
+```sql file=../usage-sqlite-v7/tests/readme/join-where.ts region=join-where-sql
+FROM User JOIN Post ON Post.authorId = User.id AND Post.published = true;
+```
+
+Supports the same MongoDB-inspired operators as `.where()` — `$AND`, `$OR`, `$NOT`, `$NOR`:
+
+```typescript file=../usage-sqlite-v7/tests/readme/join-where.ts region=join-where-ops-example
+prisma.$from("User")
+      .join("Post", "authorId", "User.id", {
+        where: {
+          $AND: [
+            { "Post.published": true },
+            { "Post.id": { op: ">", value: 0 } }
+          ]
+        }
+      })
+```
+
+```sql file=../usage-sqlite-v7/tests/readme/join-where.ts region=join-where-ops-sql
+FROM User JOIN Post ON Post.authorId = User.id AND (Post.published = true AND Post.id > 0);
+```
+
+> **Type safety**: only `"JoinedTable.field"` keys are accepted — other tables' fields are rejected at compile time.
 
 #### `.joinUnsafeTypeEnforced`
 
@@ -527,6 +602,8 @@ JOIN Post ON Post.title = User.name;
 | `table`     | The table to join on (supports inline alias: `"Post p"` or `"Post", "p"`). <br/>TS autocomplete will show tables that can join with previously defined tables on. |
 | `field`     | Column on table. <br/>TS autocomplete will show known columns that this table, can join with previously defined tables on.                                     |
 | `reference` | `Table.Column` to a previously defined table (either the base, or another join), with a column that is of the same type.                                       |
+| `where`     | *(optional)* Criteria added to the `ON` clause. See [Join-level WHERE](#join-level-where).                                                                    |
+| `joinType`  | *(optional)* Join variant. See [Join Type](#join-type).                                                                                                       |
 
 #### `.joinUnsafeIgnoreType`
 
@@ -553,6 +630,8 @@ JOIN Post ON Post.id = User.name;
 | `table`     | The table to join on (supports inline alias: `"Post p"` or `"Post", "p"`). <br/>TS autocomplete will show tables that can join with previously defined tables on. |
 | `field`     | Column on table. <br/>TS autocomplete will show known columns that this table, can join with previously defined tables on.                                     |
 | `reference` | `Table.Column` to a previously defined table (either the base, or another join). Referencing any column, of any type.                                          |
+| `where`     | *(optional)* Criteria added to the `ON` clause. See [Join-level WHERE](#join-level-where).                                                                    |
+| `joinType`  | *(optional)* Join variant. See [Join Type](#join-type).                                                                                                       |
 
 #### `.manyToManyJoin`
 
