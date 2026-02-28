@@ -442,9 +442,12 @@ The `where` syntax takes inspiration from how mongoDB does queries.
 ##### TypeSyntax
 ```TypeScript
 type WhereClause = {
-  "Table.Column": <value> | { "op": "<condition>", "value": <value> }
+  "Table.Column": <value>
+    | [<value>, ...<value>[]]                          // scalar array → IN
+    | { "op": "<condition>", "value": <value> }
+    | [{ "op": "<condition>", "value": <value> }, ...]  // op-array → OR
   "$AND": [WhereClause, ...Array<WhereClause>],
-  "$OR": [WhereClause, ...Array<WhereClause>],
+  "$OR":  [WhereClause, ...Array<WhereClause>],
   "$NOT": [WhereClause, ...Array<WhereClause>],
   "$NOR": [WhereClause, ...Array<WhereClause>]
 }
@@ -476,6 +479,8 @@ type WhereClause = {
 | $OR          | Will join all items with a `OR`                                          | <pre>.where({ <br /> $OR:[<br />  {"User.name": {op: "LIKE", value:"a%"}},<br />  {"User.name": {op: "LIKE", value:"d%"}},<br />]})</pre>                        | `(User.name LIKE "a%" OR User.name LIKE "d%")`                    |
 | $NOT         | Will wrap statement in a `NOT (/*...*/)` and join any items with a `AND` | <pre>.where({ <br /> $NOT:[<br />  {"User.age": 20 },<br />  {<br />    "User.age": {op: "=", value:60},<br />    "User.name": "Bob",<br />   },<br />]})</pre>  | `(NOT (User.age = 20 AND (User.age = 60 AND User.name = "Bob")))` |
 | $NOR         | Will wrap statement in a `NOT (/*...*/)` and join any items with a `OR`  | <pre>.where({ <br /> $NOR:[<br />  {"User.age": 20 },<br />  {<br />    "User.age": {op: "!=", value:60},<br />    "User.name": "Bob",<br />   },<br />]})</pre> | `(NOT (User.age = 20 OR (User.age != 60 AND User.name = "Bob")))` |
+| `Array (scalar)` | Non-empty array of values → SQL `IN` | `.where({ "User.name": ["Alice", "Bob"] })` | `User.name IN ('Alice', 'Bob')` |
+| `Array (op-objects)` | Non-empty array of op-objects → `OR` chain | `.where({ "User.name": [{ op: "LIKE", value: "A%" }, { op: "LIKE", value: "B%" }] })` | `(User.name LIKE 'A%' OR User.name LIKE 'B%')` |
 
 
 ###### Columns
@@ -539,6 +544,27 @@ prisma.$from("User")
             "User.name": "Bob",
           },
         ]
+      });
+```
+
+###### Array (Scalar → IN)
+```typescript file=../usage/tests/readme/where.ts region=array-scalar
+prisma.$from("User")
+      .joinUnsafeIgnoreType("Post", "id", "User.name")
+      .where({
+        "User.name": ["Alice", "Bob"],
+      });
+```
+
+###### Array (Op-Object → OR)
+```typescript file=../usage/tests/readme/where.ts region=array-op
+prisma.$from("User")
+      .joinUnsafeIgnoreType("Post", "id", "User.name")
+      .where({
+        "User.name": [
+          { op: "LIKE", value: "A%" },
+          { op: "LIKE", value: "B%" },
+        ],
       });
 ```
 
