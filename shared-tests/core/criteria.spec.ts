@@ -55,18 +55,12 @@ describe("where", () => {
 
         function createQuery2() {
 
-            prisma.$from("User")
-                .where({
-                    //@ts-expect-error 1 should not be allowed
-                    "name": 1,
-                    //@ts-expect-error 1 should not be allowed
-                    "email": {
-                        op: "LIKE",
-                        value: 1
-                    },
-                    //@ts-expect-error string should not be allowed
-                     "age": ""
-                });
+            //@ts-expect-error 1 should not be allowed for string field
+            prisma.$from("User").where({ "name": 1 });
+            //@ts-expect-error number not allowed for LIKE value on string field
+            prisma.$from("User").where({ "email": { op: "LIKE", value: 1 } });
+            //@ts-expect-error string should not be allowed for number field
+            prisma.$from("User").where({ "age": "" });
 
             prisma.$from("User")
                 .where({

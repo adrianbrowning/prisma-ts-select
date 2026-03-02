@@ -1,10 +1,10 @@
 declare const _type: unique symbol;
 
 /** Opaque wrapper carrying a SQL fragment + phantom TS type `T`. */
-export type SQLExpr<T> = { readonly sql: string; readonly [_type]?: T };
+export type SQLExpr<T> = { readonly sql: string; readonly [_type]?: T; toString(): string };
 
 export function sqlExpr<T>(sql: string): SQLExpr<T> {
-  return { sql } as SQLExpr<T>;
+  return { sql, toString() { return sql; } } as SQLExpr<T>;
 }
 
 type LitValue = string | number | boolean | null;
