@@ -26,12 +26,12 @@ prisma.$from("User")
   test("should generate correct SQL", () => {
     const sql = prisma.$from("User")
       .join("Post", "authorId", "User.id")
-      .select("*")
+      .select("email")
       .getSQL();
 
     const expectedSQL =
       // #region join-with-select-sql
-      "SELECT * FROM User JOIN Post ON Post.authorId = User.id;";
+      "SELECT email FROM User JOIN Post ON Post.authorId = User.id;";
       // #endregion join-with-select-sql
 
     expectSQL(sql, expectedSQL);

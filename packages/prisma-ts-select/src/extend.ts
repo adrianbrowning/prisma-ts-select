@@ -225,7 +225,7 @@ type Trim<T> = T extends `${Whitespace}${infer U}` ? Trim<U> : T extends `${infe
  * // Returns: "*" | "id" | "name" | "Post.id" | "Post.title" | "User.*" | "Post.*"
  */
 type ValidSelect<Tables extends TArrSources, TFields extends TFieldsType = {}> =
-    |"*"
+    | (Tables extends [TTableSources] ? "*" : never)
     | GetOtherColumns<Tables>
     | GetTableStar<Tables>
     | GetCTEColumns<Tables, TFields>;
@@ -604,6 +604,10 @@ class _fRun<TSources extends TArrSources, TFields extends TFieldsType, TSelectRT
     }
 
     getSQL(formatted: boolean = false) {
+
+        if (this.values.tables.length > 1 && this.values.selects.includes("*")) {
+            throw new Error("select('*') is not supported with joins — use selectAll() instead");
+        }
 
         const withClause = this.values.withs?.length
             ? `WITH ${this.values.withs.map(w =>

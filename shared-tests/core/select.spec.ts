@@ -61,64 +61,18 @@ describe("Select Tests", ()=> {
             });
         });
 
-        describe("basic select * with join", () => {
+        describe("basic select * with join — blocked", () => {
 
-
-            function createQuery() {
-                return prisma.$from("User")
-                    .join("Post", "authorId", "User.id")
-                    .select("*");
-            }
-
-            it("should run", async () => {
-                const result = await createQuery().run();
-
-                type TExpected = Array<UserPostJoinRow>;
-
-                typeCheck({} as Expect<Equal<typeof result, TExpected>>);
-
-                const expected: TExpected = [{
-                    email: 'johndoe@example.com',
-                    name: 'John Doe',
-                    id: 1,
-                    title: 'Blog 1',
-                    content: 'Something',
-                    published: false,
-                    createdAt: new Date("2020-01-15T10:30:00.000Z"),
-                    authorId: 1,
-                    lastModifiedById: 1,
-                    age: 25,
-                }, {
-                    email: 'johndoe@example.com',
-                    name: 'John Doe',
-                    id: 2,
-                    title: 'blog 2',
-                    content: 'sql',
-                    published: false,
-                    createdAt: new Date("2020-06-20T14:45:00.000Z"),
-                    authorId: 1,
-                    lastModifiedById: 1,
-                    age: 25,
-                }, {
-                    email: 'smith@example.com',
-                    name: 'John Smith',
-                    id: 3,
-                    title: 'blog 3',
-                    content: null,
-                    published: false,
-                     createdAt: new Date("2021-12-25T08:00:00.000Z"),
-                    authorId: 2,
-                    lastModifiedById: 2,
-                    age: 30,
-                }];
-
-                assert.deepStrictEqual(result, expected);
-
+            it("should throw at runtime", () => {
+                assert.throws(
+                    () => prisma.$from("User").join("Post", "authorId", "User.id").select("*" as any).getSQL(),
+                    /use selectAll/i
+                );
             });
 
-            it("should match SQL", () => {
-                const sql = createQuery().getSQL();
-                expectSQL(sql, `SELECT * FROM ${dialect.quote("User")} JOIN ${dialect.quote("Post")} ON ${dialect.quoteQualifiedColumn("Post.authorId")} = ${dialect.quoteQualifiedColumn("User.id")};`)
+            it("should be a type error", () => {
+                // @ts-expect-error: "*" not valid with joins
+                prisma.$from("User").join("Post", "authorId", "User.id").select("*");
             });
         })
 
