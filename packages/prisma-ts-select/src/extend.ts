@@ -1,5 +1,6 @@
 import {Prisma} from "@prisma/client/extension";
 import {match, P} from "ts-pattern";
+import type {Decimal} from "@prisma/client/runtime/client";
 
 // Type stub for PrismaClient to avoid DTS build issues when @prisma/client isn't generated
 // The actual PrismaClient type from @prisma/client will be used at runtime via getExtensionContext
@@ -408,51 +409,55 @@ type Values = {
     orderBy?: Array<`${string}${ "" | " DESC" | " ASC"}`>;
 };
 
+function applyCondition(quotedField: string, value: unknown): string {
+    if (typeof value === 'object' && value !== null && !Array.isArray(value) && "op" in value) {
+        const opObj = value as { op: string; value?: unknown; values?: unknown[] };
+        switch (opObj.op) {
+            case 'IN':
+            case 'NOT IN': {
+                const valuesList = (opObj.values as unknown[]).map(v => (typeof v === 'string' ? `'${esc(v)}'` : v)).join(", ");
+                return `${quotedField} ${opObj.op} (${valuesList})`;
+            }
+            case 'BETWEEN': {
+                const [start, end] = opObj.values as [unknown, unknown];
+                return `${quotedField} BETWEEN ${typeof start === 'string' ? `'${esc(start)}'` : start} AND ${typeof end === 'string' ? `'${esc(end)}'` : end}`;
+            }
+            case 'LIKE':
+            case 'NOT LIKE':
+                return `${quotedField} ${opObj.op} '${esc(opObj.value as string)}'`;
+            case 'IS NULL':
+            case 'IS NOT NULL':
+                return `${quotedField} ${opObj.op}`;
+            case '>':
+            case '>=':
+            case '<':
+            case '<=':
+            case '!=':
+            case '=':
+                return `${quotedField} ${opObj.op} ${typeof opObj.value === 'string' ? `'${esc(opObj.value)}'` : opObj.value}`;
+            default:
+                throw new Error(`Unsupported operation: ${opObj.op}`);
+        }
+    } else if (value === null) {
+        return `${quotedField} IS NULL`;
+    } else if (Array.isArray(value)) {
+        if (value.length === 0) throw new Error(`empty array is not allowed for field "${quotedField}"`);
+        if (typeof value[0] === 'object' && value[0] !== null && 'op' in value[0]) {
+            const parts = (value as Array<unknown>).map(opObj => applyCondition(quotedField, opObj));
+            return parts.length === 1 ? parts[0]! : "(" + parts.join(" OR ") + ")";
+        }
+        const valuesList = value.map(v => (typeof v === 'string' ? `'${esc(v)}'` : v)).join(", ");
+        return `${quotedField} IN (${valuesList})`;
+    } else {
+        return `${quotedField} = ${typeof value === 'string' ? `'${esc(value)}'` : value}`;
+    }
+}
+
 function processConditions(condition: BasicOpTypes, formatted = false): string {
     const r = Object.keys(condition).map((field) => {
         const value = condition[field];
         const quotedField = dialect.quoteQualifiedColumn(String(field));
-
-        if (typeof value === 'object' && value !== null && !Array.isArray(value) && "op" in value) {
-            switch (value.op) {
-                case 'IN':
-                case 'NOT IN':
-                    const valuesList = value.values.map(v => (typeof v === 'string' ? `'${esc(v)}'` : v)).join(", ");
-                    return `${quotedField} ${value.op} (${valuesList})`;
-                case 'BETWEEN':
-                    if (value.values.length > 2) throw new Error("Too many items supplied to op BETWEEN")
-                    const [start, end] = value.values;
-                    return `${quotedField} BETWEEN ${typeof start === 'string' ? `'${esc(start)}'` : start} AND ${typeof end === 'string' ? `'${esc(end)}'` : end}`;
-                case 'LIKE':
-                case 'NOT LIKE':
-                    return `${quotedField} ${value.op} '${esc(value.value)}'`;
-                case 'IS NULL':
-                case 'IS NOT NULL':
-                    return `${quotedField} ${value.op}`;
-                case '>':
-                case '>=':
-                case '<':
-                case '<=':
-                case '!=':
-                case '=':
-                    return `${quotedField} ${value.op} ${typeof value.value === 'string' ? `'${esc(value.value)}'` : value.value}`;
-                default:
-                    //@ts-expect-error value.op should be never
-                    throw new Error(`Unsupported operation: ${value.op}`);
-            }
-        } else if (value === null) {
-            return `${quotedField} IS NULL`;
-        } else if (Array.isArray(value)) {
-            if (value.length === 0) throw new Error(`where(): empty array is not allowed for field "${String(field)}"`);
-            if (typeof value[0] === 'object' && value[0] !== null && 'op' in value[0]) {
-                const parts = (value as Array<{ op: string; value: SUPPORTED_TYPES }>).map(opObj => processConditions({ [field]: opObj } as BasicOpTypes, formatted));
-                return parts.length === 1 ? parts[0]! : "(" + parts.join(" OR ") + ")";
-            }
-            const valuesList = value.map(v => (typeof v === 'string' ? `'${esc(v)}'` : v)).join(", ");
-            return `${quotedField} IN (${valuesList})`;
-        }  else {
-            return `${quotedField} = ${typeof value === 'string' ? `'${esc(value)}'` : value}`;
-        }
+        return applyCondition(quotedField, value);
     });
 
     return r.length === 1
@@ -516,6 +521,11 @@ function processCriteria(main: ClauseType, joinType: "AND" | "OR" = "AND", forma
         processPending();
     }
     return results.join((formatted ? "\n" : " ") + joinType + (formatted ? "\n" : " ")).trim();
+}
+
+function processExprPairs(pairs: Array<ExprCondPair>): string {
+    const parts = pairs.map(([expr, value]) => applyCondition((expr as { sql: string }).sql, value));
+    return parts.length === 1 ? parts[0]! : parts.join(' AND ');
 }
 
 /*
@@ -1174,11 +1184,18 @@ class _fHaving<TSources extends TArrSources, TFields extends TFieldsType> extend
 
     // TODO Allowed Fields
     //  - specified in groupBy
-    having<const TCriteria extends WhereCriteria<TSources, TFields>>(criteria: TCriteria) {
-        return new _fSelect<TSources, TFields>(this.db, {
-            ...this.values,
-            having: [criteria]
-        });
+    having<const TCriteria extends WhereCriteria<TSources, TFields>>(criteria: TCriteria): _fHaving<TSources, TFields>
+    having(fn: (ctx: SelectFnContext<TSources, TFields>) => Array<ExprCondPair>): _fHaving<TSources, TFields>
+    having(
+        criteriaOrFn: WhereCriteria<TSources, TFields> | ((ctx: SelectFnContext<TSources, TFields>) => Array<ExprCondPair>)
+    ): _fHaving<TSources, TFields> {
+        const existing = this.values.having ?? [];
+        if (typeof criteriaOrFn === 'function') {
+            const ctx = buildContext<TSources, TFields>(dialect);
+            const sql = processExprPairs(criteriaOrFn(ctx));
+            return new _fHaving<TSources, TFields>(this.db, { ...this.values, having: [...existing, sql] });
+        }
+        return new _fHaving<TSources, TFields>(this.db, { ...this.values, having: [...existing, criteriaOrFn] });
     }
 }
 
@@ -1194,11 +1211,18 @@ OFFSET -
 class _fGroupBy<TSources extends TArrSources, TFields extends TFieldsType> extends _fSelectDistinct<TSources, TFields> {
 
     // having() method for queries without GROUP BY - allows selectAll()
-    having<const TCriteria extends WhereCriteria<TSources, TFields>>(criteria: TCriteria) {
-        return new _fSelectDistinct<TSources, TFields>(this.db, {
-            ...this.values,
-            having: [criteria]
-        });
+    having<const TCriteria extends WhereCriteria<TSources, TFields>>(criteria: TCriteria): _fSelectDistinct<TSources, TFields>
+    having(fn: (ctx: SelectFnContext<TSources, TFields>) => Array<ExprCondPair>): _fSelectDistinct<TSources, TFields>
+    having(
+        criteriaOrFn: WhereCriteria<TSources, TFields> | ((ctx: SelectFnContext<TSources, TFields>) => Array<ExprCondPair>)
+    ): _fSelectDistinct<TSources, TFields> {
+        const existing = this.values.having ?? [];
+        if (typeof criteriaOrFn === 'function') {
+            const ctx = buildContext<TSources, TFields>(dialect);
+            const sql = processExprPairs(criteriaOrFn(ctx));
+            return new _fSelectDistinct<TSources, TFields>(this.db, { ...this.values, having: [...existing, sql] });
+        }
+        return new _fSelectDistinct<TSources, TFields>(this.db, { ...this.values, having: [...existing, criteriaOrFn] });
     }
 
     //TODO this should only accept columns for tables in play
@@ -1247,6 +1271,37 @@ type OptionalObject<K extends Record<PropertyKey, unknown>> = { [key in keyof K]
 type NonEmptyArray<T> = [T, ...Array<T>];
 
 type COND_NUMERIC_OP = '>' | '>=' | '<' | '<=' | '!=' | '=';
+
+/** Numeric condition value — accepts number | bigint for cross-dialect compatibility (count returns bigint in SQLite, number in PG). */
+type NumericCondValue =
+    | number | bigint
+    | { op: COND_NUMERIC_OP; value: number | bigint }
+    | { op: 'IN' | 'NOT IN'; values: Array<number | bigint> }
+    | { op: 'BETWEEN'; values: [low: number | bigint, high: number | bigint] };
+
+type StringCondValue =
+    | string
+    | { op: 'LIKE' | 'NOT LIKE'; value: string }
+    | { op: '!='; value: string }
+    | { op: 'IN' | 'NOT IN'; values: Array<string> };
+
+type DateCondValue =
+    | Date
+    | { op: COND_NUMERIC_OP; value: Date }
+    | { op: 'BETWEEN'; values: [Date, Date] }
+    | { op: 'IN' | 'NOT IN'; values: Array<Date> };
+
+type BoolExprCondValue = boolean | { op: '!='; value: boolean };
+
+/** Discriminated pair: [SQLExpr<T>, condition for T]. Used in where(fn) and having(fn) overloads. */
+type ExprCondPair =
+    | [SQLExpr<number | null>, NumericCondValue]
+    | [SQLExpr<bigint | null>, NumericCondValue]
+    | [SQLExpr<Decimal | null>, NumericCondValue]
+    | [SQLExpr<string | null>, StringCondValue]
+    | [SQLExpr<Date | null>, DateCondValue]
+    | [SQLExpr<boolean | null>, BoolExprCondValue];
+
 
 /**
  * Defines all valid SQL condition patterns for numeric types (number, bigint).
@@ -1542,11 +1597,22 @@ class _fWhere<TSources extends TArrSources, TFields extends TFieldsType> extends
         });
     }
 
-    where<const TCriteria extends WhereCriteria<TSources, TFields>>(criteria: TCriteria) {
-
+    where(fn: (ctx: SelectFnContext<TSources, TFields>) => Array<ExprCondPair>): _fGroupBy<TSources, TFields>
+    where<const TCriteria extends WhereCriteria<TSources, TFields>>(criteria: TCriteria): _fGroupBy<TSources, TFields>
+    where(
+        criteriaOrFn: WhereCriteria<TSources, TFields> | ((ctx: SelectFnContext<TSources, TFields>) => Array<ExprCondPair>)
+    ): _fGroupBy<TSources, TFields> {
+        if (typeof criteriaOrFn === 'function') {
+            const ctx = buildContext<TSources, TFields>(dialect);
+            const sql = processExprPairs(criteriaOrFn(ctx));
+            return new _fGroupBy<TSources, TFields>(this.db, {
+                ...this.values,
+                where: [...this.values.where || [], sql],
+            });
+        }
         return new _fGroupBy<TSources, TFields>(this.db, {
             ...this.values,
-            where: [...this.values.where || [], criteria],
+            where: [...this.values.where || [], criteriaOrFn],
         });
     }
 

@@ -250,4 +250,21 @@ prisma.$from("User")
 
     assert.equal(query.getSQL(), expectedSQL);
   });
+
+  test("where with fn expr (upper LIKE)", () => {
+    const sql =
+// #region fn-upper-like
+prisma.$from("User")
+      .where(({ upper }) => [[upper('name'), { op: 'LIKE', value: 'John%' }]])
+      .select("name")
+      // #endregion fn-upper-like
+.getSQL();
+
+    const expectedSQL =
+      // #region fn-upper-like-sql
+      "SELECT name FROM User WHERE UPPER(name) LIKE 'John%';";
+      // #endregion fn-upper-like-sql
+
+    assert.equal(sql, expectedSQL);
+  });
 });
