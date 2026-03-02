@@ -5,12 +5,14 @@
 #   ./run-tests.sh --db sqlite                        # sqlite only (v6 + v7)
 #   ./run-tests.sh --version 6 --db sqlite            # sqlite-v6 only
 #   ./run-tests.sh --skip-build                       # skip prisma-ts-select build step
+#   ./run-tests.sh --reset-db                         # run p:r before tests (reset + seed)
 #   ./run-tests.sh --test './tests/core/foo.spec.ts'  # run specific file/glob (skips lint:ts)
 
 # ── Argument parsing ──────────────────────────────────────────────────────────
 VERSION=""
 DB=""
 SKIP_BUILD=false
+RESET_DB=false
 TEST_PATTERN=""
 
 while [[ $# -gt 0 ]]; do
@@ -18,6 +20,7 @@ while [[ $# -gt 0 ]]; do
     --version)    VERSION="$2";      shift 2 ;;
     --db)         DB="$2";           shift 2 ;;
     --skip-build) SKIP_BUILD=true;   shift ;;
+    --reset-db)   RESET_DB=true;     shift ;;
     --test)       TEST_PATTERN="$2"; shift 2 ;;
     *) echo "Unknown flag: $1" >&2; exit 1 ;;
   esac
@@ -78,14 +81,16 @@ else
 fi
 
 # ── Pre-reset shared DBs (mysql/pg: once per DB, not once per version) ────────
-for db in "${DBS[@]}"; do
-  if [[ "$db" == "mysql" || "$db" == "pg" ]]; then
-    ver="${VERSIONS[0]}"
-    pkg="usage-${db}-v${ver}"
-    echo "Resetting ${db} DB via ${pkg}..."
-    pnpm --filter "${pkg}" p:r || { echo "p:r failed for ${pkg}" >&2; exit 1; }
-  fi
-done
+if $RESET_DB; then
+  for db in "${DBS[@]}"; do
+    if [[ "$db" == "mysql" || "$db" == "pg" ]]; then
+      ver="${VERSIONS[0]}"
+      pkg="usage-${db}-v${ver}"
+      echo "Resetting ${db} DB via ${pkg}..."
+      pnpm --filter "${pkg}" p:r || { echo "p:r failed for ${pkg}" >&2; exit 1; }
+    fi
+  done
+fi
 
 # ── Launch packages in parallel ───────────────────────────────────────────────
 declare -a PIDS=()
@@ -105,7 +110,7 @@ for ver in "${VERSIONS[@]}"; do
       pnpm --filter "${pkg}" gen
       # sqlite: each version has its own file — reset per package
       # mysql/pg: shared server — already reset once above
-      [[ "$db" == "sqlite" ]] && pnpm --filter "${pkg}" p:r
+      [[ "$db" == "sqlite" ]] && $RESET_DB && pnpm --filter "${pkg}" p:r
       if [[ -n "$TEST_PATTERN" ]]; then
         (cd "packages/${pkg}" && node \
           --import ../../shared-tests/client-resolver.mjs \
