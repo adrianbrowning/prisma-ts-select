@@ -102,7 +102,7 @@ prisma.$from("User u")
           .join("User u2",
               "id", "u1.id")
           .select("u1.name", "user1Name")
-          //@ts-expect-error This should error as User has no defined self join
+          // @ts-expect-error cascaded error from invalid join above
           .select("u2.name", "user2Name");
 
       const query =

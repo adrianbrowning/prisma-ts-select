@@ -231,8 +231,8 @@ describe("join", () => {
 
     test("join where type-safety: wrong table fields rejected", () => {
         prisma.$from("User")
+            // @ts-expect-error "User.name" is not a field of Post
             .join("Post", "authorId", "User.id", {
-                // @ts-expect-error "User.name" is not a field of Post
                 where: { "User.name": "test" }
             });
     });

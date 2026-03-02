@@ -232,10 +232,12 @@ export { ${provider}Dialect as dialect, ${provider}Dialect, ${ctxName} as dialec
     // Copy extend.d.ts and inject DB model (ESM-only)
     const extendDts = fs.readFileSync(path.join(srcDir, 'extend.d.ts'), {encoding: 'utf-8'});
     const PLACEHOLDER = 'type SelectFnContext<_TSources extends TArrSources, _TFields extends TFieldsType> = BaseSelectFnContext<_TSources, _TFields>;';
-    const JOIN_RETURN_PLACEHOLDER = 'type _fJoinReturn<TSources extends TArrSources, TFields extends TFieldsType> = _fJoin<TSources, TFields>;';
+    // Matches `type _fJoinReturn<...> = ...;` regardless of RHS — robust to type signature changes.
+    // The `export` keyword is stripped from .d.ts by tsup, so match without it.
+    const JOIN_RETURN_RE = /type _fJoinReturn<[^>]+>[^;]+;/;
     const joinReturnReplacement = omittedMethods.length > 0
-      ? `type _fJoinReturn<TSources extends TArrSources, TFields extends TFieldsType> = Omit<_fJoin<TSources, TFields>, ${omittedMethods.map(m => `"${m}"`).join(' | ')}>;`
-      : `type _fJoinReturn<TSources extends TArrSources, TFields extends TFieldsType> = _fJoin<TSources, TFields>;`;
+      ? `type _fJoinReturn<TSources extends TArrSources, TFields extends TFieldsType, TCTEs extends Record<string, Record<string, any>> = {}> = Omit<_fJoin<TSources, TFields, TCTEs>, ${omittedMethods.map(m => `"${m}"`).join(' | ')}>;`
+      : `type _fJoinReturn<TSources extends TArrSources, TFields extends TFieldsType, TCTEs extends Record<string, Record<string, any>> = {}> = _fJoin<TSources, TFields, TCTEs>;`;
 
     const replacedExtendDts = extendDts
       .replace('declare const DB: DBType;', declaration)
@@ -243,7 +245,7 @@ export { ${provider}Dialect as dialect, ${provider}Dialect, ${ctxName} as dialec
         PLACEHOLDER,
         `type SelectFnContext<_TSources extends TArrSources, _TFields extends TFieldsType> = Omit<BaseSelectFnContext<_TSources, _TFields>, keyof DialectFns<ColEntries<_TSources, _TFields>, WhereCriteria<_TSources, _TFields>>> & DialectFns<ColEntries<_TSources, _TFields>, WhereCriteria<_TSources, _TFields>>;`
       )
-      .replace(JOIN_RETURN_PLACEHOLDER, joinReturnReplacement);
+      .replace(JOIN_RETURN_RE, joinReturnReplacement);
 
     const dtsWithDialect = `import type { DialectFns } from './dialects/${provider}.js';\n` + replacedExtendDts;
     writeFileSafely(path.join(outputPath, 'extend.d.ts'), dtsWithDialect);

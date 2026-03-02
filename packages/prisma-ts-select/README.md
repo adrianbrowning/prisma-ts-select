@@ -29,6 +29,13 @@
         * [SQL](#sql)
       - [Example - Inline Alias Syntax](#example---inline-alias-syntax)
         * [SQL](#sql-1)
+    + [`.$with`](#with)
+      - [Example — CTE as joined table](#example--cte-as-joined-table)
+        * [SQL](#sql-2)
+      - [Example — CTE as base table](#example--cte-as-base-table)
+        * [SQL](#sql-3)
+      - [Example — Multiple CTEs](#example--multiple-ctes)
+        * [SQL](#sql-4)
     + [Table Aliases](#table-aliases)
       - [Table Alias Syntax Options](#table-alias-syntax-options)
       - [Basic Table Alias](#basic-table-alias)
@@ -333,6 +340,72 @@ FROM User AS `u`;
 **Note:** Alias can be inline (space-separated) or as second parameter.
 **Note:** Table aliases are particularly useful for self-joins where you need to join a table to itself with different aliases.
 
+
+### `.$with`
+
+Defines one or more Common Table Expressions (CTEs) that can be referenced in `.join()` calls or used directly as the base table via `.from('cteName')`.
+
+| Param | Description |
+|-------|-------------|
+| `name` | CTE name — used to reference the CTE in `join()` or `from()` |
+| `query` | Any query built with `.$from()` |
+
+Chain `.with(name, query)` before `.from()` to define additional CTEs.
+
+#### Example — CTE as joined table
+
+```typescript file=../shared-tests/readme/with-cte.ts region=join
+const posts = prisma.$from("Post").select("id").select("authorId").select("title");
+
+prisma.$with("pp", posts)
+      .from("User")
+      .join("pp", "authorId", "User.id")
+```
+
+##### SQL
+
+```sql file=../shared-tests/readme/with-cte.ts region=join-sql
+WITH pp AS (SELECT id, authorId, title FROM Post) FROM User JOIN pp ON pp.authorId = User.id;
+```
+
+#### Example — CTE as base table
+
+Use `.from('cteName')` to query a CTE directly, without a real table as the base.
+
+```typescript file=../shared-tests/readme/with-cte.ts region=cte-base
+const posts = prisma.$from("Post").select("id").select("title");
+
+prisma.$with("pp", posts)
+      .from("pp")
+      .select("pp.id")
+      .select("pp.title")
+```
+
+##### SQL
+
+```sql file=../shared-tests/readme/with-cte.ts region=cte-base-sql
+WITH pp AS (SELECT id, title FROM Post) SELECT pp.id AS `pp.id`, pp.title AS `pp.title` FROM pp;
+```
+
+**Type safety:** only CTEs declared in `.$with()` / `.with()` are accepted by `.from()`. Unknown CTE names are rejected at compile time.
+
+#### Example — Multiple CTEs
+
+```typescript file=../shared-tests/readme/with-cte.ts region=multi-cte
+const posts = prisma.$from("Post").select("id").select("authorId").select("title");
+const users = prisma.$from("User").select("id").select("name");
+
+prisma.$with("pp", posts)
+      .with("uu", users)
+      .from("User")
+      .join("pp", "authorId", "User.id")
+```
+
+##### SQL
+
+```sql file=../shared-tests/readme/with-cte.ts region=multi-cte-sql
+WITH pp AS (SELECT id, authorId, title FROM Post), uu AS (SELECT id, name FROM User) FROM User JOIN pp ON pp.authorId = User.id;
+```
 
 ### Table Aliases
 
