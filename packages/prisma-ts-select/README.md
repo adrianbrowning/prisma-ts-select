@@ -1043,6 +1043,22 @@ The resulting SQL will look like:
 FROM User JOIN Post ON Post.authorId = User.id WHERE (Post.content IS NULL);
 ```
 
+#### `.where` — fn overload (SQL expressions)
+
+Pass a callback instead of a criteria object to apply SQL functions as conditions. The callback receives the same select-fn context as `.select()`, giving access to `upper`, `lower`, `length`, `count`, `avg`, etc.
+
+```typescript file=../shared-tests/readme/where.ts region=fn-upper-like
+prisma.$from("User")
+      .where(({ upper }) => [[upper('name'), { op: 'LIKE', value: 'John%' }]])
+      .select("name")
+```
+
+```sql file=../shared-tests/readme/where.ts region=fn-upper-like-sql
+SELECT name FROM User WHERE UPPER(name) LIKE 'John%';
+```
+
+Each array element is an `[SQLExpr<T>, condition]` pair — multiple pairs are AND-ed. The condition type is inferred from `SQLExpr<T>`: string expressions accept LIKE/NOT LIKE, numeric expressions accept `>`, `<`, BETWEEN, etc.
+
 #### `.whereRaw`
 
 When you want to write a complex `where`, or you just don't want the TypeSafety offered by the other methods, you can use `.whereRaw`.
@@ -1351,11 +1367,11 @@ JOIN Post ON Post.authorId = User.id;
 
 ### Having
 
-`.having` uses the same syntax as [`.where`](#where). Please see the previous section for details.
+`.having` accepts two overloads — a criteria object (same syntax as [`.where`](#where)) or a fn callback for SQL expressions and aggregate functions.
 
-#### Example
+#### Criteria object
 
-```typescript file=../usage/tests/readme/having.ts region=with-groupby
+```typescript file=../shared-tests/readme/having.ts region=with-groupby
 prisma.$from("User")
       .join("Post", "authorId", "User.id")
       .groupBy(["name", "Post.content"])
@@ -1368,35 +1384,57 @@ prisma.$from("User")
       .select("*");
 ```
 
-```typescript file=../usage/tests/readme/having.ts region=without-groupby
+```sql file=../shared-tests/readme/having.ts region=with-groupby-sql
+SELECT * FROM User JOIN Post ON Post.authorId = User.id GROUP BY name, Post.content HAVING User.name LIKE 'bob%';
+```
+
+#### fn overload — aggregate functions
+
+Pass a callback returning `Array<[SQLExpr<T>, condition]>` pairs. The callback receives the full select-fn context, including all aggregate and string functions.
+
+##### `countAll()` with comparison op
+
+```typescript file=../shared-tests/readme/having.ts region=agg-fn-tuple-countall
 prisma.$from("User")
       .join("Post", "authorId", "User.id")
-      .having({
-        "User.name": {
-          "op": "LIKE",
-          "value": "stuart%"
-        }
-      })
-      .select("*");
+      .groupBy(["User.name"])
+      .having(({ countAll }) => [[countAll(), { op: '>', value: 1 }]])
+      .select("User.name")
 ```
 
-
-##### SQL
-
-```sql file=../usage/tests/readme/having.ts region=with-groupby-sql
-SELECT *
-FROM User
-JOIN Post ON Post.authorId = User.id
-GROUP BY name, Post.content
-HAVING User.name LIKE 'bob%';
+```sql file=../shared-tests/readme/having.ts region=agg-fn-tuple-countall-sql
+SELECT name FROM User JOIN Post ON Post.authorId = User.id GROUP BY User.name HAVING COUNT(*) > 1;
 ```
 
-```sql file=../usage/tests/readme/having.ts region=without-groupby-sql
-SELECT *
-FROM User
-JOIN Post ON Post.authorId = User.id
-HAVING User.name LIKE 'stuart%';
+##### `count(col)` with bigint value
+
+```typescript file=../shared-tests/readme/having.ts region=agg-fn-tuple-count
+prisma.$from("User")
+      .join("Post", "authorId", "User.id")
+      .groupBy(["User.name"])
+      .having(({ count }) => [[count('User.id'), { op: '>=', value: 2n }]])
+      .select("User.name")
 ```
+
+```sql file=../shared-tests/readme/having.ts region=agg-fn-tuple-count-sql
+SELECT name FROM User JOIN Post ON Post.authorId = User.id GROUP BY User.name HAVING COUNT(User.id) >= 2;
+```
+
+##### String expr — `upper(col)` LIKE
+
+```typescript file=../shared-tests/readme/having.ts region=agg-fn-string-upper
+prisma.$from("User")
+      .join("Post", "authorId", "User.id")
+      .groupBy(["User.name"])
+      .having(({ upper }) => [[upper('User.name'), { op: 'LIKE', value: 'John%' }]])
+      .select("User.name")
+```
+
+```sql file=../shared-tests/readme/having.ts region=agg-fn-string-upper-sql
+SELECT name FROM User JOIN Post ON Post.authorId = User.id GROUP BY User.name HAVING UPPER(User.name) LIKE 'John%';
+```
+
+Multiple pairs in one `.having()` call are AND-ed together. `.having()` can also be chained — each call appends an AND condition.
 
 ### Order By
 
