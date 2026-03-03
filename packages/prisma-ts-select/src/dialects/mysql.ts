@@ -4,7 +4,11 @@ import type {JSONValue} from "../utils/types.js";
 import type {Decimal} from "@prisma/client/runtime/client";
 import {esc, type FilterCols, type ColName} from "./shared.js";
 
-export type IntervalUnit = 'MICROSECOND' | 'SECOND' | 'MINUTE' | 'HOUR' | 'DAY' | 'WEEK' | 'MONTH' | 'QUARTER' | 'YEAR';
+type MySQLCastTypeMap = { SIGNED: bigint; UNSIGNED: bigint; DECIMAL: number; CHAR: string; BINARY: Buffer; DATE: Date; DATETIME: Date; TIME: string; JSON: JSONValue; FLOAT: number; DOUBLE: number };
+
+const MYSQL_CAST_TYPES = new Set<string>(['SIGNED','UNSIGNED','DECIMAL','CHAR','BINARY','DATE','DATETIME','TIME','JSON','FLOAT','DOUBLE']);
+
+export type IntervalUnit ='MICROSECOND' | 'SECOND' | 'MINUTE' | 'HOUR' | 'DAY' | 'WEEK' | 'MONTH' | 'QUARTER' | 'YEAR';
 
 export const mysqlContextFns = <TColEntries extends [string, unknown] = never, TCriteria extends object = object>(
   quoteFn: (ref: string) => string,
@@ -124,6 +128,14 @@ export const mysqlContextFns = <TColEntries extends [string, unknown] = never, T
   log10: (x: FilterCols<TColEntries, number> | SQLExpr<number>): SQLExpr<number> => sqlExpr(`LOG10(${resolveArg(x, quoteFn)})`),
   truncate: (x: FilterCols<TColEntries, number> | SQLExpr<number>, n: number): SQLExpr<number> => sqlExpr(`TRUNCATE(${resolveArg(x, quoteFn)}, ${n})`),
   rand: (seed?: number): SQLExpr<number> => sqlExpr(seed !== undefined ? `RAND(${seed})` : 'RAND()'),
+  // ── Type coercion ────────────────────────────────────────────────────────
+  cast: <T extends keyof MySQLCastTypeMap>(
+    expr: ColName<TColEntries> | SQLExpr<unknown>,
+    type: T
+  ): SQLExpr<MySQLCastTypeMap[T]> => {
+    if (!MYSQL_CAST_TYPES.has(type as string)) throw new Error(`cast: invalid cast type '${String(type)}'`);
+    return sqlExpr(`CAST(${resolveArg(expr, quoteFn)} AS ${type})`);
+  },
 });
 
 export type DialectFns<TColEntries extends [string, unknown] = never, TCriteria extends object = object> = ReturnType<typeof mysqlContextFns<TColEntries, TCriteria>>;
