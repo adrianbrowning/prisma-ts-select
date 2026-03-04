@@ -42,7 +42,8 @@ async function seed() {
                 published: false,
                 createdAt: new Date('2020-01-15T10:30:00.000Z'),
                 authorId: 1,
-                lastModifiedById: 1
+                lastModifiedById: 1,
+                metadata: { name: 'Blog Post 1', tags: ['prisma', 'ts'] },
             },
             {
                 id: 2,

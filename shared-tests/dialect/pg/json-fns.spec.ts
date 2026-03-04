@@ -19,8 +19,10 @@ describe("PostgreSQL JSON scalar fns", () => {
         it("should run and return rows", async () => {
             const rows = await createQuery().run();
             assert.ok(Array.isArray(rows));
-            // metadata is null in seed data; jsonb_path_query_first returns null for null input
-            assert.strictEqual(rows[0]?.result, null);
+            // post id=1 has metadata.name seeded; verify extraction returns the actual value
+            assert.ok(rows.some(r => r.result === 'Blog Post 1'), 'expected jsonb_path_query_first to return seeded name value');
+            // posts 2 & 3 have null metadata — verify null is also returned
+            assert.ok(rows.some(r => r.result === null), 'expected jsonb_path_query_first to return null for null metadata');
         });
     });
 
