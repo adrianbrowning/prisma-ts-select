@@ -173,5 +173,9 @@
     "./assets",
     "README.md",
     "package.json"
-  ]
+  ],
+  "publishConfig": {
+    "access": "public",
+    "name": "prisma-ts-select"
+  }
 }
