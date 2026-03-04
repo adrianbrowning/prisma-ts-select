@@ -36,4 +36,15 @@ prisma.$from("User")
 
     expectSQL(sql, expectedSQL);
   });
+
+  test("select(*) on join produces qualified columns", () => {
+    const sql = prisma.$from("User")
+      .join("Post", "authorId", "User.id")
+      .select("*")
+      .getSQL();
+
+    // select("*") on a multi-table query expands to qualified columns to avoid ambiguity
+    assert.ok(sql.includes("User.id"), `expected qualified "User.id" in: ${sql}`);
+    assert.ok(sql.includes("Post.title"), `expected qualified "Post.title" in: ${sql}`);
+  });
 });

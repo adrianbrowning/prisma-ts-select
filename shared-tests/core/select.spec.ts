@@ -61,18 +61,62 @@ describe("Select Tests", ()=> {
             });
         });
 
-        describe("basic select * with join — blocked", () => {
+        // Behavioral contract: select("*") on a multi-table query expands to qualified columns
+        // (e.g. "User.id", "Post.title"), returning UserPostQualifiedJoinRow, not UserPostJoinRow.
+        describe("basic select * with join", () => {
+            function createQuery() {
+                return prisma.$from("User")
+                    .join("Post", "authorId", "User.id")
+                    .select("*");
+            }
 
-            it("should throw at runtime", () => {
-                assert.throws(
-                    () => prisma.$from("User").join("Post", "authorId", "User.id").select("*" as any).getSQL(),
-                    /use selectAll/i
+            it("should match SQL", () => {
+                expectSQL(createQuery().getSQL(),
+                    `SELECT ${dialect.quoteQualifiedColumn("User.id")} AS ${dialect.quote("User.id", true)}, ${dialect.quoteQualifiedColumn("User.email")} AS ${dialect.quote("User.email", true)}, ${dialect.quoteQualifiedColumn("User.name")} AS ${dialect.quote("User.name", true)}, ${dialect.quoteQualifiedColumn("User.age")} AS ${dialect.quote("User.age", true)}, ${dialect.quoteQualifiedColumn("Post.id")} AS ${dialect.quote("Post.id", true)}, ${dialect.quoteQualifiedColumn("Post.title")} AS ${dialect.quote("Post.title", true)}, ${dialect.quoteQualifiedColumn("Post.content")} AS ${dialect.quote("Post.content", true)}, ${dialect.quoteQualifiedColumn("Post.published")} AS ${dialect.quote("Post.published", true)}, ${dialect.quoteQualifiedColumn("Post.createdAt")} AS ${dialect.quote("Post.createdAt", true)}, ${dialect.quoteQualifiedColumn("Post.authorId")} AS ${dialect.quote("Post.authorId", true)}, ${dialect.quoteQualifiedColumn("Post.lastModifiedById")} AS ${dialect.quote("Post.lastModifiedById", true)} FROM ${dialect.quote("User")} JOIN ${dialect.quote("Post")} ON ${dialect.quoteQualifiedColumn("Post.authorId")} = ${dialect.quoteQualifiedColumn("User.id")};`
                 );
             });
 
-            it("should be a type error", () => {
-                // @ts-expect-error: "*" not valid with joins
-                prisma.$from("User").join("Post", "authorId", "User.id").select("*");
+            it("should run and return qualified data", async () => {
+                const result = await createQuery().run();
+                typeCheck({} as Expect<Equal<typeof result, Array<UserPostQualifiedJoinRow>>>);
+                const expected: Array<UserPostQualifiedJoinRow> = [{
+                    'User.id': 1,
+                    'User.email': 'johndoe@example.com',
+                    'User.name': 'John Doe',
+                    'User.age': 25,
+                    'Post.id': 1,
+                    'Post.title': 'Blog 1',
+                    'Post.content': 'Something',
+                    'Post.published': false,
+                    'Post.createdAt': new Date("2020-01-15T10:30:00.000Z"),
+                    'Post.authorId': 1,
+                    'Post.lastModifiedById': 1
+                }, {
+                    'User.id': 1,
+                    'User.email': 'johndoe@example.com',
+                    'User.name': 'John Doe',
+                    'User.age': 25,
+                    'Post.id': 2,
+                    'Post.title': 'blog 2',
+                    'Post.content': 'sql',
+                    'Post.published': false,
+                    'Post.createdAt': new Date("2020-06-20T14:45:00.000Z"),
+                    'Post.authorId': 1,
+                    'Post.lastModifiedById': 1
+                }, {
+                    'User.id': 2,
+                    'User.email': 'smith@example.com',
+                    'User.name': 'John Smith',
+                    'User.age': 30,
+                    'Post.id': 3,
+                    'Post.title': 'blog 3',
+                    'Post.content': null,
+                    'Post.published': false,
+                    'Post.createdAt': new Date("2021-12-25T08:00:00.000Z"),
+                    'Post.authorId': 2,
+                    'Post.lastModifiedById': 2
+                }];
+                assert.deepStrictEqual(result, expected);
             });
         })
 
@@ -85,11 +129,11 @@ describe("Select Tests", ()=> {
                     .orderBy(["id"]);
             }
 
-            it("sql", async () => {
+            it("should match SQL", async () => {
                 const sql = createQuery().getSQL();
                 expectSQL(sql, `SELECT DISTINCT * FROM ${dialect.quote("User")} ORDER BY ${dialect.quoteOrderByClause("id")};`)
             });
-            it("sql", async () => {
+            it("should run and return distinct data", async () => {
                 const result = await createQuery().run();
 
 

@@ -225,7 +225,7 @@ type Trim<T> = T extends `${Whitespace}${infer U}` ? Trim<U> : T extends `${infe
  * // Returns: "*" | "id" | "name" | "Post.id" | "Post.title" | "User.*" | "Post.*"
  */
 type ValidSelect<Tables extends TArrSources, TFields extends TFieldsType = {}> =
-    | (Tables extends [TTableSources] ? "*" : never)
+    | "*"
     | GetOtherColumns<Tables>
     | GetTableStar<Tables>
     | GetCTEColumns<Tables, TFields>;
@@ -404,7 +404,7 @@ type Values = {
     selectDistinct?: true;
     selects: Array<string>;
     tables: [{ table: string, alias?: string }, ...Array<{ table: string, local: string, remote: string, alias?: string, joinWhere?: ClauseType, joinType?: JoinType }>];
-    withs?: Array<{ name: string; sql: string }>;
+    withs?: Array<{ name: string; sql: string; columns?: string[] }>;
     limit?: number;
     offset?: number;
     where?: ClauseType;
@@ -604,10 +604,6 @@ class _fRun<TSources extends TArrSources, TFields extends TFieldsType, TSelectRT
     }
 
     getSQL(formatted: boolean = false) {
-
-        if (this.values.tables.length > 1 && this.values.selects.includes("*")) {
-            throw new Error("select('*') is not supported with joins — use selectAll() instead");
-        }
 
         const withClause = this.values.withs?.length
             ? `WITH ${this.values.withs.map(w =>
@@ -865,7 +861,8 @@ type GenName<T extends string, F extends unknown, IncName extends boolean> = F e
  * // Returns: {"User.id": number, "User.name": string}
  */
 type IterateTablesFromFields<Table extends TTableSources, TFields extends Record<string, string>, IncTName extends boolean> = {
-    [f in keyof TFields as GenName<Table extends string ? Table : `Come back to 6`, f, IncTName>]: TFields[f]
+    // Assumes TTableSources is either string or [any, string] tuple — new shapes must be added here
+    [f in keyof TFields as GenName<Table extends string ? Table : Table extends readonly [any, infer Name extends string] ? Name : never, f, IncTName>]: TFields[f]
     // (f extends string
     //     ? [IncTName] extends [false]
     //         ? Record<f, TFields[f]>
@@ -978,7 +975,7 @@ class _fSelect<TSources extends TArrSources, TFields extends TFieldsType, TSelec
         : _fSelect<TSources, TFields, Prettify<TSelectRT & Record<A, T>>>
     // String column — no alias
     select<const TSelect extends ValidSelect<TSources, TFields>>(select: TSelect)
-        : _fSelect<TSources, TFields, Prettify<TSelectRT & MergeItems<TSelect, TSources, TFields>>>
+        : _fSelect<TSources, TFields, Prettify<TSelectRT & MergeItems<TSelect, TSources, TFields, CountKeys<TSources> extends 1 ? false : true>>>
     // String column — with alias
     select<const TSelect extends ValidSelect<TSources, TFields>, TAlias extends string>(select: TSelect, alias: TAlias)
         : _fSelect<TSources, TFields, Prettify<TSelectRT & Record<TAlias, ExtractColumnType<TSelect, TSources, TFields>>>>
@@ -1072,6 +1069,9 @@ class _fSelect<TSources extends TArrSources, TFields extends TFieldsType, TSelec
 
         // Check if alias is provided
         if (alias !== undefined) {
+            if (select === "*" && this.values.tables.length > 1) {
+                throw new Error(`select("*", alias) is not supported on multi-table queries — use explicit column names or select("*") without alias`);
+            }
             const quotedSelect = select === "*"
                 ? "*"
                 : select.includes('.')
@@ -1081,6 +1081,14 @@ class _fSelect<TSources extends TArrSources, TFields extends TFieldsType, TSelec
                 ...this.values,
                 selects: [...this.values.selects, `${quotedSelect} AS ${dialect.quote(alias, true)}`]
             }) as any;
+        }
+
+        // Expand "*" for multi-table queries
+        if (select === "*" && this.values.tables.length > 1) {
+            const expandedSelects = this.values.tables.flatMap(tableObj =>
+                expandToQualifiedSelects(tableObj, this.values.withs)
+            );
+            return new _fSelect(this.db, { ...this.values, selects: [...this.values.selects, ...expandedSelects] }) as any;
         }
 
         // Default: quote based on whether it's qualified or not
@@ -1111,7 +1119,7 @@ class _fSelect<TSources extends TArrSources, TFields extends TFieldsType, TSelec
  * type Count2 = CountKeys<["User", "Post"]>; // 2
  * type Count3 = CountKeys<["User", "Post", "Comment"]>; // 3
  */
-type CountKeys<T extends Array<TTableSources>, acc extends Array<true> = []> = T extends [string, ...infer R extends Array<string>] ? CountKeys<R, [...acc, true]> : acc["length"];
+type CountKeys<T extends Array<TTableSources>, acc extends Array<true> = []> = T extends [TTableSources, ...infer R extends Array<TTableSources>] ? CountKeys<R, [...acc, true]> : acc["length"];
 
 // "User.email" → "email"
 type StripTablePrefix<S extends string> = S extends `${string}.${infer Col}` ? Col : S
@@ -1134,13 +1142,7 @@ class _fSelectDistinct<TSources extends TArrSources, TFields extends TFieldsType
         const selects = (function (values: Values) {
             if (values.tables && values.tables.length > 1) {
                 return values.tables.reduce<Array<string>>((acc, tableObj): Array<string> => {
-                    const tableIdentifier = tableObj.alias || tableObj.table;
-                    const actualTable = tableObj.table;
-                    if (!DB[actualTable]) return acc; // CTEs have no DB schema entry — skip silently; explicit 'cte.col' refs are still available via select()
-                    return acc.concat(Object.keys(DB[actualTable]!.fields).map((field) => {
-                        const qualifiedCol = `${tableIdentifier}.${field}`;
-                        return `${dialect.quoteQualifiedColumn(qualifiedCol)} AS ${dialect.quote(`${tableIdentifier}.${field}`, true)}`;
-                    }))
+                    return acc.concat(expandToQualifiedSelects(tableObj, values.withs));
                 }, []);
             }
             const t = values.tables[0];
@@ -1899,6 +1901,9 @@ returns {
  * SafeJoins<"Post", ["User"]> // { User: { authorId: ["id"] } }
  * // Category is excluded because it's not in the current query
  */
+/** Widens to string only when the specific join target (TJTable) is a CTE, not when any CTE is present in sources. */
+type IsTargetCTE<TJTable> = TJTable extends TVirtualTableSource ? string : never;
+
 export type SafeJoins<TNewJoin extends TTables,
     TJoins extends TArrSources,
     TRelations = Relations<TNewJoin>
@@ -2455,8 +2460,11 @@ class _fJoin<
         Table extends AvailableJoins<TSources> = ExtractTableName<TableInput> & AvailableJoins<TSources>,
         TAlias extends string | never = ExtractAlias<TableInput>,
         TJoinCols extends [string, string] = ValidStringTuple<GetUnionOfRelations<MapJoinsToKnownTables<SafeJoins<Table, TSources>, TSources>>>,
-        TCol1 extends TJoinCols[0] = never
-    >(table: TableInput, field: TCol1, reference: find<TJoinCols, TCol1>, options?: { where?: JoinWhereCriteria<Table, TAlias>, joinType?: JoinType }):
+        // TJTable is TVirtualTableSource when: target is a CTE, OR no real tables in sources (can't infer join cols)
+        TJTable = Table extends keyof TCTEs ? TVirtualTableSource
+            : [Extract<TSources[number], string>] extends [never] ? TVirtualTableSource : never,
+        TCol1 extends (TJoinCols[0] | IsTargetCTE<TJTable>) = never
+    >(table: TableInput, field: TCol1, reference: find<TJoinCols, TCol1> | IsTargetCTE<TJTable>, options?: { where?: JoinWhereCriteria<Table, TAlias>, joinType?: JoinType }):
         _fJoinReturn<[...TSources, [TAlias] extends [never] ? Table : [Table, TAlias]],
             Prettify<TFields & Record<[TAlias] extends [never] ? Table : TAlias, GetFieldsFromTable<Table>>>, TCTEs>;
 
@@ -3016,19 +3024,66 @@ OFFSET -
 
 
 
+function expandToQualifiedSelects(
+    tableObj: { table: string; alias?: string },
+    withs: Values["withs"]
+): Array<string> {
+    const tId = tableObj.alias || tableObj.table;
+    if (DB[tableObj.table]) {
+        return Object.keys(DB[tableObj.table]!.fields).map(field => {
+            const q = `${tId}.${field}`;
+            return `${dialect.quoteQualifiedColumn(q)} AS ${dialect.quote(q, true)}`;
+        });
+    }
+    const cte = withs?.find(w => w.name === tableObj.table);
+    if (!cte?.columns?.length) throw new Error(`Cannot expand * for CTE "${tableObj.table}" — select columns explicitly`);
+    return cte.columns.map(col => {
+        const q = `${tId}.${col}`;
+        return `${dialect.quoteQualifiedColumn(q)} AS ${dialect.quote(q, true)}`;
+    });
+}
+
+/**
+ * Extracts the output alias from a SQL select expression.
+ * Computed expressions (CASE, function calls) without an explicit `AS alias` return null.
+ */
+function extractSelectAlias(expr: string): string | null {
+    // "col" AS `alias` or "col" AS 'alias'
+    const aliased = / AS ["'`](.+?)["'`]\s*$/i.exec(expr);
+    if (aliased) return aliased[1]!;
+    // `col` or "col" or 'col' (dialect-quoted bare identifier)
+    const quoted = /^["'`](.+?)["'`]$/.exec(expr);
+    if (quoted) return quoted[1]!;
+    // plain unquoted identifier (e.g. sqlite without quoting) — must be simple word
+    if (/^\w+$/.test(expr)) return expr;
+    return null;
+}
+
+/**
+ * Extracts column aliases from a query's select list.
+ * Computed expressions (CASE, function calls) without an explicit `AS alias`
+ * return null from extractSelectAlias and are excluded from the result.
+ */
+function extractCTEColumns(query: _fRun<any, any, any>): string[] {
+    return (query as any).values.selects
+        .map(extractSelectAlias)
+        .filter((c: string | null): c is string => c !== null);
+}
+
 class DbWith<TCTEs extends Record<string, Record<string, any>>> {
     constructor(
         private db: PrismaClient,
-        private _withs: Array<{ name: string; sql: string }>
+        private _withs: Array<{ name: string; sql: string; columns?: string[] }>
     ) {}
 
     with<const TName extends string, TQuery extends _fRun<any, any, any>>(
         name: TName,
         query: TQuery
     ): DbWith<TCTEs & Record<TName, InferCTEShape<TQuery>>> {
+        const columns = extractCTEColumns(query);
         return new DbWith(this.db, [
             ...this._withs,
-            { name, sql: query.getSQL().replace(/;$/, '') }
+            { name, sql: query.getSQL().replace(/;$/, ''), columns }
         ]) as any;
     }
 
@@ -3071,7 +3126,8 @@ const extendedPrismaClient =  {
             query: TQuery
         ): DbWith<Record<TName, InferCTEShape<TQuery>>> {
             const client = Prisma.getExtensionContext(this) as unknown as PrismaClient;
-            return new DbWith(client, [{ name, sql: query.getSQL().replace(/;$/, '') }]);
+            const columns = extractCTEColumns(query);
+            return new DbWith(client, [{ name, sql: query.getSQL().replace(/;$/, ''), columns }]);
         },
     },
 };

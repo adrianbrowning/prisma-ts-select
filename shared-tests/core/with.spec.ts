@@ -319,4 +319,149 @@ describe("$with (CTE)", () => {
         assert.ok('pp.title' in result[0]!, 'Result should have pp.title');
     });
 
+    describe("select * with CTE join", () => {
+        function createQuery() {
+            const inner = prisma.$from("Post").select("id").select("authorId").select("title");
+            return prisma
+                .$with("pp", inner)
+                .from("User")
+                .join("pp", "authorId", "User.id")
+                .select("*");
+        }
+
+        test("should match SQL", () => {
+            expectSQL(createQuery().getSQL(),
+                `WITH ${dialect.quoteTableIdentifier("pp", false)} AS (SELECT ${dialect.quote("id")}, ${dialect.quote("authorId")}, ${dialect.quote("title")} FROM ${dialect.quote("Post")}) SELECT ${dialect.quoteQualifiedColumn("User.id")} AS ${dialect.quote("User.id", true)}, ${dialect.quoteQualifiedColumn("User.email")} AS ${dialect.quote("User.email", true)}, ${dialect.quoteQualifiedColumn("User.name")} AS ${dialect.quote("User.name", true)}, ${dialect.quoteQualifiedColumn("User.age")} AS ${dialect.quote("User.age", true)}, ${dialect.quoteQualifiedColumn("pp.id")} AS ${dialect.quote("pp.id", true)}, ${dialect.quoteQualifiedColumn("pp.authorId")} AS ${dialect.quote("pp.authorId", true)}, ${dialect.quoteQualifiedColumn("pp.title")} AS ${dialect.quote("pp.title", true)} FROM ${dialect.quote("User")} JOIN ${dialect.quote("pp")} ON ${dialect.quoteQualifiedColumn("pp.authorId")} = ${dialect.quoteQualifiedColumn("User.id")};`
+            );
+        });
+
+        test("should run and return qualified data including CTE columns", async () => {
+            const result = await createQuery().run();
+            type IdType = (typeof result)[0]["User.id"];
+            typeCheck({} as Expect<Equal<IdType, number>>);
+            type TitleType = (typeof result)[0]["pp.title"];
+            typeCheck({} as Expect<Equal<TitleType, string>>);
+            assert.deepStrictEqual(result, [{
+                'User.id': 1, 'User.email': 'johndoe@example.com', 'User.name': 'John Doe', 'User.age': 25,
+                'pp.id': 1, 'pp.authorId': 1, 'pp.title': 'Blog 1'
+            }, {
+                'User.id': 1, 'User.email': 'johndoe@example.com', 'User.name': 'John Doe', 'User.age': 25,
+                'pp.id': 2, 'pp.authorId': 1, 'pp.title': 'blog 2'
+            }, {
+                'User.id': 2, 'User.email': 'smith@example.com', 'User.name': 'John Smith', 'User.age': 30,
+                'pp.id': 3, 'pp.authorId': 2, 'pp.title': 'blog 3'
+            }]);
+        });
+    });
+
+    describe("select * with CTE as base joined to real table", () => {
+        function createQuery() {
+            const inner = prisma.$from("Post").select("id").select("authorId").select("title");
+            return prisma
+                .$with("pp", inner)
+                .from("pp")
+                .join("User", "id", "pp.authorId")
+                .select("*");
+        }
+
+        test("should match SQL", () => {
+            expectSQL(createQuery().getSQL(),
+                `WITH ${dialect.quoteTableIdentifier("pp", false)} AS (SELECT ${dialect.quote("id")}, ${dialect.quote("authorId")}, ${dialect.quote("title")} FROM ${dialect.quote("Post")}) SELECT ${dialect.quoteQualifiedColumn("pp.id")} AS ${dialect.quote("pp.id", true)}, ${dialect.quoteQualifiedColumn("pp.authorId")} AS ${dialect.quote("pp.authorId", true)}, ${dialect.quoteQualifiedColumn("pp.title")} AS ${dialect.quote("pp.title", true)}, ${dialect.quoteQualifiedColumn("User.id")} AS ${dialect.quote("User.id", true)}, ${dialect.quoteQualifiedColumn("User.email")} AS ${dialect.quote("User.email", true)}, ${dialect.quoteQualifiedColumn("User.name")} AS ${dialect.quote("User.name", true)}, ${dialect.quoteQualifiedColumn("User.age")} AS ${dialect.quote("User.age", true)} FROM ${dialect.quoteTableIdentifier("pp", false)} JOIN ${dialect.quote("User")} ON ${dialect.quoteQualifiedColumn("User.id")} = ${dialect.quoteQualifiedColumn("pp.authorId")};`
+            );
+        });
+
+        test("should run and return qualified CTE + real table data", async () => {
+            const result = await createQuery().run();
+            type AuthorIdType = (typeof result)[0]["pp.authorId"];
+            typeCheck({} as Expect<Equal<AuthorIdType, number>>);
+            type NameType = (typeof result)[0]["User.name"];
+            typeCheck({} as Expect<Equal<NameType, string | null>>);
+            assert.deepStrictEqual(result, [
+                { 'pp.id': 1, 'pp.authorId': 1, 'pp.title': 'Blog 1',  'User.id': 1, 'User.email': 'johndoe@example.com', 'User.name': 'John Doe',   'User.age': 25 },
+                { 'pp.id': 2, 'pp.authorId': 1, 'pp.title': 'blog 2',  'User.id': 1, 'User.email': 'johndoe@example.com', 'User.name': 'John Doe',   'User.age': 25 },
+                { 'pp.id': 3, 'pp.authorId': 2, 'pp.title': 'blog 3',  'User.id': 2, 'User.email': 'smith@example.com',   'User.name': 'John Smith', 'User.age': 30 },
+            ]);
+        });
+    });
+
+    describe("select * with CTE as base", () => {
+        function createQuery() {
+            const inner = prisma.$from("Post").select("id").select("authorId").select("title");
+            return prisma
+                .$with("pp", inner)
+                .from("pp")
+                .select("*");
+        }
+
+        test("should match SQL", () => {
+            expectSQL(createQuery().getSQL(),
+                `WITH ${dialect.quoteTableIdentifier("pp", false)} AS (SELECT ${dialect.quote("id")}, ${dialect.quote("authorId")}, ${dialect.quote("title")} FROM ${dialect.quote("Post")}) SELECT * FROM ${dialect.quoteTableIdentifier("pp", false)};`
+            );
+        });
+
+        test("should run and return CTE data unqualified", async () => {
+            const result = await createQuery().run();
+            type IdType = (typeof result)[0]["id"];
+            typeCheck({} as Expect<Equal<IdType, number>>);
+            type TitleType = (typeof result)[0]["title"];
+            typeCheck({} as Expect<Equal<TitleType, string>>);
+            assert.deepStrictEqual(result, [
+                { id: 1, authorId: 1, title: 'Blog 1' },
+                { id: 2, authorId: 1, title: 'blog 2' },
+                { id: 3, authorId: 2, title: 'blog 3' },
+            ]);
+        });
+    });
+
+    describe("selectAll() with CTE join", () => {
+        function createQuery() {
+            const inner = prisma.$from("Post").select("id").select("authorId").select("title");
+            return prisma
+                .$with("pp", inner)
+                .from("User")
+                .join("pp", "authorId", "User.id")
+                .selectAll();
+        }
+
+        test("should match SQL", () => {
+            expectSQL(createQuery().getSQL(),
+                `WITH ${dialect.quoteTableIdentifier("pp", false)} AS (SELECT ${dialect.quote("id")}, ${dialect.quote("authorId")}, ${dialect.quote("title")} FROM ${dialect.quote("Post")}) SELECT ${dialect.quoteQualifiedColumn("User.id")} AS ${dialect.quote("User.id", true)}, ${dialect.quoteQualifiedColumn("User.email")} AS ${dialect.quote("User.email", true)}, ${dialect.quoteQualifiedColumn("User.name")} AS ${dialect.quote("User.name", true)}, ${dialect.quoteQualifiedColumn("User.age")} AS ${dialect.quote("User.age", true)}, ${dialect.quoteQualifiedColumn("pp.id")} AS ${dialect.quote("pp.id", true)}, ${dialect.quoteQualifiedColumn("pp.authorId")} AS ${dialect.quote("pp.authorId", true)}, ${dialect.quoteQualifiedColumn("pp.title")} AS ${dialect.quote("pp.title", true)} FROM ${dialect.quote("User")} JOIN ${dialect.quote("pp")} ON ${dialect.quoteQualifiedColumn("pp.authorId")} = ${dialect.quoteQualifiedColumn("User.id")};`
+            );
+        });
+
+        test("should run and return qualified data including CTE columns", async () => {
+            const result = await createQuery().run();
+            type IdType = (typeof result)[0]["User.id"];
+            typeCheck({} as Expect<Equal<IdType, number>>);
+            type TitleType = (typeof result)[0]["pp.title"];
+            typeCheck({} as Expect<Equal<TitleType, string>>);
+            assert.deepStrictEqual(result, [{
+                'User.id': 1, 'User.email': 'johndoe@example.com', 'User.name': 'John Doe', 'User.age': 25,
+                'pp.id': 1, 'pp.authorId': 1, 'pp.title': 'Blog 1'
+            }, {
+                'User.id': 1, 'User.email': 'johndoe@example.com', 'User.name': 'John Doe', 'User.age': 25,
+                'pp.id': 2, 'pp.authorId': 1, 'pp.title': 'blog 2'
+            }, {
+                'User.id': 2, 'User.email': 'smith@example.com', 'User.name': 'John Smith', 'User.age': 30,
+                'pp.id': 3, 'pp.authorId': 2, 'pp.title': 'blog 3'
+            }]);
+        });
+    });
+
+    test("select * with CTE-in-join and no parseable columns throws", () => {
+        const fakeQuery = { values: { selects: [] }, getSQL: () => '' } as any;
+        const withCtx = prisma.$with("pp", fakeQuery);
+        const joined = withCtx.from("User").join("pp" as any, "id" as any, "User.id" as any);
+        assert.throws(() => joined.select("*"), /Cannot expand \* for CTE "pp"/);
+    });
+
+    test("selectAll() on CTE base throws", () => {
+        const inner = prisma.$from("Post").select("id").select("title");
+        const query = prisma.$with("pp", inner).from("pp");
+        assert.throws(
+            () => query.selectAll(),
+            /selectAll\(\) is not supported when the base table is a CTE/
+        );
+    });
+
 });
