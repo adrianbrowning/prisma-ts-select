@@ -5,13 +5,16 @@ import {resolveArg, type SQLExpr} from "../sql-expr.js";
  * These aggregate functions use standard SQL syntax.
  */
 export const sharedFunctions = {
-
+  // Intentionally empty — placeholder for future cross-dialect functions
 };
 
 /** Escapes single quotes in SQL string literals. */
 export const esc = (s: string) => s.replace(/'/g, "''");
 
-/** Flattens jsonObject pairs into alternating quoted-key / resolved-value SQL tokens. */
+/**
+ * Flattens jsonObject pairs into alternating quoted-key / resolved-value SQL tokens.
+ * @param pairs - [key, value] pairs where string value must be a valid column reference resolved by quoteFn
+ */
 export const flattenJsonObjectPairs = (
   pairs: [string, string | SQLExpr<unknown>][],
   quoteFn: (ref: string) => string,

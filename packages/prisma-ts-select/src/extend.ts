@@ -68,7 +68,7 @@ type DATABASE = {
 
 export type JSONPrimitive = string | number | boolean | null;
 export type JSONValue = JSONPrimitive | JSONObject | JSONArray;
-export type JSONObject = { [member: string]: JSONValue; };
+export type JSONObject = { [member: string]: JSONValue | undefined };
 export type JSONArray = Array<JSONValue>;
 
 /**
@@ -473,6 +473,7 @@ function processCriteria(main: ClauseType, joinType: "AND" | "OR" = "AND", forma
     const results: Array<string> = [];
     for (const criteria of main) {
         if (typeof criteria === 'string') {
+            // Only reached from whereRaw / explicitly-marked raw escape-hatch paths
             results.push(criteria);
             continue;
         }
@@ -1651,6 +1652,9 @@ class _fWhere<TSources extends TArrSources, TFields extends TFieldsType> extends
         });
     }
 
+    /**
+     * @security NEVER pass user-supplied input. Inserts SQL verbatim into $queryRawUnsafe without parameterization.
+     */
     whereRaw<RAW extends string >(where:NO_START_WITH_WHERE<RAW>) {
 
         return new _fGroupBy<TSources, TFields>(this.db, {
@@ -3121,6 +3125,7 @@ const extendedPrismaClient =  {
             return new DbSelect(client)
                 .from(base!.trim() as Table, (aliases.join().trim() || undefined) as TAlias)
         },
+        /** @note `query` must be produced by the same prisma-ts-select builder instance. */
         $with<const TName extends string, TQuery extends _fRun<any, any, any>>(
             name: TName,
             query: TQuery

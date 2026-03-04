@@ -108,7 +108,7 @@ export const sqliteContextFns = <TColEntries extends [string, unknown] = never, 
   jsonExtract: (col: FilterJsonCols<TColEntries> | SQLExpr<JSONValue>, path: string): SQLExpr<JSONValue> =>
     sqlExpr(`json_extract(${resolveArg(col, quoteFn)}, '${esc(path)}')`),
   jsonArray: (...args: [ColName<TColEntries> | SQLExpr<unknown>, ...Array<ColName<TColEntries> | SQLExpr<unknown>>]): SQLExpr<JSONValue[]> =>
-    sqlExpr(`json_array(${args.map(a => resolveArg(a as ColName<TColEntries> | SQLExpr<unknown>, quoteFn)).join(', ')})`),
+    sqlExpr(`json_array(${args.map(a => resolveArg(a, quoteFn)).join(', ')})`),
   jsonObject: (pairs: [string, ColName<TColEntries> | SQLExpr<unknown>][]): SQLExpr<JSONObject> =>
     sqlExpr(`json_object(${flattenJsonObjectPairs(pairs, quoteFn).join(', ')})`),
   // ── Type coercion ────────────────────────────────────────────────────────

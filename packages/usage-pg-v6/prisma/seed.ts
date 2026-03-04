@@ -1,4 +1,4 @@
-import {PrismaClient} from "../generated/prisma/index.js";
+import {PrismaClient, Prisma} from "../generated/prisma/index.js";
 
 const prisma = new PrismaClient();
 
@@ -54,7 +54,8 @@ async function seed() {
                 published: false,
                 createdAt: new Date('2020-06-20T14:45:00.000Z'),
                 authorId: 1,
-                lastModifiedById: 1
+                lastModifiedById: 1,
+                metadata: Prisma.DbNull,
             },
             {
                 id: 3,
@@ -63,7 +64,8 @@ async function seed() {
                 published: false,
                 createdAt: new Date('2021-12-25T08:00:00.000Z'),
                 authorId: 2,
-                lastModifiedById: 2
+                lastModifiedById: 2,
+                metadata: Prisma.DbNull,
             }
         ]
     });

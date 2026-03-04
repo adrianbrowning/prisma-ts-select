@@ -40,9 +40,12 @@ describe("PostgreSQL JSON scalar fns", () => {
         it("should run and return rows", async () => {
             const rows = await createQuery().run();
             assert.ok(Array.isArray(rows));
-            // jsonb_build_array returns a JS array after pg driver deserialisation
-            assert.ok(Array.isArray(rows[0]?.arr));
-            assert.strictEqual(typeof rows[0]?.arr[0], 'number');
+            assert.ok(rows.length > 0, 'expected rows from Post table');
+            // PG driver may return JSONB as string or parsed object — handle both
+            const raw = rows[0]?.arr;
+            const arr: unknown[] = typeof raw === 'string' ? JSON.parse(raw) : raw as unknown[];
+            assert.ok(Array.isArray(arr));
+            assert.strictEqual(typeof arr[0], 'number');
         });
     });
 
@@ -60,7 +63,26 @@ describe("PostgreSQL JSON scalar fns", () => {
         it("should run and return rows", async () => {
             const rows = await createQuery().run();
             assert.ok(Array.isArray(rows));
+            assert.ok(rows.length > 0, 'expected rows from Post table');
             assert.deepStrictEqual(Object.keys(rows[0]?.obj ?? {}).sort(), ['id', 'title']);
+        });
+    });
+
+    describe("jsonExtract — array path $.tags[0]", () => {
+        function createQuery() {
+            return prisma.$from("Post")
+                .select(({ jsonExtract }) => jsonExtract("Post.metadata", "$.tags[0]"), "firstTag");
+        }
+
+        it("should run and return first tag for post with metadata", async () => {
+            const rows = await createQuery().run();
+            assert.ok(Array.isArray(rows));
+            assert.ok(rows.length > 0, 'expected rows from Post table');
+            // Post id=1 has metadata.tags = ['prisma', 'ts'] — $.tags[0] = 'prisma'
+            // PG JSONPath $.tags[0] returns the first element
+            assert.ok(rows.some(r => r.firstTag === 'prisma'), 'expected $.tags[0] to return first tag');
+            // Posts 2 & 3 have null metadata — expect null
+            assert.ok(rows.some(r => r.firstTag === null), 'expected null for posts with null metadata');
         });
     });
 

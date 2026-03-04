@@ -110,7 +110,12 @@ export const postgresqlContextFns = <TColEntries extends [string, unknown] = nev
   div:     (x: FilterCols<TColEntries, number> | SQLExpr<number>, y: number): SQLExpr<number> => sqlExpr(`DIV(${resolveArg(x, quoteFn)}, ${y})`),
   random:  (): SQLExpr<number> => sqlExpr('RANDOM()'),
   // ── JSON scalar fns ───────────────────────────────────────────────────────
-  /** Uses jsonb_path_query_first — requires PG 12+ (Prisma 5+ minimum). */
+  /**
+   * Uses jsonb_path_query_first — requires PG 12+ (Prisma 5+ minimum).
+   * @note PG uses JSONPath syntax (e.g. `$.tags[0]`, `$.name`).
+   * MySQL/SQLite use SQL/JSON path syntax — paths are NOT cross-dialect compatible.
+   * Mismatched paths silently return NULL.
+   */
   jsonExtract: (col: FilterJsonCols<TColEntries> | SQLExpr<JSONValue>, path: string): SQLExpr<JSONValue> =>
     sqlExpr(`jsonb_path_query_first(${resolveArg(col, quoteFn)}, '${esc(path)}')`),
   jsonArray: (...args: [ColName<TColEntries> | SQLExpr<unknown>, ...Array<ColName<TColEntries> | SQLExpr<unknown>>]): SQLExpr<JSONValue[]> =>

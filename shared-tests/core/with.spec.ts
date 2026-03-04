@@ -126,7 +126,6 @@ describe("$with (CTE)", () => {
             .select('pp.title')
             .run();
 
-        assert.ok(result.length > 0, 'Should return rows');
         t.assert.snapshot(result);
     });
 

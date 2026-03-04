@@ -40,6 +40,7 @@ describe("SQLite JSON scalar fns", () => {
         it("should run and return rows", async () => {
             const rows = await createQuery().run();
             assert.ok(Array.isArray(rows));
+            assert.ok(rows.length > 0, 'expected rows from Post table');
             // SQLite returns json_array() as a JSON string — parse it
             const raw = rows[0]?.arr;
             const arr: unknown[] = typeof raw === 'string' ? JSON.parse(raw) : raw as unknown[];
@@ -62,10 +63,28 @@ describe("SQLite JSON scalar fns", () => {
         it("should run and return rows", async () => {
             const rows = await createQuery().run();
             assert.ok(Array.isArray(rows));
+            assert.ok(rows.length > 0, 'expected rows from Post table');
             // SQLite returns json_object() as a JSON string — parse it
             const raw = rows[0]?.obj;
             const obj: Record<string, unknown> = typeof raw === 'string' ? JSON.parse(raw) : raw as Record<string, unknown>;
             assert.deepStrictEqual(Object.keys(obj).sort(), ['id', 'title']);
+        });
+    });
+
+    describe("jsonExtract — array path $.tags[0]", () => {
+        function createQuery() {
+            return prisma.$from("Post")
+                .select(({ jsonExtract }) => jsonExtract("Post.metadata", "$.tags[0]"), "firstTag");
+        }
+
+        it("should run and return first tag for post with metadata", async () => {
+            const rows = await createQuery().run();
+            assert.ok(Array.isArray(rows));
+            assert.ok(rows.length > 0, 'expected rows from Post table');
+            // Post id=1 has metadata.tags = ['prisma', 'ts'] — $.tags[0] = 'prisma'
+            assert.ok(rows.some(r => r.firstTag === 'prisma'), 'expected $.tags[0] to return first tag');
+            // Posts 2 & 3 have null metadata — expect null
+            assert.ok(rows.some(r => r.firstTag === null), 'expected null for posts with null metadata');
         });
     });
 
