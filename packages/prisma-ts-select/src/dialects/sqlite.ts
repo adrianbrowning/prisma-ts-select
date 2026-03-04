@@ -10,8 +10,8 @@ type SqliteMinMaxResult<TColEntries extends [string, unknown], Col extends strin
 
 // Prisma v6 stores DateTime as integer ms, v7 as ISO text in SQLite.
 // CASE normalizes both to a date string; SQLExpr args (e.g. now()) pass through unchanged.
-// INTEGER returns number (not bigint) — CAST coercion returns small integers as JS number
-type SqliteCastTypeMap = { INTEGER: number; TEXT: string; REAL: number; NUMERIC: number; BLOB: Buffer };
+// INTEGER returns bigint — consistent with all other SQLite integer-returning functions
+type SqliteCastTypeMap = { INTEGER: bigint; TEXT: string; REAL: number; NUMERIC: number; BLOB: Buffer };
 
 const SQLITE_CAST_TYPES = new Set<string>(['INTEGER','TEXT','REAL','NUMERIC','BLOB']);
 

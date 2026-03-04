@@ -24,15 +24,15 @@ describe("SQLite cast() fn", () => {
                 `SELECT CAST(strftime('%Y', ${dateExpr("Post.createdAt")}) AS INTEGER) AS ${dialect.quote("y", true)} FROM ${dialect.quote("Post")};`);
         });
 
-        it("type: number", async () => {
+        it("type: bigint", async () => {
             const result = await createQuery().run();
-            typeCheck({} as Expect<Equal<typeof result, Array<{ y: number }>>>);
+            typeCheck({} as Expect<Equal<typeof result, Array<{ y: bigint }>>>);
         });
 
-        it("returns numeric year values", async () => {
+        it("returns bigint year values", async () => {
             const result = await createQuery().run();
-            const years = result.map(r => r.y).sort((a, b) => a - b);
-            assert.deepEqual(years, [2020, 2020, 2021]);
+            const years = result.map(r => r.y).sort((a, b) => (a < b ? -1 : a > b ? 1 : 0));
+            assert.deepEqual(years, [2020n, 2020n, 2021n]);
         });
     });
 

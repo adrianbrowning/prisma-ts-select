@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
+import type { Decimal } from "@prisma/client/runtime/client";
 import type { Equal, Expect } from "../../utils.ts";
 import { typeCheck } from "../../utils.ts";
 import { expectSQL } from "../../test-utils.ts";
@@ -60,14 +61,14 @@ describe("MySQL cast() fn", () => {
                 `SELECT CAST(${dialect.quoteQualifiedColumn("User.id")} AS DECIMAL) AS ${dialect.quote("a", true)} FROM ${dialect.quote("User")};`);
         });
 
-        it("type: number", async () => {
+        it("type: Decimal", async () => {
             const result = await createQuery().run();
-            typeCheck({} as Expect<Equal<typeof result, Array<{ a: number }>>>);
+            typeCheck({} as Expect<Equal<typeof result, Array<{ a: Decimal }>>>);
         });
 
-        it("returns numeric values", async () => {
+        it("returns Decimal values", async () => {
             const result = await createQuery().run();
-            assert.deepEqual(result.map(r => r.a).sort((a, b) => (a as number) - (b as number)), [1, 2, 3]);
+            assert.deepEqual(result.map(r => r.a.toNumber()).sort((a, b) => a - b), [1, 2, 3]);
         });
     });
 

@@ -4,7 +4,7 @@ import type {JSONValue} from "../utils/types.js";
 import type {Decimal} from "@prisma/client/runtime/client";
 import {esc, type FilterCols, type ColName} from "./shared.js";
 
-type MySQLCastTypeMap = { SIGNED: bigint; UNSIGNED: bigint; DECIMAL: number; CHAR: string; BINARY: Buffer; DATE: Date; DATETIME: Date; TIME: string; JSON: JSONValue; FLOAT: number; DOUBLE: number };
+type MySQLCastTypeMap = { SIGNED: bigint; UNSIGNED: bigint; DECIMAL: Decimal; CHAR: string; BINARY: Buffer; DATE: Date; DATETIME: Date; TIME: string; JSON: JSONValue; FLOAT: number; DOUBLE: number };
 
 const MYSQL_CAST_TYPES = new Set<string>(['SIGNED','UNSIGNED','DECIMAL','CHAR','BINARY','DATE','DATETIME','TIME','JSON','FLOAT','DOUBLE']);
 
