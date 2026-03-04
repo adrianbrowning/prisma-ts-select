@@ -33,6 +33,12 @@ if [[ -n "$DB" && "$DB" != "sqlite" && "$DB" != "mysql" && "$DB" != "pg" ]]; the
   echo "Error: --db must be sqlite, mysql, or pg" >&2; exit 1
 fi
 
+# ── Branch-isolated DB name ───────────────────────────────────────────────────
+BRANCH=$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "local")
+BRANCH_DB=$(echo "$BRANCH" | sed 's|[^a-zA-Z0-9]|_|g' | tr '[:upper:]' '[:lower:]' | cut -c1-64)
+MYSQL_URL="mysql://root:test@localhost:3306/${BRANCH_DB}"
+PG_URL="postgresql://postgres:test@localhost:5432/${BRANCH_DB}?schema=public"
+
 # ── Build package matrix ──────────────────────────────────────────────────────
 VERSIONS=("6" "7")
 DBS=("sqlite" "mysql" "pg")
@@ -53,15 +59,35 @@ done
 DOCKER_STARTED_BY_US=false
 
 if $NEED_DOCKER; then
-  # Check if services are already running
+  # Collect only the compose services we actually need
+  declare -a COMPOSE_SERVICES=()
+  for db in "${DBS[@]}"; do
+    [[ "$db" == "mysql" ]] && COMPOSE_SERVICES+=("mysql")
+    [[ "$db" == "pg" ]]    && COMPOSE_SERVICES+=("postgres")
+  done
+
   RUNNING=$(docker compose ps --services --filter status=running 2>/dev/null || echo "")
-  if echo "$RUNNING" | grep -q "mysql" && echo "$RUNNING" | grep -q "postgres"; then
+  NEED_START=false
+  for svc in "${COMPOSE_SERVICES[@]}"; do
+    echo "$RUNNING" | grep -q "^${svc}$" || NEED_START=true
+  done
+
+  if ! $NEED_START; then
     echo "Docker services already running, skipping startup."
   else
     echo "Starting Docker services..."
-    docker compose up -d --wait mysql postgres
+    docker compose up -d --wait "${COMPOSE_SERVICES[@]}" || { echo "Docker failed to start" >&2; exit 1; }
     DOCKER_STARTED_BY_US=true
   fi
+
+  echo "Branch DB: ${BRANCH_DB}"
+  for db in "${DBS[@]}"; do
+    if [[ "$db" == "mysql" ]]; then
+      docker compose exec -T mysql mysql -uroot -ptest -e "CREATE DATABASE IF NOT EXISTS \`${BRANCH_DB}\`;"
+    elif [[ "$db" == "pg" ]]; then
+      docker compose exec -T postgres psql -U postgres -c "CREATE DATABASE \"${BRANCH_DB}\";" 2>/dev/null || true
+    fi
+  done
 fi
 
 cleanup() {
@@ -87,7 +113,11 @@ if $RESET_DB; then
       ver="${VERSIONS[0]}"
       pkg="usage-${db}-v${ver}"
       echo "Resetting ${db} DB via ${pkg}..."
-      pnpm --filter "${pkg}" p:r || { echo "p:r failed for ${pkg}" >&2; exit 1; }
+      if [[ "$db" == "mysql" ]]; then
+        DATABASE_URL="${MYSQL_URL}" pnpm --filter "${pkg}" p:r || { echo "p:r failed for ${pkg}" >&2; exit 1; }
+      elif [[ "$db" == "pg" ]]; then
+        DATABASE_URL="${PG_URL}" pnpm --filter "${pkg}" p:r || { echo "p:r failed for ${pkg}" >&2; exit 1; }
+      fi
     fi
   done
 fi
@@ -107,6 +137,8 @@ for ver in "${VERSIONS[@]}"; do
     echo "  → Starting ${pkg}..."
     (
       set -e
+      [[ "$db" == "mysql" ]] && export DATABASE_URL="${MYSQL_URL}"
+      [[ "$db" == "pg" ]]    && export DATABASE_URL="${PG_URL}"
       pnpm --filter "${pkg}" gen
       # sqlite: each version has its own file — reset per package
       # mysql/pg: shared server — already reset once above
