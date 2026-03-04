@@ -189,7 +189,7 @@ prisma.$from("User")
             'Post.content': 'Something',
             'Post.id': 1,
             'Post.lastModifiedById': 1,
-            'Post.metadata': null,
+            'Post.metadata': { name: 'Blog Post 1', tags: ['prisma', 'ts'] },
             'Post.published': false,
             'Post.createdAt': new Date("2020-01-15T10:30:00.000Z"),
             'Post.title': 'Blog 1',

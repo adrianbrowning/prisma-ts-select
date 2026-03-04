@@ -78,8 +78,11 @@ describe("Select Tests", ()=> {
 
             it("should run and return qualified data", async () => {
                 const result = await createQuery().run();
-                typeCheck({} as Expect<Equal<typeof result, Array<UserPostQualifiedJoinRow>>>);
-                const expected: Array<UserPostQualifiedJoinRow> = [{
+                type TExpected = Array<UserPostQualifiedJoinRow>;
+
+                typeCheck({} as Expect<Equal<typeof result, TExpected>>);
+
+                const expected: TExpected = [{
                     'User.id': 1,
                     'User.email': 'johndoe@example.com',
                     'User.name': 'John Doe',
@@ -91,7 +94,7 @@ describe("Select Tests", ()=> {
                     'Post.createdAt': new Date("2020-01-15T10:30:00.000Z"),
                     'Post.authorId': 1,
                     'Post.lastModifiedById': 1,
-                    'Post.metadata':null
+                    'Post.metadata':{ name: 'Blog Post 1', tags: ['prisma', 'ts'] },
                 }, {
                     'User.id': 1,
                     'User.email': 'johndoe@example.com',
@@ -264,7 +267,7 @@ describe("Select Tests", ()=> {
                     'Post.createdAt': new Date("2020-01-15T10:30:00.000Z"),
                     'Post.authorId': 1,
                     'Post.lastModifiedById': 1,
-                    'Post.metadata': null,
+                    'Post.metadata': { name: 'Blog Post 1', tags: ['prisma', 'ts'] },
                 }, {
                     'User.id': 1,
                     'User.email': 'johndoe@example.com',

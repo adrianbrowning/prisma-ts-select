@@ -121,7 +121,7 @@ describe("selectAllOmit Tests", () => {
                 'Post.createdAt': new Date('2020-01-15T10:30:00.000Z'),
                 'Post.authorId': 1,
                 'Post.lastModifiedById': 1,
-                'Post.metadata': null,
+                'Post.metadata': { name: 'Blog Post 1', tags: ['prisma', 'ts'] },
             }, {
                 'User.id': 1,
                 'User.name': 'John Doe',
@@ -179,7 +179,7 @@ describe("selectAllOmit Tests", () => {
                 'Post.createdAt': new Date("2020-01-15T10:30:00.000Z"),
                 'Post.authorId': 1,
                 'Post.lastModifiedById': 1,
-                'Post.metadata': null,
+                'Post.metadata': { name: 'Blog Post 1', tags: ['prisma', 'ts'] },
             }, {
                 'User.id': 1,
                 'User.name': 'John Doe',
