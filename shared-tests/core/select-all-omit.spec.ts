@@ -101,7 +101,7 @@ describe("selectAllOmit Tests", () => {
 
         it("should match SQL", () => {
             const sql = createQuery().getSQL();
-            expectSQL(sql, `SELECT ${dialect.quoteQualifiedColumn("User.id")} AS ${dialect.quote("User.id", true)}, ${dialect.quoteQualifiedColumn("User.name")} AS ${dialect.quote("User.name", true)}, ${dialect.quoteQualifiedColumn("User.age")} AS ${dialect.quote("User.age", true)}, ${dialect.quoteQualifiedColumn("Post.id")} AS ${dialect.quote("Post.id", true)}, ${dialect.quoteQualifiedColumn("Post.title")} AS ${dialect.quote("Post.title", true)}, ${dialect.quoteQualifiedColumn("Post.content")} AS ${dialect.quote("Post.content", true)}, ${dialect.quoteQualifiedColumn("Post.published")} AS ${dialect.quote("Post.published", true)}, ${dialect.quoteQualifiedColumn("Post.createdAt")} AS ${dialect.quote("Post.createdAt", true)}, ${dialect.quoteQualifiedColumn("Post.authorId")} AS ${dialect.quote("Post.authorId", true)}, ${dialect.quoteQualifiedColumn("Post.lastModifiedById")} AS ${dialect.quote("Post.lastModifiedById", true)} FROM ${dialect.quote("User")} JOIN ${dialect.quote("Post")} ON ${dialect.quoteQualifiedColumn("Post.authorId")} = ${dialect.quoteQualifiedColumn("User.id")};`)
+            expectSQL(sql, `SELECT ${dialect.quoteQualifiedColumn("User.id")} AS ${dialect.quote("User.id", true)}, ${dialect.quoteQualifiedColumn("User.name")} AS ${dialect.quote("User.name", true)}, ${dialect.quoteQualifiedColumn("User.age")} AS ${dialect.quote("User.age", true)}, ${dialect.quoteQualifiedColumn("Post.id")} AS ${dialect.quote("Post.id", true)}, ${dialect.quoteQualifiedColumn("Post.title")} AS ${dialect.quote("Post.title", true)}, ${dialect.quoteQualifiedColumn("Post.content")} AS ${dialect.quote("Post.content", true)}, ${dialect.quoteQualifiedColumn("Post.published")} AS ${dialect.quote("Post.published", true)}, ${dialect.quoteQualifiedColumn("Post.createdAt")} AS ${dialect.quote("Post.createdAt", true)}, ${dialect.quoteQualifiedColumn("Post.authorId")} AS ${dialect.quote("Post.authorId", true)}, ${dialect.quoteQualifiedColumn("Post.lastModifiedById")} AS ${dialect.quote("Post.lastModifiedById", true)}, ${dialect.quoteQualifiedColumn("Post.metadata")} AS ${dialect.quote("Post.metadata", true)} FROM ${dialect.quote("User")} JOIN ${dialect.quote("Post")} ON ${dialect.quoteQualifiedColumn("Post.authorId")} = ${dialect.quoteQualifiedColumn("User.id")};`)
         });
 
         it("should run and return correct type", async () => {
@@ -120,7 +120,8 @@ describe("selectAllOmit Tests", () => {
                 'Post.published': false,
                 'Post.createdAt': new Date('2020-01-15T10:30:00.000Z'),
                 'Post.authorId': 1,
-                'Post.lastModifiedById': 1
+                'Post.lastModifiedById': 1,
+                'Post.metadata': null,
             }, {
                 'User.id': 1,
                 'User.name': 'John Doe',
@@ -131,7 +132,8 @@ describe("selectAllOmit Tests", () => {
                 'Post.published': false,
                 'Post.createdAt': new Date('2020-06-20T14:45:00.000Z'),
                 'Post.authorId': 1,
-                'Post.lastModifiedById': 1
+                'Post.lastModifiedById': 1,
+                'Post.metadata': null,
             }, {
                 'User.id': 2,
                 'User.name': 'John Smith',
@@ -142,7 +144,8 @@ describe("selectAllOmit Tests", () => {
                 'Post.published': false,
                 'Post.createdAt': new Date('2021-12-25T08:00:00.000Z'),
                 'Post.authorId': 2,
-                'Post.lastModifiedById': 2
+                'Post.lastModifiedById': 2,
+                'Post.metadata': null,
             }];
             assert.deepStrictEqual(result, expected);
         });
@@ -157,7 +160,7 @@ describe("selectAllOmit Tests", () => {
 
         it("should match SQL", () => {
             const sql = createQuery().getSQL();
-            expectSQL(sql, `SELECT ${dialect.quoteQualifiedColumn("User.id")} AS ${dialect.quote("User.id", true)}, ${dialect.quoteQualifiedColumn("User.name")} AS ${dialect.quote("User.name", true)}, ${dialect.quoteQualifiedColumn("User.age")} AS ${dialect.quote("User.age", true)}, ${dialect.quoteQualifiedColumn("Post.id")} AS ${dialect.quote("Post.id", true)}, ${dialect.quoteQualifiedColumn("Post.title")} AS ${dialect.quote("Post.title", true)}, ${dialect.quoteQualifiedColumn("Post.published")} AS ${dialect.quote("Post.published", true)}, ${dialect.quoteQualifiedColumn("Post.createdAt")} AS ${dialect.quote("Post.createdAt", true)}, ${dialect.quoteQualifiedColumn("Post.authorId")} AS ${dialect.quote("Post.authorId", true)}, ${dialect.quoteQualifiedColumn("Post.lastModifiedById")} AS ${dialect.quote("Post.lastModifiedById", true)} FROM ${dialect.quote("User")} JOIN ${dialect.quote("Post")} ON ${dialect.quoteQualifiedColumn("Post.authorId")} = ${dialect.quoteQualifiedColumn("User.id")};`)
+            expectSQL(sql, `SELECT ${dialect.quoteQualifiedColumn("User.id")} AS ${dialect.quote("User.id", true)}, ${dialect.quoteQualifiedColumn("User.name")} AS ${dialect.quote("User.name", true)}, ${dialect.quoteQualifiedColumn("User.age")} AS ${dialect.quote("User.age", true)}, ${dialect.quoteQualifiedColumn("Post.id")} AS ${dialect.quote("Post.id", true)}, ${dialect.quoteQualifiedColumn("Post.title")} AS ${dialect.quote("Post.title", true)}, ${dialect.quoteQualifiedColumn("Post.published")} AS ${dialect.quote("Post.published", true)}, ${dialect.quoteQualifiedColumn("Post.createdAt")} AS ${dialect.quote("Post.createdAt", true)}, ${dialect.quoteQualifiedColumn("Post.authorId")} AS ${dialect.quote("Post.authorId", true)}, ${dialect.quoteQualifiedColumn("Post.lastModifiedById")} AS ${dialect.quote("Post.lastModifiedById", true)}, ${dialect.quoteQualifiedColumn("Post.metadata")} AS ${dialect.quote("Post.metadata", true)} FROM ${dialect.quote("User")} JOIN ${dialect.quote("Post")} ON ${dialect.quoteQualifiedColumn("Post.authorId")} = ${dialect.quoteQualifiedColumn("User.id")};`)
         });
 
         it("should run and return correct type", async () => {
@@ -175,7 +178,8 @@ describe("selectAllOmit Tests", () => {
                 'Post.published': false,
                 'Post.createdAt': new Date("2020-01-15T10:30:00.000Z"),
                 'Post.authorId': 1,
-                'Post.lastModifiedById': 1
+                'Post.lastModifiedById': 1,
+                'Post.metadata': null,
             }, {
                 'User.id': 1,
                 'User.name': 'John Doe',
@@ -185,7 +189,8 @@ describe("selectAllOmit Tests", () => {
                 'Post.published': false,
                 'Post.createdAt': new Date("2020-06-20T14:45:00.000Z"),
                 'Post.authorId': 1,
-                'Post.lastModifiedById': 1
+                'Post.lastModifiedById': 1,
+                'Post.metadata': null,
             }, {
                 'User.id': 2,
                 'User.name': 'John Smith',
@@ -195,7 +200,8 @@ describe("selectAllOmit Tests", () => {
                 'Post.published': false,
                  'Post.createdAt': new Date("2021-12-25T08:00:00.000Z"),
                 'Post.authorId': 2,
-                'Post.lastModifiedById': 2
+                'Post.lastModifiedById': 2,
+                'Post.metadata': null,
             }];
             assert.deepStrictEqual(result, expected);
         });

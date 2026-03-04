@@ -1,6 +1,7 @@
 import type {Dialect} from "./types.js";
 import {resolveArg, sqlExpr, type SQLExpr} from "../sql-expr.js";
-import type {FilterCols, ColName} from "./shared.js";
+import type {JSONValue, JSONObject} from "../utils/types.js";
+import {esc, flattenJsonObjectPairs, type FilterCols, type FilterJsonCols, type ColName} from "./shared.js";
 
 /** SQLite MIN/MAX return bigint for integer columns, unchanged for other types. */
 type SqliteMinMaxResult<TColEntries extends [string, unknown], Col extends string> =
@@ -103,6 +104,13 @@ export const sqliteContextFns = <TColEntries extends [string, unknown] = never, 
   log:   (x: FilterCols<TColEntries, number> | SQLExpr<number>): SQLExpr<number> => sqlExpr(`LOG(${resolveArg(x, quoteFn)})`),
   log2:  (x: FilterCols<TColEntries, number> | SQLExpr<number>): SQLExpr<number> => sqlExpr(`LOG2(${resolveArg(x, quoteFn)})`),
   log10: (x: FilterCols<TColEntries, number> | SQLExpr<number>): SQLExpr<number> => sqlExpr(`LOG10(${resolveArg(x, quoteFn)})`),
+  // ── JSON scalar fns ───────────────────────────────────────────────────────
+  jsonExtract: (col: FilterJsonCols<TColEntries> | SQLExpr<JSONValue>, path: string): SQLExpr<JSONValue> =>
+    sqlExpr(`json_extract(${resolveArg(col, quoteFn)}, '${esc(path)}')`),
+  jsonArray: (...args: [ColName<TColEntries> | SQLExpr<unknown>, ...Array<ColName<TColEntries> | SQLExpr<unknown>>]): SQLExpr<JSONValue[]> =>
+    sqlExpr(`json_array(${args.map(a => resolveArg(a as ColName<TColEntries> | SQLExpr<unknown>, quoteFn)).join(', ')})`),
+  jsonObject: (pairs: [string, ColName<TColEntries> | SQLExpr<unknown>][]): SQLExpr<JSONObject> =>
+    sqlExpr(`json_object(${flattenJsonObjectPairs(pairs, quoteFn).join(', ')})`),
   // ── Type coercion ────────────────────────────────────────────────────────
   cast: <T extends keyof SqliteCastTypeMap>(
     expr: ColName<TColEntries> | SQLExpr<unknown>,

@@ -35,6 +35,7 @@ model Post {
   lastModifiedById Int
   Images           PostsImages[]
   LikedPosts       LikedPosts[]
+  metadata         Json?
 }
 
 model PostsImages {
