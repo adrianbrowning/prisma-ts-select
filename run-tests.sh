@@ -5,12 +5,14 @@
 #   ./run-tests.sh --db sqlite                        # sqlite only (v6 + v7)
 #   ./run-tests.sh --version 6 --db sqlite            # sqlite-v6 only
 #   ./run-tests.sh --skip-build                       # skip prisma-ts-select build step
+#   ./run-tests.sh --reset-db                         # run p:r before tests (reset + seed)
 #   ./run-tests.sh --test './tests/core/foo.spec.ts'  # run specific file/glob (skips lint:ts)
 
 # ── Argument parsing ──────────────────────────────────────────────────────────
 VERSION=""
 DB=""
 SKIP_BUILD=false
+RESET_DB=false
 TEST_PATTERN=""
 
 while [[ $# -gt 0 ]]; do
@@ -18,6 +20,7 @@ while [[ $# -gt 0 ]]; do
     --version)    VERSION="$2";      shift 2 ;;
     --db)         DB="$2";           shift 2 ;;
     --skip-build) SKIP_BUILD=true;   shift ;;
+    --reset-db)   RESET_DB=true;     shift ;;
     --test)       TEST_PATTERN="$2"; shift 2 ;;
     *) echo "Unknown flag: $1" >&2; exit 1 ;;
   esac
@@ -29,6 +32,12 @@ fi
 if [[ -n "$DB" && "$DB" != "sqlite" && "$DB" != "mysql" && "$DB" != "pg" ]]; then
   echo "Error: --db must be sqlite, mysql, or pg" >&2; exit 1
 fi
+
+# ── Branch-isolated DB name ───────────────────────────────────────────────────
+BRANCH=$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "local")
+BRANCH_DB=$(echo "$BRANCH" | sed 's|[^a-zA-Z0-9]|_|g' | tr '[:upper:]' '[:lower:]' | cut -c1-64)
+MYSQL_URL="mysql://root:test@localhost:3306/${BRANCH_DB}"
+PG_URL="postgresql://postgres:test@localhost:5432/${BRANCH_DB}?schema=public"
 
 # ── Build package matrix ──────────────────────────────────────────────────────
 VERSIONS=("6" "7")
@@ -50,15 +59,35 @@ done
 DOCKER_STARTED_BY_US=false
 
 if $NEED_DOCKER; then
-  # Check if services are already running
+  # Collect only the compose services we actually need
+  declare -a COMPOSE_SERVICES=()
+  for db in "${DBS[@]}"; do
+    [[ "$db" == "mysql" ]] && COMPOSE_SERVICES+=("mysql")
+    [[ "$db" == "pg" ]]    && COMPOSE_SERVICES+=("postgres")
+  done
+
   RUNNING=$(docker compose ps --services --filter status=running 2>/dev/null || echo "")
-  if echo "$RUNNING" | grep -q "mysql" && echo "$RUNNING" | grep -q "postgres"; then
+  NEED_START=false
+  for svc in "${COMPOSE_SERVICES[@]}"; do
+    echo "$RUNNING" | grep -q "^${svc}$" || NEED_START=true
+  done
+
+  if ! $NEED_START; then
     echo "Docker services already running, skipping startup."
   else
     echo "Starting Docker services..."
-    docker compose up -d --wait mysql postgres
+    docker compose up -d --wait "${COMPOSE_SERVICES[@]}" || { echo "Docker failed to start" >&2; exit 1; }
     DOCKER_STARTED_BY_US=true
   fi
+
+  echo "Branch DB: ${BRANCH_DB}"
+  for db in "${DBS[@]}"; do
+    if [[ "$db" == "mysql" ]]; then
+      docker compose exec -T mysql mysql -uroot -ptest -e "CREATE DATABASE IF NOT EXISTS \`${BRANCH_DB}\`;"
+    elif [[ "$db" == "pg" ]]; then
+      docker compose exec -T postgres psql -U postgres -c "CREATE DATABASE \"${BRANCH_DB}\";" 2>/dev/null || true
+    fi
+  done
 fi
 
 cleanup() {
@@ -78,14 +107,20 @@ else
 fi
 
 # ── Pre-reset shared DBs (mysql/pg: once per DB, not once per version) ────────
-for db in "${DBS[@]}"; do
-  if [[ "$db" == "mysql" || "$db" == "pg" ]]; then
-    ver="${VERSIONS[0]}"
-    pkg="usage-${db}-v${ver}"
-    echo "Resetting ${db} DB via ${pkg}..."
-    pnpm --filter "${pkg}" p:r || { echo "p:r failed for ${pkg}" >&2; exit 1; }
-  fi
-done
+if $RESET_DB; then
+  for db in "${DBS[@]}"; do
+    if [[ "$db" == "mysql" || "$db" == "pg" ]]; then
+      ver="${VERSIONS[0]}"
+      pkg="usage-${db}-v${ver}"
+      echo "Resetting ${db} DB via ${pkg}..."
+      if [[ "$db" == "mysql" ]]; then
+        DATABASE_URL="${MYSQL_URL}" pnpm --filter "${pkg}" p:r || { echo "p:r failed for ${pkg}" >&2; exit 1; }
+      elif [[ "$db" == "pg" ]]; then
+        DATABASE_URL="${PG_URL}" pnpm --filter "${pkg}" p:r || { echo "p:r failed for ${pkg}" >&2; exit 1; }
+      fi
+    fi
+  done
+fi
 
 # ── Launch packages in parallel ───────────────────────────────────────────────
 declare -a PIDS=()
@@ -102,10 +137,12 @@ for ver in "${VERSIONS[@]}"; do
     echo "  → Starting ${pkg}..."
     (
       set -e
+      [[ "$db" == "mysql" ]] && export DATABASE_URL="${MYSQL_URL}"
+      [[ "$db" == "pg" ]]    && export DATABASE_URL="${PG_URL}"
       pnpm --filter "${pkg}" gen
       # sqlite: each version has its own file — reset per package
       # mysql/pg: shared server — already reset once above
-      [[ "$db" == "sqlite" ]] && pnpm --filter "${pkg}" p:r
+      [[ "$db" == "sqlite" ]] && $RESET_DB && pnpm --filter "${pkg}" p:r
       if [[ -n "$TEST_PATTERN" ]]; then
         (cd "packages/${pkg}" && node \
           --import ../../shared-tests/client-resolver.mjs \

@@ -61,7 +61,7 @@ prisma.$from("User")
     // #region offset
     const result = await prisma.$from("User")
       .join("Post", "authorId", "User.id")
-      .select("*")
+      .select("email")
       .limit(1)
       .offset(1)
       // #endregion offset

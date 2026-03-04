@@ -71,24 +71,6 @@ jobs:
         working-directory: ./packages/usage-mysql-v7
         run: pnpm --filter usage-mysql-v7 gen
 
-      - name: Debug TypeScript environment
-        working-directory: ./packages/usage-mysql-v7
-        run: |
-          echo "=== Generated files ==="
-          ls -la generated/prisma-ts-select/ | head -20
-          echo ""
-          echo "=== extend.d.ts header ==="
-          head -30 generated/prisma-ts-select/extend.d.ts
-          echo ""
-          echo "=== extend.js header ==="
-          head -10 generated/prisma-ts-select/extend.js
-          echo ""
-          echo "=== TypeScript config ==="
-          pnpm tsc --showConfig | head -50
-          echo ""
-          echo "=== TypeScript version ==="
-          pnpm tsc --version
-
       - name: Reset database
         working-directory: ./packages/usage-mysql-v7
         run: pnpm --filter usage-mysql-v7 p:r

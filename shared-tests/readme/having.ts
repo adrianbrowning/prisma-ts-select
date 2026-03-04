@@ -18,13 +18,13 @@ prisma.$from("User")
           "value": "bob%"
         }
       })
-      .select("*")
+      .select("email")
       // #endregion with-groupby
 .getSQL();
 
     const expectedSQL =
       // #region with-groupby-sql
-      "SELECT * FROM User JOIN Post ON Post.authorId = User.id GROUP BY name, Post.content HAVING User.name LIKE 'bob%';";
+      "SELECT email FROM User JOIN Post ON Post.authorId = User.id GROUP BY name, Post.content HAVING User.name LIKE 'bob%';";
       // #endregion with-groupby-sql
 
     assert.equal(sql, expectedSQL);
@@ -58,13 +58,13 @@ prisma.$from("User")
           "value": "stuart%"
         }
       })
-      .select("*")
+      .select("email")
       // #endregion without-groupby
 .getSQL();
 
     const expectedSQL =
       // #region without-groupby-sql
-      "SELECT * FROM User JOIN Post ON Post.authorId = User.id HAVING User.name LIKE 'stuart%';";
+      "SELECT email FROM User JOIN Post ON Post.authorId = User.id HAVING User.name LIKE 'stuart%';";
       // #endregion without-groupby-sql
 
     assert.equal(sql, expectedSQL);
