@@ -10,6 +10,11 @@ type SqliteMinMaxResult<TColEntries extends [string, unknown], Col extends strin
 
 // Prisma v6 stores DateTime as integer ms, v7 as ISO text in SQLite.
 // CASE normalizes both to a date string; SQLExpr args (e.g. now()) pass through unchanged.
+// INTEGER returns bigint — consistent with all other SQLite integer-returning functions
+type SqliteCastTypeMap = { INTEGER: bigint; TEXT: string; REAL: number; NUMERIC: number; BLOB: Buffer };
+
+const SQLITE_CAST_TYPES = new Set<string>(['INTEGER','TEXT','REAL','NUMERIC','BLOB']);
+
 const dateArg = (col: string | SQLExpr<Date>, quoteFn: (ref: string) => string): string => {
   if (typeof col !== 'string') return col.sql;
   const ref = quoteFn(col);
@@ -98,6 +103,14 @@ export const sqliteContextFns = <TColEntries extends [string, unknown] = never, 
   log:   (x: FilterCols<TColEntries, number> | SQLExpr<number>): SQLExpr<number> => sqlExpr(`LOG(${resolveArg(x, quoteFn)})`),
   log2:  (x: FilterCols<TColEntries, number> | SQLExpr<number>): SQLExpr<number> => sqlExpr(`LOG2(${resolveArg(x, quoteFn)})`),
   log10: (x: FilterCols<TColEntries, number> | SQLExpr<number>): SQLExpr<number> => sqlExpr(`LOG10(${resolveArg(x, quoteFn)})`),
+  // ── Type coercion ────────────────────────────────────────────────────────
+  cast: <T extends keyof SqliteCastTypeMap>(
+    expr: ColName<TColEntries> | SQLExpr<unknown>,
+    type: T
+  ): SQLExpr<SqliteCastTypeMap[T]> => {
+    if (!SQLITE_CAST_TYPES.has(type as string)) throw new Error(`cast: invalid cast type '${String(type)}'`);
+    return sqlExpr(`CAST(${resolveArg(expr, quoteFn)} AS ${type})`);
+  },
 });
 
 export type DialectFns<TColEntries extends [string, unknown] = never, TCriteria extends object = object> = ReturnType<typeof sqliteContextFns<TColEntries, TCriteria>>;

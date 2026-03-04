@@ -3,7 +3,11 @@ import {resolveArg, sqlExpr, type SQLExpr} from "../sql-expr.js";
 import type {JSONValue} from "../utils/types.js";
 import {esc, type FilterCols, type ColName} from "./shared.js";
 
-export type PgExtractField = 'YEAR' | 'MONTH' | 'DAY' | 'HOUR' | 'MINUTE' | 'SECOND' | 'DOW' | 'DOY' | 'EPOCH' | 'WEEK' | 'QUARTER';
+type PgCastTypeMap = { INTEGER: number; TEXT: string; BIGINT: bigint; BOOLEAN: boolean; REAL: number; NUMERIC: number; DATE: Date; TIMESTAMP: Date; JSON: JSONValue; JSONB: JSONValue };
+
+const PG_CAST_TYPES = new Set<string>(['INTEGER','TEXT','BIGINT','BOOLEAN','REAL','NUMERIC','DATE','TIMESTAMP','JSON','JSONB']);
+
+export type PgExtractField ='YEAR' | 'MONTH' | 'DAY' | 'HOUR' | 'MINUTE' | 'SECOND' | 'DOW' | 'DOY' | 'EPOCH' | 'WEEK' | 'QUARTER';
 export type PgDateTruncUnit = 'microseconds' | 'milliseconds' | 'second' | 'minute' | 'hour' | 'day' | 'week' | 'month' | 'quarter' | 'year' | 'decade' | 'century' | 'millennium';
 
 export const postgresqlContextFns = <TColEntries extends [string, unknown] = never>(quoteFn: (ref: string) => string) => ({
@@ -105,6 +109,14 @@ export const postgresqlContextFns = <TColEntries extends [string, unknown] = nev
   trunc:   (x: FilterCols<TColEntries, number> | SQLExpr<number>, n?: number): SQLExpr<number> => sqlExpr(n !== undefined ? `TRUNC(${resolveArg(x, quoteFn)}, ${n})` : `TRUNC(${resolveArg(x, quoteFn)})`),
   div:     (x: FilterCols<TColEntries, number> | SQLExpr<number>, y: number): SQLExpr<number> => sqlExpr(`DIV(${resolveArg(x, quoteFn)}, ${y})`),
   random:  (): SQLExpr<number> => sqlExpr('RANDOM()'),
+  // ── Type coercion ────────────────────────────────────────────────────────
+  cast: <T extends keyof PgCastTypeMap>(
+    expr: ColName<TColEntries> | SQLExpr<unknown>,
+    type: T
+  ): SQLExpr<PgCastTypeMap[T]> => {
+    if (!PG_CAST_TYPES.has(type as string)) throw new Error(`cast: invalid cast type '${String(type)}'`);
+    return sqlExpr(`CAST(${resolveArg(expr, quoteFn)} AS ${type})`);
+  },
 });
 
 export type DialectFns<TColEntries extends [string, unknown] = never, _TCriteria extends object = object> = ReturnType<typeof postgresqlContextFns<TColEntries>>;
