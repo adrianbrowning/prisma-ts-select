@@ -24,19 +24,14 @@ describe("selectAllOmit Tests", () => {
             expectSQL(sql, `SELECT ${dialect.quote("id")}, ${dialect.quote("name")}, ${dialect.quote("age")} FROM ${dialect.quote("User")};`)
         });
 
-        it("should run and return correct type", async () => {
+        it("should run and return correct type", async (t) => {
             const result = await createQuery().run();
 
             type TExpected = Array<Omit<UserRow, "email">>;
 
             typeCheck({} as Expect<Equal<typeof result, TExpected>>);
 
-            const expected: TExpected = [
-                { id:1, name: 'John Doe', age: 25 },
-                { id:2, name: 'John Smith', age: 30 },
-                { id:3, name: null, age: null },
-            ];
-            assert.deepEqual(result, expected);
+            t.assert.snapshot(result);
         });
     });
     describe("single table - omit star", () => {
@@ -77,18 +72,13 @@ describe("selectAllOmit Tests", () => {
             expectSQL(sql, `SELECT ${dialect.quote("id")}, ${dialect.quote("name")} FROM ${dialect.quote("User")};`)
         });
 
-        it("should run and return correct type", async () => {
+        it("should run and return correct type", async (t) => {
             const result = await createQuery().run();
 
             type TExpected = Array<Omit<UserRow, "email" | "age">>;
             typeCheck({} as Expect<Equal<typeof result, TExpected>>);
 
-            const expected: TExpected = [
-                { id: 1, name: 'John Doe' },
-                { id: 2, name: 'John Smith' },
-                { id: 3, name: null },
-            ];
-            assert.deepEqual(result, expected);
+            t.assert.snapshot(result);
         });
     });
 
@@ -104,50 +94,13 @@ describe("selectAllOmit Tests", () => {
             expectSQL(sql, `SELECT ${dialect.quoteQualifiedColumn("User.id")} AS ${dialect.quote("User.id", true)}, ${dialect.quoteQualifiedColumn("User.name")} AS ${dialect.quote("User.name", true)}, ${dialect.quoteQualifiedColumn("User.age")} AS ${dialect.quote("User.age", true)}, ${dialect.quoteQualifiedColumn("Post.id")} AS ${dialect.quote("Post.id", true)}, ${dialect.quoteQualifiedColumn("Post.title")} AS ${dialect.quote("Post.title", true)}, ${dialect.quoteQualifiedColumn("Post.content")} AS ${dialect.quote("Post.content", true)}, ${dialect.quoteQualifiedColumn("Post.published")} AS ${dialect.quote("Post.published", true)}, ${dialect.quoteQualifiedColumn("Post.createdAt")} AS ${dialect.quote("Post.createdAt", true)}, ${dialect.quoteQualifiedColumn("Post.authorId")} AS ${dialect.quote("Post.authorId", true)}, ${dialect.quoteQualifiedColumn("Post.lastModifiedById")} AS ${dialect.quote("Post.lastModifiedById", true)}, ${dialect.quoteQualifiedColumn("Post.metadata")} AS ${dialect.quote("Post.metadata", true)} FROM ${dialect.quote("User")} JOIN ${dialect.quote("Post")} ON ${dialect.quoteQualifiedColumn("Post.authorId")} = ${dialect.quoteQualifiedColumn("User.id")};`)
         });
 
-        it("should run and return correct type", async () => {
+        it("should run and return correct type", async (t) => {
             const result = await createQuery().run();
 
             type TExpected = Array<Prettify<Omit<UserPostQualifiedJoinRow, "User.email">>>;
             typeCheck({} as Expect<Equal<typeof result, TExpected>>);
 
-            const expected: TExpected = [{
-                'User.id': 1,
-                'User.name': 'John Doe',
-                "User.age": 25,
-                'Post.id': 1,
-                'Post.title': 'Blog 1',
-                'Post.content': 'Something',
-                'Post.published': false,
-                'Post.createdAt': new Date('2020-01-15T10:30:00.000Z'),
-                'Post.authorId': 1,
-                'Post.lastModifiedById': 1,
-                'Post.metadata': { name: 'Blog Post 1', tags: ['prisma', 'ts'] },
-            }, {
-                'User.id': 1,
-                'User.name': 'John Doe',
-                "User.age": 25,
-                'Post.id': 2,
-                'Post.title': 'blog 2',
-                'Post.content': 'sql',
-                'Post.published': false,
-                'Post.createdAt': new Date('2020-06-20T14:45:00.000Z'),
-                'Post.authorId': 1,
-                'Post.lastModifiedById': 1,
-                'Post.metadata': null,
-            }, {
-                'User.id': 2,
-                'User.name': 'John Smith',
-                "User.age": 30,
-                'Post.id': 3,
-                'Post.title': 'blog 3',
-                'Post.content': null,
-                'Post.published': false,
-                'Post.createdAt': new Date('2021-12-25T08:00:00.000Z'),
-                'Post.authorId': 2,
-                'Post.lastModifiedById': 2,
-                'Post.metadata': null,
-            }];
-            assert.deepStrictEqual(result, expected);
+            t.assert.snapshot(result);
         });
     });
 
@@ -163,47 +116,13 @@ describe("selectAllOmit Tests", () => {
             expectSQL(sql, `SELECT ${dialect.quoteQualifiedColumn("User.id")} AS ${dialect.quote("User.id", true)}, ${dialect.quoteQualifiedColumn("User.name")} AS ${dialect.quote("User.name", true)}, ${dialect.quoteQualifiedColumn("User.age")} AS ${dialect.quote("User.age", true)}, ${dialect.quoteQualifiedColumn("Post.id")} AS ${dialect.quote("Post.id", true)}, ${dialect.quoteQualifiedColumn("Post.title")} AS ${dialect.quote("Post.title", true)}, ${dialect.quoteQualifiedColumn("Post.published")} AS ${dialect.quote("Post.published", true)}, ${dialect.quoteQualifiedColumn("Post.createdAt")} AS ${dialect.quote("Post.createdAt", true)}, ${dialect.quoteQualifiedColumn("Post.authorId")} AS ${dialect.quote("Post.authorId", true)}, ${dialect.quoteQualifiedColumn("Post.lastModifiedById")} AS ${dialect.quote("Post.lastModifiedById", true)}, ${dialect.quoteQualifiedColumn("Post.metadata")} AS ${dialect.quote("Post.metadata", true)} FROM ${dialect.quote("User")} JOIN ${dialect.quote("Post")} ON ${dialect.quoteQualifiedColumn("Post.authorId")} = ${dialect.quoteQualifiedColumn("User.id")};`)
         });
 
-        it("should run and return correct type", async () => {
+        it("should run and return correct type", async (t) => {
             const result = await createQuery().run();
 
             type TExpected = Array<Prettify<Omit<UserPostQualifiedJoinRow, "User.email" | "Post.content">>>;
             typeCheck({} as Expect<Equal<typeof result, TExpected>>);
 
-            const expected: TExpected = [{
-                'User.id': 1,
-                'User.name': 'John Doe',
-                "User.age": 25,
-                'Post.id': 1,
-                'Post.title': 'Blog 1',
-                'Post.published': false,
-                'Post.createdAt': new Date("2020-01-15T10:30:00.000Z"),
-                'Post.authorId': 1,
-                'Post.lastModifiedById': 1,
-                'Post.metadata': { name: 'Blog Post 1', tags: ['prisma', 'ts'] },
-            }, {
-                'User.id': 1,
-                'User.name': 'John Doe',
-                "User.age": 25,
-                'Post.id': 2,
-                'Post.title': 'blog 2',
-                'Post.published': false,
-                'Post.createdAt': new Date("2020-06-20T14:45:00.000Z"),
-                'Post.authorId': 1,
-                'Post.lastModifiedById': 1,
-                'Post.metadata': null,
-            }, {
-                'User.id': 2,
-                'User.name': 'John Smith',
-                "User.age": 30,
-                'Post.id': 3,
-                'Post.title': 'blog 3',
-                'Post.published': false,
-                 'Post.createdAt': new Date("2021-12-25T08:00:00.000Z"),
-                'Post.authorId': 2,
-                'Post.lastModifiedById': 2,
-                'Post.metadata': null,
-            }];
-            assert.deepStrictEqual(result, expected);
+            t.assert.snapshot(result);
         });
     });
 

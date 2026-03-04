@@ -1,0 +1,7 @@
+exports[`where() fn overload > upper(col) scalar equality > runtime: only John Doe returned 1`] = `
+[
+  {
+    "name": "John Doe"
+  }
+]
+`;

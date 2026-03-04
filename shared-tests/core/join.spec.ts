@@ -10,7 +10,7 @@ import { dialect } from '#dialect';
 // Database is seeded via `pnpm p:r` which runs before all tests
 describe("join", () => {
 
-    test("TS join Checks", async () =>  {
+    test("TS join Checks", async (t) =>  {
 
         {
             const query = prisma.$from("User")
@@ -21,18 +21,7 @@ describe("join", () => {
             // Verify join returns actual data
             const result = await query.select("User.name").select("Post.title").run();
             assert.ok(result.length > 0, "Join should return data");
-            assert.deepStrictEqual(result, [{
-                name: 'John Doe',
-                title: 'Blog 1'
-            },
-                {
-                    name: 'John Doe',
-                 title: 'blog 2'
-          },
-               {
-                 name: 'John Smith',
-                 title: 'blog 3'
-           }])
+            t.assert.snapshot(result);
 
         }
 

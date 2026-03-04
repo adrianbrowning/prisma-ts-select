@@ -116,7 +116,7 @@ describe("$with (CTE)", () => {
         assert.ok(sql.includes(dialect.quoteQualifiedColumn('pp.title')), 'WHERE should reference pp.title');
     });
 
-    test("runtime result correctness - single CTE", async () => {
+    test("runtime result correctness - single CTE", async (t) => {
         const inner = prisma.$from('Post').select('id').select('authorId').select('title');
         const result = await prisma
             .$with('pp', inner)
@@ -127,14 +127,10 @@ describe("$with (CTE)", () => {
             .run();
 
         assert.ok(result.length > 0, 'Should return rows');
-        assert.deepStrictEqual(result, [
-            { name: 'John Doe', 'pp.title': 'Blog 1' },
-            { name: 'John Doe', 'pp.title': 'blog 2' },
-            { name: 'John Smith', 'pp.title': 'blog 3' },
-        ]);
+        t.assert.snapshot(result);
     });
 
-    test("runtime result correctness - filtered CTE", async () => {
+    test("runtime result correctness - filtered CTE", async (t) => {
         // CTE filters to only post id=1
         const inner = prisma.$from('Post').where({ id: 1 }).select('id').select('authorId').select('title');
         const result = await prisma
@@ -145,9 +141,7 @@ describe("$with (CTE)", () => {
             .select('pp.title')
             .run();
 
-        assert.deepStrictEqual(result, [
-            { name: 'John Doe', 'pp.title': 'Blog 1' },
-        ]);
+        t.assert.snapshot(result);
     });
 
     test("CTE columns accessible in groupBy", () => {

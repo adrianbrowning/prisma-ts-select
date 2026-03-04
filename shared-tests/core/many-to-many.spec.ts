@@ -136,22 +136,22 @@ describe("manyToManyJoin", () => {
     // ──────────────────────────────────────────
 
     describe("runtime", () => {
-        it("returns M2M_Category row joined via junction", async () => {
+        it("returns M2M_Category row joined via junction", async (t) => {
             const result = await prisma.$from("M2M_Post")
                 .manyToManyJoin("M2M_Category")
                 .select("M2M_Category.name")
                 .run()
 
-            assert.deepStrictEqual(result, [{ name: "M2M Category 1" }])
+            t.assert.snapshot(result);
         })
 
-        it("explicit source override returns correct rows", async () => {
+        it("explicit source override returns correct rows", async (t) => {
             const result = await prisma.$from("MMM_Post mp")
                 .manyToManyJoin("MMM_Category mmc1", { refName: "M2M_NC_M1", source: "mp.id" })
                 .select("mmc1.name")
                 .run()
 
-            assert.deepStrictEqual(result, [{ name: "MMM Category M1" }])
+            t.assert.snapshot(result);
         })
     })
 })

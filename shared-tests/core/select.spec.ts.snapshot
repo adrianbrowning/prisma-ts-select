@@ -1,0 +1,257 @@
+exports[`Select Tests > basic select * > should RUN 1`] = `
+[
+  {
+    "id": 1,
+    "email": "johndoe@example.com",
+    "name": "John Doe",
+    "age": 25
+  },
+  {
+    "id": 2,
+    "email": "smith@example.com",
+    "name": "John Smith",
+    "age": 30
+  },
+  {
+    "id": 3,
+    "email": "alice@example.com",
+    "name": null,
+    "age": null
+  }
+]
+`;
+
+exports[`Select Tests > basic select * with join > should run and return qualified data 1`] = `
+[
+  {
+    "User.id": 1,
+    "User.email": "johndoe@example.com",
+    "User.name": "John Doe",
+    "User.age": 25,
+    "Post.id": 1,
+    "Post.title": "Blog 1",
+    "Post.content": "Something",
+    "Post.published": false,
+    "Post.createdAt": "2020-01-15T10:30:00.000Z",
+    "Post.authorId": 1,
+    "Post.lastModifiedById": 1,
+    "Post.metadata": {
+      "name": "Blog Post 1",
+      "tags": [
+        "prisma",
+        "ts"
+      ]
+    }
+  },
+  {
+    "User.id": 1,
+    "User.email": "johndoe@example.com",
+    "User.name": "John Doe",
+    "User.age": 25,
+    "Post.id": 2,
+    "Post.title": "blog 2",
+    "Post.content": "sql",
+    "Post.published": false,
+    "Post.createdAt": "2020-06-20T14:45:00.000Z",
+    "Post.authorId": 1,
+    "Post.lastModifiedById": 1,
+    "Post.metadata": null
+  },
+  {
+    "User.id": 2,
+    "User.email": "smith@example.com",
+    "User.name": "John Smith",
+    "User.age": 30,
+    "Post.id": 3,
+    "Post.title": "blog 3",
+    "Post.content": null,
+    "Post.published": false,
+    "Post.createdAt": "2021-12-25T08:00:00.000Z",
+    "Post.authorId": 2,
+    "Post.lastModifiedById": 2,
+    "Post.metadata": null
+  }
+]
+`;
+
+exports[`Select Tests > basic select email, name > should RUN 1`] = `
+[
+  {
+    "email": "johndoe@example.com",
+    "name": "John Doe"
+  },
+  {
+    "email": "smith@example.com",
+    "name": "John Smith"
+  },
+  {
+    "email": "alice@example.com",
+    "name": null
+  }
+]
+`;
+
+exports[`Select Tests > basic select email, name, Post.title with join > should run 1`] = `
+[
+  {
+    "email": "johndoe@example.com",
+    "name": "John Doe",
+    "title": "Blog 1"
+  },
+  {
+    "email": "johndoe@example.com",
+    "name": "John Doe",
+    "title": "blog 2"
+  },
+  {
+    "email": "smith@example.com",
+    "name": "John Smith",
+    "title": "blog 3"
+  }
+]
+`;
+
+exports[`Select Tests > basic select email, name, Post.title, Post.id with join > should run 1`] = `
+[
+  {
+    "email": "johndoe@example.com",
+    "name": "John Doe",
+    "title": "Blog 1",
+    "Post.id": 1
+  },
+  {
+    "email": "johndoe@example.com",
+    "name": "John Doe",
+    "title": "blog 2",
+    "Post.id": 2
+  },
+  {
+    "email": "smith@example.com",
+    "name": "John Smith",
+    "title": "blog 3",
+    "Post.id": 3
+  }
+]
+`;
+
+exports[`Select Tests > basic select email, name, Post.title, Post.id with join > should run 2`] = `
+[
+  {
+    "email": "johndoe@example.com",
+    "name": "John Doe",
+    "title": "Blog 1",
+    "pId": 1
+  },
+  {
+    "email": "johndoe@example.com",
+    "name": "John Doe",
+    "title": "blog 2",
+    "pId": 2
+  },
+  {
+    "email": "smith@example.com",
+    "name": "John Smith",
+    "title": "blog 3",
+    "pId": 3
+  }
+]
+`;
+
+exports[`Select Tests > basic selectAll > should run 1`] = `
+[
+  {
+    "id": 1,
+    "email": "johndoe@example.com",
+    "name": "John Doe",
+    "age": 25
+  },
+  {
+    "id": 2,
+    "email": "smith@example.com",
+    "name": "John Smith",
+    "age": 30
+  },
+  {
+    "id": 3,
+    "email": "alice@example.com",
+    "name": null,
+    "age": null
+  }
+]
+`;
+
+exports[`Select Tests > basic selectAll with join > should run 1`] = `
+[
+  {
+    "User.id": 1,
+    "User.email": "johndoe@example.com",
+    "User.name": "John Doe",
+    "User.age": 25,
+    "Post.id": 1,
+    "Post.title": "Blog 1",
+    "Post.content": "Something",
+    "Post.published": false,
+    "Post.createdAt": "2020-01-15T10:30:00.000Z",
+    "Post.authorId": 1,
+    "Post.lastModifiedById": 1,
+    "Post.metadata": {
+      "name": "Blog Post 1",
+      "tags": [
+        "prisma",
+        "ts"
+      ]
+    }
+  },
+  {
+    "User.id": 1,
+    "User.email": "johndoe@example.com",
+    "User.name": "John Doe",
+    "User.age": 25,
+    "Post.id": 2,
+    "Post.title": "blog 2",
+    "Post.content": "sql",
+    "Post.published": false,
+    "Post.createdAt": "2020-06-20T14:45:00.000Z",
+    "Post.authorId": 1,
+    "Post.lastModifiedById": 1,
+    "Post.metadata": null
+  },
+  {
+    "User.id": 2,
+    "User.email": "smith@example.com",
+    "User.name": "John Smith",
+    "User.age": 30,
+    "Post.id": 3,
+    "Post.title": "blog 3",
+    "Post.content": null,
+    "Post.published": false,
+    "Post.createdAt": "2021-12-25T08:00:00.000Z",
+    "Post.authorId": 2,
+    "Post.lastModifiedById": 2,
+    "Post.metadata": null
+  }
+]
+`;
+
+exports[`Select Tests > select distinct > should run and return distinct data 1`] = `
+[
+  {
+    "id": 1,
+    "email": "johndoe@example.com",
+    "name": "John Doe",
+    "age": 25
+  },
+  {
+    "id": 2,
+    "email": "smith@example.com",
+    "name": "John Smith",
+    "age": 30
+  },
+  {
+    "id": 3,
+    "email": "alice@example.com",
+    "name": null,
+    "age": null
+  }
+]
+`;

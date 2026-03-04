@@ -25,33 +25,13 @@ describe("Select Tests", ()=> {
                     .select("*");
             }
 
-            it("should RUN", async () => {
+            it("should RUN", async (t) => {
                 const result = await createQuery().run();
 
                 typeCheck({} as Expect<Equal<typeof result, UserRowArray>>);
 
 
-                const expected: UserRowArray = [
-                    {
-                        id: 1,
-                        email: 'johndoe@example.com',
-                        name: 'John Doe',
-                        age: 25
-                    },
-                    {
-                        id: 2,
-                        email: 'smith@example.com',
-                        name: 'John Smith',
-                        age: 30
-                    },
-                    {
-                        id: 3,
-                        email: "alice@example.com",
-                        name: null,
-                        age: null
-                    }
-                ];
-                assert.deepEqual(result, expected);
+                t.assert.snapshot(result);
 
             });
 
@@ -72,58 +52,20 @@ describe("Select Tests", ()=> {
 
             it("should match SQL", () => {
                 expectSQL(createQuery().getSQL(),
-                    `SELECT ${dialect.quoteQualifiedColumn("User.id")} AS ${dialect.quote("User.id", true)}, ${dialect.quoteQualifiedColumn("User.email")} AS ${dialect.quote("User.email", true)}, ${dialect.quoteQualifiedColumn("User.name")} AS ${dialect.quote("User.name", true)}, ${dialect.quoteQualifiedColumn("User.age")} AS ${dialect.quote("User.age", true)}, ${dialect.quoteQualifiedColumn("Post.id")} AS ${dialect.quote("Post.id", true)}, ${dialect.quoteQualifiedColumn("Post.title")} AS ${dialect.quote("Post.title", true)}, ${dialect.quoteQualifiedColumn("Post.content")} AS ${dialect.quote("Post.content", true)}, ${dialect.quoteQualifiedColumn("Post.published")} AS ${dialect.quote("Post.published", true)}, ${dialect.quoteQualifiedColumn("Post.createdAt")} AS ${dialect.quote("Post.createdAt", true)}, ${dialect.quoteQualifiedColumn("Post.authorId")} AS ${dialect.quote("Post.authorId", true)}, ${dialect.quoteQualifiedColumn("Post.lastModifiedById")} AS ${dialect.quote("Post.lastModifiedById", true)} FROM ${dialect.quote("User")} JOIN ${dialect.quote("Post")} ON ${dialect.quoteQualifiedColumn("Post.authorId")} = ${dialect.quoteQualifiedColumn("User.id")};`
+                    `SELECT ${dialect.quoteQualifiedColumn("User.id")} AS ${dialect.quote("User.id", true)}, ${dialect.quoteQualifiedColumn("User.email")} AS ${dialect.quote("User.email", true)}, ${dialect.quoteQualifiedColumn("User.name")} AS ${dialect.quote("User.name", true)}, ${dialect.quoteQualifiedColumn("User.age")} AS ${dialect.quote("User.age", true)}, ${dialect.quoteQualifiedColumn("Post.id")} AS ${dialect.quote("Post.id", true)}, ${dialect.quoteQualifiedColumn("Post.title")} AS ${dialect.quote("Post.title", true)}, ${dialect.quoteQualifiedColumn("Post.content")} AS ${dialect.quote("Post.content", true)}, ${dialect.quoteQualifiedColumn("Post.published")} AS ${dialect.quote("Post.published", true)}, ${dialect.quoteQualifiedColumn("Post.createdAt")} AS ${dialect.quote("Post.createdAt", true)}, ${dialect.quoteQualifiedColumn("Post.authorId")} AS ${dialect.quote("Post.authorId", true)}, ${dialect.quoteQualifiedColumn("Post.lastModifiedById")} AS ${dialect.quote("Post.lastModifiedById", true)}, ${dialect.quoteQualifiedColumn("Post.metadata")} AS ${dialect.quote("Post.metadata", true)} FROM ${dialect.quote("User")} JOIN ${dialect.quote("Post")} ON ${dialect.quoteQualifiedColumn("Post.authorId")} = ${dialect.quoteQualifiedColumn("User.id")};`
                 );
             });
 
-            it("should run and return qualified data", async () => {
+            it("should run and return qualified data", async (t) => {
                 const result = await createQuery().run();
                 type TExpected = Array<UserPostQualifiedJoinRow>;
 
                 typeCheck({} as Expect<Equal<typeof result, TExpected>>);
 
-                const expected: TExpected = [{
-                    'User.id': 1,
-                    'User.email': 'johndoe@example.com',
-                    'User.name': 'John Doe',
-                    'User.age': 25,
-                    'Post.id': 1,
-                    'Post.title': 'Blog 1',
-                    'Post.content': 'Something',
-                    'Post.published': false,
-                    'Post.createdAt': new Date("2020-01-15T10:30:00.000Z"),
-                    'Post.authorId': 1,
-                    'Post.lastModifiedById': 1,
-                    'Post.metadata':{ name: 'Blog Post 1', tags: ['prisma', 'ts'] },
-                }, {
-                    'User.id': 1,
-                    'User.email': 'johndoe@example.com',
-                    'User.name': 'John Doe',
-                    'User.age': 25,
-                    'Post.id': 2,
-                    'Post.title': 'blog 2',
-                    'Post.content': 'sql',
-                    'Post.published': false,
-                    'Post.createdAt': new Date("2020-06-20T14:45:00.000Z"),
-                    'Post.authorId': 1,
-                    'Post.lastModifiedById': 1,
-                    'Post.metadata':null
-                }, {
-                    'User.id': 2,
-                    'User.email': 'smith@example.com',
-                    'User.name': 'John Smith',
-                    'User.age': 30,
-                    'Post.id': 3,
-                    'Post.title': 'blog 3',
-                    'Post.content': null,
-                    'Post.published': false,
-                    'Post.createdAt': new Date("2021-12-25T08:00:00.000Z"),
-                    'Post.authorId': 2,
-                    'Post.lastModifiedById': 2,
-                    'Post.metadata':null
-                }];
-                assert.deepStrictEqual(result, expected);
+                t.assert.snapshot(result);
+
             });
+
         })
 
 
@@ -139,34 +81,13 @@ describe("Select Tests", ()=> {
                 const sql = createQuery().getSQL();
                 expectSQL(sql, `SELECT DISTINCT * FROM ${dialect.quote("User")} ORDER BY ${dialect.quoteOrderByClause("id")};`)
             });
-            it("should run and return distinct data", async () => {
+            it("should run and return distinct data", async (t) => {
                 const result = await createQuery().run();
 
 
                 typeCheck({} as Expect<Equal<typeof result, UserRowArray>>);
 
-                const expected: UserRowArray = [
-                    {
-                        id: 1,
-                        email: 'johndoe@example.com',
-                        name: 'John Doe',
-                        age: 25,
-                    },
-                    {
-                        id: 2,
-                        email: 'smith@example.com',
-                        name: 'John Smith',
-                        age: 30
-                    },
-                    {
-                        id: 3,
-                        email: "alice@example.com",
-                        name: null,
-                        age: null
-                    }
-                ];
-
-                assert.deepEqual(result, expected);
+                t.assert.snapshot(result);
             })
         });
 
@@ -205,33 +126,12 @@ describe("Select Tests", ()=> {
                     .selectAll();
             }
 
-            it("should run", async () => {
+            it("should run", async (t) => {
                 const result = await createQuery().run();
 
                 typeCheck({} as Expect<Equal<typeof result, UserRowArray>>);
 
-                const expected: UserRowArray = [
-                    {
-                        id: 1,
-                        email: 'johndoe@example.com',
-                        name: 'John Doe',
-                        age: 25,
-                    },
-                    {
-                        id: 2,
-                        email: 'smith@example.com',
-                        name: 'John Smith',
-                        age: 30
-                    },
-                    {
-                        id: 3,
-                        email: "alice@example.com",
-                        name: null,
-                        age: null,
-                    }
-                ]
-
-                assert.deepEqual(result, expected);
+                t.assert.snapshot(result);
 
             });
 
@@ -250,53 +150,12 @@ describe("Select Tests", ()=> {
                     .selectAll();
             }
 
-            it("should run", async () => {
+            it("should run", async (t) => {
                 const result = await createQuery().run();
 
                 typeCheck({} as Expect<Equal<typeof result, Array<UserPostQualifiedJoinRow>>>);
 
-                const expected: Array<UserPostQualifiedJoinRow> = [{
-                    'User.id': 1,
-                    'User.email': 'johndoe@example.com',
-                    'User.name': 'John Doe',
-                    "User.age": 25,
-                    'Post.id': 1,
-                    'Post.title': 'Blog 1',
-                    'Post.content': 'Something',
-                    'Post.published': false,
-                    'Post.createdAt': new Date("2020-01-15T10:30:00.000Z"),
-                    'Post.authorId': 1,
-                    'Post.lastModifiedById': 1,
-                    'Post.metadata': { name: 'Blog Post 1', tags: ['prisma', 'ts'] },
-                }, {
-                    'User.id': 1,
-                    'User.email': 'johndoe@example.com',
-                    'User.name': 'John Doe',
-                    "User.age": 25,
-                    'Post.id': 2,
-                    'Post.title': 'blog 2',
-                    'Post.content': 'sql',
-                    'Post.published': false,
-                    'Post.createdAt': new Date("2020-06-20T14:45:00.000Z"),
-                    'Post.authorId': 1,
-                    'Post.lastModifiedById': 1,
-                    'Post.metadata': null,
-                }, {
-                    'User.id': 2,
-                    'User.email': 'smith@example.com',
-                    'User.name': 'John Smith',
-                    "User.age": 30,
-                    'Post.id': 3,
-                    'Post.title': 'blog 3',
-                    'Post.content': null,
-                    'Post.published': false,
-                     'Post.createdAt': new Date("2021-12-25T08:00:00.000Z"),
-                    'Post.authorId': 2,
-                    'Post.lastModifiedById': 2,
-                    'Post.metadata': null,
-                }];
-
-                assert.deepStrictEqual(result, expected);
+                t.assert.snapshot(result);
 
             });
 
@@ -315,7 +174,7 @@ describe("Select Tests", ()=> {
                     .select("name");
             }
 
-            it("should RUN", async () => {
+            it("should RUN", async (t) => {
                 const result = await createQuery().run();
 
                 type TExpected = Array<Pick<UserRow, "name" | "email">>;
@@ -323,21 +182,7 @@ describe("Select Tests", ()=> {
                 typeCheck({} as Expect<Equal<typeof result, TExpected>>);
 
 
-                const expected: TExpected = [
-                    {
-                        email: 'johndoe@example.com',
-                        name: 'John Doe',
-                    },
-                    {
-                        email: 'smith@example.com',
-                        name: 'John Smith',
-                    },
-                    {
-                        email: "alice@example.com",
-                        name: null
-                    }
-                ];
-                assert.deepEqual(result, expected);
+                t.assert.snapshot(result);
 
             });
 
@@ -358,28 +203,14 @@ describe("Select Tests", ()=> {
                     .select("Post.title");
             }
 
-            it("should run", async () => {
+            it("should run", async (t) => {
                 const result = await createQuery().run();
 
                 type TExpected = Array<Pick<UserPostJoinRow, "email" | "name" | "title">>;
 
                 typeCheck({} as Expect<Equal<typeof result, TExpected>>);
 
-                const expected: TExpected = [{
-                    email: 'johndoe@example.com',
-                    name: 'John Doe',
-                    title: 'Blog 1',
-                }, {
-                    email: 'johndoe@example.com',
-                    name: 'John Doe',
-                    title: 'blog 2',
-                }, {
-                    email: 'smith@example.com',
-                    name: 'John Smith',
-                    title: 'blog 3',
-                }];
-
-                assert.deepStrictEqual(result, expected);
+                t.assert.snapshot(result);
 
             });
 
@@ -401,31 +232,14 @@ describe("Select Tests", ()=> {
                 .select("Post.id");
         }
 
-        it("should run", async () => {
+        it("should run", async (t) => {
             const result = await createQuery().run();
 
             type TExpected = Array<Prettify<Pick<UserRow, "email"|"name"> & Pick<PostRow, "title"> & Pick<PostRowQualified, "Post.id">>>;
 
             typeCheck({} as Expect<Equal<typeof result, TExpected>>);
 
-            const expected: TExpected = [{
-                email: 'johndoe@example.com',
-                name: 'John Doe',
-                title: 'Blog 1',
-                'Post.id': 1
-            }, {
-                email: 'johndoe@example.com',
-                name: 'John Doe',
-                title: 'blog 2',
-                'Post.id': 2
-            }, {
-                email: 'smith@example.com',
-                name: 'John Smith',
-                title: 'blog 3',
-                'Post.id': 3
-            }];
-
-            assert.deepStrictEqual(result, expected);
+            t.assert.snapshot(result);
 
         });
 
@@ -446,7 +260,7 @@ describe("Select Tests", ()=> {
                 .select("Post.id", 'pId');
         }
 
-        it("should run", async () => {
+        it("should run", async (t) => {
             const result = await createQuery().run();
 
 
@@ -455,24 +269,7 @@ describe("Select Tests", ()=> {
 
             typeCheck({} as Expect<Equal<typeof result, TExpected>>);
 
-            const expected: TExpected = [{
-                email: 'johndoe@example.com',
-                name: 'John Doe',
-                title: 'Blog 1',
-                pId: 1
-            }, {
-                email: 'johndoe@example.com',
-                name: 'John Doe',
-                title: 'blog 2',
-                pId: 2
-            }, {
-                email: 'smith@example.com',
-                name: 'John Smith',
-                title: 'blog 3',
-                pId: 3
-            }];
-
-            assert.deepStrictEqual(result, expected);
+            t.assert.snapshot(result);
 
         });
 

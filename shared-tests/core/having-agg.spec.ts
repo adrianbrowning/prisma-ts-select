@@ -40,9 +40,9 @@ describe("having() with aggregate functions", () => {
             ].join(" "));
         });
 
-        it("runtime: only users with >1 post returned", async () => {
+        it("runtime: only users with >1 post returned", async (t) => {
             const result = await createQuery().run();
-            assert.deepStrictEqual(result, [{ name: 'John Doe' }]);
+            t.assert.snapshot(result);
         });
     });
 
@@ -160,9 +160,9 @@ describe("having() with aggregate functions", () => {
             ].join(" "));
         });
 
-        it("runtime: chained having filters correctly", async () => {
+        it("runtime: chained having filters correctly", async (t) => {
             const result = await createQuery().run();
-            assert.deepStrictEqual(result, [{ name: 'John Doe' }]);
+            t.assert.snapshot(result);
         });
     });
 
@@ -186,9 +186,9 @@ describe("having() with aggregate functions", () => {
             ].join(" "));
         });
 
-        it("runtime: only John Doe matches LIKE 'JOHN D%'", async () => {
+        it("runtime: only John Doe matches LIKE 'JOHN D%'", async (t) => {
             const result = await createQuery().run();
-            assert.deepStrictEqual(result, [{ name: 'John Doe' }]);
+            t.assert.snapshot(result);
         });
     });
 

@@ -1,0 +1,109 @@
+exports[`having > HAVING with GROUP BY > should run 1`] = `
+[
+  {
+    "name": "John Doe"
+  },
+  {
+    "name": "John Smith"
+  }
+]
+`;
+
+exports[`having > HAVING with complex criteria > should run 1`] = `
+[
+  {
+    "User.id": 1,
+    "name": "John Doe",
+    "email": "johndoe@example.com",
+    "age": 25
+  },
+  {
+    "User.id": 2,
+    "name": "John Smith",
+    "email": "smith@example.com",
+    "age": 30
+  }
+]
+`;
+
+exports[`where > Where Criteria Object > should run 1`] = `
+[
+  {
+    "User.id": 1,
+    "User.email": "johndoe@example.com",
+    "User.name": "John Doe",
+    "User.age": 25,
+    "Post.id": 1,
+    "Post.title": "Blog 1",
+    "Post.content": "Something",
+    "Post.published": false,
+    "Post.createdAt": "2020-01-15T10:30:00.000Z",
+    "Post.authorId": 1,
+    "Post.lastModifiedById": 1,
+    "Post.metadata": {
+      "name": "Blog Post 1",
+      "tags": [
+        "prisma",
+        "ts"
+      ]
+    }
+  }
+]
+`;
+
+exports[`where > Where NULL - Type Narrowing > should run 1`] = `
+[]
+`;
+
+exports[`where > Where Raw > should run 1`] = `
+[
+  {
+    "User.id": 1,
+    "User.email": "johndoe@example.com",
+    "User.name": "John Doe",
+    "User.age": 25,
+    "Post.id": 1,
+    "Post.title": "Blog 1",
+    "Post.content": "Something",
+    "Post.published": false,
+    "Post.createdAt": "2020-01-15T10:30:00.000Z",
+    "Post.authorId": 1,
+    "Post.lastModifiedById": 1,
+    "Post.metadata": {
+      "name": "Blog Post 1",
+      "tags": [
+        "prisma",
+        "ts"
+      ]
+    }
+  },
+  {
+    "User.id": 1,
+    "User.email": "johndoe@example.com",
+    "User.name": "John Doe",
+    "User.age": 25,
+    "Post.id": 2,
+    "Post.title": "blog 2",
+    "Post.content": "sql",
+    "Post.published": false,
+    "Post.createdAt": "2020-06-20T14:45:00.000Z",
+    "Post.authorId": 1,
+    "Post.lastModifiedById": 1,
+    "Post.metadata": null
+  },
+  {
+    "User.id": 2,
+    "User.email": "smith@example.com",
+    "User.name": "John Smith",
+    "User.age": 30,
+    "Post.id": 3,
+    "Post.title": "blog 3",
+    "Post.content": null,
+    "Post.published": false,
+    "Post.createdAt": "2021-12-25T08:00:00.000Z",
+    "Post.authorId": 2,
+    "Post.lastModifiedById": 2,
+    "Post.metadata": null
+  }
+]
+`;

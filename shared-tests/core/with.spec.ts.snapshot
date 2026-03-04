@@ -1,0 +1,25 @@
+exports[`$with (CTE) > runtime result correctness - filtered CTE 1`] = `
+[
+  {
+    "name": "John Doe",
+    "pp.title": "Blog 1"
+  }
+]
+`;
+
+exports[`$with (CTE) > runtime result correctness - single CTE 1`] = `
+[
+  {
+    "name": "John Doe",
+    "pp.title": "Blog 1"
+  },
+  {
+    "name": "John Doe",
+    "pp.title": "blog 2"
+  },
+  {
+    "name": "John Smith",
+    "pp.title": "blog 3"
+  }
+]
+`;

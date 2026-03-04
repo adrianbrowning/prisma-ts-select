@@ -1,0 +1,15 @@
+exports[`manyToManyJoin > runtime > explicit source override returns correct rows 1`] = `
+[
+  {
+    "name": "MMM Category M1"
+  }
+]
+`;
+
+exports[`manyToManyJoin > runtime > returns M2M_Category row joined via junction 1`] = `
+[
+  {
+    "name": "M2M Category 1"
+  }
+]
+`;
