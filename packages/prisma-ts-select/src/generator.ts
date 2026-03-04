@@ -134,7 +134,7 @@ generatorHandler({
     }, {});
 
 
-    const pTSSelPath = path.dirname(_require.resolve('@gcm/prisma-ts-select'));
+    const pTSSelPath = path.dirname(_require.resolve('prisma-ts-select'));
     logger.info("pTSSelPath", pTSSelPath);
 
     const srcDir = path.join(pTSSelPath, "extend");
