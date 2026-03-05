@@ -138,7 +138,7 @@ describe("whereNotNull / whereIsNull", () => {
             const userCols = ["id", "email", "name", "age"]
                 .map(c => `${dialect.quoteQualifiedColumn(`User.${c}`)} AS ${dialect.quote(`User.${c}`, true)}`)
                 .join(", ")
-            const postCols = ["id", "title", "content", "published", "createdAt", "authorId", "lastModifiedById"]
+            const postCols = ["id", "title", "content", "published", "createdAt", "authorId", "lastModifiedById", "metadata"]
                 .map(c => `${dialect.quoteQualifiedColumn(`Post.${c}`)} AS ${dialect.quote(`Post.${c}`, true)}`)
                 .join(", ")
             expectSQL(

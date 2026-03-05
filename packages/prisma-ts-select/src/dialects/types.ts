@@ -86,3 +86,6 @@ export type Dialect = {
 
 export const SUPPORTED_PROVIDERS = ["sqlite", "mysql", "postgresql"] as const;
 export type SupportedProvider = typeof SUPPORTED_PROVIDERS[keyof typeof SUPPORTED_PROVIDERS];
+
+/** Registry of SQL functions available for a given dialect/context. */
+export type FunctionRegistry = Record<string, (...args: unknown[]) => unknown>;

@@ -1,0 +1,23 @@
+exports[`having() with aggregate functions > chained .having(criteria).having(tuple fn) > runtime: chained having filters correctly 1`] = `
+[
+  {
+    "name": "John Doe"
+  }
+]
+`;
+
+exports[`having() with aggregate functions > countAll() with op (>) > runtime: only users with >1 post returned 1`] = `
+[
+  {
+    "name": "John Doe"
+  }
+]
+`;
+
+exports[`having() with aggregate functions > string expr in HAVING — upper() LIKE > runtime: only John Doe matches LIKE 'JOHN D%' 1`] = `
+[
+  {
+    "name": "John Doe"
+  }
+]
+`;

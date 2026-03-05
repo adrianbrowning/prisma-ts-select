@@ -8,6 +8,7 @@
 // ============================================================================
 
 import type {Prettify} from "./utils.js";
+import type {JSONValue} from "../generated/prisma-ts-select/extend.js";
 
 /**
  * User table row with unqualified column names.
@@ -32,6 +33,7 @@ export type PostRow = {
     createdAt: Date;
     authorId: number;
     lastModifiedById: number;
+    metadata: JSONValue | null;
 };
 
 /**

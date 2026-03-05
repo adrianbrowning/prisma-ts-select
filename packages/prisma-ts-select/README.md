@@ -1900,6 +1900,12 @@ GROUP BY User.name;
 
 ---
 
+## Security
+
+All queries execute via Prisma's `$queryRawUnsafe`. The `esc()` helper escapes single quotes in string literals, but **never pass user-supplied values directly** to query builder methods — use Prisma's parameterized queries for user input.
+
+`whereRaw()` in particular inserts SQL verbatim. Only use it with trusted, static SQL strings.
+
 ## Future updates
 
 - Support specifying `JOIN` type [issue#2](https://github.com/adrianbrowning/prisma-ts-select/issues/2)

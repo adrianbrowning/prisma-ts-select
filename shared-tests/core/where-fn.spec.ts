@@ -25,9 +25,9 @@ describe("where() fn overload", () => {
             ].join(" "));
         });
 
-        it("runtime: only John Doe returned", async () => {
+        it("runtime: only John Doe returned", async (t) => {
             const result = await createQuery().run();
-            assert.deepStrictEqual(result, [{ name: 'John Doe' }]);
+            t.assert.snapshot(result);
         });
     });
 

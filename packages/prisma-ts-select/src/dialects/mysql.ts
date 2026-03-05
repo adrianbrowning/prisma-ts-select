@@ -1,8 +1,8 @@
 import type {Dialect} from "./types.js";
 import {resolveArg, sqlExpr, type SQLExpr} from "../sql-expr.js";
-import type {JSONValue} from "../utils/types.js";
+import type {JSONValue, JSONObject} from "../utils/types.js";
 import type {Decimal} from "@prisma/client/runtime/client";
-import {esc, type FilterCols, type ColName} from "./shared.js";
+import {esc, flattenJsonObjectPairs, type FilterCols, type FilterJsonCols, type ColName} from "./shared.js";
 
 type MySQLCastTypeMap = { SIGNED: bigint; UNSIGNED: bigint; DECIMAL: Decimal; CHAR: string; BINARY: Buffer; DATE: Date; DATETIME: Date; TIME: string; JSON: JSONValue; FLOAT: number; DOUBLE: number };
 
@@ -128,6 +128,13 @@ export const mysqlContextFns = <TColEntries extends [string, unknown] = never, T
   log10: (x: FilterCols<TColEntries, number> | SQLExpr<number>): SQLExpr<number> => sqlExpr(`LOG10(${resolveArg(x, quoteFn)})`),
   truncate: (x: FilterCols<TColEntries, number> | SQLExpr<number>, n: number): SQLExpr<number> => sqlExpr(`TRUNCATE(${resolveArg(x, quoteFn)}, ${n})`),
   rand: (seed?: number): SQLExpr<number> => sqlExpr(seed !== undefined ? `RAND(${seed})` : 'RAND()'),
+  // ── JSON scalar fns ───────────────────────────────────────────────────────
+  jsonExtract: (col: FilterJsonCols<TColEntries> | SQLExpr<JSONValue>, path: string): SQLExpr<JSONValue> =>
+    sqlExpr(`JSON_EXTRACT(${resolveArg(col, quoteFn)}, '${esc(path)}')`),
+  jsonArray: (...args: [ColName<TColEntries> | SQLExpr<unknown>, ...Array<ColName<TColEntries> | SQLExpr<unknown>>]): SQLExpr<JSONValue[]> =>
+    sqlExpr(`JSON_ARRAY(${args.map(a => resolveArg(a as ColName<TColEntries> | SQLExpr<unknown>, quoteFn)).join(', ')})`),
+  jsonObject: (pairs: [string, ColName<TColEntries> | SQLExpr<unknown>][]): SQLExpr<JSONObject> =>
+    sqlExpr(`JSON_OBJECT(${flattenJsonObjectPairs(pairs, quoteFn).join(', ')})`),
   // ── Type coercion ────────────────────────────────────────────────────────
   cast: <T extends keyof MySQLCastTypeMap>(
     expr: ColName<TColEntries> | SQLExpr<unknown>,

@@ -1,7 +1,7 @@
 import type {Dialect} from "./types.js";
 import {resolveArg, sqlExpr, type SQLExpr} from "../sql-expr.js";
-import type {JSONValue} from "../utils/types.js";
-import {esc, type FilterCols, type ColName} from "./shared.js";
+import type {JSONValue, JSONObject} from "../utils/types.js";
+import {esc, flattenJsonObjectPairs, type FilterCols, type FilterJsonCols, type ColName} from "./shared.js";
 
 type PgCastTypeMap = { INTEGER: number; TEXT: string; BIGINT: bigint; BOOLEAN: boolean; REAL: number; NUMERIC: number; DATE: Date; TIMESTAMP: Date; JSON: JSONValue; JSONB: JSONValue };
 
@@ -109,6 +109,19 @@ export const postgresqlContextFns = <TColEntries extends [string, unknown] = nev
   trunc:   (x: FilterCols<TColEntries, number> | SQLExpr<number>, n?: number): SQLExpr<number> => sqlExpr(n !== undefined ? `TRUNC(${resolveArg(x, quoteFn)}, ${n})` : `TRUNC(${resolveArg(x, quoteFn)})`),
   div:     (x: FilterCols<TColEntries, number> | SQLExpr<number>, y: number): SQLExpr<number> => sqlExpr(`DIV(${resolveArg(x, quoteFn)}, ${y})`),
   random:  (): SQLExpr<number> => sqlExpr('RANDOM()'),
+  // ── JSON scalar fns ───────────────────────────────────────────────────────
+  /**
+   * Uses jsonb_path_query_first — requires PG 12+ (Prisma 5+ minimum).
+   * @note PG uses JSONPath syntax (e.g. `$.tags[0]`, `$.name`).
+   * MySQL/SQLite use SQL/JSON path syntax — paths are NOT cross-dialect compatible.
+   * Mismatched paths silently return NULL.
+   */
+  jsonExtract: (col: FilterJsonCols<TColEntries> | SQLExpr<JSONValue>, path: string): SQLExpr<JSONValue> =>
+    sqlExpr(`jsonb_path_query_first(${resolveArg(col, quoteFn)}, '${esc(path)}')`),
+  jsonArray: (...args: [ColName<TColEntries> | SQLExpr<unknown>, ...Array<ColName<TColEntries> | SQLExpr<unknown>>]): SQLExpr<JSONValue[]> =>
+    sqlExpr(`jsonb_build_array(${args.map(a => resolveArg(a as ColName<TColEntries> | SQLExpr<unknown>, quoteFn)).join(', ')})`),
+  jsonObject: (pairs: [string, ColName<TColEntries> | SQLExpr<unknown>][]): SQLExpr<JSONObject> =>
+    sqlExpr(`jsonb_build_object(${flattenJsonObjectPairs(pairs, quoteFn).join(', ')})`),
   // ── Type coercion ────────────────────────────────────────────────────────
   cast: <T extends keyof PgCastTypeMap>(
     expr: ColName<TColEntries> | SQLExpr<unknown>,

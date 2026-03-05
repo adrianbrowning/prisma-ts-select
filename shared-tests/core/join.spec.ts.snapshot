@@ -1,0 +1,16 @@
+exports[`join > TS join Checks 1`] = `
+[
+  {
+    "name": "John Doe",
+    "title": "Blog 1"
+  },
+  {
+    "name": "John Doe",
+    "title": "blog 2"
+  },
+  {
+    "name": "John Smith",
+    "title": "blog 3"
+  }
+]
+`;

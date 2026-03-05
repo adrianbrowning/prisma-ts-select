@@ -42,7 +42,8 @@ async function seed() {
                 published: false,
                 createdAt: new Date('2020-01-15T10:30:00.000Z'),
                 authorId: 1,
-                lastModifiedById: 1
+                lastModifiedById: 1,
+                metadata: { name: 'Blog Post 1', tags: ['prisma', 'ts'] },
             },
             {
                 id: 2,
@@ -51,7 +52,8 @@ async function seed() {
                 published: false,
                 createdAt: new Date('2020-06-20T14:45:00.000Z'),
                 authorId: 1,
-                lastModifiedById: 1
+                lastModifiedById: 1,
+                metadata: null,
             },
             {
                 id: 3,
@@ -60,7 +62,8 @@ async function seed() {
                 published: false,
                 createdAt: new Date('2021-12-25T08:00:00.000Z'),
                 authorId: 2,
-                lastModifiedById: 2
+                lastModifiedById: 2,
+                metadata: null,
             }
         ]
     });
