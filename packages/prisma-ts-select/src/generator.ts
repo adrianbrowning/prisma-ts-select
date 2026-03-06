@@ -2,6 +2,7 @@ import {type ConnectorType, type DMMF, generatorHandler} from '@prisma/generator
 import type { GeneratorOptions } from '@prisma/generator-helper'
 import { logger } from '@prisma/internals'
 import path from 'node:path'
+import { createHash } from 'node:crypto'
 import { GENERATOR_NAME } from './constants.js'
 import { writeFileSafely } from './utils/writeFileSafely.js'
 import { createRequire } from "node:module";
@@ -36,6 +37,7 @@ generatorHandler({
     if(!output) throw new Error(`${GENERATOR_NAME}: No output directory found. Please add an output directory to your schema.prisma file.`)
 
     const outputPath = path.resolve(output);
+    const packageName = (options.generator.config.packageName as string | undefined) ?? generatePackageName(outputPath);
 
     fs.mkdirSync(outputPath, { recursive: true });
 
@@ -258,6 +260,22 @@ export { ${provider}Dialect as dialect, ${provider}Dialect, ${ctxName} as dialec
       writeFileSafely(path.join(outputPath, `extend-${ver}.d.ts`), vDts);
     }
 
+    // Write package.json so the output dir can be consumed as a workspace package
+    const pkg = {
+      name: packageName,
+      version: "0.0.0",
+      type: "module",
+      exports: {
+        ".":            { types: "./extend.d.ts",         import: "./extend.js" },
+        "./extend-v6":  { types: "./extend-v6.d.ts",      import: "./extend-v6.js" },
+        "./extend-v7":  { types: "./extend-v7.d.ts",      import: "./extend-v7.js" },
+        "./dialects":   { types: "./dialects/index.d.ts", import: "./dialects/index.js" },
+        "./dialects/*": { types: "./dialects/*.d.ts",     import: "./dialects/*.js" },
+      },
+      sideEffects: false,
+    };
+    await writeFileSafely(path.join(outputPath, 'package.json'), JSON.stringify(pkg, null, 2));
+
     // Copy chunk .d.ts files (e.g. sql-expr-HASH.d.ts) that extend.d.ts imports
     for (const file of fs.readdirSync(srcDir)) {
       if (file !== 'extend.d.ts' && file !== 'extend.js' && file.endsWith('.d.ts')) {
@@ -292,6 +310,10 @@ export { ${provider}Dialect as dialect, ${provider}Dialect, ${ctxName} as dialec
   },
 })
 
+
+function generatePackageName(outputPath: string): string {
+  return 'prisma-ts-select-' + createHash('sha256').update(outputPath).digest('hex').slice(0, 8);
+}
 
 function generateReadonlyDeclaration(db: DBType) {
   const traverse = (obj : {} | null, level = 0) : string => {
