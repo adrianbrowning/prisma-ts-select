@@ -17,7 +17,7 @@ prisma.$from("User")
 
     const expectedSQL =
       // #region single-omit-sql
-      "SELECT `id`, `name`, `age` FROM `User`;";
+      "SELECT id, name, age FROM User;";
       // #endregion single-omit-sql
 
     expectSQL(sql, expectedSQL);

@@ -8,14 +8,14 @@ import { prisma } from '#client';
 
 describe("README Example: table aliases", () => {
   test("inline alias with joins - should generate correct SQL", () => {
-    let sql =
+    const $sql =
 // #region inline-join
 prisma.$from("User u")
       .join("Post p", "authorId", "u.id")
       .select("u.name")
       .select("p.title");
       // #endregion
-      sql = sql.getSQL();
+      const sql = $sql.getSQL();
 
     const expectedSQL =
       // #region inline-join-sql
