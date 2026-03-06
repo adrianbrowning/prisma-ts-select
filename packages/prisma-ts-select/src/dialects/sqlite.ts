@@ -33,10 +33,11 @@ export const sqliteContextFns = <TColEntries extends [string, unknown] = never, 
   countAll:      (): SQLExpr<bigint> => sqlExpr('COUNT(*)'),
   count:         (col: ColName<TColEntries> | '*'): SQLExpr<bigint> => sqlExpr(col === '*' ? 'COUNT(*)' : `COUNT(${quoteFn(col)})`),
   countDistinct: (col: ColName<TColEntries>): SQLExpr<bigint> => sqlExpr(`COUNT(DISTINCT ${quoteFn(col)})`),
+  distinct:      (col: ColName<TColEntries>): SQLExpr<any> => sqlExpr(`DISTINCT ${quoteFn(col)}`),
   // LENGTH returns INTEGER → bigint in SQLite
   length: (col: FilterCols<TColEntries, string> | SQLExpr<string>): SQLExpr<bigint> => sqlExpr(`LENGTH(${resolveArg(col, quoteFn)})`),
-  groupConcat: (col: ColName<TColEntries>, sep?: string): SQLExpr<string> =>
-    sqlExpr(`GROUP_CONCAT(${quoteFn(col)}${sep !== undefined ? `, '${sep.replace(/'/g, "''")}'` : ''})`),
+  groupConcat: (col: ColName<TColEntries> | SQLExpr<any>, sep?: string): SQLExpr<string> =>
+    sqlExpr(`GROUP_CONCAT(${resolveArg(col, quoteFn)}${sep !== undefined ? `, '${sep.replace(/'/g, "''")}'` : ''})`),
   total: (col: ColName<TColEntries>): SQLExpr<number> => sqlExpr(`TOTAL(${quoteFn(col)})`),
   // SQLite MIN/MAX return bigint for integer columns — override base (number) return types
   min: <Col extends ColName<TColEntries>>(col: Col): SQLExpr<SqliteMinMaxResult<TColEntries, Col>> => sqlExpr(`MIN(${quoteFn(col)})`),

@@ -16,10 +16,11 @@ export const postgresqlContextFns = <TColEntries extends [string, unknown] = nev
   countAll:      (): SQLExpr<number> => sqlExpr('COUNT(*)'),
   count:         (col: ColName<TColEntries> | '*'): SQLExpr<number> => sqlExpr(col === '*' ? 'COUNT(*)' : `COUNT(${quoteFn(col)})`),
   countDistinct: (col: ColName<TColEntries>): SQLExpr<number> => sqlExpr(`COUNT(DISTINCT ${quoteFn(col)})`),
+  distinct:      (col: ColName<TColEntries>): SQLExpr<any> => sqlExpr(`DISTINCT ${quoteFn(col)}`),
   length: (col: FilterCols<TColEntries, string> | SQLExpr<string>): SQLExpr<number> => sqlExpr(`LENGTH(${resolveArg(col, quoteFn)})`),
-  stringAgg:     (col: ColName<TColEntries>, sep: string): SQLExpr<string> =>
-    sqlExpr(`STRING_AGG(${quoteFn(col)}, '${esc(sep)}')`),
-  arrayAgg:      (col: ColName<TColEntries>): SQLExpr<unknown[]> => sqlExpr(`ARRAY_AGG(${quoteFn(col)})`),
+  stringAgg:     (col: ColName<TColEntries> | SQLExpr<any>, sep: string): SQLExpr<string> =>
+    sqlExpr(`STRING_AGG(${resolveArg(col, quoteFn)}, '${esc(sep)}')`),
+  arrayAgg:      (col: ColName<TColEntries> | SQLExpr<any>): SQLExpr<unknown[]> => sqlExpr(`ARRAY_AGG(${resolveArg(col, quoteFn)})`),
   stddevPop:     (col: FilterCols<TColEntries, number>): SQLExpr<number> => sqlExpr(`STDDEV_POP(${quoteFn(col)})`),
   stddevSamp:    (col: FilterCols<TColEntries, number>): SQLExpr<number> => sqlExpr(`STDDEV_SAMP(${quoteFn(col)})`),
   varPop:        (col: FilterCols<TColEntries, number>): SQLExpr<number> => sqlExpr(`VAR_POP(${quoteFn(col)})`),

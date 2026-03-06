@@ -21,9 +21,10 @@ export const mysqlContextFns = <TColEntries extends [string, unknown] = never, T
   countAll:      (): SQLExpr<bigint> => sqlExpr('COUNT(*)'),
   count:         (col: ColName<TColEntries> | '*'): SQLExpr<bigint> => sqlExpr(col === '*' ? 'COUNT(*)' : `COUNT(${quoteFn(col)})`),
   countDistinct: (col: ColName<TColEntries>): SQLExpr<bigint> => sqlExpr(`COUNT(DISTINCT ${quoteFn(col)})`),
+  distinct:      (col: ColName<TColEntries>): SQLExpr<any> => sqlExpr(`DISTINCT ${quoteFn(col)}`),
   length: (col: FilterCols<TColEntries, string> | SQLExpr<string>): SQLExpr<bigint> => sqlExpr(`LENGTH(${resolveArg(col, quoteFn)})`),
-  groupConcat:   (col: ColName<TColEntries>, sep?: string): SQLExpr<string> =>
-    sqlExpr(`GROUP_CONCAT(${quoteFn(col)}${sep !== undefined ? ` SEPARATOR '${esc(sep)}'` : ''})`),
+  groupConcat:   (col: ColName<TColEntries> | SQLExpr<any>, sep?: string): SQLExpr<string> =>
+    sqlExpr(`GROUP_CONCAT(${resolveArg(col, quoteFn)}${sep !== undefined ? ` SEPARATOR '${esc(sep)}'` : ''})`),
   bitAnd:        (col: FilterCols<TColEntries, number>): SQLExpr<number> => sqlExpr(`BIT_AND(${quoteFn(col)})`),
   bitOr:         (col: FilterCols<TColEntries, number>): SQLExpr<number> => sqlExpr(`BIT_OR(${quoteFn(col)})`),
   bitXor:        (col: FilterCols<TColEntries, number>): SQLExpr<number> => sqlExpr(`BIT_XOR(${quoteFn(col)})`),
