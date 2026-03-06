@@ -1,8 +1,8 @@
 import type {Dialect} from "./types.js";
-import {resolveArg, sqlExpr, type SQLExpr} from "../sql-expr.js";
+import {resolveArg, sqlExpr, sqlDistinct, type SQLExpr, type SQLDistinct} from "../sql-expr.js";
 import type {JSONValue, JSONObject} from "../utils/types.js";
 import type {Decimal} from "@prisma/client/runtime/client";
-import {esc, flattenJsonObjectPairs, type FilterCols, type FilterJsonCols, type ColName} from "./shared.js";
+import {esc, flattenJsonObjectPairs, type FilterCols, type FilterJsonCols, type ColName, type ColTypeOf} from "./shared.js";
 
 type MySQLCastTypeMap = { SIGNED: bigint; UNSIGNED: bigint; DECIMAL: Decimal; CHAR: string; BINARY: Buffer; DATE: Date; DATETIME: Date; TIME: string; JSON: JSONValue; FLOAT: number; DOUBLE: number };
 
@@ -19,11 +19,12 @@ export const mysqlContextFns = <TColEntries extends [string, unknown] = never, T
   sum: (col: FilterCols<TColEntries, number> | SQLExpr<number>): SQLExpr<Decimal> =>
     sqlExpr(`SUM(${resolveArg(col, quoteFn)})`),
   countAll:      (): SQLExpr<bigint> => sqlExpr('COUNT(*)'),
-  count:         (col: ColName<TColEntries> | '*'): SQLExpr<bigint> => sqlExpr(col === '*' ? 'COUNT(*)' : `COUNT(${quoteFn(col)})`),
+  count:         (col: ColName<TColEntries> | '*' | SQLExpr<unknown>): SQLExpr<bigint> =>
+    sqlExpr(col === '*' ? 'COUNT(*)' : `COUNT(${resolveArg(col as string | SQLExpr<unknown>, quoteFn)})`),
   countDistinct: (col: ColName<TColEntries>): SQLExpr<bigint> => sqlExpr(`COUNT(DISTINCT ${quoteFn(col)})`),
-  distinct:      (col: ColName<TColEntries>): SQLExpr<any> => sqlExpr(`DISTINCT ${quoteFn(col)}`),
+  distinct:      <Col extends ColName<TColEntries>>(col: Col): SQLDistinct<NonNullable<ColTypeOf<TColEntries, Col>>> => sqlDistinct(`DISTINCT ${quoteFn(col)}`),
   length: (col: FilterCols<TColEntries, string> | SQLExpr<string>): SQLExpr<bigint> => sqlExpr(`LENGTH(${resolveArg(col, quoteFn)})`),
-  groupConcat:   (col: ColName<TColEntries> | SQLExpr<any>, sep?: string): SQLExpr<string> =>
+  groupConcat:   (col: ColName<TColEntries> | SQLExpr<string>, sep?: string): SQLExpr<string> =>
     sqlExpr(`GROUP_CONCAT(${resolveArg(col, quoteFn)}${sep !== undefined ? ` SEPARATOR '${esc(sep)}'` : ''})`),
   bitAnd:        (col: FilterCols<TColEntries, number>): SQLExpr<number> => sqlExpr(`BIT_AND(${quoteFn(col)})`),
   bitOr:         (col: FilterCols<TColEntries, number>): SQLExpr<number> => sqlExpr(`BIT_OR(${quoteFn(col)})`),

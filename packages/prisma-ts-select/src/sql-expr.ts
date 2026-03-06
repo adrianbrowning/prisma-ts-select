@@ -7,6 +7,18 @@ export function sqlExpr<T>(sql: string): SQLExpr<T> {
   return { sql, toString() { return sql; } } as SQLExpr<T>;
 }
 
+export const DISTINCT_BRAND: unique symbol = Symbol('sqlDistinct');
+
+export type SQLDistinct<T> = SQLExpr<T> & { readonly [DISTINCT_BRAND]: true };
+
+export function sqlDistinct<T>(sql: string): SQLDistinct<T> {
+  return { sql, [DISTINCT_BRAND]: true as const, toString() { return sql; } } as SQLDistinct<T>;
+}
+
+export function isDistinct(val: SQLExpr<unknown> | string): val is SQLDistinct<unknown> {
+  return typeof val === 'object' && val !== null && DISTINCT_BRAND in val;
+}
+
 type LitValue = string | number | boolean | null;
 
 /** Maps a JS literal type to the TS type the SQL expression will produce. */

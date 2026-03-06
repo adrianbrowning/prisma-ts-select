@@ -16,8 +16,8 @@ export const mysqlV6ContextFns = <TColEntries extends [string, unknown] = never,
 ) => ({
   ...mysqlContextFns<TColEntries, TCriteria>(quoteFn, condFn),
   countAll:      (): SQLExpr<bigint> => sqlExpr('COUNT(*)'),
-  count:         (col: ColName<TColEntries> | '*'): SQLExpr<bigint> =>
-    sqlExpr(col === '*' ? 'COUNT(*)' : `COUNT(${quoteFn(col)})`),
+  count:         (col: ColName<TColEntries> | '*' | SQLExpr<unknown>): SQLExpr<bigint> =>
+    sqlExpr(col === '*' ? 'COUNT(*)' : `COUNT(${resolveArg(col as string | SQLExpr<unknown>, quoteFn)})`),
   countDistinct: (col: ColName<TColEntries>): SQLExpr<bigint> =>
     sqlExpr(`COUNT(DISTINCT ${quoteFn(col)})`),
   length: (col: FilterCols<TColEntries, string> | SQLExpr<string>): SQLExpr<bigint> =>

@@ -1,7 +1,7 @@
 import type {Dialect} from "./types.js";
-import {resolveArg, sqlExpr, type SQLExpr} from "../sql-expr.js";
+import {resolveArg, sqlExpr, sqlDistinct, type SQLExpr, type SQLDistinct} from "../sql-expr.js";
 import type {JSONValue, JSONObject} from "../utils/types.js";
-import {esc, flattenJsonObjectPairs, type FilterCols, type FilterJsonCols, type ColName} from "./shared.js";
+import {esc, flattenJsonObjectPairs, type FilterCols, type FilterJsonCols, type ColName, type ColTypeOf} from "./shared.js";
 
 type PgCastTypeMap = { INTEGER: number; TEXT: string; BIGINT: bigint; BOOLEAN: boolean; REAL: number; NUMERIC: number; DATE: Date; TIMESTAMP: Date; JSON: JSONValue; JSONB: JSONValue };
 
@@ -14,13 +14,14 @@ export const postgresqlContextFns = <TColEntries extends [string, unknown] = nev
   avg: (col: FilterCols<TColEntries, number> | SQLExpr<number>): SQLExpr<number> => sqlExpr(`AVG(${resolveArg(col, quoteFn)})`),
   sum: (col: FilterCols<TColEntries, number> | SQLExpr<number>): SQLExpr<number> => sqlExpr(`SUM(${resolveArg(col, quoteFn)})`),
   countAll:      (): SQLExpr<number> => sqlExpr('COUNT(*)'),
-  count:         (col: ColName<TColEntries> | '*'): SQLExpr<number> => sqlExpr(col === '*' ? 'COUNT(*)' : `COUNT(${quoteFn(col)})`),
+  count:         (col: ColName<TColEntries> | '*' | SQLExpr<unknown>): SQLExpr<number> =>
+    sqlExpr(col === '*' ? 'COUNT(*)' : `COUNT(${resolveArg(col as string | SQLExpr<unknown>, quoteFn)})`),
   countDistinct: (col: ColName<TColEntries>): SQLExpr<number> => sqlExpr(`COUNT(DISTINCT ${quoteFn(col)})`),
-  distinct:      (col: ColName<TColEntries>): SQLExpr<any> => sqlExpr(`DISTINCT ${quoteFn(col)}`),
+  distinct:      <Col extends ColName<TColEntries>>(col: Col): SQLDistinct<NonNullable<ColTypeOf<TColEntries, Col>>> => sqlDistinct(`DISTINCT ${quoteFn(col)}`),
   length: (col: FilterCols<TColEntries, string> | SQLExpr<string>): SQLExpr<number> => sqlExpr(`LENGTH(${resolveArg(col, quoteFn)})`),
-  stringAgg:     (col: ColName<TColEntries> | SQLExpr<any>, sep: string): SQLExpr<string> =>
+  stringAgg:     (col: ColName<TColEntries> | SQLExpr<string>, sep: string): SQLExpr<string> =>
     sqlExpr(`STRING_AGG(${resolveArg(col, quoteFn)}, '${esc(sep)}')`),
-  arrayAgg:      (col: ColName<TColEntries> | SQLExpr<any>): SQLExpr<unknown[]> => sqlExpr(`ARRAY_AGG(${resolveArg(col, quoteFn)})`),
+  arrayAgg:      (col: ColName<TColEntries> | SQLExpr<unknown>): SQLExpr<unknown[]> => sqlExpr(`ARRAY_AGG(${resolveArg(col, quoteFn)})`),
   stddevPop:     (col: FilterCols<TColEntries, number>): SQLExpr<number> => sqlExpr(`STDDEV_POP(${quoteFn(col)})`),
   stddevSamp:    (col: FilterCols<TColEntries, number>): SQLExpr<number> => sqlExpr(`STDDEV_SAMP(${quoteFn(col)})`),
   varPop:        (col: FilterCols<TColEntries, number>): SQLExpr<number> => sqlExpr(`VAR_POP(${quoteFn(col)})`),
