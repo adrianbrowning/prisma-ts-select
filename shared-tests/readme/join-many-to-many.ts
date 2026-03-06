@@ -5,12 +5,12 @@ import { prisma } from '#client';
 
 describe("README Example: .manyToManyJoin", () => {
   test("basic M2M join generates correct SQL", () => {
-    const sql =
+    const $m2m =
 // #region m2m-basic
 prisma.$from("M2M_Post")
-      .manyToManyJoin("M2M_Category")
+      .manyToManyJoin("M2M_Category");
       // #endregion m2m-basic
-      .getSQL();
+     const sql = $m2m.getSQL();
 
     const expectedSQL =
       // #region m2m-basic-sql
@@ -21,12 +21,12 @@ prisma.$from("M2M_Post")
   });
 
   test("M2M join with target alias generates correct SQL", () => {
-    const sql =
+    const $m2m =
 // #region m2m-alias
 prisma.$from("M2M_Post")
-      .manyToManyJoin("M2M_Category mc")
+      .manyToManyJoin("M2M_Category mc");
       // #endregion m2m-alias
-      .getSQL();
+     const sql = $m2m.getSQL();
 
     const expectedSQL =
       // #region m2m-alias-sql
@@ -37,12 +37,12 @@ prisma.$from("M2M_Post")
   });
 
   test("M2M join with refName selects correct junction table", () => {
-    const sql =
+    const $m2m =
 // #region m2m-refname
 prisma.$from("MMM_Post")
-      .manyToManyJoin("MMM_Category", { refName: "M2M_NC_M1" })
+      .manyToManyJoin("MMM_Category", { refName: "M2M_NC_M1" });
       // #endregion m2m-refname
-      .getSQL();
+     const sql = $m2m .getSQL();
 
     const expectedSQL =
       // #region m2m-refname-sql
@@ -53,12 +53,12 @@ prisma.$from("MMM_Post")
   });
 
   test("M2M join with explicit source resolves aliased source table", () => {
-    const sql =
+    const $m2m =
 // #region m2m-source
 prisma.$from("M2M_Post mp")
-      .manyToManyJoin("M2M_Category mc", { source: "mp.id" })
+      .manyToManyJoin("M2M_Category mc", { source: "mp.id" });
       // #endregion m2m-source
-      .getSQL();
+      const sql = $m2m.getSQL();
 
     const expectedSQL =
       // #region m2m-source-sql

@@ -9,7 +9,7 @@ import { prisma } from '#client';
 describe("README Example: select advanced", () => {
   test("selectDistinct - should generate correct SQL", () => {
     const sql =
-// #region distinct
+// #region distinct-1
 prisma.$from("User")
       .selectDistinct()
       .select("name")
@@ -36,12 +36,12 @@ prisma.$from("User")
   });
 
   test("selectAll single table - should generate correct SQL", () => {
-    const sql =
+    const $from =
 // #region all-single
 prisma.$from("User")
-      .selectAll()
+      .selectAll();
       // #endregion all-single
-.getSQL();
+const sql = $from.getSQL();
 
     const expectedSQL =
       // #region all-single-sql
@@ -52,7 +52,7 @@ prisma.$from("User")
   });
 
   test("selectAll single table - should run successfully", async () => {
-    // #region all-single
+    // #region all-single-full
     const result = await prisma.$from("User")
       .selectAll()
       // #endregion all-single
@@ -84,13 +84,13 @@ prisma.$from("User")
   });
 
   test("selectAll join table - should generate correct SQL", () => {
-    const sql =
+    const $sql =
 // #region all-join
 prisma.$from("User")
       .join("Post", "authorId", "User.id")
-      .selectAll()
+      .selectAll();
       // #endregion all-join
-.getSQL();
+const sql = $sql.getSQL();
 
     const expectedSQL =
       // #region all-join-sql
@@ -101,7 +101,7 @@ prisma.$from("User")
   });
 
   test("selectAll join table - should run successfully", async () => {
-    // #region all-join
+    // #region all-join-full
     const result = await prisma.$from("User")
       .join("Post", "authorId", "User.id")
       .selectAll()
@@ -112,12 +112,12 @@ prisma.$from("User")
   });
 
   test("select Table.* single - should generate correct SQL", () => {
-    const sql =
+    const $sql =
 // #region table-star-single
 prisma.$from("User")
-      .select("User.*")
+      .select("User.*");
       // #endregion table-star-single
-.getSQL();
+      const sql = $sql.getSQL();
 
     const expectedSQL =
       // #region table-star-single-sql
@@ -128,7 +128,7 @@ prisma.$from("User")
   });
 
   test("select Table.* single - should run successfully", async () => {
-    // #region table-star-single
+    // #region table-star-single-2
     const result = await prisma.$from("User")
       .select("User.*")
       // #endregion table-star-single
@@ -157,14 +157,14 @@ prisma.$from("User")
   });
 
   test("select Table.* with join - should generate correct SQL", () => {
-    const sql =
+    const $sql =
 // #region table-star-join
 prisma.$from("User")
       .join("Post", "authorId", "User.id")
       .select("User.*")
-      .select("Post.*")
+      .select("Post.*");
       // #endregion table-star-join
-.getSQL();
+      const sql = $sql.getSQL();
 
     const expectedSQL =
       // #region table-star-join-sql
@@ -175,7 +175,7 @@ prisma.$from("User")
   });
 
   test("select Table.* with join - should run successfully", async () => {
-    // #region table-star-join
+    // #region table-star-join-2
     const result = await prisma.$from("User")
       .join("Post", "authorId", "User.id")
       .select("User.*")
@@ -230,14 +230,14 @@ prisma.$from("User")
   });
 
   test("select join  chained - should generate correct SQL", () => {
-    const sql =
+    const $sql =
 // #region join-chained
 prisma.$from("User")
       .join("Post", "authorId", "User.id")
       .select("name")
-      .select("Post.title")
+      .select("Post.title");
       // #endregion join-chained
-.getSQL();
+      const sql = $sql.getSQL();
 
     const expectedSQL =
       // #region join-chained-sql
@@ -248,7 +248,7 @@ prisma.$from("User")
   });
 
   test("select join  chained - should run successfully", async () => {
-    // #region join-chained
+    // #region join-chained-run
     const result = await prisma.$from("User")
       .join("Post", "authorId", "User.id")
       .select("name")
@@ -273,14 +273,14 @@ prisma.$from("User")
   });
 
   test("select aliases with joins - should generate correct SQL", () => {
-    const sql =
+    const $sql =
 // #region aliases-joins
 prisma.$from("User")
       .join("Post", "authorId", "User.id")
       .select("User.name", "authorName")
-      .select("Post.title", "postTitle")
+      .select("Post.title", "postTitle");
       // #endregion aliases-joins
-.getSQL();
+      const sql = $sql.getSQL();
 
     const expectedSQL =
       // #region aliases-joins-sql
@@ -291,7 +291,7 @@ prisma.$from("User")
   });
 
   test("select aliases with joins - should run successfully", async () => {
-    // #region aliases-joins
+    // #region aliases-joins-run
     const result = await prisma.$from("User")
       .join("Post", "authorId", "User.id")
       .select("User.name", "authorName")

@@ -47,11 +47,9 @@
     "test:jest": "jest",
     "2postinstall": "node src/scripts/postinstall.js",
     "doc": "pnpm exec markdown-toc -i README.md",
-    "mdcode": "go run github.com/szkiba/mdcode@latest ",
-    "mdcode-ts": "pnpm exec mdcode-ts",
-    "readme:extract": "pnpm mdcode-ts extract README.md",
-    "readme:update:old": "pnpm mdcode update README.md",
-    "readme:update": "pnpm mdcode-ts update README.md",
+    "mdcode-ts": "pnpm exec mdcode",
+    "readme:extract": "pnpm mdcode extract README.md",
+    "readme:update": "pnpm mdcode update --transform ./transforms/readme-sql-clean.ts README.md",
     "readme:test": "pnpm --filter usage-sqlite-v7 test -- tests/readme"
   },
   "dependencies": {
@@ -102,7 +100,7 @@
     "knip": "^5.9.4",
     "log-with-statusbar": "^1.2.0",
     "markdown-toc": "^1.2.0",
-    "mdcode-ts": "0.0.3-9",
+    "mdcode-ts": "^0.0.4",
     "prisma": "6.19.2",
     "prisma-dbml-generator": "^0.10.0",
     "prisma-docs-generator": "^0.8.0",

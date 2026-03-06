@@ -7,13 +7,13 @@ import { prisma } from '#client';
 
 describe("README Example: pagination", () => {
   test("limit - should generate correct SQL", () => {
-    const sql =
+    const $sql =
 // #region limit
 prisma.$from("User")
       .join("Post", "authorId", "User.id")
-      .limit(1)
+      .limit(1);
       // #endregion limit
-.getSQL();
+    const sql = $sql.getSQL();
 
     const expectedSQL =
       // #region limit-sql
@@ -25,14 +25,14 @@ prisma.$from("User")
 
   test("limit - should be chainable", () => {
     const query =
-// #region limit
+// #region limit-chain
 prisma.$from("User")
       .join("Post", "authorId", "User.id")
       .limit(1);
     // #endregion limit
 
     const expectedSQL =
-      // #region limit-sql
+      // #region limit-sql-chain
       "FROM User JOIN Post ON Post.authorId = User.id LIMIT 1;";
       // #endregion limit-sql
 
@@ -40,14 +40,14 @@ prisma.$from("User")
   });
 
   test("offset - should generate correct SQL", () => {
-    const sql =
+    const $sql =
 // #region offset
 prisma.$from("User")
       .join("Post", "authorId", "User.id")
       .limit(1)
-      .offset(1)
+      .offset(1);
       // #endregion offset
-.getSQL();
+    const sql = $sql.getSQL();
 
     const expectedSQL =
       // #region offset-sql
@@ -58,7 +58,7 @@ prisma.$from("User")
   });
 
   test("offset - should run successfully", async () => {
-    // #region offset
+    // #region offset-run
     const result = await prisma.$from("User")
       .join("Post", "authorId", "User.id")
       .select("email")

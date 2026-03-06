@@ -8,14 +8,14 @@ import { prisma } from '#client';
 
 describe("README Example: table aliases", () => {
   test("inline alias with joins - should generate correct SQL", () => {
-    const sql =
+    let sql =
 // #region inline-join
 prisma.$from("User u")
       .join("Post p", "authorId", "u.id")
       .select("u.name")
-      .select("p.title")
+      .select("p.title");
       // #endregion
-.getSQL();
+      sql = sql.getSQL();
 
     const expectedSQL =
       // #region inline-join-sql
@@ -26,7 +26,7 @@ prisma.$from("User u")
   });
 
   test("inline alias with joins - should run successfully", async () => {
-    // #region inline-join
+    // #region inline-join-alias
     const result = await prisma.$from("User u")
       .join("Post p", "authorId", "u.id")
       .select("u.name")
@@ -53,14 +53,14 @@ prisma.$from("User u")
   });
 
   test("object syntax joins - should generate correct SQL", () => {
-    const sql =
-// #region object-join
+    const from =
+// #region object-join-1
 prisma.$from("User u")
       .join({table: "Post", src: "authorId", on: "u.id", alias: "p"})
       .select("u.name")
-      .select("p.title")
+      .select("p.title");
       // #endregion
-.getSQL();
+const sql = from.getSQL();
 
     const expectedSQL =
       // #region object-join-sql
@@ -123,7 +123,7 @@ prisma.$from("User u1")
           .select("u1.name", "user1Name")
           .select("u2.name", "user2Name");
 
-      // #region self-join
+      // #region self-join-2
       prisma.$from("User u1")
           .joinUnsafeIgnoreType("User u2", "id", "u1.id")
           .select("u1.name", "user1Name")
@@ -149,12 +149,12 @@ prisma.$from("User u1")
   });
 
   test("table.* with alias single - should generate correct SQL", () => {
-    const sql =
+    const $from =
 // #region star-single
 prisma.$from("User u")
-      .select("u.*")
+      .select("u.*");
       // #endregion
-.getSQL();
+const sql = $from.getSQL();
 
     const expectedSQL =
       // #region star-single-sql
@@ -165,7 +165,7 @@ prisma.$from("User u")
   });
 
   test("table.* with alias single - should run successfully", async () => {
-    // #region star-single
+    // #region star-single-alias
     const result = await prisma.$from("User u")
       .select("u.*")
       // #endregion
@@ -194,14 +194,14 @@ prisma.$from("User u")
   });
 
   test("table.* with alias joins - should generate correct SQL", () => {
-    const sql =
+    const $join =
 // #region star-join
 prisma.$from("User u")
       .join("Post p", "authorId", "u.id")
       .select("u.*")
-      .select("p.*")
+      .select("p.*");
       // #endregion
-.getSQL();
+const sql  = $join.getSQL();
 
     const expectedSQL =
       // #region star-join-sql
@@ -212,7 +212,7 @@ prisma.$from("User u")
   });
 
   test("table.* with alias joins - should run successfully", async () => {
-    // #region star-join
+    // #region star-join-2
     const result = await prisma.$from("User u")
       .join("Post p", "authorId", "u.id")
       .select("u.*")

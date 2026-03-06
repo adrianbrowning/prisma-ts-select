@@ -6,13 +6,16 @@ import { prisma } from '#client';
 describe("README Example: $with (CTE)", () => {
 
   test("CTE as joined table - SQL", () => {
-    const posts = prisma.$from("Post").select("id").select("authorId").select("title");
+// #region join
+const posts = prisma.$from("Post").select("id").select("authorId").select("title");
+
+// #endregion
     const sql =
 // #region join
 prisma.$with("pp", posts)
       .from("User")
       .join("pp", "authorId", "User.id")
-    // #endregion join
+    // #endregion
     .getSQL();
 
     assert.equal(sql,
@@ -23,7 +26,10 @@ prisma.$with("pp", posts)
   });
 
   test("CTE as base table - SQL", () => {
-    const posts = prisma.$from("Post").select("id").select("title");
+// #region cte-base
+const posts = prisma.$from("Post").select("id").select("title");
+
+// #endregion
     const sql =
 // #region cte-base
 prisma.$with("pp", posts)
@@ -41,8 +47,11 @@ prisma.$with("pp", posts)
   });
 
   test("multiple CTEs - SQL", () => {
-    const posts = prisma.$from("Post").select("id").select("authorId").select("title");
-    const users = prisma.$from("User").select("id").select("name");
+// #region multi-cte
+const posts = prisma.$from("Post").select("id").select("authorId").select("title");
+const users = prisma.$from("User").select("id").select("name");
+
+//#endregion
     const sql =
 // #region multi-cte
 prisma.$with("pp", posts)

@@ -7,7 +7,7 @@ import { prisma } from '#client';
 
 describe("README Example: having", () => {
   test("having with groupBy - should generate correct SQL", () => {
-    const sql =
+    const $sql =
 // #region with-groupby
 prisma.$from("User")
       .join("Post", "authorId", "User.id")
@@ -18,9 +18,9 @@ prisma.$from("User")
           "value": "bob%"
         }
       })
-      .select("email")
+      .select("email");
       // #endregion with-groupby
-.getSQL();
+    const sql = $sql.getSQL();
 
     const expectedSQL =
       // #region with-groupby-sql
@@ -32,7 +32,7 @@ prisma.$from("User")
 
   test("having with groupBy - should be chainable", () => {
     const query =
-// #region with-groupby
+// #region with-groupby-chain
 prisma.$from("User")
       .join("Post", "authorId", "User.id")
       .groupBy(["name", "Post.content"])
@@ -48,7 +48,7 @@ prisma.$from("User")
   });
 
   test("having without groupBy - should generate correct SQL", () => {
-    const sql =
+    const $sql =
 // #region without-groupby
 prisma.$from("User")
       .join("Post", "authorId", "User.id")
@@ -58,9 +58,9 @@ prisma.$from("User")
           "value": "stuart%"
         }
       })
-      .select("email")
+      .select("email");
       // #endregion without-groupby
-.getSQL();
+    const sql = $sql.getSQL();
 
     const expectedSQL =
       // #region without-groupby-sql
@@ -72,7 +72,7 @@ prisma.$from("User")
 
   test("having without groupBy - should be chainable", () => {
     const query =
-// #region without-groupby
+// #region without-groupby-run
 prisma.$from("User")
       .join("Post", "authorId", "User.id")
       .having({

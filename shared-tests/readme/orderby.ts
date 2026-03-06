@@ -7,13 +7,13 @@ import { prisma } from '#client';
 
 describe("README Example: orderBy", () => {
   test("orderBy - should generate correct SQL", () => {
-    const sql =
+    const $sql =
 // #region basic
 prisma.$from("User")
       .join("Post", "authorId", "User.id")
-      .orderBy(["name", "Post.content DESC"])
+      .orderBy(["name", "Post.content DESC"]);
       // #endregion basic
-.getSQL();
+    const sql = $sql.getSQL();
 
     const expectedSQL =
       // #region basic-sql
@@ -25,14 +25,14 @@ prisma.$from("User")
 
   test("orderBy - should be chainable", () => {
     const query =
-// #region basic
+// #region basic-chain
 prisma.$from("User")
       .join("Post", "authorId", "User.id")
       .orderBy(["name", "Post.content DESC"]);
     // #endregion basic
 
     const expectedSQL =
-      // #region basic-sql
+      // #region basic-sql-chain
       "FROM User JOIN Post ON Post.authorId = User.id ORDER BY name, Post.content DESC;";
       // #endregion basic-sql
 

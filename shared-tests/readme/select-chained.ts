@@ -8,13 +8,13 @@ import { prisma } from '#client';
 
 describe("README Example: select chained", () => {
   test("should generate correct SQL", () => {
-    const sql =
+    const $sql =
 // #region example
 prisma.$from("User")
       .select("name")
-      .select("email")
+      .select("email");
       // #endregion
-.getSQL();
+    const sql = $sql.getSQL();
 
     const expectedSQL =
       // #region example-sql
@@ -25,7 +25,7 @@ prisma.$from("User")
   });
 
   test("should run and return selected columns", async () => {
-    // #region example
+    // #region example-run
     const result = await prisma.$from("User")
       .select("name")
       .select("email")
