@@ -9,7 +9,7 @@ import { prisma } from '#client';
 describe("README Example: .$from basic", () => {
   test("should create basic from query", () => {
             const query =
-// #region example
+// #region example-$from
 prisma.$from("User");
     // #endregion
 

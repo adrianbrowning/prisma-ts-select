@@ -325,16 +325,16 @@ The way the methods are chained, are heavily inspired by [Dr Milan Milanović](h
 This takes the `base` table to work from.
 
 #### Example
-```typescript file=../usage/tests/readme/from-basic.ts region=example
+```typescript file=../usage-sqlite-v7/tests/readme/from-basic.ts region=example-$from
 prisma.$from("User");
 ```
 
 #### Example - With Table Alias
-```typescript file=../usage/tests/readme/from-inline-alias.ts region=example
+```typescript file=../usage-sqlite-v7/tests/readme/from-inline-alias.ts region=example-$from
 prisma.$from("User u");
 ```
 ##### SQL
-```sql file=../usage/tests/readme/from-inline-alias.ts region=inline-alias-sql
+```sql file=../usage-sqlite-v7/tests/readme/from-inline-alias.ts region=inline-alias-sql
 FROM User AS `u`;
 ```
 **Note:** Alias can be inline (space-separated) or as second parameter.
@@ -354,7 +354,7 @@ Chain `.with(name, query)` before `.from()` to define additional CTEs.
 
 #### Example — CTE as joined table
 
-```typescript file=../shared-tests/readme/with-cte.ts region=join
+```typescript file=../../shared-tests/readme/with-cte.ts region=join
 const posts = prisma.$from("Post").select("id").select("authorId").select("title");
 
 prisma.$with("pp", posts)
@@ -364,15 +364,19 @@ prisma.$with("pp", posts)
 
 ##### SQL
 
-```sql file=../shared-tests/readme/with-cte.ts region=join-sql
-WITH pp AS (SELECT id, authorId, title FROM Post) FROM User JOIN pp ON pp.authorId = User.id;
+```sql file=../../shared-tests/readme/with-cte.ts region=join-sql
+WITH pp AS (
+SELECT id, authorId, title 
+FROM Post) 
+FROM User 
+JOIN pp ON pp.authorId = User.id;
 ```
 
 #### Example — CTE as base table
 
 Use `.from('cteName')` to query a CTE directly, without a real table as the base.
 
-```typescript file=../shared-tests/readme/with-cte.ts region=cte-base
+```typescript file=../../shared-tests/readme/with-cte.ts region=cte-base
 const posts = prisma.$from("Post").select("id").select("title");
 
 prisma.$with("pp", posts)
@@ -383,15 +387,19 @@ prisma.$with("pp", posts)
 
 ##### SQL
 
-```sql file=../shared-tests/readme/with-cte.ts region=cte-base-sql
-WITH pp AS (SELECT id, title FROM Post) SELECT pp.id AS `pp.id`, pp.title AS `pp.title` FROM pp;
+```sql file=../../shared-tests/readme/with-cte.ts region=cte-base-sql
+WITH pp AS (
+SELECT id, title 
+FROM Post) 
+SELECT pp.id AS `pp.id`, pp.title AS `pp.title` 
+FROM pp;
 ```
 
 **Type safety:** only CTEs declared in `.$with()` / `.with()` are accepted by `.from()`. Unknown CTE names are rejected at compile time.
 
 #### Example — Multiple CTEs
 
-```typescript file=../shared-tests/readme/with-cte.ts region=multi-cte
+```typescript file=../../shared-tests/readme/with-cte.ts region=multi-cte
 const posts = prisma.$from("Post").select("id").select("authorId").select("title");
 const users = prisma.$from("User").select("id").select("name");
 
@@ -403,8 +411,14 @@ prisma.$with("pp", posts)
 
 ##### SQL
 
-```sql file=../shared-tests/readme/with-cte.ts region=multi-cte-sql
-WITH pp AS (SELECT id, authorId, title FROM Post), uu AS (SELECT id, name FROM User) FROM User JOIN pp ON pp.authorId = User.id;
+```sql file=../../shared-tests/readme/with-cte.ts region=multi-cte-sql
+WITH pp AS (
+SELECT id, authorId, title 
+FROM Post), uu AS (
+SELECT id, name 
+FROM User) 
+FROM User 
+JOIN pp ON pp.authorId = User.id;
 ```
 
 ### Table Aliases
@@ -424,7 +438,7 @@ Multiple syntaxes supported:
 #### Table Aliases with Joins
 
 ##### Inline Alias Syntax
-```typescript file=../usage/tests/readme/table-alias.ts region=inline-join
+```typescript file=../usage-sqlite-v7/tests/readme/table-alias.ts region=inline-join
 prisma.$from("User u")
       .join("Post p", "authorId", "u.id")
       .select("u.name")
@@ -432,7 +446,7 @@ prisma.$from("User u")
 ```
 
 ##### Object Syntax
-```typescript file=../usage/tests/readme/table-alias.ts region=object-join
+```typescript file=../usage-sqlite-v7/tests/readme/table-alias.ts region=object-join-1
 prisma.$from("User u")
       .join({table: "Post", src: "authorId", on: "u.id", alias: "p"})
       .select("u.name")
@@ -440,9 +454,9 @@ prisma.$from("User u")
 ```
 
 ##### SQL
-```sql file=../usage/tests/readme/table-alias.ts region=inline-join-sql
-SELECT name, title
-FROM User AS `u`
+```sql file=../usage-sqlite-v7/tests/readme/table-alias.ts region=inline-join-sql
+SELECT name, title 
+FROM User AS `u` 
 JOIN Post AS `p` ON p.authorId = u.id;
 ```
 
@@ -452,7 +466,7 @@ JOIN Post AS `p` ON p.authorId = u.id;
 
 Self-joins require aliases to distinguish between the different "instances" of the same table:
 
-```typescript file=../usage/tests/readme/table-alias.ts region=self-join
+```typescript file=../usage-sqlite-v7/tests/readme/table-alias.ts region=self-join
 prisma.$from("User u1")
       .joinUnsafeTypeEnforced("User u2", "id", "u1.id")
       .select("u1.name", "user1Name")
@@ -460,11 +474,9 @@ prisma.$from("User u1")
 ```
 
 ##### SQL
-```sql file=../usage/tests/readme/table-alias.ts region=self-join-sql
-SELECT 
-  u1.name AS `user1Name`,
-  u2.name AS `user2Name`
-FROM User AS `u1`
+```sql file=../usage-sqlite-v7/tests/readme/table-alias.ts region=self-join-sql
+SELECT u1.name AS `user1Name`, u2.name AS `user2Name` 
+FROM User AS `u1` 
 JOIN User AS `u2` ON u2.id = u1.id;
 ```
 
@@ -472,23 +484,19 @@ JOIN User AS `u2` ON u2.id = u1.id;
 
 You can use the `alias.*` syntax to select all columns from an aliased table:
 
-```typescript file=../usage/tests/readme/table-alias.ts region=star-single
+```typescript file=../usage-sqlite-v7/tests/readme/table-alias.ts region=star-single
 prisma.$from("User u")
       .select("u.*");
 ```
 
 ##### SQL
-```sql file=../usage/tests/readme/table-alias.ts region=star-single-sql
-SELECT 
-  id,
-  email,
-  name,
-  age
+```sql file=../usage-sqlite-v7/tests/readme/table-alias.ts region=star-single-sql
+SELECT id, email, name, age 
 FROM User AS `u`;
 ```
 
 With joins:
-```typescript file=../usage/tests/readme/table-alias.ts region=star-join
+```typescript file=../usage-sqlite-v7/tests/readme/table-alias.ts region=star-join
 prisma.$from("User u")
       .join("Post p", "authorId", "u.id")
       .select("u.*")
@@ -496,19 +504,9 @@ prisma.$from("User u")
 ```
 
 ##### SQL
-```sql file=../usage/tests/readme/table-alias.ts region=star-join-sql
-SELECT 
-  u.id AS `u.id`,
-  u.email AS `u.email`,
-  u.name AS `u.name`,
-  u.age AS `u.age`,
-  p.id AS `p.id`,
-  p.title AS `p.title`,
-  p.content AS `p.content`,
-  p.published AS `p.published`,
-  p.authorId AS `p.authorId`,
-  p.lastModifiedById AS `p.lastModifiedById`
-FROM User AS `u`
+```sql file=../usage-sqlite-v7/tests/readme/table-alias.ts region=star-join-sql
+SELECT u.id AS `u.id`, u.email AS `u.email`, u.name AS `u.name`, u.age AS `u.age`, p.id AS `p.id`, p.title AS `p.title`, p.content AS `p.content`, p.published AS `p.published`, p.createdAt AS `p.createdAt`, p.authorId AS `p.authorId`, p.lastModifiedById AS `p.lastModifiedById`, p.metadata AS `p.metadata` 
+FROM User AS `u` 
 JOIN Post AS `p` ON p.authorId = u.id;
 ```
 
@@ -538,7 +536,7 @@ Each method has `*UnsafeTypeEnforced` and `*UnsafeIgnoreType` variants with the 
 Using the defined links (foreign keys) defined in the schema, provides a type-safe way of joining on tables.
 
 ##### Example
-```typescript file=../usage/tests/readme/join-basic.ts region=example
+```typescript file=../usage-sqlite-v7/tests/readme/join-basic.ts region=example
 prisma.$from("User")
       .join("Post", "authorId", "User.id");
 ```
@@ -549,8 +547,8 @@ prisma.$from("User")
 
 The resulting SQL will look like:
 
-```sql file=../usage/tests/readme/join-basic.ts region=join-basic-sql
-FROM User
+```sql file=../usage-sqlite-v7/tests/readme/join-basic.ts region=join-basic-sql
+FROM User 
 JOIN Post ON Post.authorId = User.id;
 ```
 
@@ -589,7 +587,8 @@ prisma.$from("User")
 ```
 
 ```sql file=../usage-sqlite-v7/tests/readme/join-type.ts region=join-type-left-sql
-FROM User LEFT JOIN Post ON Post.authorId = User.id;
+FROM User 
+LEFT JOIN Post ON Post.authorId = User.id;
 ```
 
 `CROSS JOIN` has no `ON` clause — it is suppressed automatically:
@@ -600,7 +599,8 @@ prisma.$from("User")
 ```
 
 ```sql file=../usage-sqlite-v7/tests/readme/join-type.ts region=join-type-cross-sql
-FROM User CROSS JOIN Post;
+FROM User 
+CROSS JOIN Post;
 ```
 
 `joinType` and `where` can be combined — `where` is ignored for `CROSS`:
@@ -614,7 +614,8 @@ prisma.$from("User")
 ```
 
 ```sql file=../usage-sqlite-v7/tests/readme/join-type.ts region=join-type-with-where-sql
-FROM User LEFT JOIN Post ON Post.authorId = User.id AND Post.published = true;
+FROM User 
+LEFT JOIN Post ON Post.authorId = User.id AND Post.published = true;
 ```
 
 ##### Join-level WHERE
@@ -627,7 +628,8 @@ prisma.$from("User")
 ```
 
 ```sql file=../usage-sqlite-v7/tests/readme/join-where.ts region=join-where-sql
-FROM User JOIN Post ON Post.authorId = User.id AND Post.published = true;
+FROM User 
+JOIN Post ON Post.authorId = User.id AND Post.published = true;
 ```
 
 Supports the same MongoDB-inspired operators as `.where()` — `$AND`, `$OR`, `$NOT`, `$NOR`:
@@ -645,7 +647,8 @@ prisma.$from("User")
 ```
 
 ```sql file=../usage-sqlite-v7/tests/readme/join-where.ts region=join-where-ops-sql
-FROM User JOIN Post ON Post.authorId = User.id AND (Post.published = true AND Post.id > 0);
+FROM User 
+JOIN Post ON Post.authorId = User.id AND (Post.published = true AND Post.id > 0);
 ```
 
 > **Type safety**: only `"JoinedTable.field"` keys are accepted — other tables' fields are rejected at compile time.
@@ -655,7 +658,7 @@ FROM User JOIN Post ON Post.authorId = User.id AND (Post.published = true AND Po
 Unlike the `.join` command, this will allow you to join on columns that are not explicitly linked by a FK, but have the same type.
 
 ##### Example
-```typescript file=../usage/tests/readme/join-unsafe.ts region=type-enforced
+```typescript file=../usage-sqlite-v7/tests/readme/join-unsafe.ts region=type-enforced
 prisma.$from("User")
       .joinUnsafeTypeEnforced("Post", "title", "User.name");
 ```
@@ -664,8 +667,8 @@ prisma.$from("User")
 ##### SQL
 The resulting SQL will look like:
 
-```sql file=../usage/tests/readme/join-unsafe.ts region=type-enforced-sql
-FROM User
+```sql file=../usage-sqlite-v7/tests/readme/join-unsafe.ts region=type-enforced-sql
+FROM User 
 JOIN Post ON Post.title = User.name;
 ```
 
@@ -683,7 +686,7 @@ JOIN Post ON Post.title = User.name;
 Unlike the `.joinUnsafeIgnoreType` command, this will allow you to join on columns that are not explicitly linked by a FK, and do not have the same type.
 
 ##### Example
-```typescript file=../usage/tests/readme/join-unsafe.ts region=ignore-type
+```typescript file=../usage-sqlite-v7/tests/readme/join-unsafe.ts region=ignore-type
 prisma.$from("User")
       .joinUnsafeIgnoreType("Post", "id", "User.name");
 ```
@@ -692,8 +695,8 @@ prisma.$from("User")
 ##### SQL
 The resulting SQL will look like:
 
-```sql file=../usage/tests/readme/join-unsafe.ts region=ignore-type-sql
-FROM User
+```sql file=../usage-sqlite-v7/tests/readme/join-unsafe.ts region=ignore-type-sql
+FROM User 
 JOIN Post ON Post.id = User.name;
 ```
 
@@ -718,7 +721,9 @@ prisma.$from("M2M_Post")
 
 ##### SQL
 ```sql file=../usage-sqlite-v7/tests/readme/join-many-to-many.ts region=m2m-basic-sql
-FROM M2M_Post JOIN _M2M_CategoryToM2M_Post ON _M2M_CategoryToM2M_Post.B = M2M_Post.id JOIN M2M_Category ON M2M_Category.id = _M2M_CategoryToM2M_Post.A;
+FROM M2M_Post 
+JOIN _M2M_CategoryToM2M_Post ON _M2M_CategoryToM2M_Post.B = M2M_Post.id 
+JOIN M2M_Category ON M2M_Category.id = _M2M_CategoryToM2M_Post.A;
 ```
 
 ##### Parameters
@@ -735,7 +740,9 @@ prisma.$from("M2M_Post")
 ```
 
 ```sql file=../usage-sqlite-v7/tests/readme/join-many-to-many.ts region=m2m-alias-sql
-FROM M2M_Post JOIN _M2M_CategoryToM2M_Post ON _M2M_CategoryToM2M_Post.B = M2M_Post.id JOIN M2M_Category AS `mc` ON mc.id = _M2M_CategoryToM2M_Post.A;
+FROM M2M_Post 
+JOIN _M2M_CategoryToM2M_Post ON _M2M_CategoryToM2M_Post.B = M2M_Post.id 
+JOIN M2M_Category AS `mc` ON mc.id = _M2M_CategoryToM2M_Post.A;
 ```
 
 ##### Named Junction (`refName`)
@@ -748,7 +755,9 @@ prisma.$from("MMM_Post")
 ```
 
 ```sql file=../usage-sqlite-v7/tests/readme/join-many-to-many.ts region=m2m-refname-sql
-FROM MMM_Post JOIN _M2M_NC_M1 ON _M2M_NC_M1.B = MMM_Post.id JOIN MMM_Category ON MMM_Category.id = _M2M_NC_M1.A;
+FROM MMM_Post 
+JOIN _M2M_NC_M1 ON _M2M_NC_M1.B = MMM_Post.id 
+JOIN MMM_Category ON MMM_Category.id = _M2M_NC_M1.A;
 ```
 
 ##### Explicit Source (`source`)
@@ -761,7 +770,9 @@ prisma.$from("M2M_Post mp")
 ```
 
 ```sql file=../usage-sqlite-v7/tests/readme/join-many-to-many.ts region=m2m-source-sql
-FROM M2M_Post AS `mp` JOIN _M2M_CategoryToM2M_Post ON _M2M_CategoryToM2M_Post.B = mp.id JOIN M2M_Category AS `mc` ON mc.id = _M2M_CategoryToM2M_Post.A;
+FROM M2M_Post AS `mp` 
+JOIN _M2M_CategoryToM2M_Post ON _M2M_CategoryToM2M_Post.B = mp.id 
+JOIN M2M_Category AS `mc` ON mc.id = _M2M_CategoryToM2M_Post.A;
 ```
 
 #### `.innerJoin`
@@ -769,40 +780,43 @@ FROM M2M_Post AS `mp` JOIN _M2M_CategoryToM2M_Post ON _M2M_CategoryToM2M_Post.B 
 Alias for `.join` — explicitly emits `INNER JOIN`. Same type-safe FK constraints.
 
 ##### Example
-```typescript file=../shared-tests/readme/join-inner.ts region=example
+```typescript file=../../shared-tests/readme/join-inner.ts region=example
 prisma.$from("User")
       .innerJoin("Post", "authorId", "User.id")
 ```
 
 ##### SQL
-```sql file=../shared-tests/readme/join-inner.ts region=sql
-FROM User INNER JOIN Post ON Post.authorId = User.id;
+```sql file=../../shared-tests/readme/join-inner.ts region=sql
+FROM User 
+INNER JOIN Post ON Post.authorId = User.id;
 ```
 
 ##### `.innerJoinUnsafeTypeEnforced`
 
 Same-type column join, INNER semantics.
 
-```typescript file=../shared-tests/readme/join-inner.ts region=type-enforced
+```typescript file=../../shared-tests/readme/join-inner.ts region=type-enforced
 prisma.$from("User")
       .innerJoinUnsafeTypeEnforced("Post", "title", "User.name")
 ```
 
-```sql file=../shared-tests/readme/join-inner.ts region=type-enforced-sql
-FROM User INNER JOIN Post ON Post.title = User.name;
+```sql file=../../shared-tests/readme/join-inner.ts region=type-enforced-sql
+FROM User 
+INNER JOIN Post ON Post.title = User.name;
 ```
 
 ##### `.innerJoinUnsafeIgnoreType`
 
 Any-column join, INNER semantics.
 
-```typescript file=../shared-tests/readme/join-inner.ts region=ignore-type
+```typescript file=../../shared-tests/readme/join-inner.ts region=ignore-type
 prisma.$from("User")
       .innerJoinUnsafeIgnoreType("Post", "id", "User.name")
 ```
 
-```sql file=../shared-tests/readme/join-inner.ts region=ignore-type-sql
-FROM User INNER JOIN Post ON Post.id = User.name;
+```sql file=../../shared-tests/readme/join-inner.ts region=ignore-type-sql
+FROM User 
+INNER JOIN Post ON Post.id = User.name;
 ```
 
 ---
@@ -812,40 +826,43 @@ FROM User INNER JOIN Post ON Post.id = User.name;
 FK-safe LEFT JOIN. Joined table fields become `T | null` in the result type.
 
 ##### Example
-```typescript file=../shared-tests/readme/join-left.ts region=example
+```typescript file=../../shared-tests/readme/join-left.ts region=example
 prisma.$from("User")
       .leftJoin("Post", "authorId", "User.id")
 ```
 
 ##### SQL
-```sql file=../shared-tests/readme/join-left.ts region=sql
-FROM User LEFT JOIN Post ON Post.authorId = User.id;
+```sql file=../../shared-tests/readme/join-left.ts region=sql
+FROM User 
+LEFT JOIN Post ON Post.authorId = User.id;
 ```
 
 ##### `.leftJoinUnsafeTypeEnforced`
 
 Same-type column join, LEFT semantics.
 
-```typescript file=../shared-tests/readme/join-left.ts region=type-enforced
+```typescript file=../../shared-tests/readme/join-left.ts region=type-enforced
 prisma.$from("User")
       .leftJoinUnsafeTypeEnforced("Post", "title", "User.name")
 ```
 
-```sql file=../shared-tests/readme/join-left.ts region=type-enforced-sql
-FROM User LEFT JOIN Post ON Post.title = User.name;
+```sql file=../../shared-tests/readme/join-left.ts region=type-enforced-sql
+FROM User 
+LEFT JOIN Post ON Post.title = User.name;
 ```
 
 ##### `.leftJoinUnsafeIgnoreType`
 
 Any-column join, LEFT semantics.
 
-```typescript file=../shared-tests/readme/join-left.ts region=ignore-type
+```typescript file=../../shared-tests/readme/join-left.ts region=ignore-type
 prisma.$from("User")
       .leftJoinUnsafeIgnoreType("Post", "id", "User.name")
 ```
 
-```sql file=../shared-tests/readme/join-left.ts region=ignore-type-sql
-FROM User LEFT JOIN Post ON Post.id = User.name;
+```sql file=../../shared-tests/readme/join-left.ts region=ignore-type-sql
+FROM User 
+LEFT JOIN Post ON Post.id = User.name;
 ```
 
 ---
@@ -855,27 +872,29 @@ FROM User LEFT JOIN Post ON Post.id = User.name;
 Produces a cartesian product — no `ON` clause. All dialects supported.
 
 ##### Example
-```typescript file=../shared-tests/readme/join-cross.ts region=example
+```typescript file=../../shared-tests/readme/join-cross.ts region=example
 prisma.$from("User")
       .crossJoin("Post")
 ```
 
 ##### SQL
-```sql file=../shared-tests/readme/join-cross.ts region=sql
-FROM User CROSS JOIN Post;
+```sql file=../../shared-tests/readme/join-cross.ts region=sql
+FROM User 
+CROSS JOIN Post;
 ```
 
 ##### `.crossJoinUnsafeTypeEnforced` / `.crossJoinUnsafeIgnoreType`
 
 Type-permission variants — still emit `CROSS JOIN` with no `ON` clause (takes only a table argument).
 
-```typescript file=../shared-tests/readme/join-cross.ts region=type-enforced
+```typescript file=../../shared-tests/readme/join-cross.ts region=type-enforced
 prisma.$from("User")
       .crossJoinUnsafeTypeEnforced("Post")
 ```
 
-```sql file=../shared-tests/readme/join-cross.ts region=type-enforced-sql
-FROM User CROSS JOIN Post;
+```sql file=../../shared-tests/readme/join-cross.ts region=type-enforced-sql
+FROM User 
+CROSS JOIN Post;
 ```
 
 ---
@@ -993,7 +1012,7 @@ type WhereClause = {
 
 
 ###### Columns
-```typescript file=../usage/tests/readme/where.ts region=columns
+```typescript file=../usage-sqlite-v7/tests/readme/where.ts region=columns
 prisma.$from("User")
       .joinUnsafeIgnoreType("Post", "id", "User.name")
       .where({
@@ -1003,7 +1022,7 @@ prisma.$from("User")
 ```
 
 ###### $AND
-```typescript file=../usage/tests/readme/where.ts region=and
+```typescript file=../usage-sqlite-v7/tests/readme/where.ts region=and
 prisma.$from("User")
       .joinUnsafeIgnoreType("Post", "id", "User.name")
       .where({
@@ -1015,7 +1034,7 @@ prisma.$from("User")
 ```
 
 ###### $OR
-```typescript file=../usage/tests/readme/where.ts region=or
+```typescript file=../usage-sqlite-v7/tests/readme/where.ts region=or
 prisma.$from("User")
       .joinUnsafeIgnoreType("Post", "id", "User.name")
       .where({
@@ -1027,7 +1046,7 @@ prisma.$from("User")
 ```
 
 ###### $NOT
-```typescript file=../usage/tests/readme/where.ts region=not
+```typescript file=../usage-sqlite-v7/tests/readme/where.ts region=not
 prisma.$from("User")
       .joinUnsafeIgnoreType("Post", "id", "User.name")
       .where({
@@ -1042,7 +1061,7 @@ prisma.$from("User")
 ```
 
 ###### $NOR
-```typescript file=../usage/tests/readme/where.ts region=nor
+```typescript file=../usage-sqlite-v7/tests/readme/where.ts region=nor
 prisma.$from("User")
       .joinUnsafeIgnoreType("Post", "id", "User.name")
       .where({
@@ -1057,7 +1076,7 @@ prisma.$from("User")
 ```
 
 ###### Array (Scalar → IN)
-```typescript file=../usage/tests/readme/where.ts region=array-scalar
+```typescript file=../usage-sqlite-v7/tests/readme/where.ts region=array-scalar
 prisma.$from("User")
       .joinUnsafeIgnoreType("Post", "id", "User.name")
       .where({
@@ -1066,7 +1085,7 @@ prisma.$from("User")
 ```
 
 ###### Array (Op-Object → OR)
-```typescript file=../usage/tests/readme/where.ts region=array-op
+```typescript file=../usage-sqlite-v7/tests/readme/where.ts region=array-op
 prisma.$from("User")
       .joinUnsafeIgnoreType("Post", "id", "User.name")
       .where({
@@ -1094,7 +1113,9 @@ prisma.$from("User")
 The resulting SQL will look like:
 
 ```sql file=../usage-sqlite-v7/tests/readme/whereNotNull.ts region=whereNotNull-sql
-FROM User JOIN Post ON Post.authorId = User.id WHERE (User.name IS NOT NULL);
+FROM User 
+JOIN Post ON Post.authorId = User.id 
+WHERE (User.name IS NOT NULL);
 ```
 
 #### `.whereIsNull`
@@ -1113,21 +1134,25 @@ prisma.$from("User")
 The resulting SQL will look like:
 
 ```sql file=../usage-sqlite-v7/tests/readme/whereNotNull.ts region=whereIsNull-sql
-FROM User JOIN Post ON Post.authorId = User.id WHERE (Post.content IS NULL);
+FROM User 
+JOIN Post ON Post.authorId = User.id 
+WHERE (Post.content IS NULL);
 ```
 
 #### `.where` — fn overload (SQL expressions)
 
 Pass a callback instead of a criteria object to apply SQL functions as conditions. The callback receives the same select-fn context as `.select()`, giving access to `upper`, `lower`, `length`, `count`, `avg`, etc.
 
-```typescript file=../shared-tests/readme/where.ts region=fn-upper-like
+```typescript file=../../shared-tests/readme/where.ts region=fn-upper-like
 prisma.$from("User")
       .where(({ upper }) => [[upper('name'), { op: 'LIKE', value: 'John%' }]])
       .select("name")
 ```
 
-```sql file=../shared-tests/readme/where.ts region=fn-upper-like-sql
-SELECT name FROM User WHERE UPPER(name) LIKE 'John%';
+```sql file=../../shared-tests/readme/where.ts region=fn-upper-like-sql
+SELECT name 
+FROM User 
+WHERE UPPER(name) LIKE 'John%';
 ```
 
 Each array element is an `[SQLExpr<T>, condition]` pair — multiple pairs are AND-ed. The condition type is inferred from `SQLExpr<T>`: string expressions accept LIKE/NOT LIKE, numeric expressions accept `>`, `<`, BETWEEN, etc.
@@ -1137,7 +1162,7 @@ Each array element is an `[SQLExpr<T>, condition]` pair — multiple pairs are A
 When you want to write a complex `where`, or you just don't want the TypeSafety offered by the other methods, you can use `.whereRaw`.
 
 ##### Example
-```typescript file=../usage/tests/readme/where.ts region=raw
+```typescript file=../usage-sqlite-v7/tests/readme/where.ts region=raw
 prisma.$from("User")
       .join("Post", "authorId", "User.id")
       .whereRaw("this is a raw where statement");
@@ -1146,11 +1171,11 @@ prisma.$from("User")
 ##### SQL
 The resulting SQL will look like:
 
-```sql file=../usage/tests/readme/where.ts region=raw-sql
-FROM User
-JOIN Post ON Post.authorId = User.id
-WHERE this is a raw
-WHERE statement;
+```sql file=../usage-sqlite-v7/tests/readme/where.ts region=raw-sql
+FROM User 
+JOIN Post ON Post.authorId = User.id 
+WHERE this is a raw 
+where statement;
 ```
 
 
@@ -1159,7 +1184,7 @@ WHERE statement;
 Will allow you to pass a list of columns, that haven been specified from the `.$from` and any `.join` methods.
 
 #### Example
-```typescript file=../usage/tests/readme/groupby.ts region=basic
+```typescript file=../usage-sqlite-v7/tests/readme/groupby.ts region=basic
 prisma.$from("User")
       .join("Post", "authorId", "User.id")
       .groupBy(["name", "Post.content"]);
@@ -1169,9 +1194,9 @@ prisma.$from("User")
 #### SQL
 The resulting SQL will look like:
 
-```sql file=../usage/tests/readme/groupby.ts region=basic-sql
-FROM User
-JOIN Post ON Post.authorId = User.id
+```sql file=../usage-sqlite-v7/tests/readme/groupby.ts region=basic-sql
+FROM User 
+JOIN Post ON Post.authorId = User.id 
 GROUP BY name, Post.content;
 ```
 
@@ -1182,17 +1207,17 @@ GROUP BY name, Post.content;
 Will add the keyword `DISTINCT` after the select.
 
 #### Example
-```typescript file=../usage/tests/readme/select-advanced.ts region=distinct
+```typescript file=../usage-sqlite-v7/tests/readme/select-advanced.ts region=distinct
 prisma.$from("User")
       .selectDistinct()
-      .select("name");
+      .select("User.name");
 ```
 
 #### SQL
 The resulting SQL will look like:
 
-```sql file=../usage/tests/readme/select-advanced.ts region=distinct-sql
-SELECT DISTINCT name
+```sql file=../usage-sqlite-v7/tests/readme/select-advanced.ts region=distinct-sql
+SELECT DISTINCT name 
 FROM User;
 ```
 
@@ -1203,7 +1228,7 @@ This method will explicitly list all the tables from the `$from` and `.join`. So
 
 
 #### Example - Single Table
-```typescript file=../usage/tests/readme/select-advanced.ts region=all-single
+```typescript file=../usage-sqlite-v7/tests/readme/select-advanced.ts region=all-single
 prisma.$from("User")
       .selectAll();
 ```
@@ -1211,17 +1236,13 @@ prisma.$from("User")
 ##### SQL
 The resulting SQL will look like:
 
-```sql file=../usage/tests/readme/select-advanced.ts region=all-single-sql
-SELECT 
-  id,
-  email,
-  name,
-  age
+```sql file=../usage-sqlite-v7/tests/readme/select-advanced.ts region=all-single-sql
+SELECT id, email, name, age 
 FROM User;
 ```
 
 #### Example - Join table
-```typescript file=../usage/tests/readme/select-advanced.ts region=all-join
+```typescript file=../usage-sqlite-v7/tests/readme/select-advanced.ts region=all-join
 prisma.$from("User")
       .join("Post", "authorId", "User.id")
       .selectAll();
@@ -1230,19 +1251,9 @@ prisma.$from("User")
 ##### SQL
 The resulting SQL will look like:
 
-```sql file=../usage/tests/readme/select-advanced.ts region=all-join-sql
-SELECT 
-  User.id AS `User.id`,
-  User.email AS `User.email`,
-  User.name AS `User.name`,
-  User.age AS `User.age`,
-  Post.id AS `Post.id`,
-  Post.title AS `Post.title`,
-  Post.content AS `Post.content`,
-  Post.published AS `Post.published`,
-  Post.authorId AS `Post.authorId`,
-  Post.lastModifiedById AS `Post.lastModifiedById`
-FROM User
+```sql file=../usage-sqlite-v7/tests/readme/select-advanced.ts region=all-join-sql
+SELECT User.id AS `User.id`, User.email AS `User.email`, User.name AS `User.name`, User.age AS `User.age`, Post.id AS `Post.id`, Post.title AS `Post.title`, Post.content AS `Post.content`, Post.published AS `Post.published`, Post.createdAt AS `Post.createdAt`, Post.authorId AS `Post.authorId`, Post.lastModifiedById AS `Post.lastModifiedById`, Post.metadata AS `Post.metadata` 
+FROM User 
 JOIN Post ON Post.authorId = User.id;
 ```
 
@@ -1258,7 +1269,8 @@ prisma.$from("User")
 
 ##### SQL
 ```sql file=../usage-sqlite-v7/tests/readme/select-all-omit.ts region=single-omit-sql
-SELECT id, name, age FROM User;
+SELECT `id`, `name`, `age` 
+FROM `User`;
 ```
 
 #### Example - Multiple Columns
@@ -1281,7 +1293,7 @@ prisma.$from("User")
 You can supply either; `*`, `Table.*` OR `table.field` and then chain them together.
 
 #### Example - `*`
-```typescript file=../usage/tests/readme/select-star.ts region=example
+```typescript file=../usage-sqlite-v7/tests/readme/select-star.ts region=example
 prisma.$from("User")
       .select("*");
 ```
@@ -1289,13 +1301,13 @@ prisma.$from("User")
 ##### SQL
 The resulting SQL will look like:
 
-```sql file=../usage/tests/readme/select-star.ts region=example-sql
-SELECT *
+```sql file=../usage-sqlite-v7/tests/readme/select-star.ts region=example-sql
+SELECT * 
 FROM User;
 ```
 
 #### Example - `Table.*` (Single Table)
-```typescript file=../usage/tests/readme/select-advanced.ts region=table-star-single
+```typescript file=../usage-sqlite-v7/tests/readme/select-advanced.ts region=table-star-single
 prisma.$from("User")
       .select("User.*");
 ```
@@ -1303,17 +1315,13 @@ prisma.$from("User")
 ##### SQL
 The resulting SQL will look like:
 
-```sql file=../usage/tests/readme/select-advanced.ts region=table-star-single-sql
-SELECT 
-  id,
-  email,
-  name,
-  age
+```sql file=../usage-sqlite-v7/tests/readme/select-advanced.ts region=table-star-single-sql
+SELECT id, email, name, age 
 FROM User;
 ```
 
 #### Example - `Table.*` (With Join)
-```typescript file=../usage/tests/readme/select-advanced.ts region=table-star-join
+```typescript file=../usage-sqlite-v7/tests/readme/select-advanced.ts region=table-star-join
 prisma.$from("User")
       .join("Post", "authorId", "User.id")
       .select("User.*")
@@ -1323,19 +1331,9 @@ prisma.$from("User")
 ##### SQL
 The resulting SQL will look like:
 
-```sql file=../usage/tests/readme/select-advanced.ts region=table-star-join-sql
-SELECT 
-  User.id AS `User.id`,
-  User.email AS `User.email`,
-  User.name AS `User.name`,
-  User.age AS `User.age`,
-  Post.id AS `Post.id`,
-  Post.title AS `Post.title`,
-  Post.content AS `Post.content`,
-  Post.published AS `Post.published`,
-  Post.authorId AS `Post.authorId`,
-  Post.lastModifiedById AS `Post.lastModifiedById`
-FROM User
+```sql file=../usage-sqlite-v7/tests/readme/select-advanced.ts region=table-star-join-sql
+SELECT User.id AS `User.id`, User.email AS `User.email`, User.name AS `User.name`, User.age AS `User.age`, Post.id AS `Post.id`, Post.title AS `Post.title`, Post.content AS `Post.content`, Post.published AS `Post.published`, Post.createdAt AS `Post.createdAt`, Post.authorId AS `Post.authorId`, Post.lastModifiedById AS `Post.lastModifiedById`, Post.metadata AS `Post.metadata` 
+FROM User 
 JOIN Post ON Post.authorId = User.id;
 ```
 
@@ -1343,7 +1341,7 @@ JOIN Post ON Post.authorId = User.id;
 > When using `Table.*` with joins, all columns are automatically aliased with the table name prefix to avoid column name conflicts.
 
 #### Example - Chained
-```typescript file=../usage/tests/readme/select-chained.ts region=example
+```typescript file=../usage-sqlite-v7/tests/readme/select-chained.ts region=example
 prisma.$from("User")
       .select("name")
       .select("email");
@@ -1352,13 +1350,13 @@ prisma.$from("User")
 ##### SQL
 The resulting SQL will look like:
 
-```sql file=../usage/tests/readme/select-chained.ts region=example-sql
-SELECT name, email
+```sql file=../usage-sqlite-v7/tests/readme/select-chained.ts region=example-sql
+SELECT name, email 
 FROM User;
 ```
 
 #### Example - Join + Chained
-```typescript file=../usage/tests/readme/select-advanced.ts region=join-chained
+```typescript file=../usage-sqlite-v7/tests/readme/select-advanced.ts region=join-chained
 prisma.$from("User")
       .join("Post", "authorId", "User.id")
       .select("name")
@@ -1368,25 +1366,25 @@ prisma.$from("User")
 ##### SQL
 The resulting SQL will look like:
 
-```sql file=../usage/tests/readme/select-advanced.ts region=join-chained-sql
-SELECT name, title
-FROM User
+```sql file=../usage-sqlite-v7/tests/readme/select-advanced.ts region=join-chained-sql
+SELECT name, title 
+FROM User 
 JOIN Post ON Post.authorId = User.id;
 ```
 
 #### Example - Column Aliases
-```typescript file=../usage/tests/readme/select-column-alias.ts region=basic
+```typescript file=../usage-sqlite-v7/tests/readme/select-column-alias.ts region=basic
 prisma.$from("User")
       .select("User.name", "username");
 ```
 
-```typescript file=../usage/tests/readme/select-column-alias.ts region=multiple
+```typescript file=../usage-sqlite-v7/tests/readme/select-column-alias.ts region=multiple
 prisma.$from("User")
       .select("User.id", "userId")
       .select("User.email", "emailAddress");
 ```
 
-```typescript file=../usage/tests/readme/select-column-alias.ts region=mixed
+```typescript file=../usage-sqlite-v7/tests/readme/select-column-alias.ts region=mixed
 prisma.$from("User")
       .select("User.id")
       .select("User.name", "username")
@@ -1396,28 +1394,23 @@ prisma.$from("User")
 ##### SQL
 The resulting SQL will look like:
 
-```sql file=../usage/tests/readme/select-column-alias.ts region=basic-sql
-SELECT User.name AS `username`
+```sql file=../usage-sqlite-v7/tests/readme/select-column-alias.ts region=basic-sql
+SELECT User.name AS `username` 
 FROM User;
 ```
 
-```sql file=../usage/tests/readme/select-column-alias.ts region=multiple-sql
-SELECT 
-  User.id AS `userId`,
-  User.email AS `emailAddress`
+```sql file=../usage-sqlite-v7/tests/readme/select-column-alias.ts region=multiple-sql
+SELECT User.id AS `userId`, User.email AS `emailAddress` 
 FROM User;
 ```
 
-```sql file=../usage/tests/readme/select-column-alias.ts region=mixed-sql
-SELECT 
-  id,
-  User.name AS `username`,
-  email
+```sql file=../usage-sqlite-v7/tests/readme/select-column-alias.ts region=mixed-sql
+SELECT id, User.name AS `username`, email 
 FROM User;
 ```
 
 #### Example - Aliases with Joins
-```typescript file=../usage/tests/readme/select-advanced.ts region=aliases-joins
+```typescript file=../usage-sqlite-v7/tests/readme/select-advanced.ts region=aliases-joins
 prisma.$from("User")
       .join("Post", "authorId", "User.id")
       .select("User.name", "authorName")
@@ -1427,11 +1420,9 @@ prisma.$from("User")
 ##### SQL
 The resulting SQL will look like:
 
-```sql file=../usage/tests/readme/select-advanced.ts region=aliases-joins-sql
-SELECT 
-  User.name AS `authorName`,
-  Post.title AS `postTitle`
-FROM User
+```sql file=../usage-sqlite-v7/tests/readme/select-advanced.ts region=aliases-joins-sql
+SELECT User.name AS `authorName`, Post.title AS `postTitle` 
+FROM User 
 JOIN Post ON Post.authorId = User.id;
 ```
 
@@ -1444,7 +1435,7 @@ JOIN Post ON Post.authorId = User.id;
 
 #### Criteria object
 
-```typescript file=../shared-tests/readme/having.ts region=with-groupby
+```typescript file=../../shared-tests/readme/having.ts region=with-groupby
 prisma.$from("User")
       .join("Post", "authorId", "User.id")
       .groupBy(["name", "Post.content"])
@@ -1454,11 +1445,14 @@ prisma.$from("User")
           "value": "bob%"
         }
       })
-      .select("*");
+      .select("email");
 ```
 
-```sql file=../shared-tests/readme/having.ts region=with-groupby-sql
-SELECT * FROM User JOIN Post ON Post.authorId = User.id GROUP BY name, Post.content HAVING User.name LIKE 'bob%';
+```sql file=../../shared-tests/readme/having.ts region=with-groupby-sql
+SELECT email 
+FROM User 
+JOIN Post ON Post.authorId = User.id 
+GROUP BY name, Post.content HAVING User.name LIKE 'bob%';
 ```
 
 #### fn overload — aggregate functions
@@ -1467,7 +1461,7 @@ Pass a callback returning `Array<[SQLExpr<T>, condition]>` pairs. The callback r
 
 ##### `countAll()` with comparison op
 
-```typescript file=../shared-tests/readme/having.ts region=agg-fn-tuple-countall
+```typescript file=../../shared-tests/readme/having.ts region=agg-fn-tuple-countall
 prisma.$from("User")
       .join("Post", "authorId", "User.id")
       .groupBy(["User.name"])
@@ -1475,13 +1469,16 @@ prisma.$from("User")
       .select("User.name")
 ```
 
-```sql file=../shared-tests/readme/having.ts region=agg-fn-tuple-countall-sql
-SELECT name FROM User JOIN Post ON Post.authorId = User.id GROUP BY User.name HAVING COUNT(*) > 1;
+```sql file=../../shared-tests/readme/having.ts region=agg-fn-tuple-countall-sql
+SELECT name 
+FROM User 
+JOIN Post ON Post.authorId = User.id 
+GROUP BY User.name HAVING COUNT(*) > 1;
 ```
 
 ##### `count(col)` with bigint value
 
-```typescript file=../shared-tests/readme/having.ts region=agg-fn-tuple-count
+```typescript file=../../shared-tests/readme/having.ts region=agg-fn-tuple-count
 prisma.$from("User")
       .join("Post", "authorId", "User.id")
       .groupBy(["User.name"])
@@ -1489,13 +1486,16 @@ prisma.$from("User")
       .select("User.name")
 ```
 
-```sql file=../shared-tests/readme/having.ts region=agg-fn-tuple-count-sql
-SELECT name FROM User JOIN Post ON Post.authorId = User.id GROUP BY User.name HAVING COUNT(User.id) >= 2;
+```sql file=../../shared-tests/readme/having.ts region=agg-fn-tuple-count-sql
+SELECT name 
+FROM User 
+JOIN Post ON Post.authorId = User.id 
+GROUP BY User.name HAVING COUNT(User.id) >= 2;
 ```
 
 ##### String expr — `upper(col)` LIKE
 
-```typescript file=../shared-tests/readme/having.ts region=agg-fn-string-upper
+```typescript file=../../shared-tests/readme/having.ts region=agg-fn-string-upper
 prisma.$from("User")
       .join("Post", "authorId", "User.id")
       .groupBy(["User.name"])
@@ -1503,8 +1503,11 @@ prisma.$from("User")
       .select("User.name")
 ```
 
-```sql file=../shared-tests/readme/having.ts region=agg-fn-string-upper-sql
-SELECT name FROM User JOIN Post ON Post.authorId = User.id GROUP BY User.name HAVING UPPER(User.name) LIKE 'John%';
+```sql file=../../shared-tests/readme/having.ts region=agg-fn-string-upper-sql
+SELECT name 
+FROM User 
+JOIN Post ON Post.authorId = User.id 
+GROUP BY User.name HAVING UPPER(User.name) LIKE 'John%';
 ```
 
 Multiple pairs in one `.having()` call are AND-ed together. `.having()` can also be chained — each call appends an AND condition.
@@ -1515,7 +1518,7 @@ Multiple pairs in one `.having()` call are AND-ed together. `.having()` can also
 
 #### Example
 
-```typescript file=../usage/tests/readme/orderby.ts region=basic
+```typescript file=../usage-sqlite-v7/tests/readme/orderby.ts region=basic
 prisma.$from("User")
       .join("Post", "authorId", "User.id")
       .orderBy(["name", "Post.content DESC"]);
@@ -1523,9 +1526,9 @@ prisma.$from("User")
 
 ##### SQL
 
-```sql file=../usage/tests/readme/orderby.ts region=basic-sql
-FROM User
-JOIN Post ON Post.authorId = User.id
+```sql file=../usage-sqlite-v7/tests/readme/orderby.ts region=basic-sql
+FROM User 
+JOIN Post ON Post.authorId = User.id 
 ORDER BY name, Post.content DESC;
 ```
 
@@ -1535,7 +1538,7 @@ ORDER BY name, Post.content DESC;
 
 #### Example
 
-```typescript file=../usage/tests/readme/pagination.ts region=limit
+```typescript file=../usage-sqlite-v7/tests/readme/pagination.ts region=limit
 prisma.$from("User")
       .join("Post", "authorId", "User.id")
       .limit(1);
@@ -1543,9 +1546,9 @@ prisma.$from("User")
 
 ##### SQL
 
-```sql file=../usage/tests/readme/pagination.ts region=limit-sql
-FROM User
-JOIN Post ON Post.authorId = User.id
+```sql file=../usage-sqlite-v7/tests/readme/pagination.ts region=limit-sql
+FROM User 
+JOIN Post ON Post.authorId = User.id 
 LIMIT 1;
 ```
 
@@ -1554,7 +1557,7 @@ LIMIT 1;
 `.offSet`, the number of rows to skip. Requires `.limit` to have been used first.
 
 #### Example
-```typescript file=../usage/tests/readme/pagination.ts region=offset
+```typescript file=../usage-sqlite-v7/tests/readme/pagination.ts region=offset
 prisma.$from("User")
       .join("Post", "authorId", "User.id")
       .limit(1)
@@ -1563,10 +1566,10 @@ prisma.$from("User")
 
 ##### SQL
 
-```sql file=../usage/tests/readme/pagination.ts region=offset-sql
-FROM User
-JOIN Post ON Post.authorId = User.id
-LIMIT 1
+```sql file=../usage-sqlite-v7/tests/readme/pagination.ts region=offset-sql
+FROM User 
+JOIN Post ON Post.authorId = User.id 
+LIMIT 1 
 OFFSET 1;
 ```
 
@@ -1598,7 +1601,8 @@ prisma.$from("User")
 
 ##### SQL
 ```sql file=../usage-sqlite-v7/tests/readme/select-fns.ts region=count-all-sql
-SELECT COUNT(*) AS `total` FROM User;
+SELECT COUNT(*) AS `total` 
+FROM User;
 ```
 
 #### `count(col)` — COUNT(col)

@@ -8,12 +8,12 @@ import { prisma } from '#client';
 
 describe("README Example: select column alias", () => {
   test("basic alias - should generate correct SQL", () => {
-    const sql =
+    const $sql =
 // #region basic
 prisma.$from("User")
-      .select("User.name", "username")
+      .select("User.name", "username");
       // #endregion basic
-.getSQL();
+    const sql = $sql.getSQL();
 
     const expectedSQL =
       // #region basic-sql
@@ -24,7 +24,7 @@ prisma.$from("User")
   });
 
   test("basic alias - should return aliased column", async () => {
-    // #region basic
+    // #region basic-run
     const result = await prisma.$from("User")
       .select("User.name", "username")
       // #endregion basic
@@ -45,13 +45,13 @@ prisma.$from("User")
   });
 
   test("multiple aliases - should generate correct SQL", () => {
-    const sql =
+    const $sql =
 // #region multiple
 prisma.$from("User")
       .select("User.id", "userId")
-      .select("User.email", "emailAddress")
+      .select("User.email", "emailAddress");
       // #endregion multiple
-.getSQL();
+    const sql = $sql.getSQL();
 
     const expectedSQL =
       // #region multiple-sql
@@ -62,14 +62,14 @@ prisma.$from("User")
   });
 
   test("mixed aliased and non-aliased", () => {
-    const sql =
+    const $sql =
 // #region mixed
 prisma.$from("User")
       .select("User.id")
       .select("User.name", "username")
-      .select("User.email")
+      .select("User.email");
       // #endregion mixed
-.getSQL();
+    const sql = $sql.getSQL();
 
     const expectedSQL =
       // #region mixed-sql

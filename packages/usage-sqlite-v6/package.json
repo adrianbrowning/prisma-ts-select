@@ -19,7 +19,7 @@
     "#extend": "./generated/prisma-ts-select/extend-v6.js"
   },
   "dependencies": {
-    "@gcm/prisma-ts-select": "workspace:*"
+    "@gcm/prisma-ts-select": "workspace:prisma-ts-select@*"
   },
   "devDependencies": {
     "@prisma/client": "6.19.2",

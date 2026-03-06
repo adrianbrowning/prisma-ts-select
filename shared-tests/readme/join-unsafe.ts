@@ -6,14 +6,14 @@ import { prisma } from '#client';
 describe("README Example: unsafe joins", () => {
   test("joinUnsafeTypeEnforced - should generate correct SQL", () => {
     const sql =
-// #region type-enforced
+// #region type-enforced-1
 prisma.$from("User")
       .joinUnsafeTypeEnforced("Post", "title", "User.name")
       // #endregion type-enforced
 .getSQL();
 
     const expectedSQL =
-      // #region type-enforced-sql
+      // #region type-enforced-sql-1
       "FROM User JOIN Post ON Post.title = User.name;";
       // #endregion type-enforced-sql
 
@@ -37,7 +37,7 @@ prisma.$from("User")
 
   test("joinUnsafeIgnoreType - should generate correct SQL", () => {
     const sql =
-// #region ignore-type
+// #region ignore-type-1
 prisma.$from("User")
       .joinUnsafeIgnoreType("Post", "id", "User.name")
       // #endregion ignore-type
@@ -59,7 +59,7 @@ prisma.$from("User")
     // #endregion ignore-type
 
     const expectedSQL =
-      // #region ignore-type-sql
+      // #region ignore-type-sql-2
       "FROM User JOIN Post ON Post.id = User.name;";
       // #endregion ignore-type-sql
 

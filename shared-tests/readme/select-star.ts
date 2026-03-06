@@ -8,12 +8,12 @@ import { prisma } from '#client';
 
 describe("README Example: select *", () => {
   test("should generate correct SQL", () => {
-    const sql =
+    const $sql =
 // #region example
 prisma.$from("User")
-      .select("*")
+      .select("*");
       // #endregion
-.getSQL();
+    const sql = $sql.getSQL();
 
     const expectedSQL =
       // #region example-sql
@@ -24,7 +24,7 @@ prisma.$from("User")
   });
 
   test("should run and return data", async () => {
-    // #region example
+    // #region example-2
     const result = await prisma.$from("User")
       .select("*")
       // #endregion

@@ -46,3 +46,8 @@ Auto-maintained by Claude Code hooks. Load on demand — not upfront.
 
 Read only the file relevant to what you are about to do. Do not load all three upfront.
 <!-- end-claude-knowledge-autoload -->
+
+## Plan mode
+Remember to always use TDD for implementation. 
+RED->GREEN->REFACTOR.
+Use 3 agents, 1 for each of the 3 phases.

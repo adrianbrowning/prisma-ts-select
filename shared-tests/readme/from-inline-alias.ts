@@ -9,7 +9,7 @@ import { prisma } from '#client';
 describe("README Example: .$from inline alias syntax", () => {
   test("should create query with inline alias", () => {
         const query =
-// #region example
+// #region example-$from
 prisma.$from("User u");
     // #endregion
 

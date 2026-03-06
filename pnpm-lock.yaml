@@ -109,8 +109,8 @@ importers:
         specifier: ^1.2.0
         version: 1.2.0
       mdcode-ts:
-        specifier: 0.0.3-9
-        version: 0.0.3-9
+        specifier: ^0.0.4
+        version: 0.0.4
       prisma:
         specifier: 6.19.2
         version: 6.19.2(typescript@5.9.3)
@@ -148,7 +148,7 @@ importers:
   packages/usage-mysql-v6:
     dependencies:
       '@gcm/prisma-ts-select':
-        specifier: workspace:*
+        specifier: workspace:prisma-ts-select@*
         version: link:../prisma-ts-select
     devDependencies:
       '@prisma/client':
@@ -167,10 +167,12 @@ importers:
         specifier: ^5.9.3
         version: 5.9.3
 
+  packages/usage-mysql-v6/generated/prisma: {}
+
   packages/usage-mysql-v7:
     dependencies:
       '@gcm/prisma-ts-select':
-        specifier: workspace:*
+        specifier: workspace:prisma-ts-select@*
         version: link:../prisma-ts-select
     devDependencies:
       '@prisma/adapter-mariadb':
@@ -195,7 +197,7 @@ importers:
   packages/usage-pg-v6:
     dependencies:
       '@gcm/prisma-ts-select':
-        specifier: workspace:*
+        specifier: workspace:prisma-ts-select@*
         version: link:../prisma-ts-select
     devDependencies:
       '@prisma/client':
@@ -214,10 +216,12 @@ importers:
         specifier: ^5.9.3
         version: 5.9.3
 
+  packages/usage-pg-v6/generated/prisma: {}
+
   packages/usage-pg-v7:
     dependencies:
       '@gcm/prisma-ts-select':
-        specifier: workspace:*
+        specifier: workspace:prisma-ts-select@*
         version: link:../prisma-ts-select
     devDependencies:
       '@prisma/adapter-pg':
@@ -242,7 +246,7 @@ importers:
   packages/usage-sqlite-v6:
     dependencies:
       '@gcm/prisma-ts-select':
-        specifier: workspace:*
+        specifier: workspace:prisma-ts-select@*
         version: link:../prisma-ts-select
     devDependencies:
       '@prisma/client':
@@ -261,10 +265,12 @@ importers:
         specifier: ^5.9.3
         version: 5.9.3
 
+  packages/usage-sqlite-v6/generated/prisma: {}
+
   packages/usage-sqlite-v7:
     dependencies:
       '@gcm/prisma-ts-select':
-        specifier: workspace:*
+        specifier: workspace:prisma-ts-select@*
         version: link:../prisma-ts-select
     devDependencies:
       '@prisma/adapter-better-sqlite3':
@@ -4084,8 +4090,8 @@ packages:
   mdast-util-to-string@3.2.0:
     resolution: {integrity: sha512-V4Zn/ncyN1QNSqSBxTrMOLpjr+IKdHl2v3KVLoWmDPscP4r9GcCi71gjgvUV1SFSKh92AjAG4peFuBl2/YgCJg==}
 
-  mdcode-ts@0.0.3-9:
-    resolution: {integrity: sha512-/GTv2QqcW41F7sIWWLcFxqSRy0Etzi6llrEeNtZRaxHjJ2jJrZ61ClQhlBEwezUwdjX9ey2ryhLN0Ak95VJSag==}
+  mdcode-ts@0.0.4:
+    resolution: {integrity: sha512-yuq9C4M9VfaX0xgB6kTdz8s/FtC4Y8xQCE6JAa4JSWQaOcVxabbfYfagfv0373doFcqNWSmpgt869y7OKQhM8Q==}
     engines: {node: '>=22.0.0'}
     hasBin: true
 
@@ -4769,6 +4775,7 @@ packages:
   prebuild-install@7.1.3:
     resolution: {integrity: sha512-8Mf2cbV7x1cXPUILADGI3wuhfqWvtiLA1iclTDbFRZkgRQS0NqsPZphna9V+HyTEadheuPmjaJMsbzKQFOzLug==}
     engines: {node: '>=10'}
+    deprecated: No longer maintained. Please contact the author of the relevant native addon; alternatives are available.
     hasBin: true
 
   prelude-ls@1.2.1:
@@ -10544,7 +10551,7 @@ snapshots:
     dependencies:
       '@types/mdast': 3.0.15
 
-  mdcode-ts@0.0.3-9:
+  mdcode-ts@0.0.4:
     dependencies:
       commander: 14.0.3
       tar-stream: 3.1.7

@@ -6,7 +6,7 @@ import { prisma } from '#client';
 describe("README Example: groupBy", () => {
   test("groupBy - should generate correct SQL", () => {
     const sql =
-// #region basic
+// #region basic-1
 prisma.$from("User")
       .join("Post", "authorId", "User.id")
       .groupBy(["name", "Post.content"])
