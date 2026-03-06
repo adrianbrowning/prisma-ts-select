@@ -175,6 +175,47 @@ generator prisma-ts-select {
 }
 ```
 
+#### Options
+
+| Option | Default | Description |
+|--------|---------|-------------|
+| `output` | *(required)* | Output directory, relative to schema file |
+| `packageName` | `prisma-ts-select-<hash>` | Package name in the generated `package.json`. Defaults to a stable hash of the output path — set this when referencing the generated output as a workspace package. |
+
+Example with `packageName`:
+
+```prisma
+generator prisma-ts-select {
+  provider    = "prisma-ts-select"
+  output      = "../generated/prisma-ts-select"
+  packageName = "my-app-prisma-types"
+}
+```
+
+Then register as a workspace package and import by name:
+
+**npm / yarn** — `package.json`:
+```json
+{
+  "workspaces": ["generated/prisma-ts-select"]
+}
+```
+
+**pnpm** — `pnpm-workspace.yaml`:
+```yaml
+packages:
+  - generated/prisma-ts-select
+```
+
+Then add it as a dependency:
+```shell
+pnpm add my-app-prisma-types
+```
+
+```typescript
+import tsSelectExtend from 'my-app-prisma-types/extend-v7.js'
+```
+
 The client generator differs between Prisma versions:
 
 **Prisma v6**
