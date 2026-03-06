@@ -1,7 +1,7 @@
 import type {Dialect} from "./types.js";
-import {resolveArg, sqlExpr, type SQLExpr} from "../sql-expr.js";
+import {resolveArg, sqlExpr, sqlDistinct, isDistinct, type SQLExpr, type SQLDistinct, DISTINCT_BRAND} from "../sql-expr.js";
 import type {JSONValue, JSONObject} from "../utils/types.js";
-import {esc, flattenJsonObjectPairs, type FilterCols, type FilterJsonCols, type ColName} from "./shared.js";
+import {esc, flattenJsonObjectPairs, type FilterCols, type FilterJsonCols, type ColName, type ColTypeOf} from "./shared.js";
 
 /** SQLite MIN/MAX return bigint for integer columns, unchanged for other types. */
 type SqliteMinMaxResult<TColEntries extends [string, unknown], Col extends string> =
@@ -31,12 +31,22 @@ export const sqliteContextFns = <TColEntries extends [string, unknown] = never, 
   sum: (col: FilterCols<TColEntries, number> | SQLExpr<number>): SQLExpr<bigint | number> => sqlExpr(`SUM(${resolveArg(col, quoteFn)})`),
   // Aggregate integer-result fns — SQLite returns INTEGER → bigint
   countAll:      (): SQLExpr<bigint> => sqlExpr('COUNT(*)'),
-  count:         (col: ColName<TColEntries> | '*'): SQLExpr<bigint> => sqlExpr(col === '*' ? 'COUNT(*)' : `COUNT(${quoteFn(col)})`),
+  count:         (col: ColName<TColEntries> | '*' | SQLExpr<unknown>): SQLExpr<bigint> =>
+    sqlExpr(col === '*' ? 'COUNT(*)' : `COUNT(${resolveArg(col as string | SQLExpr<unknown>, quoteFn)})`),
   countDistinct: (col: ColName<TColEntries>): SQLExpr<bigint> => sqlExpr(`COUNT(DISTINCT ${quoteFn(col)})`),
+  distinct:      <Col extends ColName<TColEntries>>(col: Col): SQLDistinct<NonNullable<ColTypeOf<TColEntries, Col>>> => sqlDistinct(`DISTINCT ${quoteFn(col)}`),
   // LENGTH returns INTEGER → bigint in SQLite
   length: (col: FilterCols<TColEntries, string> | SQLExpr<string>): SQLExpr<bigint> => sqlExpr(`LENGTH(${resolveArg(col, quoteFn)})`),
-  groupConcat: (col: ColName<TColEntries>, sep?: string): SQLExpr<string> =>
-    sqlExpr(`GROUP_CONCAT(${quoteFn(col)}${sep !== undefined ? `, '${sep.replace(/'/g, "''")}'` : ''})`),
+  groupConcat: ((col: ColName<TColEntries> | SQLExpr<string>, sep?: string): SQLExpr<string> => {
+    const inner = resolveArg(col, quoteFn);
+    if (isDistinct(col) && sep !== undefined) {
+      throw new Error('SQLite does not support GROUP_CONCAT(DISTINCT col, sep) — omit the separator.');
+    }
+    return sqlExpr(`GROUP_CONCAT(${inner}${sep !== undefined ? `, '${sep.replace(/'/g, "''")}'` : ''})`);
+  }) as (
+    & ((col: SQLDistinct<string>) => SQLExpr<string>)
+    & ((col: ColName<TColEntries> | (SQLExpr<string> & { readonly [DISTINCT_BRAND]?: never }), sep?: string) => SQLExpr<string>)
+  ),
   total: (col: ColName<TColEntries>): SQLExpr<number> => sqlExpr(`TOTAL(${quoteFn(col)})`),
   // SQLite MIN/MAX return bigint for integer columns — override base (number) return types
   min: <Col extends ColName<TColEntries>>(col: Col): SQLExpr<SqliteMinMaxResult<TColEntries, Col>> => sqlExpr(`MIN(${quoteFn(col)})`),

@@ -1817,6 +1817,7 @@ GROUP BY User.name;
 
 | Function | SQL | Returns |
 |---|---|---|
+| `distinct(col)` | `DISTINCT col` | `ColType` (use inside `avg`, `sum`, `count`, `groupConcat`) |
 | `groupConcat(col, sep?)` | `GROUP_CONCAT(col SEPARATOR sep)` | `string` |
 | `bitAnd(col)` | `BIT_AND(col)` | `number` |
 | `bitOr(col)` | `BIT_OR(col)` | `number` |
@@ -1871,6 +1872,7 @@ GROUP BY User.name;
 |---|---|---|
 | `greatest(...args)` | `GREATEST(a, b, ...)` | `T` |
 | `least(...args)` | `LEAST(a, b, ...)` | `T` |
+| `distinct(col)` | `DISTINCT col` | `ColType` (use inside `avg`, `sum`, `count`, `stringAgg`, `arrayAgg`) |
 | `stringAgg(col, sep)` | `STRING_AGG(col, sep)` | `string` |
 | `arrayAgg(col)` | `ARRAY_AGG(col)` | `unknown[]` |
 | `stddevPop(col)` | `STDDEV_POP(col)` | `number` |
@@ -1922,6 +1924,7 @@ GROUP BY User.name;
 |---|---|---|
 | `iif(cond, trueVal, falseVal)` | `IIF(cond, a, b)` | `T` |
 | `ifNull(col, fallback)` | `IFNULL(col, fallback)` | `NonNullable<T>` |
+| `distinct(col)` | `DISTINCT col` | `ColType` (use inside `avg`, `sum`, `count`, `groupConcat`; sep with ≥ 3.44) |
 | `groupConcat(col, sep?)` | `GROUP_CONCAT(col, sep)` | `string` |
 | `total(col)` | `TOTAL(col)` | `number` |
 | `concat(...cols)` | `a \|\| b \|\| ...` | `string` |

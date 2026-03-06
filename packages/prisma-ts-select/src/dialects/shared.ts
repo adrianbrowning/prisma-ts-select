@@ -14,6 +14,7 @@ export const esc = (s: string) => s.replace(/'/g, "''");
 /**
  * Flattens jsonObject pairs into alternating quoted-key / resolved-value SQL tokens.
  * @param pairs - [key, value] pairs where string value must be a valid column reference resolved by quoteFn
+ * @param quoteFn
  */
 export const flattenJsonObjectPairs = (
   pairs: [string, string | SQLExpr<unknown>][],
@@ -30,6 +31,10 @@ export type FilterCols<TEntries extends [string, unknown], T> =
 /** Extracts all col names from a col-entry tuple union (untyped). */
 export type ColName<TEntries extends [string, unknown]> =
   TEntries extends [infer N extends string, unknown] ? N : never;
+
+/** Extracts the value type for a specific column from a col-entry tuple union. */
+export type ColTypeOf<TEntries extends [string, unknown], Col extends string> =
+  TEntries extends [Col, infer V] ? V : never;
 
 /**
  * Filters col-entry tuple union to names whose type is a JSON column (object/array).

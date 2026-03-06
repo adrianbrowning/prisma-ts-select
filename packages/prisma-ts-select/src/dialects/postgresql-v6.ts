@@ -17,8 +17,8 @@ export const postgresqlV6ContextFns = <TColEntries extends [string, unknown] = n
 ) => ({
   ...postgresqlContextFns<TColEntries>(quoteFn),
   countAll:      (): SQLExpr<bigint> => sqlExpr('COUNT(*)'),
-  count:         (col: ColName<TColEntries> | '*'): SQLExpr<bigint> =>
-    sqlExpr(col === '*' ? 'COUNT(*)' : `COUNT(${quoteFn(col)})`),
+  count:         (col: ColName<TColEntries> | '*' | SQLExpr<unknown>): SQLExpr<bigint> =>
+    sqlExpr(col === '*' ? 'COUNT(*)' : `COUNT(${resolveArg(col as string | SQLExpr<unknown>, quoteFn)})`),
   countDistinct: (col: ColName<TColEntries>): SQLExpr<bigint> =>
     sqlExpr(`COUNT(DISTINCT ${quoteFn(col)})`),
   ceil:  (col: FilterCols<TColEntries, number> | SQLExpr<number>): SQLExpr<number | Decimal> =>
