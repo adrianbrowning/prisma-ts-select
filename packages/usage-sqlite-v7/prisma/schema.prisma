@@ -20,6 +20,9 @@ model User {
   Posts             Post[]       @relation("author")
   LastModifiedPosts Post[]       @relation("lastModifiedBy")
   LikedPosts        LikedPosts[]
+  M2MPosts          M2M_Post[]     @relation("M2MPostAuthor")
+  MMMPosts          MMM_Post[]     @relation("MMMPostAuthor")
+  M2MBugPosts       M2MBug_Post[]  @relation("M2MBugPostAuthor")
 }
 
 model Post {
@@ -85,9 +88,11 @@ model MFId_Post {
 // Region M2M name change
 
 model M2M_Post {
-  id    Int            @id
-  title String
-  cat1  M2M_Category[]
+  id       Int            @id
+  title    String
+  authorId Int?
+  author   User?          @relation("M2MPostAuthor", fields: [authorId], references: [id])
+  cat1     M2M_Category[]
 }
 
 model M2M_Category {
@@ -122,10 +127,39 @@ model MMM_Category {
 }
 
 model MMM_Post {
-  id    Int            @id
-  title String
-  cat1  MMM_Category[] @relation("M2M_NC_M1")
-  cat2  MMM_Category[] @relation("M2M_NC_M2")
+  id       Int            @id
+  title    String
+  authorId Int?
+  author   User?          @relation("MMMPostAuthor", fields: [authorId], references: [id])
+  cat1     MMM_Category[] @relation("M2M_NC_M1")
+  cat2     MMM_Category[] @relation("M2M_NC_M2")
 }
 
 // Region END Multi M2M
+
+// Region M2M multi-junction bug models (2 junctions → different targets → keyof-union bug)
+// M2MBug_Post has M2M to BOTH M2MBug_CatA and M2MBug_CatB.
+// Junction tables: _M2MBug_CatAToM2MBug_Post and _M2MBug_CatBToM2MBug_Post
+// keyof Relations<juncA | juncB> = intersection = {M2MBug_Post} only → AvailableM2MTargets = never
+model M2MBug_Post {
+  id       Int             @id
+  title    String
+  authorId Int?
+  author   User?           @relation("M2MBugPostAuthor", fields: [authorId], references: [id])
+  catsA    M2MBug_CatA[]
+  catsB    M2MBug_CatB[]
+}
+
+model M2MBug_CatA {
+  id    Int             @id
+  name  String
+  posts M2MBug_Post[]
+}
+
+model M2MBug_CatB {
+  id    Int             @id
+  name  String
+  posts M2MBug_Post[]
+}
+// Region END M2M bug models
+

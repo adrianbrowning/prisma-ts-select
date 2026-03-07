@@ -96,6 +96,7 @@ async function seed() {
         data: {
             id: 1,
             title: "M2M Post 1",
+            authorId: 1,
             cat1: {
                 create: { id: 1, name: "M2M Category 1" }
             }
@@ -109,6 +110,7 @@ async function seed() {
         data: {
             id: 1,
             title: "MMM Post 1",
+            authorId: 1,
             cat1: {
                 create: { id: 1, name: "MMM Category M1" }
             }
@@ -120,6 +122,24 @@ async function seed() {
             cat2: {
                 create: { id: 2, name: "MMM Category M2" }
             }
+        }
+    });
+
+
+
+    // Create M2MBug seed data (multi-junction M2M type bug tests)
+    await prisma.m2MBug_Post.deleteMany({});
+    await prisma.m2MBug_CatA.deleteMany({});
+    await prisma.m2MBug_CatB.deleteMany({});
+    await prisma.m2MBug_CatA.createMany({ data: [{ id: 1, name: "M2MBug CatA 1" }] });
+    await prisma.m2MBug_CatB.createMany({ data: [{ id: 1, name: "M2MBug CatB 1" }] });
+    await prisma.m2MBug_Post.create({
+        data: {
+            id: 1,
+            title: "M2MBug Post 1",
+            authorId: 1,
+            catsA: { connect: [{ id: 1 }] },
+            catsB: { connect: [{ id: 1 }] },
         }
     });
 
