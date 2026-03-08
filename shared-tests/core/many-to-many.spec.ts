@@ -29,9 +29,6 @@ describe("manyToManyJoin", () => {
             // This would fail at compile time if _M2M_CategoryToM2M_Post or M2M_Category aren't in TFields
             const _q1 = createQuery().select("_M2M_CategoryToM2M_Post.A")
             const _q2 = createQuery().select("M2M_Category.name")
-            typeCheck(
-                {} as Expect<Equal<typeof _q1, typeof _q1>>, // type-level smoke test
-            )
         })
     })
 
@@ -122,12 +119,34 @@ describe("manyToManyJoin", () => {
                 .manyToManyJoin("MMM_Category", { refName: "NotAValidRef" })
         })
 
+        it("requires refName when source has ambiguous junctions (MMM_Post)", () => {
+            prisma.$from("MMM_Post")
+                // @ts-expect-error refName is required when junction is a union
+                .manyToManyJoin("MMM_Category")
+        })
+
         it("rejects invalid source table", () => {
             assert.throws(() => {
                 prisma.$from("M2M_Post")
                     // @ts-expect-error "NotATable" is not a valid alias
                     .manyToManyJoin("M2M_Category", { source: "NotATable.id" })
             })
+        })
+    })
+
+    describe("safeIdent validation", () => {
+        it("throws on unsafe target identifier", () => {
+            assert.throws(
+                () => prisma.$from("M2M_Post").manyToManyJoin("M2M_Category; DROP TABLE" as any).getSQL(),
+                /unsafe identifier/
+            )
+        })
+
+        it("throws on unsafe refName identifier", () => {
+            assert.throws(
+                () => prisma.$from("MMM_Post").manyToManyJoin("MMM_Category", { refName: "M2M_NC_M1'; DROP" as any }).getSQL(),
+                /unsafe identifier/
+            )
         })
     })
 
@@ -151,6 +170,62 @@ describe("manyToManyJoin", () => {
                 .select("mmc1.name")
                 .run()
 
+            t.assert.snapshot(result);
+        })
+    })
+
+    // ──────────────────────────────────────────
+    // Multi-junction M2M bug fix
+    // M2MBug_Post has M2M to BOTH M2MBug_CatA and M2MBug_CatB (different targets).
+    // Without fix: keyof Relations<juncA | juncB> = {M2MBug_Post} only → AvailableM2MTargets = never
+    // ──────────────────────────────────────────
+
+    describe("manyToManyJoin with multiple junctions to different targets", () => {
+        it("resolves M2M_CatA target from M2MBug_Post (2-junction source)", () => {
+            // Bug: AvailableM2MTargets<["M2MBug_Post"]> was `never` because
+            // keyof Relations<"_M2MBug_CatAToM2MBug_Post" | "_M2MBug_CatBToM2MBug_Post">
+            // = intersection of {M2MBug_CatA, M2MBug_Post} ∩ {M2MBug_CatB, M2MBug_Post}
+            // = {M2MBug_Post} → excluding sources → never
+            const sql = prisma.$from("M2MBug_Post")
+                .manyToManyJoin("M2MBug_CatA")
+                .getSQL()
+            expectSQL(sql,
+                `FROM ${dialect.quote("M2MBug_Post")} JOIN ${dialect.quote("_M2MBug_CatAToM2MBug_Post")} ON ${dialect.quoteQualifiedColumn("_M2MBug_CatAToM2MBug_Post.B")} = ${dialect.quoteQualifiedColumn("M2MBug_Post.id")} JOIN ${dialect.quote("M2MBug_CatA")} ON ${dialect.quoteQualifiedColumn("M2MBug_CatA.id")} = ${dialect.quoteQualifiedColumn("_M2MBug_CatAToM2MBug_Post.A")};`
+            )
+        })
+
+        it("resolves M2MBug_CatB after regular join (multi-source)", () => {
+            // Same bug with 2 sources: [M2MBug_Post, User]
+            const sql = prisma.$from("M2MBug_Post bp")
+                .join("User u", "id", "bp.authorId")
+                .manyToManyJoin("M2MBug_CatB")
+                .getSQL()
+            expectSQL(sql,
+                `FROM ${dialect.quote("M2MBug_Post")} AS ${dialect.quote("bp", true)} JOIN ${dialect.quote("User")} AS ${dialect.quote("u", true)} ON ${dialect.quoteQualifiedColumn("u.id")} = ${dialect.quoteQualifiedColumn("bp.authorId")} JOIN ${dialect.quote("_M2MBug_CatBToM2MBug_Post")} ON ${dialect.quoteQualifiedColumn("_M2MBug_CatBToM2MBug_Post.B")} = ${dialect.quoteQualifiedColumn("bp.id")} JOIN ${dialect.quote("M2MBug_CatB")} ON ${dialect.quoteQualifiedColumn("M2MBug_CatB.id")} = ${dialect.quoteQualifiedColumn("_M2MBug_CatBToM2MBug_Post.A")};`
+            )
+        })
+
+        it("chains both M2M joins from same source", () => {
+            const sql = prisma.$from("M2MBug_Post bp")
+                .join("User u", "id", "bp.authorId")
+                .manyToManyJoin("M2MBug_CatA ca", { source: "bp.id" })
+                .manyToManyJoin("M2MBug_CatB cb", { source: "bp.id" })
+                .getSQL()
+            expectSQL(sql,
+                `FROM ${dialect.quote("M2MBug_Post")} AS ${dialect.quote("bp", true)} JOIN ${dialect.quote("User")} AS ${dialect.quote("u", true)} ON ${dialect.quoteQualifiedColumn("u.id")} = ${dialect.quoteQualifiedColumn("bp.authorId")} JOIN ${dialect.quote("_M2MBug_CatAToM2MBug_Post")} ON ${dialect.quoteQualifiedColumn("_M2MBug_CatAToM2MBug_Post.B")} = ${dialect.quoteQualifiedColumn("bp.id")} JOIN ${dialect.quote("M2MBug_CatA")} AS ${dialect.quote("ca", true)} ON ${dialect.quoteQualifiedColumn("ca.id")} = ${dialect.quoteQualifiedColumn("_M2MBug_CatAToM2MBug_Post.A")} JOIN ${dialect.quote("_M2MBug_CatBToM2MBug_Post")} ON ${dialect.quoteQualifiedColumn("_M2MBug_CatBToM2MBug_Post.B")} = ${dialect.quoteQualifiedColumn("bp.id")} JOIN ${dialect.quote("M2MBug_CatB")} AS ${dialect.quote("cb", true)} ON ${dialect.quoteQualifiedColumn("cb.id")} = ${dialect.quoteQualifiedColumn("_M2MBug_CatBToM2MBug_Post.A")};`
+            )
+        })
+
+        it("runtime: returns rows with both junctions joined", async (t) => {
+            const result = await prisma.$from("M2MBug_Post bp")
+                .join("User u", "id", "bp.authorId")
+                .manyToManyJoin("M2MBug_CatA ca", { source: "bp.id" })
+                .manyToManyJoin("M2MBug_CatB cb", { source: "bp.id" })
+                .select("bp.title")
+                .select("u.name")
+                .select("ca.name")
+                .select("cb.name")
+                .run()
             t.assert.snapshot(result);
         })
     })
