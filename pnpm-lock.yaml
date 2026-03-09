@@ -7534,7 +7534,7 @@ snapshots:
 
   '@types/better-sqlite3@7.6.10':
     dependencies:
-      '@types/node': 20.11.30
+      '@types/node': 24.10.13
 
   '@types/cross-spawn@6.0.2':
     dependencies:
@@ -7594,7 +7594,7 @@ snapshots:
 
   '@types/klaw-sync@6.0.5':
     dependencies:
-      '@types/node': 20.11.30
+      '@types/node': 24.10.13
 
   '@types/lodash@4.17.4': {}
 
