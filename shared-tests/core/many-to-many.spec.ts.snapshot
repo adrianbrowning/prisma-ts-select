@@ -1,3 +1,14 @@
+exports[`manyToManyJoin > manyToManyJoin with multiple junctions to different targets > runtime: returns rows with both junctions joined 1`] = `
+[
+  {
+    "title": "M2MBug Post 1",
+    "u.name": "John Doe",
+    "ca.name": "M2MBug CatA 1",
+    "cb.name": "M2MBug CatB 1"
+  }
+]
+`;
+
 exports[`manyToManyJoin > runtime > explicit source override returns correct rows 1`] = `
 [
   {

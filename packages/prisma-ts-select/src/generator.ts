@@ -56,6 +56,8 @@ generatorHandler({
       }, []).join(", ")}`)
     }
     const modelToId:Record<string, [string, string]> = {};
+    // source → { target → Set<junctionTableName> }
+    const m2mMap: Record<string, Record<string, Set<string>>> = {};
 
     type InnerOutType ={
       fields: Record<string, string>;
@@ -100,6 +102,13 @@ generatorHandler({
             if (!isManyToManyRelationShip(field)) continue;
 
             const joinTableName = "_"+field.relationName;
+
+            // Populate M2MMap: both directions
+            const src = model.name, tgt = field.type;
+            (m2mMap[src] ??= {})[tgt] ??= new Set();
+            m2mMap[src]![tgt]!.add(joinTableName);
+            (m2mMap[tgt] ??= {})[src] ??= new Set();
+            m2mMap[tgt]![src]!.add(joinTableName);
 
             const joinTableModel = acc[joinTableName] = acc[joinTableName] ?? ({
               fields: {
@@ -243,6 +252,7 @@ export { ${provider}Dialect as dialect, ${provider}Dialect, ${ctxName} as dialec
 
     const replacedExtendDts = extendDts
       .replace('declare const DB: DBType;', declaration)
+      .replace('type M2MMap = {};', generateM2MMapDeclaration(m2mMap))
       .replace(
         PLACEHOLDER,
         `type SelectFnContext<_TSources extends TArrSources, _TFields extends TFieldsType> = Omit<BaseSelectFnContext<_TSources, _TFields>, keyof DialectFns<ColEntries<_TSources, _TFields>, WhereCriteria<_TSources, _TFields>>> & DialectFns<ColEntries<_TSources, _TFields>, WhereCriteria<_TSources, _TFields>>;`
@@ -338,5 +348,20 @@ function generateReadonlyDeclaration(db: DBType) {
   };
 
   return `declare const DB: {\n${traverse(db, 1)}\n};`;
+}
+
+function generateM2MMapDeclaration(m2mMap: Record<string, Record<string, Set<string>>>): string {
+  if (Object.keys(m2mMap).length === 0) return 'type M2MMap = {};';
+  const lines = ['type M2MMap = {'];
+  for (const [source, targets] of Object.entries(m2mMap)) {
+    lines.push(`  readonly "${source}": {`);
+    for (const [target, junctions] of Object.entries(targets)) {
+      const junctionLiterals = [...junctions].map(j => `"${j}"`).join(' | ');
+      lines.push(`    readonly "${target}": ${junctionLiterals};`);
+    }
+    lines.push('  };');
+  }
+  lines.push('};');
+  return lines.join('\n');
 }
 

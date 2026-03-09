@@ -125,14 +125,16 @@ async function seed() {
         }
     });
 
-
-
     // Create M2MBug seed data (multi-junction M2M type bug tests)
     await prisma.m2MBug_Post.deleteMany({});
-    await prisma.m2MBug_CatA.deleteMany({});
-    await prisma.m2MBug_CatB.deleteMany({});
-    await prisma.m2MBug_CatA.createMany({ data: [{ id: 1, name: "M2MBug CatA 1" }] });
-    await prisma.m2MBug_CatB.createMany({ data: [{ id: 1, name: "M2MBug CatB 1" }] });
+    await Promise.all([
+        prisma.m2MBug_CatA.deleteMany({}),
+        prisma.m2MBug_CatB.deleteMany({}),
+    ]);
+    await Promise.all([
+        prisma.m2MBug_CatA.createMany({ data: [{ id: 1, name: "M2MBug CatA 1" }] }),
+        prisma.m2MBug_CatB.createMany({ data: [{ id: 1, name: "M2MBug CatB 1" }] }),
+    ]);
     await prisma.m2MBug_Post.create({
         data: {
             id: 1,
@@ -149,6 +151,7 @@ async function seed() {
     console.log('- 3 employees');
     console.log('- 1 M2M_Post + 1 M2M_Category (M2M join tests)');
     console.log('- 1 MMM_Post + 2 MMM_Category (multi-M2M join tests)');
+    console.log('- 1 M2MBug_Post + 1 M2MBug_CatA + 1 M2MBug_CatB (multi-junction M2M bug tests)');
 }
 
 async function main() {
