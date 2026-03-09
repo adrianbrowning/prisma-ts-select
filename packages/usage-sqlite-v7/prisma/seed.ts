@@ -1,4 +1,6 @@
-import { prisma } from '../src/client.ts'
+import {prisma} from "#client"
+import { Prisma } from '#dbTypes';
+
 
 async function seed() {
     console.log('Seeding database...');
@@ -53,7 +55,7 @@ async function seed() {
                 createdAt: new Date('2020-06-20T14:45:00.000Z'),
                 authorId: 1,
                 lastModifiedById: 1,
-                metadata: null,
+                metadata: Prisma.DbNull,
             },
             {
                 id: 3,
@@ -63,7 +65,7 @@ async function seed() {
                 createdAt: new Date('2021-12-25T08:00:00.000Z'),
                 authorId: 2,
                 lastModifiedById: 2,
-                metadata: null,
+                metadata: Prisma.DbNull,
             }
         ]
     });
