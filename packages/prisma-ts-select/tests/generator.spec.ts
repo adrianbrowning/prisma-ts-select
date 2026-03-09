@@ -4,6 +4,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { createHash } from "node:crypto";
+import { generateM2MMapDeclaration } from "../src/generator.ts";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -126,7 +127,8 @@ describe("Generator M2MMap output", () => {
     // Find M2MBug_CatA section in M2MMap and check it has M2MBug_Post entry
     const m2mMapIdx = dts.indexOf("type M2MMap");
     const catASection = dts.indexOf('"M2MBug_CatA"', m2mMapIdx);
-    const snippet = dts.slice(catASection, catASection + 200);
+    const blockEnd = dts.indexOf("};", catASection);
+    const snippet = dts.slice(catASection, blockEnd + 2);
     assert.ok(
       snippet.includes('"M2MBug_Post": "_M2MBug_CatAToM2MBug_Post"'),
       "M2MBug_CatA must have reciprocal M2MBug_Post entry"
@@ -151,14 +153,24 @@ describe("Generator M2MMap output", () => {
   });
 });
 
-describe("Generator empty M2MMap", () => {
-  test("generates type M2MMap = {} for schema with no M2M relations", async () => {
-    const dts = fs.readFileSync(
-      path.join(__dirname, `../../usage-sqlite-v7/generated/prisma-ts-select/extend.d.ts`),
-      "utf-8"
+describe("generateM2MMapDeclaration unit tests", () => {
+  test("empty map produces type M2MMap = {}", () => {
+    assert.strictEqual(generateM2MMapDeclaration({}), "type M2MMap = {};");
+  });
+
+  test("single source+target produces correct literal", () => {
+    const result = generateM2MMapDeclaration({ Post: { CatA: new Set(["_CatAToPost"]) } });
+    assert.strictEqual(
+      result,
+      'type M2MMap = {\n  readonly "Post": {\n    readonly "CatA": "_CatAToPost";\n  };\n};'
     );
-    // Verify M2MMap is defined as a proper type (has `{` after `=`)
-    const match = dts.match(/type M2MMap\s*=\s*\{/);
-    assert.ok(match, "M2MMap must be defined as an object type");
+  });
+
+  test("multiple junctions produce union literal", () => {
+    const result = generateM2MMapDeclaration({ Post: { Cat: new Set(["_M1", "_M2"]) } });
+    assert.ok(
+      result.includes('"_M1" | "_M2"') || result.includes('"_M2" | "_M1"'),
+      "multiple junctions must produce a union"
+    );
   });
 });

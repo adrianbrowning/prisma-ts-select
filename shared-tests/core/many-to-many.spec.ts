@@ -1,7 +1,5 @@
 import assert from "node:assert/strict"
 import { describe, it } from "node:test"
-import type { Equal, Expect } from "../utils.ts"
-import { typeCheck } from "../utils.ts"
 import { expectSQL } from "../test-utils.ts"
 import { prisma } from '#client'
 import { dialect } from '#dialect'
@@ -130,10 +128,12 @@ describe("manyToManyJoin", () => {
     // ──────────────────────────────────────────
 
     describe("type safety", () => {
-        it("rejects invalid refName string", () => {
-            prisma.$from("MMM_Post")
-                // @ts-expect-error "NotAValidRef" is not in AvailableRefNames
-                .manyToManyJoin("MMM_Post", "MMM_Category", { refName: "NotAValidRef" })
+        it("rejects invalid refName string (type + runtime)", () => {
+            assert.throws(() =>
+                prisma.$from("MMM_Post")
+                    // @ts-expect-error "NotAValidRef" is not in AvailableRefNames
+                    .manyToManyJoin("MMM_Post", "MMM_Category", { refName: "NotAValidRef" })
+            )
         })
 
         it("requires refName when source has ambiguous junctions (MMM_Post)", () => {
@@ -162,6 +162,13 @@ describe("manyToManyJoin", () => {
         it("throws on unsafe refName identifier", () => {
             assert.throws(
                 () => prisma.$from("MMM_Post").manyToManyJoin("MMM_Post", "MMM_Category", { refName: "M2M_NC_M1'; DROP" as any }).getSQL(),
+                /unsafe identifier/
+            )
+        })
+
+        it("throws on unsafe source identifier", () => {
+            assert.throws(
+                () => prisma.$from("M2M_Post").manyToManyJoin("M2M_Post; DROP TABLE" as any, "M2M_Category").getSQL(),
                 /unsafe identifier/
             )
         })

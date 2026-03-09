@@ -13,6 +13,7 @@ import {lit as _lit, sqlExpr, resolveArg, type SQLExpr, type LitToType} from "./
 const DB: DBType = {} as const satisfies DBType;
 // Placeholder replaced by generator with actual M2M relationship map
 type M2MMap = {};
+const SAFE_IDENT_RE = /^\w+$/;
 
 type TDB = typeof DB;
 
@@ -2407,7 +2408,10 @@ function buildContext<TSources extends TArrSources, TFields extends TFieldsType>
 // ────────────────────────────────────────────────────────────────────────────
 // M2M type helpers (use M2MMap — generated per-schema flat lookup)
 
-/** True if T is a union type (distributing check) */
+/**
+ * True if T is a union type (distributing check).
+ * @returns {never} when T is never
+ */
 type IsUnion<T, _T extends T = T> = _T extends _T ? ([T] extends [_T] ? false : true) : never
 
 /** Maps source input (real name OR alias) → actual TTables name */
@@ -2726,7 +2730,7 @@ joinUnsafeTypeEnforced<const Table extends TTables | `${TTables} ${string}`,
         const opts = args[0];
         const refName = opts?.refName as string | undefined;
         const safeIdent = (v: string, ctx: string) => {
-            if (!/^\w+$/.test(v)) throw new Error(`manyToManyJoin: unsafe identifier in ${ctx}: "${v}"`);
+            if (!SAFE_IDENT_RE.test(v)) throw new Error(`manyToManyJoin: unsafe identifier in ${ctx}: "${v}"`);
             return v;
         };
 
@@ -2744,26 +2748,37 @@ joinUnsafeTypeEnforced<const Table extends TTables | `${TTables} ${string}`,
         const safeAlias = alias ? safeIdent(alias, "alias") : undefined;
         const safeRef = refName ? safeIdent(refName, "refName") : undefined;
 
-        const srcEntry = (DB as any)[sourceTableName];
+        const srcEntry = (DB as DBType)[sourceTableName];
         if (!srcEntry) throw new Error(`manyToManyJoin: unknown source table "${sourceTableName}"`);
         const srcRelations = srcEntry.relations as Record<string, Record<string, string[]>>;
         const junctionTable = safeRef
             ? `_${safeRef}`
             : Object.keys(srcRelations).find(k =>
-                k.startsWith("_") && (DB as any)[k]?.relations?.[safeTbl] !== undefined
+                k.startsWith("_") && (DB as DBType)[k]?.relations?.[safeTbl] !== undefined
             );
         if (!junctionTable) throw new Error(
             `manyToManyJoin: no junction between "${sourceTableName}" and "${safeTbl}"`
         );
 
         const junctionRelEntry = srcRelations[junctionTable];
-        const srcLocalCol = junctionRelEntry ? Object.keys(junctionRelEntry)[0]! : "id";
-        const srcJunctionCol = junctionRelEntry?.[srcLocalCol]?.[0] ?? "A";
-        const tgtRelEntry = (DB as any)[junctionTable]?.relations?.[safeTbl] as Record<string, string[]> | undefined;
-        const tgtJunctionCol = tgtRelEntry ? Object.keys(tgtRelEntry)[0]! : "B";
-        const tgtLocalCol = tgtRelEntry?.[tgtJunctionCol]?.[0] ?? "id";
+        const junctionKeys = junctionRelEntry ? Object.keys(junctionRelEntry) : [];
+        if (junctionRelEntry && junctionKeys.length === 0) throw new Error(
+            `manyToManyJoin: junction "${junctionTable}" has no relation columns for source "${sourceTableName}"`
+        );
+        const srcLocalCol = junctionKeys[0] ?? (() => { throw new Error(`manyToManyJoin: cannot determine source local col for junction "${junctionTable}"`); })();
+        const srcJunctionCol = junctionRelEntry?.[srcLocalCol]?.[0] ?? (() => { throw new Error(`manyToManyJoin: cannot determine source junction col for "${junctionTable}"`); })();
+        const tgtRelEntry = (DB as DBType)[junctionTable]?.relations?.[safeTbl] as Record<string, string[]> | undefined;
+        const tgtKeys = tgtRelEntry ? Object.keys(tgtRelEntry) : [];
+        if (tgtRelEntry && tgtKeys.length === 0) throw new Error(
+            `manyToManyJoin: junction "${junctionTable}" has no relation columns for target "${safeTbl}"`
+        );
+        const tgtJunctionCol = tgtKeys[0] ?? (() => { throw new Error(`manyToManyJoin: cannot determine target junction col for "${junctionTable}"`); })();
+        const tgtLocalCol = tgtRelEntry?.[tgtJunctionCol]?.[0] ?? (() => { throw new Error(`manyToManyJoin: cannot determine target local col for "${junctionTable}"`); })();
         const remoteRef = `${sourceAlias}.${srcLocalCol}`;
 
+        // joinUnsafeIgnoreType overloads require statically-typed table/column names via
+        // template literal types; runtime-validated strings can't satisfy those constraints.
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         return (this as any)
             .joinUnsafeIgnoreType(junctionTable, srcJunctionCol, remoteRef)
             .joinUnsafeIgnoreType(safeAlias ? `${safeTbl} ${safeAlias}` : safeTbl, tgtLocalCol, `${junctionTable}.${tgtJunctionCol}`);
