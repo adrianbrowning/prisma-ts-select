@@ -1,0 +1,15 @@
+generator prisma-ts-select {
+  provider    = "prisma-ts-select"
+  output      = "../generated/prisma-ts-select"
+  packageName = "test-pkg-override"
+}
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}

@@ -1,30 +1,14 @@
-generator prisma-ts-select {
-  provider    = "prisma-ts-select"
-  output      = "../generated/prisma-ts-select"
-  packageName = "test-pkg-override"
-}
-
-generator client {
-  provider = "prisma-client-js"
-  output   = "../generated/prisma"
-}
-
-datasource db {
-  provider = "sqlite"
-  url      = env("DATABASE_URL")
-}
-
 model User {
-  id                Int          @id @default(autoincrement())
-  email             String       @unique
+  id                Int           @id @default(autoincrement())
+  email             String        @unique
   name              String?
   age               Int?
-  Posts             Post[]       @relation("author")
-  LastModifiedPosts Post[]       @relation("lastModifiedBy")
+  Posts             Post[]        @relation("author")
+  LastModifiedPosts Post[]        @relation("lastModifiedBy")
   LikedPosts        LikedPosts[]
-  M2MPosts          M2M_Post[]     @relation("M2MPostAuthor")
-  MMMPosts          MMM_Post[]     @relation("MMMPostAuthor")
-  M2MBugPosts       M2MBug_Post[]  @relation("M2MBugPostAuthor")
+  M2MPosts          M2M_Post[]    @relation("M2MPostAuthor")
+  MMMPosts          MMM_Post[]    @relation("MMMPostAuthor")
+  M2MBugPosts       M2MBug_Post[] @relation("M2MBugPostAuthor")
 }
 
 model Post {
@@ -65,7 +49,7 @@ model Employee {
   subordinates Employee[] @relation("ManagerSubordinates")
 }
 
-// Region Mutli-field Id
+// Region Multi-field Id
 model MFId_Category {
   id                Int                 @id
   name              String
@@ -87,8 +71,7 @@ model MFId_Post {
   MFId_CategoryPost MFId_CategoryPost[]
 }
 
-// Region M2M name change
-
+// Region M2M
 model M2M_Post {
   id       Int            @id
   title    String
@@ -105,7 +88,7 @@ model M2M_Category {
 
 // Region END M2M
 
-// Region M2M name change
+// Region M2M named relation
 model M2M_NC_Category {
   id     Int           @id
   name   String
@@ -118,9 +101,9 @@ model M2M_NC_Post {
   cat1  M2M_NC_Category[] @relation("M2M_NC")
 }
 
-// Region END M2M
+// Region END M2M named relation
 
-// Region Multi M2M
+// Region Multi M2M (two junctions, same target type)
 model MMM_Category {
   id     Int        @id
   name   String
@@ -144,24 +127,23 @@ model MMM_Post {
 // Junction tables: _M2MBug_CatAToM2MBug_Post and _M2MBug_CatBToM2MBug_Post
 // keyof Relations<juncA | juncB> = intersection = {M2MBug_Post} only → AvailableM2MTargets = never
 model M2MBug_Post {
-  id       Int             @id
+  id       Int           @id
   title    String
   authorId Int?
-  author   User?           @relation("M2MBugPostAuthor", fields: [authorId], references: [id])
+  author   User?         @relation("M2MBugPostAuthor", fields: [authorId], references: [id])
   catsA    M2MBug_CatA[]
   catsB    M2MBug_CatB[]
 }
 
 model M2MBug_CatA {
-  id    Int             @id
+  id    Int           @id
   name  String
   posts M2MBug_Post[]
 }
 
 model M2MBug_CatB {
-  id    Int             @id
+  id    Int           @id
   name  String
   posts M2MBug_Post[]
 }
 // Region END M2M bug models
-

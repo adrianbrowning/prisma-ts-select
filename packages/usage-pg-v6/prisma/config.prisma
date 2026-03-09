@@ -1,0 +1,14 @@
+generator prisma-ts-select {
+  provider = "prisma-ts-select"
+  output   = "../generated/prisma-ts-select"
+}
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
