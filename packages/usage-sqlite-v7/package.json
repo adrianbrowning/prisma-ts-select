@@ -13,6 +13,7 @@
     "p:r": "prisma db push --force-reset && prisma db seed"
   },
   "imports": {
+    "#dbTypes": "./generated/prisma/client.ts",
     "#client": "./src/client.ts",
     "#prisma-ts-select": "./generated/prisma-ts-select/*",
     "#dialect": "./generated/prisma-ts-select/dialects/v7.js",

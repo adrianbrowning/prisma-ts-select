@@ -4,6 +4,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { createHash } from "node:crypto";
+import { generateM2MMapDeclaration } from "../src/generator.ts";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -86,5 +87,90 @@ describe("Generator dialect replacement", () => {
   test("should export sqliteDialect for SQLite", () => {
     const content = readDialectsIndex("usage-sqlite-v7");
     assert.strictEqual(content.includes("sqliteDialect"), true, "SQLite dialects/index.js should export sqliteDialect");
+  });
+});
+
+describe("Generator M2MMap output", () => {
+  function readExtendDts(pkg: string) {
+    return fs.readFileSync(
+      path.join(__dirname, `../../${pkg}/generated/prisma-ts-select/extend.d.ts`),
+      "utf-8"
+    );
+  }
+
+  // Use sqlite-v7 (no versioned models) as canonical test target
+  const PKG = "usage-sqlite-v7";
+
+  test("M2MMap type is present in generated extend.d.ts", () => {
+    const dts = readExtendDts(PKG);
+    assert.ok(dts.includes("type M2MMap"), "extend.d.ts must contain 'type M2MMap'");
+  });
+
+  test("M2MBug_Post maps to M2MBug_CatA (single junction)", () => {
+    const dts = readExtendDts(PKG);
+    assert.ok(
+      dts.includes('"M2MBug_CatA": "_M2MBug_CatAToM2MBug_Post"'),
+      "M2MBug_Post → M2MBug_CatA junction must be in M2MMap"
+    );
+  });
+
+  test("M2MBug_Post maps to M2MBug_CatB (second junction, different target)", () => {
+    const dts = readExtendDts(PKG);
+    assert.ok(
+      dts.includes('"M2MBug_CatB": "_M2MBug_CatBToM2MBug_Post"'),
+      "M2MBug_Post → M2MBug_CatB junction must be in M2MMap"
+    );
+  });
+
+  test("reciprocal: M2MBug_CatA maps back to M2MBug_Post", () => {
+    const dts = readExtendDts(PKG);
+    // Find M2MBug_CatA section in M2MMap and check it has M2MBug_Post entry
+    const m2mMapIdx = dts.indexOf("type M2MMap");
+    const catASection = dts.indexOf('"M2MBug_CatA"', m2mMapIdx);
+    const blockEnd = dts.indexOf("};", catASection);
+    const snippet = dts.slice(catASection, blockEnd + 2);
+    assert.ok(
+      snippet.includes('"M2MBug_Post": "_M2MBug_CatAToM2MBug_Post"'),
+      "M2MBug_CatA must have reciprocal M2MBug_Post entry"
+    );
+  });
+
+  test("ambiguous M2M: MMM_Post → MMM_Category is a union of junction tables", () => {
+    const dts = readExtendDts(PKG);
+    // Both _M2M_NC_M1 and _M2M_NC_M2 must appear as a union for MMM_Category
+    assert.ok(
+      dts.includes('"_M2M_NC_M1" | "_M2M_NC_M2"') || dts.includes('"_M2M_NC_M2" | "_M2M_NC_M1"'),
+      "Ambiguous MMM_Post → MMM_Category should produce a union of junction tables in M2MMap"
+    );
+  });
+
+  test("simple M2M: M2M_Post → M2M_Category", () => {
+    const dts = readExtendDts(PKG);
+    assert.ok(
+      dts.includes('"M2M_Category": "_M2M_CategoryToM2M_Post"'),
+      "M2M_Post → M2M_Category junction must be in M2MMap"
+    );
+  });
+});
+
+describe("generateM2MMapDeclaration unit tests", () => {
+  test("empty map produces type M2MMap = {}", () => {
+    assert.strictEqual(generateM2MMapDeclaration({}), "type M2MMap = {};");
+  });
+
+  test("single source+target produces correct literal", () => {
+    const result = generateM2MMapDeclaration({ Post: { CatA: new Set(["_CatAToPost"]) } });
+    assert.strictEqual(
+      result,
+      'type M2MMap = {\n  readonly "Post": {\n    readonly "CatA": "_CatAToPost";\n  };\n};'
+    );
+  });
+
+  test("multiple junctions produce union literal", () => {
+    const result = generateM2MMapDeclaration({ Post: { Cat: new Set(["_M1", "_M2"]) } });
+    assert.ok(
+      result.includes('"_M1" | "_M2"') || result.includes('"_M2" | "_M1"'),
+      "multiple junctions must produce a union"
+    );
   });
 });

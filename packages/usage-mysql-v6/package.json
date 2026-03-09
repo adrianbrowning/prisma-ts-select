@@ -13,6 +13,7 @@
   },
   "imports": {
     "#client": "./src/client.ts",
+    "#dbTypes": "./generated/prisma/index.js",
     "#prisma-ts-select": "./generated/prisma-ts-select/*",
     "#dialect": "./generated/prisma-ts-select/dialects/v6.js",
     "#extend": "./generated/prisma-ts-select/extend-v6.js"

@@ -75,6 +75,18 @@ if $NEED_DOCKER; then
   if ! $NEED_START; then
     echo "Docker services already running, skipping startup."
   else
+    # Stop any other Docker containers holding required ports before starting
+    declare -A PORT_MAP=([postgres]=5432 [mysql]=3306)
+    for svc in "${COMPOSE_SERVICES[@]}"; do
+      port="${PORT_MAP[$svc]}"
+      [[ -z "$port" ]] && continue
+      conflicting=$(docker ps --filter "publish=${port}" --format "{{.Names}}" 2>/dev/null)
+      if [[ -n "$conflicting" ]]; then
+        echo "Stopping conflicting container(s) on port ${port}: ${conflicting}"
+        docker stop $conflicting
+      fi
+    done
+
     echo "Starting Docker services..."
     docker compose up -d --wait "${COMPOSE_SERVICES[@]}" || { echo "Docker failed to start" >&2; exit 1; }
     DOCKER_STARTED_BY_US=true
