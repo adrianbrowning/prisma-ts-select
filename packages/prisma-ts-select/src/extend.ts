@@ -417,17 +417,22 @@ type Values = {
 };
 
 function applyCondition(quotedField: string, value: unknown): string {
+    const sqlVal = (v: unknown) =>
+        typeof v === 'string' ? `'${esc(v)}'`
+        : v instanceof Date   ? `'${v.toISOString()}'`
+        : v;
+
     if (typeof value === 'object' && value !== null && !Array.isArray(value) && "op" in value) {
         const opObj = value as { op: string; value?: unknown; values?: unknown[] };
         switch (opObj.op) {
             case 'IN':
             case 'NOT IN': {
-                const valuesList = (opObj.values as unknown[]).map(v => (typeof v === 'string' ? `'${esc(v)}'` : v)).join(", ");
+                const valuesList = (opObj.values as unknown[]).map(v => sqlVal(v)).join(", ");
                 return `${quotedField} ${opObj.op} (${valuesList})`;
             }
             case 'BETWEEN': {
                 const [start, end] = opObj.values as [unknown, unknown];
-                return `${quotedField} BETWEEN ${typeof start === 'string' ? `'${esc(start)}'` : start} AND ${typeof end === 'string' ? `'${esc(end)}'` : end}`;
+                return `${quotedField} BETWEEN ${sqlVal(start)} AND ${sqlVal(end)}`;
             }
             case 'LIKE':
             case 'NOT LIKE':
@@ -441,7 +446,7 @@ function applyCondition(quotedField: string, value: unknown): string {
             case '<=':
             case '!=':
             case '=':
-                return `${quotedField} ${opObj.op} ${typeof opObj.value === 'string' ? `'${esc(opObj.value)}'` : opObj.value}`;
+                return `${quotedField} ${opObj.op} ${sqlVal(opObj.value)}`;
             default:
                 throw new Error(`Unsupported operation: ${opObj.op}`);
         }
@@ -453,10 +458,10 @@ function applyCondition(quotedField: string, value: unknown): string {
             const parts = (value as Array<unknown>).map(opObj => applyCondition(quotedField, opObj));
             return parts.length === 1 ? parts[0]! : "(" + parts.join(" OR ") + ")";
         }
-        const valuesList = value.map(v => (typeof v === 'string' ? `'${esc(v)}'` : v)).join(", ");
+        const valuesList = value.map(v => sqlVal(v)).join(", ");
         return `${quotedField} IN (${valuesList})`;
     } else {
-        return `${quotedField} = ${typeof value === 'string' ? `'${esc(value)}'` : value}`;
+        return `${quotedField} = ${sqlVal(value)}`;
     }
 }
 
