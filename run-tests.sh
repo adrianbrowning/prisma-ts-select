@@ -38,7 +38,7 @@ fi
 
 # ── Branch-isolated DB name ───────────────────────────────────────────────────
 BRANCH=$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "local")
-BRANCH_DB=$(echo "$BRANCH" | sed 's|[^a-zA-Z0-9]|_|g' | tr '[:upper:]' '[:lower:]' | cut -c1-62)
+BRANCH_DB=$(echo "$BRANCH" | sed 's|[^a-zA-Z0-9]|_|g' | tr '[:upper:]' '[:lower:]' | cut -c1-60)
 # versions get isolated DBs (avoids shared connection pool exhaustion)
 BRANCH_DB_V6="${BRANCH_DB}_v6"
 BRANCH_DB_V7="${BRANCH_DB}_v7"
