@@ -417,10 +417,14 @@ type Values = {
 };
 
 function applyCondition(quotedField: string, value: unknown): string {
-    const sqlVal = (v: unknown) =>
-        typeof v === 'string' ? `'${esc(v)}'`
-        : v instanceof Date   ? `'${v.toISOString()}'`
-        : v;
+    const sqlVal = (v: unknown): string => {
+        if (typeof v === 'string') return `'${esc(v)}'`;
+        if (v instanceof Date)     return `'${v.toISOString()}'`;
+        if (v === null)             return 'NULL';
+        if (typeof v === 'number' || typeof v === 'bigint' || typeof v === 'boolean')
+            return String(v);
+        throw new Error(`Unsupported value type in sqlVal: ${typeof v}`);
+    };
 
     if (typeof value === 'object' && value !== null && !Array.isArray(value) && "op" in value) {
         const opObj = value as { op: string; value?: unknown; values?: unknown[] };

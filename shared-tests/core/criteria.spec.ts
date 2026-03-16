@@ -324,6 +324,28 @@ describe("where array shorthand", () => {
 
     });
 
+    describe("Stage 8: array where with table alias FROM", () => {
+
+        const q = () => prisma.$from("User u")
+            .where({ "name": ["John Doe", "John Smith"] })
+            .select("name");
+
+        it("should produce correct SQL with alias in FROM and IN in WHERE", () => {
+            expectSQL(
+                q().getSQL(),
+                `SELECT ${dialect.quote("name")} FROM ${dialect.quote("User")} AS ${dialect.quote("u", true)} WHERE ${dialect.quote("name")} IN ('John Doe', 'John Smith');`
+            );
+        });
+
+        it("should run and return both users", async () => {
+            const result = await q().run();
+            assert.equal(result.length, 2);
+            assert.ok(result.some(u => u.name === "John Doe"));
+            assert.ok(result.some(u => u.name === "John Smith"));
+        });
+
+    });
+
     describe("Stage 9: NOT LIKE in op-array", () => {
 
         const q = () => prisma.$from("User")
@@ -422,26 +444,64 @@ describe("where array shorthand", () => {
             );
         });
 
-    });
-
-    describe("Stage 8: array where with table alias FROM", () => {
-
-        const q = () => prisma.$from("User u")
-            .where({ "name": ["John Doe", "John Smith"] })
-            .select("name");
-
-        it("should produce correct SQL with alias in FROM and IN in WHERE", () => {
+        it("op NOT IN with Date values should produce quoted ISO strings", () => {
+            const q = prisma.$from("Post")
+                .where({ "createdAt": { op: "NOT IN", values: [fixedDate, fixedDate2] } })
+                .select("createdAt");
             expectSQL(
-                q().getSQL(),
-                `SELECT ${dialect.quote("name")} FROM ${dialect.quote("User")} AS ${dialect.quote("u", true)} WHERE ${dialect.quote("name")} IN ('John Doe', 'John Smith');`
+                q.getSQL(),
+                `SELECT ${dialect.quote("createdAt")} FROM ${dialect.quote("Post")} WHERE ${dialect.quote("createdAt")} NOT IN ('${fixedDateISO}', '${fixedDate2ISO}');`
             );
         });
 
-        it("should run and return both users", async () => {
-            const result = await q().run();
-            assert.equal(result.length, 2);
-            assert.ok(result.some(u => u.name === "John Doe"));
-            assert.ok(result.some(u => u.name === "John Smith"));
+        it("op < with Date value should produce quoted ISO string", () => {
+            const q = prisma.$from("Post")
+                .where({ "createdAt": { op: "<", value: fixedDate } })
+                .select("createdAt");
+            expectSQL(
+                q.getSQL(),
+                `SELECT ${dialect.quote("createdAt")} FROM ${dialect.quote("Post")} WHERE ${dialect.quote("createdAt")} < '${fixedDateISO}';`
+            );
+        });
+
+        it("op <= with Date value should produce quoted ISO string", () => {
+            const q = prisma.$from("Post")
+                .where({ "createdAt": { op: "<=", value: fixedDate } })
+                .select("createdAt");
+            expectSQL(
+                q.getSQL(),
+                `SELECT ${dialect.quote("createdAt")} FROM ${dialect.quote("Post")} WHERE ${dialect.quote("createdAt")} <= '${fixedDateISO}';`
+            );
+        });
+
+        it("op >= with Date value should produce quoted ISO string", () => {
+            const q = prisma.$from("Post")
+                .where({ "createdAt": { op: ">=", value: fixedDate } })
+                .select("createdAt");
+            expectSQL(
+                q.getSQL(),
+                `SELECT ${dialect.quote("createdAt")} FROM ${dialect.quote("Post")} WHERE ${dialect.quote("createdAt")} >= '${fixedDateISO}';`
+            );
+        });
+
+        it("op != with Date value should produce quoted ISO string", () => {
+            const q = prisma.$from("Post")
+                .where({ "createdAt": { op: "!=", value: fixedDate } })
+                .select("createdAt");
+            expectSQL(
+                q.getSQL(),
+                `SELECT ${dialect.quote("createdAt")} FROM ${dialect.quote("Post")} WHERE ${dialect.quote("createdAt")} != '${fixedDateISO}';`
+            );
+        });
+
+        it("op-array of Date values should produce OR chain with quoted ISO strings", () => {
+            const q = prisma.$from("Post")
+                .where({ "createdAt": [{ op: ">", value: fixedDate }, { op: "<", value: fixedDate2 }] })
+                .select("createdAt");
+            expectSQL(
+                q.getSQL(),
+                `SELECT ${dialect.quote("createdAt")} FROM ${dialect.quote("Post")} WHERE (${dialect.quote("createdAt")} > '${fixedDateISO}' OR ${dialect.quote("createdAt")} < '${fixedDate2ISO}');`
+            );
         });
 
     });
