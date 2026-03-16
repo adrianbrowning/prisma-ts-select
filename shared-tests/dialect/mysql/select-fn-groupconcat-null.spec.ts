@@ -1,55 +1,244 @@
+import assert from "node:assert/strict"
 import { describe, it } from "node:test"
 import type { Equal, Expect } from "../../utils.ts"
 import { typeCheck } from "../../utils.ts"
+import { expectSQL } from "../../test-utils.ts"
 import { prisma } from '#client'
+import { dialect } from '#dialect'
+
+function sortByNames(rows: Array<{ names: string | null }>, sep = ","): Array<{ names: string | null }> {
+    return rows
+        .map(r => ({ names: r.names !== null ? r.names.split(sep).sort().join(sep) : null }))
+        .sort((a, b) => {
+            if (a.names === null) return 1;
+            if (b.names === null) return -1;
+            return a.names < b.names ? -1 : a.names > b.names ? 1 : 0;
+        });
+}
 
 describe("groupConcat nullability propagation (MySQL)", () => {
 
     describe("inner join + groupConcat(col) — non-nullable col stays string", () => {
-        it("type: string (not string | null)", () => {
-            const q = prisma.$from("User")
+        function createQuery() {
+            return prisma.$from("User")
                 .innerJoin("Post", "authorId", "User.id")
                 .groupBy(["User.id"])
                 .select(({ groupConcat }) => groupConcat("Post.title"), "names");
+        }
+
+        it("type: string (not string | null)", () => {
+            const q = createQuery();
             type R = Awaited<ReturnType<typeof q.run>>;
-            // FAILS currently: groupConcat always returns SQLExpr<string | null>, so names = string | null
             typeCheck({} as Expect<Equal<R, Array<{ names: string }>>>);
+        });
+
+        it("should match SQL", () => {
+            expectSQL(createQuery().getSQL(),
+                `SELECT GROUP_CONCAT(${dialect.quoteQualifiedColumn("Post.title")}) AS ${dialect.quote("names", true)} FROM ${dialect.quote("User")} INNER JOIN ${dialect.quote("Post")} ON ${dialect.quoteQualifiedColumn("Post.authorId")} = ${dialect.quoteQualifiedColumn("User.id")} GROUP BY ${dialect.quoteQualifiedColumn("User.id")};`);
+        });
+
+        it("should run and return sorted results", async () => {
+            const result = await createQuery().run();
+            assert.deepStrictEqual(sortByNames(result, ","), [
+                { names: "Blog 1,blog 2" },
+                { names: "blog 3" },
+            ]);
         });
     });
 
     describe("left join + groupConcat(col) — nullable col stays string | null", () => {
-        it("type: string | null (regression guard)", () => {
-            const q = prisma.$from("User")
+        function createQuery() {
+            return prisma.$from("User")
                 .leftJoin("Post", "authorId", "User.id")
                 .groupBy(["User.id"])
                 .select(({ groupConcat }) => groupConcat("Post.title"), "names");
+        }
+
+        it("type: string | null (regression guard)", () => {
+            const q = createQuery();
             type R = Awaited<ReturnType<typeof q.run>>;
-            // PASSES currently: groupConcat returns SQLExpr<string | null>
             typeCheck({} as Expect<Equal<R, Array<{ names: string | null }>>>);
+        });
+
+        it("should match SQL", () => {
+            expectSQL(createQuery().getSQL(),
+                `SELECT GROUP_CONCAT(${dialect.quoteQualifiedColumn("Post.title")}) AS ${dialect.quote("names", true)} FROM ${dialect.quote("User")} LEFT JOIN ${dialect.quote("Post")} ON ${dialect.quoteQualifiedColumn("Post.authorId")} = ${dialect.quoteQualifiedColumn("User.id")} GROUP BY ${dialect.quoteQualifiedColumn("User.id")};`);
+        });
+
+        it("should run and include null for users without posts", async () => {
+            const result = await createQuery().run();
+            assert.deepStrictEqual(sortByNames(result, ","), [
+                { names: "Blog 1,blog 2" },
+                { names: "blog 3" },
+                { names: null },
+            ]);
         });
     });
 
     describe("inner join + groupConcat(distinct(col)) — non-nullable col stays string", () => {
-        it("type: string (regression guard)", () => {
-            const q = prisma.$from("User")
+        function createQuery() {
+            return prisma.$from("User")
                 .innerJoin("Post", "authorId", "User.id")
                 .groupBy(["User.id"])
                 .select(({ groupConcat, distinct }) => groupConcat(distinct("Post.title")), "names");
+        }
+
+        it("type: string (regression guard)", () => {
+            const q = createQuery();
             type R = Awaited<ReturnType<typeof q.run>>;
-            // PASSES currently: distinct strips null via NonNullable, groupConcat returns string
             typeCheck({} as Expect<Equal<R, Array<{ names: string }>>>);
+        });
+
+        it("should match SQL", () => {
+            expectSQL(createQuery().getSQL(),
+                `SELECT GROUP_CONCAT(DISTINCT ${dialect.quoteQualifiedColumn("Post.title")}) AS ${dialect.quote("names", true)} FROM ${dialect.quote("User")} INNER JOIN ${dialect.quote("Post")} ON ${dialect.quoteQualifiedColumn("Post.authorId")} = ${dialect.quoteQualifiedColumn("User.id")} GROUP BY ${dialect.quoteQualifiedColumn("User.id")};`);
+        });
+
+        it("should run and return sorted results", async () => {
+            const result = await createQuery().run();
+            assert.deepStrictEqual(sortByNames(result, ","), [
+                { names: "Blog 1,blog 2" },
+                { names: "blog 3" },
+            ]);
         });
     });
 
     describe("left join + groupConcat(distinct(col)) — nullable col should be string | null", () => {
-        it("type: string | null", () => {
-            const q = prisma.$from("User")
+        function createQuery() {
+            return prisma.$from("User")
                 .leftJoin("Post", "authorId", "User.id")
                 .groupBy(["User.id"])
                 .select(({ groupConcat, distinct }) => groupConcat(distinct("Post.title")), "names");
+        }
+
+        it("type: string | null", () => {
+            const q = createQuery();
             type R = Awaited<ReturnType<typeof q.run>>;
-            // FAILS currently: distinct uses NonNullable stripping null, so names = string instead of string | null
             typeCheck({} as Expect<Equal<R, Array<{ names: string | null }>>>);
+        });
+
+        it("should match SQL", () => {
+            expectSQL(createQuery().getSQL(),
+                `SELECT GROUP_CONCAT(DISTINCT ${dialect.quoteQualifiedColumn("Post.title")}) AS ${dialect.quote("names", true)} FROM ${dialect.quote("User")} LEFT JOIN ${dialect.quote("Post")} ON ${dialect.quoteQualifiedColumn("Post.authorId")} = ${dialect.quoteQualifiedColumn("User.id")} GROUP BY ${dialect.quoteQualifiedColumn("User.id")};`);
+        });
+
+        it("should run and include null for users without posts", async () => {
+            const result = await createQuery().run();
+            assert.deepStrictEqual(sortByNames(result, ","), [
+                { names: "Blog 1,blog 2" },
+                { names: "blog 3" },
+                { names: null },
+            ]);
+        });
+    });
+
+    describe("inner join + groupConcat(col, sep) — separator variant", () => {
+        function createQuery() {
+            return prisma.$from("User")
+                .innerJoin("Post", "authorId", "User.id")
+                .groupBy(["User.id"])
+                .select(({ groupConcat }) => groupConcat("Post.title", ", "), "names");
+        }
+
+        it("type: string", () => {
+            const q = createQuery();
+            type R = Awaited<ReturnType<typeof q.run>>;
+            typeCheck({} as Expect<Equal<R, Array<{ names: string }>>>);
+        });
+
+        it("should match SQL", () => {
+            expectSQL(createQuery().getSQL(),
+                `SELECT GROUP_CONCAT(${dialect.quoteQualifiedColumn("Post.title")} SEPARATOR ', ') AS ${dialect.quote("names", true)} FROM ${dialect.quote("User")} INNER JOIN ${dialect.quote("Post")} ON ${dialect.quoteQualifiedColumn("Post.authorId")} = ${dialect.quoteQualifiedColumn("User.id")} GROUP BY ${dialect.quoteQualifiedColumn("User.id")};`);
+        });
+
+        it("should run and return sorted results", async () => {
+            const result = await createQuery().run();
+            assert.deepStrictEqual(sortByNames(result, ", "), [
+                { names: "Blog 1, blog 2" },
+                { names: "blog 3" },
+            ]);
+        });
+    });
+
+    describe("inner join + groupConcat(distinct(col), sep) — distinct + separator variant", () => {
+        function createQuery() {
+            return prisma.$from("User")
+                .innerJoin("Post", "authorId", "User.id")
+                .groupBy(["User.id"])
+                .select(({ groupConcat, distinct }) => groupConcat(distinct("Post.title"), ", "), "names");
+        }
+
+        it("type: string", () => {
+            const q = createQuery();
+            type R = Awaited<ReturnType<typeof q.run>>;
+            typeCheck({} as Expect<Equal<R, Array<{ names: string }>>>);
+        });
+
+        it("should match SQL", () => {
+            expectSQL(createQuery().getSQL(),
+                `SELECT GROUP_CONCAT(DISTINCT ${dialect.quoteQualifiedColumn("Post.title")} SEPARATOR ', ') AS ${dialect.quote("names", true)} FROM ${dialect.quote("User")} INNER JOIN ${dialect.quote("Post")} ON ${dialect.quoteQualifiedColumn("Post.authorId")} = ${dialect.quoteQualifiedColumn("User.id")} GROUP BY ${dialect.quoteQualifiedColumn("User.id")};`);
+        });
+
+        it("should run and return sorted results", async () => {
+            const result = await createQuery().run();
+            assert.deepStrictEqual(sortByNames(result, ", "), [
+                { names: "Blog 1, blog 2" },
+                { names: "blog 3" },
+            ]);
+        });
+    });
+
+    describe("raw SQLExpr<string> input — overload 3", () => {
+        function createQuery() {
+            return prisma.$from("User")
+                .innerJoin("Post", "authorId", "User.id")
+                .groupBy(["User.id"])
+                .select(({ groupConcat, concat }) => groupConcat(concat("Post.title")), "names");
+        }
+
+        it("type: string (SQLExpr<string> in → SQLExpr<string> out)", () => {
+            const q = createQuery();
+            type R = Awaited<ReturnType<typeof q.run>>;
+            typeCheck({} as Expect<Equal<R, Array<{ names: string }>>>);
+        });
+
+        it("should match SQL", () => {
+            expectSQL(createQuery().getSQL(),
+                `SELECT GROUP_CONCAT(CONCAT(${dialect.quoteQualifiedColumn("Post.title")})) AS ${dialect.quote("names", true)} FROM ${dialect.quote("User")} INNER JOIN ${dialect.quote("Post")} ON ${dialect.quoteQualifiedColumn("Post.authorId")} = ${dialect.quoteQualifiedColumn("User.id")} GROUP BY ${dialect.quoteQualifiedColumn("User.id")};`);
+        });
+
+        it("should run and return sorted results", async () => {
+            const result = await createQuery().run();
+            assert.deepStrictEqual(sortByNames(result, ","), [
+                { names: "Blog 1,blog 2" },
+                { names: "blog 3" },
+            ]);
+        });
+
+        it("type: string | null (SQLExpr<string | null> in → SQLExpr<string | null> out — type only)", () => {
+            if (false) {
+                const q = prisma.$from("User")
+                    .leftJoin("Post", "authorId", "User.id")
+                    .groupBy(["User.id"])
+                    .select(({ groupConcat }) => {
+                        const nullableExpr = groupConcat("Post.title"); // SQLExpr<string | null> via overload 2
+                        return groupConcat(nullableExpr);               // overload 3: T = string | null
+                    }, "names");
+                type R = Awaited<ReturnType<typeof q.run>>;
+                typeCheck({} as Expect<Equal<R, Array<{ names: string | null }>>>);
+            }
+        });
+    });
+
+    describe("type boundary", () => {
+        it("groupConcat(SQLExpr<bigint>) should be a type error", () => {
+            // @ts-expect-error — SQLExpr<bigint> does not satisfy T extends string | null
+            prisma.$from("User").select(({ groupConcat, count }) => groupConcat(count("User.id")), "v");
+        });
+
+        it("groupConcat(distinct(number col)) should be a type error", () => {
+            // @ts-expect-error — SQLDistinct<number | null> fails T extends string | null constraint
+            prisma.$from("User").select(({ groupConcat, distinct }) => groupConcat(distinct("User.age")), "v");
         });
     });
 
