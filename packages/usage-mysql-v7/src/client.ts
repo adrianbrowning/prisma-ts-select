@@ -9,13 +9,13 @@ const DB_URL=new URL(process.env.DATABASE_URL || "");
 
 const adapter = new PrismaMariaDb({
   host: DB_URL.hostname,
-  port: DB_URL.port,
+  port: Number(DB_URL.port),
   user: DB_URL.username,
   password: DB_URL.password,
   database: DB_URL.pathname.slice(1),
-  connectionLimit: 5,
-  connectTimeout: 1000,
-  acquireTimeout: 1000,
+  connectionLimit: 10,
+  connectTimeout: 1e3,
+  acquireTimeout: 1e3,
 })
 
 export const prisma = new PrismaClient({ adapter }).$extends(tsSelectExtend)
