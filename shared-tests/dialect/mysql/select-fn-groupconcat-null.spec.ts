@@ -188,6 +188,34 @@ describe("groupConcat nullability propagation (MySQL)", () => {
         });
     });
 
+    describe("schema-nullable col (no join) + groupConcat(col) — overload 2", () => {
+        function createQuery() {
+            return prisma.$from("User")
+                .groupBy(["User.id"])
+                .select(({ groupConcat }) => groupConcat("User.name"), "names");
+        }
+
+        it("type: string | null (User.name is String? in schema)", () => {
+            const q = createQuery();
+            type R = Awaited<ReturnType<typeof q.run>>;
+            typeCheck({} as Expect<Equal<R, Array<{ names: string | null }>>>);
+        });
+
+        it("should match SQL", () => {
+            expectSQL(createQuery().getSQL(),
+                `SELECT GROUP_CONCAT(${dialect.quoteQualifiedColumn("User.name")}) AS ${dialect.quote("names", true)} FROM ${dialect.quote("User")} GROUP BY ${dialect.quoteQualifiedColumn("User.id")};`);
+        });
+
+        it("should run and return null for users with null name", async () => {
+            const result = await createQuery().run();
+            assert.deepStrictEqual(sortByNames(result, ","), [
+                { names: "John Doe" },
+                { names: "John Smith" },
+                { names: null },
+            ]);
+        });
+    });
+
     describe("raw SQLExpr<string> input — overload 3", () => {
         function createQuery() {
             return prisma.$from("User")
@@ -215,18 +243,18 @@ describe("groupConcat nullability propagation (MySQL)", () => {
             ]);
         });
 
-        it("type: string | null (SQLExpr<string | null> in → SQLExpr<string | null> out — type only)", () => {
-            if (false) {
-                const q = prisma.$from("User")
-                    .leftJoin("Post", "authorId", "User.id")
-                    .groupBy(["User.id"])
-                    .select(({ groupConcat }) => {
-                        const nullableExpr = groupConcat("Post.title"); // SQLExpr<string | null> via overload 2
-                        return groupConcat(nullableExpr);               // overload 3: T = string | null
-                    }, "names");
-                type R = Awaited<ReturnType<typeof q.run>>;
-                typeCheck({} as Expect<Equal<R, Array<{ names: string | null }>>>);
-            }
+        it("type: string | null (SQLExpr<string | null> in → SQLExpr<string | null> out)", () => {
+            // Verifies overload 3: groupConcat(SQLExpr<string|null>) → SQLExpr<string|null>.
+            // Query is constructed but never run() — nested aggregate is valid SQL-builder input.
+            const q = prisma.$from("User")
+                .leftJoin("Post", "authorId", "User.id")
+                .groupBy(["User.id"])
+                .select(({ groupConcat }) => {
+                    const nullableExpr = groupConcat("Post.title"); // SQLExpr<string | null> via overload 2
+                    return groupConcat(nullableExpr);               // overload 3: T = string | null
+                }, "names");
+            type R = Awaited<ReturnType<typeof q.run>>;
+            typeCheck({} as Expect<Equal<R, Array<{ names: string | null }>>>);
         });
     });
 

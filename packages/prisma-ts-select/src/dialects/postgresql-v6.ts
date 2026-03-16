@@ -1,5 +1,6 @@
 import type {Decimal} from "@prisma/client/runtime/client";
 import {resolveArg, sqlExpr, type SQLExpr, DISTINCT_BRAND} from "../sql-expr.js";
+// Re-exported for generated extend-v*.d.ts — required by type system, do not remove
 export { DISTINCT_BRAND };
 import type {FilterCols, ColName} from "./shared.js";
 import {postgresqlContextFns, postgresqlDialect} from "./postgresql.js";

@@ -1,4 +1,7 @@
 import type {Dialect} from "./types.js";
+// DISTINCT_BRAND is used internally but NOT re-exported: sqlite.ts is version-agnostic
+// (no v6/v7 shim files), so generated extend-*.d.ts for SQLite packages import it
+// directly from sql-expr.js rather than via a shim.
 import {resolveArg, sqlExpr, sqlDistinct, isDistinct, type SQLExpr, type SQLDistinct, DISTINCT_BRAND} from "../sql-expr.js";
 import type {JSONValue, JSONObject} from "../utils/types.js";
 import {esc, flattenJsonObjectPairs, type FilterCols, type FilterJsonCols, type ColName, type ColTypeOf} from "./shared.js";

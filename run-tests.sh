@@ -124,8 +124,8 @@ trap cleanup EXIT
 
 $SEED_ONLY && RESET_DB=true
 
-if $SKIP_BUILD; then
-  echo "Skipping build (--skip-build)."
+if $SKIP_BUILD || $SEED_ONLY; then
+  echo "Skipping build (--skip-build / --seed-only)."
 else
   echo "Building prisma-ts-select..."
   pnpm --filter prisma-ts-select build
