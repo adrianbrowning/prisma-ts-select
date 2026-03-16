@@ -1038,6 +1038,7 @@ class _fSelect<TSources extends TArrSources, TFields extends TFieldsType, TSelec
                     selects: [...this.values.selects, ...expandedSelects]
                 }) as any;
             }
+            // alias provided → falls through to generic alias handler below
             else if (!alias && !!colName) {  //table.column
 
                 //Check if column is a unique

@@ -159,11 +159,11 @@ export const sqliteDialect: Dialect = {
   name: "sqlite",
   needsBooleanCoercion: () => true,
   quote: (name, _isAlias) => {
-    if (_isAlias) return "`" + name + "`";
+    if (_isAlias) return "`" + name.replace(/`/g, '``') + "`";
     return name;
   },
   quoteTableIdentifier: (name, _isAlias) => {
-   if(_isAlias) return "`" + name + "`";
+   if(_isAlias) return "`" + name.replace(/`/g, '``') + "`";
     return name;
   },
   quoteQualifiedColumn: (ref) => {
