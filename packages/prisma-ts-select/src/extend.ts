@@ -1017,7 +1017,7 @@ class _fSelect<TSources extends TArrSources, TFields extends TFieldsType, TSelec
                 }
                 return new _fSelect(this.db, {
                     ...this.values,
-                    selects: [...this.values.selects, `${dialect.quoteQualifiedColumn(select)} AS ${dialect.quote(select, true)}`]
+                    selects: [...this.values.selects, `${dialect.quoteQualifiedColumn(select)} AS ${dialect.quote(alias ?? select, true)}`]
                 }) as any;
             }
 

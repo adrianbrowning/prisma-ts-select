@@ -457,4 +457,21 @@ describe("$with (CTE)", () => {
         );
     });
 
+    test("CTE column select with explicit alias uses alias in SQL", () => {
+        const posts = prisma.$from('Post').select('id').select('authorId');
+        const query = prisma
+            .$with('pp', posts)
+            .from('User')
+            .join('pp', 'authorId', 'User.id')
+            .select('pp.authorId', 'authorId');
+
+        expectSQL(query.getSQL(),
+            `WITH ${dialect.quoteTableIdentifier('pp', false)} AS (SELECT ${dialect.quote('id')}, ${dialect.quote('authorId')} FROM ${dialect.quote('Post')}) SELECT ${dialect.quoteQualifiedColumn('pp.authorId')} AS ${dialect.quote('authorId', true)} FROM ${dialect.quote('User')} JOIN ${dialect.quote('pp')} ON ${dialect.quoteQualifiedColumn('pp.authorId')} = ${dialect.quoteQualifiedColumn('User.id')};`
+        );
+
+        // Type check: result key should be 'authorId', not 'pp.authorId'
+        type Result = Awaited<ReturnType<typeof query.run>>[0];
+        typeCheck({} as Expect<Equal<keyof Result, 'authorId'>>);
+    });
+
 });
