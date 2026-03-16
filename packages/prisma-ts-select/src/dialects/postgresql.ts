@@ -1,5 +1,5 @@
 import type {Dialect} from "./types.js";
-import {resolveArg, sqlExpr, sqlDistinct, type SQLExpr, type SQLDistinct} from "../sql-expr.js";
+import {resolveArg, sqlExpr, sqlDistinct, type SQLExpr, type SQLDistinct, DISTINCT_BRAND} from "../sql-expr.js";
 import type {JSONValue, JSONObject} from "../utils/types.js";
 import {esc, flattenJsonObjectPairs, type FilterCols, type FilterJsonCols, type ColName, type ColTypeOf} from "./shared.js";
 
@@ -11,16 +11,21 @@ export type PgExtractField ='YEAR' | 'MONTH' | 'DAY' | 'HOUR' | 'MINUTE' | 'SECO
 export type PgDateTruncUnit = 'microseconds' | 'milliseconds' | 'second' | 'minute' | 'hour' | 'day' | 'week' | 'month' | 'quarter' | 'year' | 'decade' | 'century' | 'millennium';
 
 export const postgresqlContextFns = <TColEntries extends [string, unknown] = never>(quoteFn: (ref: string) => string) => ({
-  avg: (col: FilterCols<TColEntries, number> | SQLExpr<number>): SQLExpr<number> => sqlExpr(`AVG(${resolveArg(col, quoteFn)})`),
-  sum: (col: FilterCols<TColEntries, number> | SQLExpr<number>): SQLExpr<number> => sqlExpr(`SUM(${resolveArg(col, quoteFn)})`),
+  avg: (col: FilterCols<TColEntries, number> | SQLExpr<number | null>): SQLExpr<number> => sqlExpr(`AVG(${resolveArg(col, quoteFn)})`),
+  sum: (col: FilterCols<TColEntries, number> | SQLExpr<number | null>): SQLExpr<number> => sqlExpr(`SUM(${resolveArg(col, quoteFn)})`),
   countAll:      (): SQLExpr<number> => sqlExpr('COUNT(*)'),
   count:         (col: ColName<TColEntries> | '*' | SQLExpr<unknown>): SQLExpr<number> =>
     sqlExpr(col === '*' ? 'COUNT(*)' : `COUNT(${resolveArg(col as string | SQLExpr<unknown>, quoteFn)})`),
   countDistinct: (col: ColName<TColEntries>): SQLExpr<number> => sqlExpr(`COUNT(DISTINCT ${quoteFn(col)})`),
-  distinct:      <Col extends ColName<TColEntries>>(col: Col): SQLDistinct<NonNullable<ColTypeOf<TColEntries, Col>>> => sqlDistinct(`DISTINCT ${quoteFn(col)}`),
+  distinct:      <Col extends ColName<TColEntries>>(col: Col): SQLDistinct<ColTypeOf<TColEntries, Col>> => sqlDistinct(`DISTINCT ${quoteFn(col)}`),
   length: (col: FilterCols<TColEntries, string> | SQLExpr<string>): SQLExpr<number> => sqlExpr(`LENGTH(${resolveArg(col, quoteFn)})`),
-  stringAgg:     (col: ColName<TColEntries> | SQLExpr<string>, sep: string): SQLExpr<string> =>
-    sqlExpr(`STRING_AGG(${resolveArg(col, quoteFn)}, '${esc(sep)}')`),
+  stringAgg: ((col: ColName<TColEntries> | SQLExpr<string>, sep: string): SQLExpr<string | null> =>
+    sqlExpr(`STRING_AGG(${resolveArg(col, quoteFn)}, '${esc(sep)}')`)
+  ) as (
+    & (<T extends string | null>(col: SQLDistinct<T>, sep: string) => SQLExpr<T>)
+    & (<Col extends ColName<TColEntries>>(col: Col, sep: string) => SQLExpr<null extends ColTypeOf<TColEntries, Col> ? string | null : string>)
+    & (<T extends string | null>(col: SQLExpr<T> & { readonly [DISTINCT_BRAND]?: never }, sep: string) => SQLExpr<T>)
+  ),
   arrayAgg:      (col: ColName<TColEntries> | SQLExpr<unknown>): SQLExpr<unknown[]> => sqlExpr(`ARRAY_AGG(${resolveArg(col, quoteFn)})`),
   stddevPop:     (col: FilterCols<TColEntries, number>): SQLExpr<number> => sqlExpr(`STDDEV_POP(${quoteFn(col)})`),
   stddevSamp:    (col: FilterCols<TColEntries, number>): SQLExpr<number> => sqlExpr(`STDDEV_SAMP(${quoteFn(col)})`),

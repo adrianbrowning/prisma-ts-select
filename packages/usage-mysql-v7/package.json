@@ -22,10 +22,10 @@
     "@gcm/prisma-ts-select": "workspace:prisma-ts-select@*"
   },
   "devDependencies": {
-    "@prisma/adapter-mariadb": "^7.4.0",
-    "@prisma/client": "7.4.0",
+    "@prisma/adapter-mariadb": "^7.5.0",
+    "@prisma/client": "7.5.0",
     "@types/node": "^24.0.0",
-    "prisma": "7.4.0",
+    "prisma": "7.5.0",
     "tsx": "^4.21.0",
     "typescript": "^5.9.3"
   }
