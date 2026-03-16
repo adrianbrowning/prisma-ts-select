@@ -42,7 +42,7 @@ export const sqliteContextFns = <TColEntries extends [string, unknown] = never, 
     if (isDistinct(col) && sep !== undefined) {
       throw new Error('SQLite does not support GROUP_CONCAT(DISTINCT col, sep) — omit the separator.');
     }
-    return sqlExpr(`GROUP_CONCAT(${inner}${sep !== undefined ? `, '${sep.replace(/'/g, "''")}'` : ''})`);
+    return sqlExpr(`GROUP_CONCAT(${inner}${sep !== undefined ? `, '${esc(sep)}'` : ''})`);
   }) as (
     // distinct overload: propagate T (string | null if left-joined, string otherwise)
     & (<T extends string | null>(col: SQLDistinct<T>) => SQLExpr<T>)
