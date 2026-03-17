@@ -2482,14 +2482,15 @@ class _fJoin<
 
     /**
      * CTE join overload — when table name is a known CTE.
-     * @note `joinWhere` (additional ON-clause filtering) is not supported for CTE joins.
-     * Use `.where()` after the join to filter CTE results instead.
      */
     join<const TName extends keyof TCTEs & string>(
         cteName: TName,
         local: keyof TCTEs[TName] & string,
         remote: GetJoinCols<TSources[number]>,
-        opts?: { joinType?: JoinType }
+        opts?: {
+            where?: WhereCriteriaMulti<[readonly ["__cte__", TName]], Record<TName, TCTEs[TName]>>,
+            joinType?: JoinType
+        }
     ): _fJoin<[...TSources, readonly ["__cte__", TName]], TFields & Record<TName, TCTEs[TName]>, TCTEs>
 
     // Overload 1: Object syntax
@@ -2796,6 +2797,16 @@ joinUnsafeTypeEnforced<const Table extends TTables | `${TTables} ${string}`,
 
     // ── Named join methods ───────────────────────────────────────────────
 
+    /**
+     * CTE innerJoin — `where` appends conditions to the ON clause.
+     * Scoped to CTE fields only; use `join()` for cross-table conditions.
+     */
+    innerJoin<const TName extends keyof TCTEs & string>(
+        cteName: TName,
+        local: keyof TCTEs[TName] & string,
+        remote: GetJoinCols<TSources[number]>,
+        opts?: { where?: WhereCriteriaMulti<[readonly ["__cte__", TName]], Record<TName, TCTEs[TName]>> }
+    ): _fJoin<[...TSources, readonly ["__cte__", TName]], TFields & Record<TName, TCTEs[TName]>, TCTEs>
     // Overload 1: Object syntax
     innerJoin<const Table extends AvailableJoins<TSources>,
         TJoinCols extends [string, string] = ValidStringTuple<GetUnionOfRelations<MapJoinsToKnownTables<SafeJoins<Table, TSources>, TSources>>>,
@@ -2812,10 +2823,20 @@ joinUnsafeTypeEnforced<const Table extends TTables | `${TTables} ${string}`,
         TCol1 extends TJoinCols[0] = never
     >(table: TableInput, field: TCol1, reference: find<TJoinCols, TCol1>):
         _fJoinReturn<[...TSources, [TAlias] extends [never] ? Table : [Table, TAlias]], Prettify<TFields & Record<[TAlias] extends [never] ? Table : TAlias, GetFieldsFromTable<Table>>>, TCTEs>;
-    innerJoin(tableOrOptions: any, field?: any, reference?: any): any {
-        return this._joinImpl("INNER", tableOrOptions, field, reference);
+    innerJoin(tableOrOptions: any, field?: any, reference?: any, opts?: any): any {
+        return this._joinImpl("INNER", tableOrOptions, field, reference, opts);
     }
 
+    /**
+     * CTE leftJoin — `where` appends conditions to the ON clause.
+     * Scoped to CTE fields only; use `join()` for cross-table conditions.
+     */
+    leftJoin<const TName extends keyof TCTEs & string>(
+        cteName: TName,
+        local: keyof TCTEs[TName] & string,
+        remote: GetJoinCols<TSources[number]>,
+        opts?: { where?: WhereCriteriaMulti<[readonly ["__cte__", TName]], Record<TName, TCTEs[TName]>> }
+    ): _fJoin<[...TSources, readonly ["__cte__", TName]], TFields & Record<TName, TCTEs[TName]>, TCTEs>
     // Overload 1: Object syntax
     leftJoin<const Table extends AvailableJoins<TSources>,
         TJoinCols extends [string, string] = ValidStringTuple<GetUnionOfRelations<MapJoinsToKnownTables<SafeJoins<Table, TSources>, TSources>>>,
@@ -2832,10 +2853,20 @@ joinUnsafeTypeEnforced<const Table extends TTables | `${TTables} ${string}`,
         TCol1 extends TJoinCols[0] = never
     >(table: TableInput, field: TCol1, reference: find<TJoinCols, TCol1>):
         _fJoinReturn<[...TSources, [TAlias] extends [never] ? Table : [Table, TAlias]], Prettify<TFields & Record<[TAlias] extends [never] ? Table : TAlias, MakeNullable<GetFieldsFromTable<Table>>>>, TCTEs>;
-    leftJoin(tableOrOptions: any, field?: any, reference?: any): any {
-        return this._joinImpl("LEFT", tableOrOptions, field, reference);
+    leftJoin(tableOrOptions: any, field?: any, reference?: any, opts?: any): any {
+        return this._joinImpl("LEFT", tableOrOptions, field, reference, opts);
     }
 
+    /**
+     * CTE rightJoin — `where` appends conditions to the ON clause.
+     * Scoped to CTE fields only; use `join()` for cross-table conditions.
+     */
+    rightJoin<const TName extends keyof TCTEs & string>(
+        cteName: TName,
+        local: keyof TCTEs[TName] & string,
+        remote: GetJoinCols<TSources[number]>,
+        opts?: { where?: WhereCriteriaMulti<[readonly ["__cte__", TName]], Record<TName, TCTEs[TName]>> }
+    ): _fJoin<[...TSources, readonly ["__cte__", TName]], TFields & Record<TName, TCTEs[TName]>, TCTEs>
     // Overload 1: Object syntax
     rightJoin<const Table extends AvailableJoins<TSources>,
         TJoinCols extends [string, string] = ValidStringTuple<GetUnionOfRelations<MapJoinsToKnownTables<SafeJoins<Table, TSources>, TSources>>>,
@@ -2852,10 +2883,20 @@ joinUnsafeTypeEnforced<const Table extends TTables | `${TTables} ${string}`,
         TCol1 extends TJoinCols[0] = never
     >(table: TableInput, field: TCol1, reference: find<TJoinCols, TCol1>):
         _fJoinReturn<[...TSources, [TAlias] extends [never] ? Table : [Table, TAlias]], Prettify<NullifyTableFields<TFields> & Record<[TAlias] extends [never] ? Table : TAlias, GetFieldsFromTable<Table>>>, TCTEs>;
-    rightJoin(tableOrOptions: any, field?: any, reference?: any): any {
-        return this._joinImpl("RIGHT", tableOrOptions, field, reference);
+    rightJoin(tableOrOptions: any, field?: any, reference?: any, opts?: any): any {
+        return this._joinImpl("RIGHT", tableOrOptions, field, reference, opts);
     }
 
+    /**
+     * CTE fullJoin — `where` appends conditions to the ON clause.
+     * Scoped to CTE fields only; use `join()` for cross-table conditions.
+     */
+    fullJoin<const TName extends keyof TCTEs & string>(
+        cteName: TName,
+        local: keyof TCTEs[TName] & string,
+        remote: GetJoinCols<TSources[number]>,
+        opts?: { where?: WhereCriteriaMulti<[readonly ["__cte__", TName]], Record<TName, TCTEs[TName]>> }
+    ): _fJoin<[...TSources, readonly ["__cte__", TName]], TFields & Record<TName, TCTEs[TName]>, TCTEs>
     // Overload 1: Object syntax
     fullJoin<const Table extends AvailableJoins<TSources>,
         TJoinCols extends [string, string] = ValidStringTuple<GetUnionOfRelations<MapJoinsToKnownTables<SafeJoins<Table, TSources>, TSources>>>,
@@ -2872,8 +2913,8 @@ joinUnsafeTypeEnforced<const Table extends TTables | `${TTables} ${string}`,
         TCol1 extends TJoinCols[0] = never
     >(table: TableInput, field: TCol1, reference: find<TJoinCols, TCol1>):
         _fJoinReturn<[...TSources, [TAlias] extends [never] ? Table : [Table, TAlias]], Prettify<NullifyTableFields<TFields> & Record<[TAlias] extends [never] ? Table : TAlias, MakeNullable<GetFieldsFromTable<Table>>>>, TCTEs>;
-    fullJoin(tableOrOptions: any, field?: any, reference?: any): any {
-        return this._joinImpl("FULL", tableOrOptions, field, reference);
+    fullJoin(tableOrOptions: any, field?: any, reference?: any, opts?: any): any {
+        return this._joinImpl("FULL", tableOrOptions, field, reference, opts);
     }
 
     // crossJoin: no ON clause — table only (with optional inline alias)
