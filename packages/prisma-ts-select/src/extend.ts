@@ -2482,14 +2482,15 @@ class _fJoin<
 
     /**
      * CTE join overload — when table name is a known CTE.
-     * @note `joinWhere` (additional ON-clause filtering) is not supported for CTE joins.
-     * Use `.where()` after the join to filter CTE results instead.
      */
     join<const TName extends keyof TCTEs & string>(
         cteName: TName,
         local: keyof TCTEs[TName] & string,
         remote: GetJoinCols<TSources[number]>,
-        opts?: { joinType?: JoinType }
+        opts?: {
+            where?: WhereCriteriaMulti<[readonly ["__cte__", TName]], Record<TName, TCTEs[TName]>>,
+            joinType?: JoinType
+        }
     ): _fJoin<[...TSources, readonly ["__cte__", TName]], TFields & Record<TName, TCTEs[TName]>, TCTEs>
 
     // Overload 1: Object syntax
