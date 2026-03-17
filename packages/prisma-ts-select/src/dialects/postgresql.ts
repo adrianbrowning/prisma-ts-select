@@ -161,12 +161,12 @@ export const supportedJoinMethods = [
 export const postgresqlDialect: Dialect = {
   name: "postgresql",
   needsBooleanCoercion: () => false,
-  quote: (id, _isAlias) => `"${id}"`,
-  quoteTableIdentifier: (name, _isAlias) => `"${name}"`,
+  quote: (id, _isAlias) => `"${id.replace(/"/g, '""')}"`,
+  quoteTableIdentifier: (name, _isAlias) => `"${name.replace(/"/g, '""')}"`,
   quoteQualifiedColumn: (ref) => {
-    if (!ref.includes('.')) return `"${ref}"`; // Quote unqualified column
+    if (!ref.includes('.')) return `"${ref.replace(/"/g, '""')}"`;
     const [table, col] = ref.split('.', 2);
-    return `"${table}"."${col}"`;
+    return `"${table!.replace(/"/g, '""')}"."${col!.replace(/"/g, '""')}"`;
   },
   quoteOrderByClause: (clause) => {
     const parts = clause.trim().split(/\s+/);

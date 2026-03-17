@@ -457,4 +457,45 @@ describe("$with (CTE)", () => {
         );
     });
 
+    test("CTE column select with explicit alias uses alias in SQL", () => {
+        const posts = prisma.$from('Post').select('id').select('authorId');
+        const query = prisma
+            .$with('pp', posts)
+            .from('User')
+            .join('pp', 'authorId', 'User.id')
+            .select('pp.authorId', 'authorId');
+
+        // alias strip: 'pp.authorId' -> 'authorId'
+        expectSQL(query.getSQL(),
+            `WITH ${dialect.quoteTableIdentifier('pp', false)} AS (SELECT ${dialect.quote('id')}, ${dialect.quote('authorId')} FROM ${dialect.quote('Post')}) SELECT ${dialect.quoteQualifiedColumn('pp.authorId')} AS ${dialect.quote('authorId', true)} FROM ${dialect.quote('User')} JOIN ${dialect.quote('pp')} ON ${dialect.quoteQualifiedColumn('pp.authorId')} = ${dialect.quoteQualifiedColumn('User.id')};`
+        );
+
+        // Type check: result key should be 'authorId', not 'pp.authorId'
+        type Result = Awaited<ReturnType<typeof query.run>>[0];
+        typeCheck({} as Expect<Equal<keyof Result, 'authorId'>>);
+    });
+
+    test("CTE column select with no alias uses select string as alias in SQL", () => {
+        const posts = prisma.$from('Post').select('id').select('authorId');
+        const query = prisma
+            .$with('pp', posts)
+            .from('User')
+            .join('pp', 'authorId', 'User.id')
+            .select('pp.authorId'); // no alias — fallback: alias ?? select
+        expectSQL(query.getSQL(),
+            `WITH ${dialect.quoteTableIdentifier('pp', false)} AS (SELECT ${dialect.quote('id')}, ${dialect.quote('authorId')} FROM ${dialect.quote('Post')}) SELECT ${dialect.quoteQualifiedColumn('pp.authorId')} AS ${dialect.quote('pp.authorId', true)} FROM ${dialect.quote('User')} JOIN ${dialect.quote('pp')} ON ${dialect.quoteQualifiedColumn('pp.authorId')} = ${dialect.quoteQualifiedColumn('User.id')};`
+        );
+    });
+
+    test("runtime result correctness - CTE column select with alias", async (t) => {
+        const posts = prisma.$from('Post').select('id').select('authorId');
+        const result = await prisma
+            .$with('pp', posts)
+            .from('User')
+            .join('pp', 'authorId', 'User.id')
+            .select('pp.authorId', 'authorId')
+            .run();
+        t.assert.snapshot(result);
+    });
+
 });
