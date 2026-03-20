@@ -7,6 +7,7 @@
   },
   "scripts": {
     "prepare": "husky install",
+    "run-tests": "node packages/run-tests-tui/src/index.ts",
     "test:v6": "./run-tests-v6.sh",
     "test:v7": "./run-tests-v7.sh",
     "test:isolated": "./run-tests-isolated.sh",
