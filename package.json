@@ -29,5 +29,6 @@
       "prisma",
       "puppeteer"
     ]
-  }
+  },
+  "version": "0.0.1-rc.0"
 }
