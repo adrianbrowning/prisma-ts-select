@@ -414,6 +414,160 @@ describe("join unsafe variants", () => {
     });
 });
 
+describe("prefixed join variants - where option", () => {
+
+    test("innerJoin with where - positional", () => {
+        const sql = prisma.$from("User")
+            .innerJoin("Post", "authorId", "User.id", { where: { "Post.published": true } })
+            .getSQL();
+        expectSQL(sql, `FROM ${dialect.quote("User")} INNER JOIN ${dialect.quote("Post")} ON ${dialect.quoteQualifiedColumn("Post.authorId")} = ${dialect.quoteQualifiedColumn("User.id")} AND ${dialect.quoteQualifiedColumn("Post.published")} = true;`);
+    });
+
+    test("innerJoin with where - object syntax", () => {
+        const sql = prisma.$from("User")
+            .innerJoin({ table: "Post", src: "authorId", on: "User.id", where: { "Post.published": true } })
+            .getSQL();
+        expectSQL(sql, `FROM ${dialect.quote("User")} INNER JOIN ${dialect.quote("Post")} ON ${dialect.quoteQualifiedColumn("Post.authorId")} = ${dialect.quoteQualifiedColumn("User.id")} AND ${dialect.quoteQualifiedColumn("Post.published")} = true;`);
+    });
+
+    test("leftJoin with where - positional", () => {
+        const sql = prisma.$from("User")
+            .leftJoin("Post", "authorId", "User.id", { where: { "Post.published": true } })
+            .getSQL();
+        expectSQL(sql, `FROM ${dialect.quote("User")} LEFT JOIN ${dialect.quote("Post")} ON ${dialect.quoteQualifiedColumn("Post.authorId")} = ${dialect.quoteQualifiedColumn("User.id")} AND ${dialect.quoteQualifiedColumn("Post.published")} = true;`);
+    });
+
+    test("leftJoin with where - object syntax", () => {
+        const sql = prisma.$from("User")
+            .leftJoin({ table: "Post", src: "authorId", on: "User.id", where: { "Post.published": true } })
+            .getSQL();
+        expectSQL(sql, `FROM ${dialect.quote("User")} LEFT JOIN ${dialect.quote("Post")} ON ${dialect.quoteQualifiedColumn("Post.authorId")} = ${dialect.quoteQualifiedColumn("User.id")} AND ${dialect.quoteQualifiedColumn("Post.published")} = true;`);
+    });
+
+    test("leftJoin with where - runtime: published=false matches all posts", async () => {
+        const result = await prisma.$from("User")
+            .leftJoin("Post", "authorId", "User.id", { where: { "Post.published": false } })
+            .select("User.name")
+            .select("Post.title")
+            .run();
+        // All seeded posts have published=false, so all 3 should join
+        const withPost = result.filter(r => r.title !== null);
+        assert.ok(withPost.length >= 3, `Expected at least 3 joined rows, got ${withPost.length}`);
+    });
+
+});
+
+describe("prefixed unsafe join variants - where option", () => {
+
+    test("innerJoinUnsafeTypeEnforced with where - positional", () => {
+        const sql = prisma.$from("User")
+            .innerJoinUnsafeTypeEnforced("Post", "id", "User.id", { where: { "Post.published": true } })
+            .getSQL();
+        expectSQL(sql, `FROM ${dialect.quote("User")} INNER JOIN ${dialect.quote("Post")} ON ${dialect.quoteQualifiedColumn("Post.id")} = ${dialect.quoteQualifiedColumn("User.id")} AND ${dialect.quoteQualifiedColumn("Post.published")} = true;`);
+    });
+
+    test("innerJoinUnsafeTypeEnforced with where - object syntax", () => {
+        const sql = prisma.$from("User")
+            .innerJoinUnsafeTypeEnforced({ table: "Post", src: "id", on: "User.id", where: { "Post.published": true } })
+            .getSQL();
+        expectSQL(sql, `FROM ${dialect.quote("User")} INNER JOIN ${dialect.quote("Post")} ON ${dialect.quoteQualifiedColumn("Post.id")} = ${dialect.quoteQualifiedColumn("User.id")} AND ${dialect.quoteQualifiedColumn("Post.published")} = true;`);
+    });
+
+    test("innerJoinUnsafeIgnoreType with where - positional", () => {
+        const sql = prisma.$from("User")
+            .innerJoinUnsafeIgnoreType("Post", "id", "User.email", { where: { "Post.published": false } })
+            .getSQL();
+        expectSQL(sql, `FROM ${dialect.quote("User")} INNER JOIN ${dialect.quote("Post")} ON ${dialect.quoteQualifiedColumn("Post.id")} = ${dialect.quoteQualifiedColumn("User.email")} AND ${dialect.quoteQualifiedColumn("Post.published")} = false;`);
+    });
+
+    test("innerJoinUnsafeIgnoreType with where - object syntax", () => {
+        const sql = prisma.$from("User")
+            .innerJoinUnsafeIgnoreType({ table: "Post", src: "id", on: "User.email", where: { "Post.published": false } })
+            .getSQL();
+        expectSQL(sql, `FROM ${dialect.quote("User")} INNER JOIN ${dialect.quote("Post")} ON ${dialect.quoteQualifiedColumn("Post.id")} = ${dialect.quoteQualifiedColumn("User.email")} AND ${dialect.quoteQualifiedColumn("Post.published")} = false;`);
+    });
+
+    test("leftJoinUnsafeTypeEnforced with where - positional", () => {
+        const sql = prisma.$from("User")
+            .leftJoinUnsafeTypeEnforced("Post", "id", "User.id", { where: { "Post.published": true } })
+            .getSQL();
+        expectSQL(sql, `FROM ${dialect.quote("User")} LEFT JOIN ${dialect.quote("Post")} ON ${dialect.quoteQualifiedColumn("Post.id")} = ${dialect.quoteQualifiedColumn("User.id")} AND ${dialect.quoteQualifiedColumn("Post.published")} = true;`);
+    });
+
+    test("leftJoinUnsafeTypeEnforced with where - object syntax", () => {
+        const sql = prisma.$from("User")
+            .leftJoinUnsafeTypeEnforced({ table: "Post", src: "id", on: "User.id", where: { "Post.published": true } })
+            .getSQL();
+        expectSQL(sql, `FROM ${dialect.quote("User")} LEFT JOIN ${dialect.quote("Post")} ON ${dialect.quoteQualifiedColumn("Post.id")} = ${dialect.quoteQualifiedColumn("User.id")} AND ${dialect.quoteQualifiedColumn("Post.published")} = true;`);
+    });
+
+    test("leftJoinUnsafeIgnoreType with where - positional", () => {
+        const sql = prisma.$from("User")
+            .leftJoinUnsafeIgnoreType("Post", "id", "User.email", { where: { "Post.published": false } })
+            .getSQL();
+        expectSQL(sql, `FROM ${dialect.quote("User")} LEFT JOIN ${dialect.quote("Post")} ON ${dialect.quoteQualifiedColumn("Post.id")} = ${dialect.quoteQualifiedColumn("User.email")} AND ${dialect.quoteQualifiedColumn("Post.published")} = false;`);
+    });
+
+    test("leftJoinUnsafeIgnoreType with where - object syntax", () => {
+        const sql = prisma.$from("User")
+            .leftJoinUnsafeIgnoreType({ table: "Post", src: "id", on: "User.email", where: { "Post.published": false } })
+            .getSQL();
+        expectSQL(sql, `FROM ${dialect.quote("User")} LEFT JOIN ${dialect.quote("Post")} ON ${dialect.quoteQualifiedColumn("Post.id")} = ${dialect.quoteQualifiedColumn("User.email")} AND ${dialect.quoteQualifiedColumn("Post.published")} = false;`);
+    });
+
+    // Bug 2 regression: alias where — JoinWhereCriteria used Record<TAlias,...> but looked up TFields[realTableName]
+    test("leftJoinUnsafeTypeEnforced with alias + where - positional", () => {
+        const sql = prisma.$from("User")
+            .leftJoinUnsafeTypeEnforced("Post p", "id", "User.id", { where: { "p.published": true } })
+            .getSQL();
+        expectSQL(sql, `FROM ${dialect.quote("User")} LEFT JOIN ${dialect.quote("Post")} AS ${dialect.quote("p", true)} ON ${dialect.quoteQualifiedColumn("p.id")} = ${dialect.quoteQualifiedColumn("User.id")} AND ${dialect.quoteQualifiedColumn("p.published")} = true;`);
+    });
+
+    test("innerJoinUnsafeTypeEnforced with alias + where - positional", () => {
+        const sql = prisma.$from("User")
+            .innerJoinUnsafeTypeEnforced("Post p", "id", "User.id", { where: { "p.published": false } })
+            .getSQL();
+        expectSQL(sql, `FROM ${dialect.quote("User")} INNER JOIN ${dialect.quote("Post")} AS ${dialect.quote("p", true)} ON ${dialect.quoteQualifiedColumn("p.id")} = ${dialect.quoteQualifiedColumn("User.id")} AND ${dialect.quoteQualifiedColumn("p.published")} = false;`);
+    });
+
+    test("type check - alias-qualified where keys accepted, raw table name rejected", () => {
+        // valid: alias-qualified key
+        prisma.$from("User")
+            .leftJoinUnsafeTypeEnforced("Post p", "id", "User.id", { where: { "p.published": true } });
+
+        // @ts-expect-error "Post.published" should be rejected when alias "p" is used
+        prisma.$from("User").leftJoinUnsafeTypeEnforced("Post p", "id", "User.id", { where: { "Post.published": true } });
+    });
+
+});
+
+// Bug 1 regression: GetJoinOnColsType resolved TCol2 to never for CTE columns
+describe("*UnsafeTypeEnforced with CTE reference", () => {
+
+    test("type check - leftJoinUnsafeTypeEnforced accepts CTE column as on-reference", () => {
+        const inner = prisma.$from("Post").select("id").select("authorId");
+
+        // Should compile — CTE column "pp.authorId" is a valid reference
+        prisma.$with("pp", inner)
+            .from("User")
+            .leftJoinUnsafeTypeEnforced("Post p", "authorId", "pp.authorId");
+
+        // @ts-expect-error CTE field "pp.nonexistent" should not exist
+        prisma.$with("pp", inner).from("User").leftJoinUnsafeTypeEnforced("Post p", "authorId", "pp.nonexistent");
+    });
+
+    test("leftJoinUnsafeTypeEnforced with CTE reference - SQL", () => {
+        const inner = prisma.$from("Post").select("id").select("authorId");
+        const innerSQL = inner.getSQL().replace(/;$/, "");
+        const sql = prisma.$with("pp", inner)
+            .from("User")
+            .leftJoinUnsafeTypeEnforced("Post p", "authorId", "pp.authorId")
+            .getSQL();
+        expectSQL(sql, `WITH ${dialect.quoteTableIdentifier("pp", false)} AS (${innerSQL}) FROM ${dialect.quote("User")} LEFT JOIN ${dialect.quote("Post")} AS ${dialect.quote("p", true)} ON ${dialect.quoteQualifiedColumn("p.authorId")} = ${dialect.quoteQualifiedColumn("pp.authorId")};`);
+    });
+
+});
+
 describe("join nullability types", () => {
 
     test("leftJoin makes new table fields nullable", () => {

@@ -612,10 +612,8 @@ describe("$with (CTE)", () => {
             prisma
                 .$with('pp', inner)
                 .from('User')
-                .leftJoin('pp', 'authorId', 'User.id', {
-                    // @ts-expect-error 'User.name' is not a field of CTE 'pp'
-                    where: { 'User.name': 'foo' }
-                });
+                // @ts-expect-error 'User.name' is not a field of CTE 'pp'
+                .leftJoin('pp', 'authorId', 'User.id', { where: { 'User.name': 'foo' } });
         });
     });
 
