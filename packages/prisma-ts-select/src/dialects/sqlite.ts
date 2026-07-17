@@ -1,10 +1,13 @@
-import type {Dialect} from "./types.js";
 // DISTINCT_BRAND is used internally but NOT re-exported: sqlite.ts is version-agnostic
 // (no v6/v7 shim files), so generated extend-*.d.ts for SQLite packages import it
 // directly from sql-expr.js rather than via a shim.
-import {resolveArg, sqlExpr, sqlDistinct, isDistinct, type SQLExpr, type SQLDistinct, DISTINCT_BRAND} from "../sql-expr.js";
-import type {JSONValue, JSONObject} from "../utils/types.js";
-import {esc, flattenJsonObjectPairs, type FilterCols, type FilterJsonCols, type ColName, type ColTypeOf} from "./shared.js";
+import { resolveArg, sqlExpr, sqlDistinct, isDistinct } from "../sql-expr.js";
+import type { DISTINCT_BRAND } from "../sql-expr.js";
+import type { SQLExpr, SQLDistinct } from "../sql-expr.js";
+import type { JSONValue, JSONObject } from "../utils/types.js";
+import { esc, flattenJsonObjectPairs } from "./shared.js";
+import type { FilterCols, FilterJsonCols, ColName, ColTypeOf } from "./shared.js";
+import type { Dialect } from "./types.js";
 
 /** SQLite MIN/MAX return bigint for integer columns, unchanged for other types. */
 type SqliteMinMaxResult<TColEntries extends [string, unknown], Col extends string> =
@@ -66,7 +69,7 @@ export const sqliteContextFns = <TColEntries extends [string, unknown] = never, 
     sqlExpr(`SUBSTR(${resolveArg(col, quoteFn)}, ${start}${len !== undefined ? `, ${len}` : ''})`),
   instr: (col: FilterCols<TColEntries, string> | SQLExpr<string>, substr: string): SQLExpr<bigint> =>
     sqlExpr(`INSTR(${resolveArg(col, quoteFn)}, '${substr.replace(/'/g, "''")}')`),
-  char: (...codes: number[]): SQLExpr<string> =>
+  char: (...codes: Array<number>): SQLExpr<string> =>
     sqlExpr(`CHAR(${codes.join(', ')})`),
   hex: (col: FilterCols<TColEntries, string> | SQLExpr<string>): SQLExpr<string> =>
     sqlExpr(`HEX(${resolveArg(col, quoteFn)})`),
@@ -77,8 +80,8 @@ export const sqliteContextFns = <TColEntries extends [string, unknown] = never, 
   // Omitted here because the naming diverges from the MySQL/PG convention.
   iif: <T>(cond: TCriteria | SQLExpr<unknown>, trueVal: SQLExpr<T>, falseVal: SQLExpr<T>): SQLExpr<T> => {
     const condSql = typeof cond === 'object' && cond !== null && 'sql' in cond
-      ? (cond as SQLExpr<unknown>).sql
-      : condFn(cond as TCriteria);
+      ? (cond).sql
+      : condFn(cond);
     return sqlExpr(`IIF(${condSql}, ${trueVal.sql}, ${falseVal.sql})`);
   },
   ifNull: <T>(col: FilterCols<TColEntries, T> | SQLExpr<T>, fallback: SQLExpr<NonNullable<T>>): SQLExpr<NonNullable<T>> =>
@@ -124,16 +127,16 @@ export const sqliteContextFns = <TColEntries extends [string, unknown] = never, 
   // ── JSON scalar fns ───────────────────────────────────────────────────────
   jsonExtract: (col: FilterJsonCols<TColEntries> | SQLExpr<JSONValue>, path: string): SQLExpr<JSONValue> =>
     sqlExpr(`json_extract(${resolveArg(col, quoteFn)}, '${esc(path)}')`),
-  jsonArray: (...args: [ColName<TColEntries> | SQLExpr<unknown>, ...Array<ColName<TColEntries> | SQLExpr<unknown>>]): SQLExpr<JSONValue[]> =>
+  jsonArray: (...args: [ColName<TColEntries> | SQLExpr<unknown>, ...Array<ColName<TColEntries> | SQLExpr<unknown>>]): SQLExpr<Array<JSONValue>> =>
     sqlExpr(`json_array(${args.map(a => resolveArg(a, quoteFn)).join(', ')})`),
-  jsonObject: (pairs: [string, ColName<TColEntries> | SQLExpr<unknown>][]): SQLExpr<JSONObject> =>
+  jsonObject: (pairs: Array<[string, ColName<TColEntries> | SQLExpr<unknown>]>): SQLExpr<JSONObject> =>
     sqlExpr(`json_object(${flattenJsonObjectPairs(pairs, quoteFn).join(', ')})`),
   // ── Type coercion ────────────────────────────────────────────────────────
   cast: <T extends keyof SqliteCastTypeMap>(
     expr: ColName<TColEntries> | SQLExpr<unknown>,
     type: T
   ): SQLExpr<SqliteCastTypeMap[T]> => {
-    if (!SQLITE_CAST_TYPES.has(type as string)) throw new Error(`cast: invalid cast type '${String(type)}'`);
+    if (!SQLITE_CAST_TYPES.has(type)) throw new Error(`cast: invalid cast type '${String(type)}'`);
     return sqlExpr(`CAST(${resolveArg(expr, quoteFn)} AS ${type})`);
   },
 });
@@ -168,7 +171,7 @@ export const sqliteDialect: Dialect = {
   },
   quoteQualifiedColumn: (ref) => {
     if (!ref.includes(".")) return ref;
-    const [table, col] = ref.split(".", 2);
+    const [ table, col ] = ref.split(".", 2);
     return `${table}.${col}`;
   },
   quoteOrderByClause: (clause) => {
@@ -176,7 +179,7 @@ export const sqliteDialect: Dialect = {
     const colRef = parts[0] ?? "";
     const suffix = parts.slice(1).join(" ");
     const quoted = colRef.includes(".") ? (() => {
-      const [table, col] = colRef.split(".", 2);
+      const [ table, col ] = colRef.split(".", 2);
       return `${table}.${col}`;
     })() : `${colRef}`;
     return (suffix ? `${quoted} ${suffix}` : quoted);

@@ -1,8 +1,9 @@
-import {resolveArg, sqlExpr, type SQLExpr, DISTINCT_BRAND} from "../sql-expr.js";
+import { resolveArg, sqlExpr, DISTINCT_BRAND } from "../sql-expr.js";
+import type { SQLExpr } from "../sql-expr.js";
 // Re-exported for generated extend-v*.d.ts — required by type system, do not remove
 export { DISTINCT_BRAND };
-import type {FilterCols, ColName} from "./shared.js";
-import {mysqlContextFns, mysqlDialect} from "./mysql.js";
+import { mysqlContextFns, mysqlDialect } from "./mysql.js";
+import type { FilterCols, ColName } from "./shared.js";
 
 export type { IntervalUnit } from "./mysql.js";
 export { mysqlDialect };
@@ -14,7 +15,7 @@ export { mysqlDialect };
  */
 export const mysqlV6ContextFns = <TColEntries extends [string, unknown] = never, TCriteria extends object = object>(
   quoteFn: (ref: string) => string,
-  condFn: (criteria: TCriteria) => string,
+  condFn: (criteria: TCriteria) => string
 ) => ({
   ...mysqlContextFns<TColEntries, TCriteria>(quoteFn, condFn),
   countAll:      (): SQLExpr<bigint> => sqlExpr('COUNT(*)'),

@@ -1,16 +1,16 @@
 export * from "./types.js";
-export {sqliteDialect} from "./sqlite.js";
-export {mysqlDialect} from "./mysql.js";
-export {postgresqlDialect} from "./postgresql.js";
+export { sqliteDialect } from "./sqlite.js";
+export { mysqlDialect } from "./mysql.js";
+export { postgresqlDialect } from "./postgresql.js";
 
-import type {Dialect, SupportedProvider} from "./types.js";
-import {sqliteDialect} from "./sqlite.js";
-import {mysqlDialect} from "./mysql.js";
-import {postgresqlDialect} from "./postgresql.js";
+import { mysqlDialect } from "./mysql.js";
+import { postgresqlDialect } from "./postgresql.js";
+import { sqliteDialect } from "./sqlite.js";
+import type { Dialect, SupportedProvider } from "./types.js";
 
 // Default dialect export (overwritten by generator at runtime)
-export {sqliteDialect as dialect};
-export {sqliteContextFns as dialectContextFns} from "./sqlite.js";
+export { sqliteDialect as dialect };
+export { sqliteContextFns as dialectContextFns } from "./sqlite.js";
 
 /**
  * Get dialect configuration by provider name.

@@ -1,8 +1,10 @@
 import type {Dialect} from "./types.js";
-import {resolveArg, sqlExpr, sqlDistinct, type SQLExpr, type SQLDistinct, DISTINCT_BRAND} from "../sql-expr.js";
+import {resolveArg, sqlExpr, sqlDistinct,   DISTINCT_BRAND} from "../sql-expr.js";
+import type {SQLExpr, SQLDistinct} from "../sql-expr.js";
 import type {JSONValue, JSONObject} from "../utils/types.js";
 import type {Decimal} from "@prisma/client/runtime/client";
-import {esc, flattenJsonObjectPairs, type FilterCols, type FilterJsonCols, type ColName, type ColTypeOf} from "./shared.js";
+import {esc, flattenJsonObjectPairs    } from "./shared.js";
+import type {FilterCols, FilterJsonCols, ColName, ColTypeOf} from "./shared.js";
 
 type MySQLCastTypeMap = { SIGNED: bigint; UNSIGNED: bigint; DECIMAL: Decimal; CHAR: string; BINARY: Buffer; DATE: Date; DATETIME: Date; TIME: string; JSON: JSONValue; FLOAT: number; DOUBLE: number };
 
@@ -75,8 +77,8 @@ export const mysqlContextFns = <TColEntries extends [string, unknown] = never, T
   // Control flow
   $if: <T>(cond: TCriteria | SQLExpr<unknown>, trueVal: SQLExpr<T>, falseVal: SQLExpr<T>): SQLExpr<T> => {
     const condSql = typeof cond === 'object' && cond !== null && 'sql' in cond
-      ? (cond as SQLExpr<unknown>).sql
-      : condFn(cond as TCriteria);
+      ? (cond).sql
+      : condFn(cond);
     return sqlExpr(`IF(${condSql}, ${trueVal.sql}, ${falseVal.sql})`);
   },
   ifNull: <T>(col: FilterCols<TColEntries, T> | SQLExpr<T>, fallback: SQLExpr<NonNullable<T>>): SQLExpr<NonNullable<T>> =>
@@ -138,16 +140,16 @@ export const mysqlContextFns = <TColEntries extends [string, unknown] = never, T
   // ── JSON scalar fns ───────────────────────────────────────────────────────
   jsonExtract: (col: FilterJsonCols<TColEntries> | SQLExpr<JSONValue>, path: string): SQLExpr<JSONValue> =>
     sqlExpr(`JSON_EXTRACT(${resolveArg(col, quoteFn)}, '${esc(path)}')`),
-  jsonArray: (...args: [ColName<TColEntries> | SQLExpr<unknown>, ...Array<ColName<TColEntries> | SQLExpr<unknown>>]): SQLExpr<JSONValue[]> =>
-    sqlExpr(`JSON_ARRAY(${args.map(a => resolveArg(a as ColName<TColEntries> | SQLExpr<unknown>, quoteFn)).join(', ')})`),
-  jsonObject: (pairs: [string, ColName<TColEntries> | SQLExpr<unknown>][]): SQLExpr<JSONObject> =>
+  jsonArray: (...args: [ColName<TColEntries> | SQLExpr<unknown>, ...Array<ColName<TColEntries> | SQLExpr<unknown>>]): SQLExpr<Array<JSONValue>> =>
+    sqlExpr(`JSON_ARRAY(${args.map(a => resolveArg(a, quoteFn)).join(', ')})`),
+  jsonObject: (pairs: Array<[string, ColName<TColEntries> | SQLExpr<unknown>]>): SQLExpr<JSONObject> =>
     sqlExpr(`JSON_OBJECT(${flattenJsonObjectPairs(pairs, quoteFn).join(', ')})`),
   // ── Type coercion ────────────────────────────────────────────────────────
   cast: <T extends keyof MySQLCastTypeMap>(
     expr: ColName<TColEntries> | SQLExpr<unknown>,
     type: T
   ): SQLExpr<MySQLCastTypeMap[T]> => {
-    if (!MYSQL_CAST_TYPES.has(type as string)) throw new Error(`cast: invalid cast type '${String(type)}'`);
+    if (!MYSQL_CAST_TYPES.has(type)) throw new Error(`cast: invalid cast type '${String(type)}'`);
     return sqlExpr(`CAST(${resolveArg(expr, quoteFn)} AS ${type})`);
   },
 });

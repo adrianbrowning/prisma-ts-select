@@ -1,9 +1,10 @@
-import type {Decimal} from "@prisma/client/runtime/client";
-import {resolveArg, sqlExpr, type SQLExpr, DISTINCT_BRAND} from "../sql-expr.js";
+import type { Decimal } from "@prisma/client/runtime/client";
+import { resolveArg, sqlExpr, DISTINCT_BRAND } from "../sql-expr.js";
+import type { SQLExpr } from "../sql-expr.js";
 // Re-exported for generated extend-v*.d.ts — required by type system, do not remove
 export { DISTINCT_BRAND };
-import type {FilterCols, ColName} from "./shared.js";
-import {postgresqlContextFns, postgresqlDialect} from "./postgresql.js";
+import { postgresqlContextFns, postgresqlDialect } from "./postgresql.js";
+import type { FilterCols, ColName } from "./shared.js";
 
 export type { PgExtractField, PgDateTruncUnit } from "./postgresql.js";
 export { postgresqlDialect };
@@ -15,7 +16,7 @@ export { postgresqlDialect };
  * - CEIL/FLOOR of numeric literal → Decimal (PostgreSQL returns `numeric` for CEIL/FLOOR(numeric))
  */
 export const postgresqlV6ContextFns = <TColEntries extends [string, unknown] = never>(
-  quoteFn: (ref: string) => string,
+  quoteFn: (ref: string) => string
 ) => ({
   ...postgresqlContextFns<TColEntries>(quoteFn),
   countAll:      (): SQLExpr<bigint> => sqlExpr('COUNT(*)'),
