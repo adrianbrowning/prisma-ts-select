@@ -9,8 +9,8 @@ import {dialect, dialectContextFns} from "./dialects/index.js";
 import {esc} from "./dialects/shared.js";
 import type {Dialect} from "./dialects/types.js";
 import {lit as _lit, sqlExpr, resolveArg, type SQLExpr, type LitToType} from "./sql-expr.js";
+import {DB, type DBType} from "./db.js";
 
-const DB: DBType = {} as const satisfies DBType;
 // Placeholder replaced by generator with actual M2M relationship map
 type M2MMap = {};
 const SAFE_IDENT_RE = /^\w+$/;
@@ -159,10 +159,7 @@ type IsNullable<str extends string> = str extends `?${string}` ? null : never;
  */
 export type RemoveNullChar<str extends string> = str extends `?${infer s}` ? s : str;
 
-export type DBType = Record<string, {
-    fields: Record<string, string>;
-    relations: Record<string, Record<string, Array<string>>>
-}>;
+
 
 /**
  * Filters type `a` to only include members that extend type `b`.
@@ -417,17 +414,26 @@ type Values = {
 };
 
 function applyCondition(quotedField: string, value: unknown): string {
+    const sqlVal = (v: unknown): string => {
+        if (typeof v === 'string') return `'${esc(v)}'`;
+        if (v instanceof Date)     return `'${v.toISOString()}'`;
+        if (v === null)             return 'NULL';
+        if (typeof v === 'number' || typeof v === 'bigint' || typeof v === 'boolean')
+            return String(v);
+        throw new Error(`Unsupported value type in sqlVal: ${typeof v}`);
+    };
+
     if (typeof value === 'object' && value !== null && !Array.isArray(value) && "op" in value) {
         const opObj = value as { op: string; value?: unknown; values?: unknown[] };
         switch (opObj.op) {
             case 'IN':
             case 'NOT IN': {
-                const valuesList = (opObj.values as unknown[]).map(v => (typeof v === 'string' ? `'${esc(v)}'` : v)).join(", ");
+                const valuesList = (opObj.values as unknown[]).map(v => sqlVal(v)).join(", ");
                 return `${quotedField} ${opObj.op} (${valuesList})`;
             }
             case 'BETWEEN': {
                 const [start, end] = opObj.values as [unknown, unknown];
-                return `${quotedField} BETWEEN ${typeof start === 'string' ? `'${esc(start)}'` : start} AND ${typeof end === 'string' ? `'${esc(end)}'` : end}`;
+                return `${quotedField} BETWEEN ${sqlVal(start)} AND ${sqlVal(end)}`;
             }
             case 'LIKE':
             case 'NOT LIKE':
@@ -441,7 +447,7 @@ function applyCondition(quotedField: string, value: unknown): string {
             case '<=':
             case '!=':
             case '=':
-                return `${quotedField} ${opObj.op} ${typeof opObj.value === 'string' ? `'${esc(opObj.value)}'` : opObj.value}`;
+                return `${quotedField} ${opObj.op} ${sqlVal(opObj.value)}`;
             default:
                 throw new Error(`Unsupported operation: ${opObj.op}`);
         }
@@ -453,10 +459,10 @@ function applyCondition(quotedField: string, value: unknown): string {
             const parts = (value as Array<unknown>).map(opObj => applyCondition(quotedField, opObj));
             return parts.length === 1 ? parts[0]! : "(" + parts.join(" OR ") + ")";
         }
-        const valuesList = value.map(v => (typeof v === 'string' ? `'${esc(v)}'` : v)).join(", ");
+        const valuesList = value.map(v => sqlVal(v)).join(", ");
         return `${quotedField} IN (${valuesList})`;
     } else {
-        return `${quotedField} = ${typeof value === 'string' ? `'${esc(value)}'` : value}`;
+        return `${quotedField} = ${sqlVal(value)}`;
     }
 }
 
@@ -1017,7 +1023,7 @@ class _fSelect<TSources extends TArrSources, TFields extends TFieldsType, TSelec
                 }
                 return new _fSelect(this.db, {
                     ...this.values,
-                    selects: [...this.values.selects, `${dialect.quoteQualifiedColumn(select)} AS ${dialect.quote(select, true)}`]
+                    selects: [...this.values.selects, `${dialect.quoteQualifiedColumn(select)} AS ${dialect.quote(alias ?? select, true)}`]
                 }) as any;
             }
 
@@ -1038,6 +1044,7 @@ class _fSelect<TSources extends TArrSources, TFields extends TFieldsType, TSelec
                     selects: [...this.values.selects, ...expandedSelects]
                 }) as any;
             }
+            // alias provided → falls through to generic alias handler below
             else if (!alias && !!colName) {  //table.column
 
                 //Check if column is a unique
@@ -1505,7 +1512,7 @@ type WhereCriteria<T extends TArrSources, TFields extends TFieldsType> = T['leng
 type JoinWhereCriteria<Table extends string, TAlias extends string | never> =
     [TAlias] extends [never]
         ? WhereCriteriaMulti<[Table], Record<Table, GetFieldsFromTable<Table>>>
-        : WhereCriteriaMulti<[[Table, TAlias]], Record<TAlias, GetFieldsFromTable<Table>>>;
+        : WhereCriteriaMulti<[[Table, TAlias]], Record<Table, GetFieldsFromTable<Table>>>;
 
 /**
  * Recursively builds the field condition types for all tables in the query.
@@ -2221,6 +2228,10 @@ type GetJoinOnColsType<Type extends string, TSources extends TArrSources> =
 // GetColsFromTableType<TDBBase, Type>
     GetJoinColsType<TSources[number], Type>;
 
+/** Produces "CTEName.field" strings for all fields in all CTEs. Used to widen TCol2 in *TypeEnforced joins so CTE columns are valid references. */
+type GetCTECols<TCTEs extends Record<string, Record<string, any>>> =
+    { [K in keyof TCTEs & string]: `${K}.${keyof TCTEs[K] & string}` }[keyof TCTEs & string];
+
 /**
  * Extracts columns of a specific type from a single table source.
  *
@@ -2362,7 +2373,7 @@ type BaseSelectFnContext<_TSources extends TArrSources, _TFields extends TFields
   rtrim: (col: GetColumnsOfType<_TSources, _TFields, string> | SQLExpr<string>) => SQLExpr<string>;
   // ── Control flow ─────────────────────────────────────────────────────────
   cond: (criteria: WhereCriteria<_TSources, _TFields>) => SQLExpr<boolean>;
-  coalesce: <T>(...args: [GetColumnsOfType<_TSources, _TFields, T> | SQLExpr<T>, ...Array<GetColumnsOfType<_TSources, _TFields, T> | SQLExpr<T>>]) => SQLExpr<T>;
+  coalesce: <T>(...args: [GetColumnsOfType<_TSources, _TFields, T> | SQLExpr<T>, ...Array<GetColumnsOfType<_TSources, _TFields, T> | SQLExpr<T>>]) => SQLExpr<NonNullable<T>>;
   nullif: <T>(expr1: SQLExpr<T>, expr2: SQLExpr<T>) => SQLExpr<T | null>;
   caseWhen: <T, TElse extends SQLExpr<T> | undefined = undefined>(
     cases: [{ when: WhereCriteria<_TSources, _TFields>; then: SQLExpr<T> }, ...Array<{ when: WhereCriteria<_TSources, _TFields>; then: SQLExpr<T> }>],
@@ -2472,14 +2483,15 @@ class _fJoin<
 
     /**
      * CTE join overload — when table name is a known CTE.
-     * @note `joinWhere` (additional ON-clause filtering) is not supported for CTE joins.
-     * Use `.where()` after the join to filter CTE results instead.
      */
     join<const TName extends keyof TCTEs & string>(
         cteName: TName,
         local: keyof TCTEs[TName] & string,
         remote: GetJoinCols<TSources[number]>,
-        opts?: { joinType?: JoinType }
+        opts?: {
+            where?: WhereCriteriaMulti<[readonly ["__cte__", TName]], Record<TName, TCTEs[TName]>>,
+            joinType?: JoinType
+        }
     ): _fJoin<[...TSources, readonly ["__cte__", TName]], TFields & Record<TName, TCTEs[TName]>, TCTEs>
 
     // Overload 1: Object syntax
@@ -2570,7 +2582,7 @@ class _fJoin<
     // Overload 1: Object syntax
 joinUnsafeTypeEnforced<const Table extends TTables | `${TTables} ${string}`,
         TCol1 extends GetColsBaseTable<Table>,
-        TCol2 extends GetJoinOnColsType<GetColumnType<Table, TCol1>, [...TSources, Table]>,
+        TCol2 extends GetJoinOnColsType<GetColumnType<Table, TCol1>, [...TSources, Table]> | GetCTECols<TCTEs>,
         TAlias extends string = never
     >(options: {
         table: Table,
@@ -2586,7 +2598,7 @@ joinUnsafeTypeEnforced<const Table extends TTables | `${TTables} ${string}`,
         Table extends TTables = ExtractTableName<TableInput>,// & AvailableJoins<TSources>,
         TAlias extends string | never = ExtractAlias<TableInput>,
         TCol1 extends GetColsBaseTable<Table> = GetColsBaseTable<Table>,
-        TCol2 extends GetJoinOnColsType<GetColumnType<Table, TCol1>, [...TSources, Table]> =
+        TCol2 extends GetJoinOnColsType<GetColumnType<Table, TCol1>, [...TSources, Table]> | GetCTECols<TCTEs> =
                       GetJoinOnColsType<GetColumnType<Table, TCol1>, [...TSources, Table]>
     >(table: TableInput, field: TCol1, reference: TCol2, options?: { where?: JoinWhereCriteria<Table, TAlias>, joinType?: JoinType }): _fJoinReturn<[...TSources, [TAlias] extends [never] ? Table : [Table, TAlias]], Prettify<TFields & Record<[TAlias] extends [undefined] ? Table : TAlias, GetFieldsFromTable<Table>>>, TCTEs>;
 
@@ -2786,13 +2798,24 @@ joinUnsafeTypeEnforced<const Table extends TTables | `${TTables} ${string}`,
 
     // ── Named join methods ───────────────────────────────────────────────
 
+    /**
+     * CTE innerJoin — `where` appends conditions to the ON clause.
+     * Scoped to CTE fields only; use `join()` for cross-table conditions.
+     */
+    innerJoin<const TName extends keyof TCTEs & string>(
+        cteName: TName,
+        local: keyof TCTEs[TName] & string,
+        remote: GetJoinCols<TSources[number]>,
+        opts?: { where?: WhereCriteriaMulti<[readonly ["__cte__", TName]], Record<TName, TCTEs[TName]>> }
+    ): _fJoin<[...TSources, readonly ["__cte__", TName]], TFields & Record<TName, TCTEs[TName]>, TCTEs>
     // Overload 1: Object syntax
     innerJoin<const Table extends AvailableJoins<TSources>,
         TJoinCols extends [string, string] = ValidStringTuple<GetUnionOfRelations<MapJoinsToKnownTables<SafeJoins<Table, TSources>, TSources>>>,
         TCol1 extends TJoinCols[0] = never,
         TAlias extends string = never
     >(options: {
-        table: Table, src: TCol1, on: find<TJoinCols, TCol1>, alias?: TAlias
+        table: Table, src: TCol1, on: find<TJoinCols, TCol1>, alias?: TAlias,
+        where?: JoinWhereCriteria<Table, TAlias>, joinType?: JoinType
     }): _fJoinReturn<[...TSources, [TAlias] extends [undefined] ? Table : [Table, TAlias]], Prettify<TFields & Record<[TAlias] extends [undefined] ? Table : TAlias, GetFieldsFromTable<Table>>>, TCTEs>;
     // Overload 2: Positional syntax
     innerJoin<const TableInput extends `${AvailableJoins<TSources>}` | `${AvailableJoins<TSources>} ${string}`,
@@ -2800,19 +2823,30 @@ joinUnsafeTypeEnforced<const Table extends TTables | `${TTables} ${string}`,
         TAlias extends string | never = ExtractAlias<TableInput>,
         TJoinCols extends [string, string] = ValidStringTuple<GetUnionOfRelations<MapJoinsToKnownTables<SafeJoins<Table, TSources>, TSources>>>,
         TCol1 extends TJoinCols[0] = never
-    >(table: TableInput, field: TCol1, reference: find<TJoinCols, TCol1>):
+    >(table: TableInput, field: TCol1, reference: find<TJoinCols, TCol1>, options?: { where?: JoinWhereCriteria<Table, TAlias>, joinType?: JoinType }):
         _fJoinReturn<[...TSources, [TAlias] extends [never] ? Table : [Table, TAlias]], Prettify<TFields & Record<[TAlias] extends [never] ? Table : TAlias, GetFieldsFromTable<Table>>>, TCTEs>;
-    innerJoin(tableOrOptions: any, field?: any, reference?: any): any {
-        return this._joinImpl("INNER", tableOrOptions, field, reference);
+    innerJoin(tableOrOptions: any, field?: any, reference?: any, opts?: any): any {
+        return this._joinImpl("INNER", tableOrOptions, field, reference, opts);
     }
 
+    /**
+     * CTE leftJoin — `where` appends conditions to the ON clause.
+     * Scoped to CTE fields only; use `join()` for cross-table conditions.
+     */
+    leftJoin<const TName extends keyof TCTEs & string>(
+        cteName: TName,
+        local: keyof TCTEs[TName] & string,
+        remote: GetJoinCols<TSources[number]>,
+        opts?: { where?: WhereCriteriaMulti<[readonly ["__cte__", TName]], Record<TName, TCTEs[TName]>> }
+    ): _fJoin<[...TSources, readonly ["__cte__", TName]], TFields & Record<TName, TCTEs[TName]>, TCTEs>
     // Overload 1: Object syntax
     leftJoin<const Table extends AvailableJoins<TSources>,
         TJoinCols extends [string, string] = ValidStringTuple<GetUnionOfRelations<MapJoinsToKnownTables<SafeJoins<Table, TSources>, TSources>>>,
         TCol1 extends TJoinCols[0] = never,
         TAlias extends string = never
     >(options: {
-        table: Table, src: TCol1, on: find<TJoinCols, TCol1>, alias?: TAlias
+        table: Table, src: TCol1, on: find<TJoinCols, TCol1>, alias?: TAlias,
+        where?: JoinWhereCriteria<Table, TAlias>, joinType?: JoinType
     }): _fJoinReturn<[...TSources, [TAlias] extends [undefined] ? Table : [Table, TAlias]], Prettify<TFields & Record<[TAlias] extends [undefined] ? Table : TAlias, MakeNullable<GetFieldsFromTable<Table>>>>, TCTEs>;
     // Overload 2: Positional syntax
     leftJoin<const TableInput extends `${AvailableJoins<TSources>}` | `${AvailableJoins<TSources>} ${string}`,
@@ -2820,19 +2854,30 @@ joinUnsafeTypeEnforced<const Table extends TTables | `${TTables} ${string}`,
         TAlias extends string | never = ExtractAlias<TableInput>,
         TJoinCols extends [string, string] = ValidStringTuple<GetUnionOfRelations<MapJoinsToKnownTables<SafeJoins<Table, TSources>, TSources>>>,
         TCol1 extends TJoinCols[0] = never
-    >(table: TableInput, field: TCol1, reference: find<TJoinCols, TCol1>):
+    >(table: TableInput, field: TCol1, reference: find<TJoinCols, TCol1>, options?: { where?: JoinWhereCriteria<Table, TAlias>, joinType?: JoinType }):
         _fJoinReturn<[...TSources, [TAlias] extends [never] ? Table : [Table, TAlias]], Prettify<TFields & Record<[TAlias] extends [never] ? Table : TAlias, MakeNullable<GetFieldsFromTable<Table>>>>, TCTEs>;
-    leftJoin(tableOrOptions: any, field?: any, reference?: any): any {
-        return this._joinImpl("LEFT", tableOrOptions, field, reference);
+    leftJoin(tableOrOptions: any, field?: any, reference?: any, opts?: any): any {
+        return this._joinImpl("LEFT", tableOrOptions, field, reference, opts);
     }
 
+    /**
+     * CTE rightJoin — `where` appends conditions to the ON clause.
+     * Scoped to CTE fields only; use `join()` for cross-table conditions.
+     */
+    rightJoin<const TName extends keyof TCTEs & string>(
+        cteName: TName,
+        local: keyof TCTEs[TName] & string,
+        remote: GetJoinCols<TSources[number]>,
+        opts?: { where?: WhereCriteriaMulti<[readonly ["__cte__", TName]], Record<TName, TCTEs[TName]>> }
+    ): _fJoin<[...TSources, readonly ["__cte__", TName]], TFields & Record<TName, TCTEs[TName]>, TCTEs>
     // Overload 1: Object syntax
     rightJoin<const Table extends AvailableJoins<TSources>,
         TJoinCols extends [string, string] = ValidStringTuple<GetUnionOfRelations<MapJoinsToKnownTables<SafeJoins<Table, TSources>, TSources>>>,
         TCol1 extends TJoinCols[0] = never,
         TAlias extends string = never
     >(options: {
-        table: Table, src: TCol1, on: find<TJoinCols, TCol1>, alias?: TAlias
+        table: Table, src: TCol1, on: find<TJoinCols, TCol1>, alias?: TAlias,
+        where?: JoinWhereCriteria<Table, TAlias>, joinType?: JoinType
     }): _fJoinReturn<[...TSources, [TAlias] extends [undefined] ? Table : [Table, TAlias]], Prettify<NullifyTableFields<TFields> & Record<[TAlias] extends [undefined] ? Table : TAlias, GetFieldsFromTable<Table>>>, TCTEs>;
     // Overload 2: Positional syntax
     rightJoin<const TableInput extends `${AvailableJoins<TSources>}` | `${AvailableJoins<TSources>} ${string}`,
@@ -2840,19 +2885,30 @@ joinUnsafeTypeEnforced<const Table extends TTables | `${TTables} ${string}`,
         TAlias extends string | never = ExtractAlias<TableInput>,
         TJoinCols extends [string, string] = ValidStringTuple<GetUnionOfRelations<MapJoinsToKnownTables<SafeJoins<Table, TSources>, TSources>>>,
         TCol1 extends TJoinCols[0] = never
-    >(table: TableInput, field: TCol1, reference: find<TJoinCols, TCol1>):
+    >(table: TableInput, field: TCol1, reference: find<TJoinCols, TCol1>, options?: { where?: JoinWhereCriteria<Table, TAlias>, joinType?: JoinType }):
         _fJoinReturn<[...TSources, [TAlias] extends [never] ? Table : [Table, TAlias]], Prettify<NullifyTableFields<TFields> & Record<[TAlias] extends [never] ? Table : TAlias, GetFieldsFromTable<Table>>>, TCTEs>;
-    rightJoin(tableOrOptions: any, field?: any, reference?: any): any {
-        return this._joinImpl("RIGHT", tableOrOptions, field, reference);
+    rightJoin(tableOrOptions: any, field?: any, reference?: any, opts?: any): any {
+        return this._joinImpl("RIGHT", tableOrOptions, field, reference, opts);
     }
 
+    /**
+     * CTE fullJoin — `where` appends conditions to the ON clause.
+     * Scoped to CTE fields only; use `join()` for cross-table conditions.
+     */
+    fullJoin<const TName extends keyof TCTEs & string>(
+        cteName: TName,
+        local: keyof TCTEs[TName] & string,
+        remote: GetJoinCols<TSources[number]>,
+        opts?: { where?: WhereCriteriaMulti<[readonly ["__cte__", TName]], Record<TName, TCTEs[TName]>> }
+    ): _fJoin<[...TSources, readonly ["__cte__", TName]], TFields & Record<TName, TCTEs[TName]>, TCTEs>
     // Overload 1: Object syntax
     fullJoin<const Table extends AvailableJoins<TSources>,
         TJoinCols extends [string, string] = ValidStringTuple<GetUnionOfRelations<MapJoinsToKnownTables<SafeJoins<Table, TSources>, TSources>>>,
         TCol1 extends TJoinCols[0] = never,
         TAlias extends string = never
     >(options: {
-        table: Table, src: TCol1, on: find<TJoinCols, TCol1>, alias?: TAlias
+        table: Table, src: TCol1, on: find<TJoinCols, TCol1>, alias?: TAlias,
+        where?: JoinWhereCriteria<Table, TAlias>, joinType?: JoinType
     }): _fJoinReturn<[...TSources, [TAlias] extends [undefined] ? Table : [Table, TAlias]], Prettify<NullifyTableFields<TFields> & Record<[TAlias] extends [undefined] ? Table : TAlias, MakeNullable<GetFieldsFromTable<Table>>>>, TCTEs>;
     // Overload 2: Positional syntax
     fullJoin<const TableInput extends `${AvailableJoins<TSources>}` | `${AvailableJoins<TSources>} ${string}`,
@@ -2860,10 +2916,10 @@ joinUnsafeTypeEnforced<const Table extends TTables | `${TTables} ${string}`,
         TAlias extends string | never = ExtractAlias<TableInput>,
         TJoinCols extends [string, string] = ValidStringTuple<GetUnionOfRelations<MapJoinsToKnownTables<SafeJoins<Table, TSources>, TSources>>>,
         TCol1 extends TJoinCols[0] = never
-    >(table: TableInput, field: TCol1, reference: find<TJoinCols, TCol1>):
+    >(table: TableInput, field: TCol1, reference: find<TJoinCols, TCol1>, options?: { where?: JoinWhereCriteria<Table, TAlias>, joinType?: JoinType }):
         _fJoinReturn<[...TSources, [TAlias] extends [never] ? Table : [Table, TAlias]], Prettify<NullifyTableFields<TFields> & Record<[TAlias] extends [never] ? Table : TAlias, MakeNullable<GetFieldsFromTable<Table>>>>, TCTEs>;
-    fullJoin(tableOrOptions: any, field?: any, reference?: any): any {
-        return this._joinImpl("FULL", tableOrOptions, field, reference);
+    fullJoin(tableOrOptions: any, field?: any, reference?: any, opts?: any): any {
+        return this._joinImpl("FULL", tableOrOptions, field, reference, opts);
     }
 
     // crossJoin: no ON clause — table only (with optional inline alias)
@@ -2880,20 +2936,21 @@ joinUnsafeTypeEnforced<const Table extends TTables | `${TTables} ${string}`,
     // innerJoinUnsafeTypeEnforced — INNER semantics, type-enforced columns
     innerJoinUnsafeTypeEnforced<const Table extends TTables | `${TTables} ${string}`,
         TCol1 extends GetColsBaseTable<Table>,
-        TCol2 extends GetJoinOnColsType<GetColumnType<Table, TCol1>, [...TSources, Table]>,
+        TCol2 extends GetJoinOnColsType<GetColumnType<Table, TCol1>, [...TSources, Table]> | GetCTECols<TCTEs>,
         TAlias extends string = never
     >(options: {
-        table: Table, src: TCol1, on: TCol2, alias?: TAlias
+        table: Table, src: TCol1, on: TCol2, alias?: TAlias,
+        where?: JoinWhereCriteria<Table, TAlias>, joinType?: JoinType
     }): _fJoinReturn<[...TSources, [TAlias] extends [undefined] ? Table : [Table, TAlias]], Prettify<TFields & Record<[TAlias] extends [undefined] ? Table : TAlias, GetFieldsFromTable<Table>>>, TCTEs>;
     innerJoinUnsafeTypeEnforced<const TableInput extends TTables | `${TTables} ${string}`,
         Table extends TTables = ExtractTableName<TableInput>,
         TAlias extends string | never = ExtractAlias<TableInput>,
         TCol1 extends GetColsBaseTable<Table> = GetColsBaseTable<Table>,
-        TCol2 extends GetJoinOnColsType<GetColumnType<Table, TCol1>, [...TSources, Table]> =
+        TCol2 extends GetJoinOnColsType<GetColumnType<Table, TCol1>, [...TSources, Table]> | GetCTECols<TCTEs> =
                       GetJoinOnColsType<GetColumnType<Table, TCol1>, [...TSources, Table]>
-    >(table: TableInput, field: TCol1, reference: TCol2): _fJoinReturn<[...TSources, [TAlias] extends [never] ? Table : [Table, TAlias]], Prettify<TFields & Record<[TAlias] extends [undefined] ? Table : TAlias, GetFieldsFromTable<Table>>>, TCTEs>;
-    innerJoinUnsafeTypeEnforced(tableOrOptions: any, field?: any, reference?: any): any {
-        return this._joinImpl("INNER", tableOrOptions as any, field as any, reference as any) as any;
+    >(table: TableInput, field: TCol1, reference: TCol2, options?: { where?: JoinWhereCriteria<Table, TAlias>, joinType?: JoinType }): _fJoinReturn<[...TSources, [TAlias] extends [never] ? Table : [Table, TAlias]], Prettify<TFields & Record<[TAlias] extends [undefined] ? Table : TAlias, GetFieldsFromTable<Table>>>, TCTEs>;
+    innerJoinUnsafeTypeEnforced(tableOrOptions: any, field?: any, reference?: any, opts?: any): any {
+        return this._joinImpl("INNER", tableOrOptions as any, field as any, reference as any, opts) as any;
     }
 
     // innerJoinUnsafeIgnoreType — INNER semantics, any columns
@@ -2902,35 +2959,37 @@ joinUnsafeTypeEnforced<const Table extends TTables | `${TTables} ${string}`,
         TCol2 extends GetJoinCols<TSources[number]>,
         TAlias extends string = never
     >(options: {
-        table: Table, src: TCol1, on: TCol2, alias?: TAlias
+        table: Table, src: TCol1, on: TCol2, alias?: TAlias,
+        where?: JoinWhereCriteria<Table, TAlias>, joinType?: JoinType
     }): _fJoinReturn<[...TSources, [TAlias] extends [never] ? Table : [Table, TAlias]], TFields & Record<Table, GetFieldsFromTable<Table>>, TCTEs>;
     innerJoinUnsafeIgnoreType<const TableInput extends TTables | `${TTables} ${string}`,
         Table extends TTables = ExtractTableName<TableInput>,
         TAlias extends string | never = ExtractAlias<TableInput>,
         TCol1 extends GetColsBaseTable<Table> = GetColsBaseTable<Table>,
         TCol2 extends GetJoinCols<TSources[number]> = GetJoinCols<TSources[number]>
-    >(table: TableInput, field: TCol1, reference: TCol2): _fJoinReturn<[...TSources, [TAlias] extends [never] ? Table : [Table, TAlias]], TFields & Record<Table, GetFieldsFromTable<Table>>, TCTEs>;
-    innerJoinUnsafeIgnoreType(tableOrOptions: any, field?: any, reference?: any): any {
-        return this._joinImpl("INNER", tableOrOptions as any, field as any, reference as any) as any;
+    >(table: TableInput, field: TCol1, reference: TCol2, options?: { where?: JoinWhereCriteria<Table, TAlias>, joinType?: JoinType }): _fJoinReturn<[...TSources, [TAlias] extends [never] ? Table : [Table, TAlias]], TFields & Record<Table, GetFieldsFromTable<Table>>, TCTEs>;
+    innerJoinUnsafeIgnoreType(tableOrOptions: any, field?: any, reference?: any, opts?: any): any {
+        return this._joinImpl("INNER", tableOrOptions as any, field as any, reference as any, opts) as any;
     }
 
     // leftJoinUnsafeTypeEnforced — LEFT semantics, type-enforced columns
     leftJoinUnsafeTypeEnforced<const Table extends TTables | `${TTables} ${string}`,
         TCol1 extends GetColsBaseTable<Table>,
-        TCol2 extends GetJoinOnColsType<GetColumnType<Table, TCol1>, [...TSources, Table]>,
+        TCol2 extends GetJoinOnColsType<GetColumnType<Table, TCol1>, [...TSources, Table]> | GetCTECols<TCTEs>,
         TAlias extends string = never
     >(options: {
-        table: Table, src: TCol1, on: TCol2, alias?: TAlias
+        table: Table, src: TCol1, on: TCol2, alias?: TAlias,
+        where?: JoinWhereCriteria<Table, TAlias>, joinType?: JoinType
     }): _fJoinReturn<[...TSources, [TAlias] extends [undefined] ? Table : [Table, TAlias]], Prettify<TFields & Record<[TAlias] extends [undefined] ? Table : TAlias, MakeNullable<GetFieldsFromTable<Table>>>>, TCTEs>;
     leftJoinUnsafeTypeEnforced<const TableInput extends TTables | `${TTables} ${string}`,
         Table extends TTables = ExtractTableName<TableInput>,
         TAlias extends string | never = ExtractAlias<TableInput>,
         TCol1 extends GetColsBaseTable<Table> = GetColsBaseTable<Table>,
-        TCol2 extends GetJoinOnColsType<GetColumnType<Table, TCol1>, [...TSources, Table]> =
+        TCol2 extends GetJoinOnColsType<GetColumnType<Table, TCol1>, [...TSources, Table]> | GetCTECols<TCTEs> =
                       GetJoinOnColsType<GetColumnType<Table, TCol1>, [...TSources, Table]>
-    >(table: TableInput, field: TCol1, reference: TCol2): _fJoinReturn<[...TSources, [TAlias] extends [never] ? Table : [Table, TAlias]], Prettify<TFields & Record<[TAlias] extends [undefined] ? Table : TAlias, MakeNullable<GetFieldsFromTable<Table>>>>, TCTEs>;
-    leftJoinUnsafeTypeEnforced(tableOrOptions: any, field?: any, reference?: any): any {
-        return this._joinImpl("LEFT", tableOrOptions as any, field as any, reference as any) as any;
+    >(table: TableInput, field: TCol1, reference: TCol2, options?: { where?: JoinWhereCriteria<Table, TAlias>, joinType?: JoinType }): _fJoinReturn<[...TSources, [TAlias] extends [never] ? Table : [Table, TAlias]], Prettify<TFields & Record<[TAlias] extends [undefined] ? Table : TAlias, MakeNullable<GetFieldsFromTable<Table>>>>, TCTEs>;
+    leftJoinUnsafeTypeEnforced(tableOrOptions: any, field?: any, reference?: any, opts?: any): any {
+        return this._joinImpl("LEFT", tableOrOptions as any, field as any, reference as any, opts) as any;
     }
 
     // leftJoinUnsafeIgnoreType — LEFT semantics, any columns
@@ -2939,35 +2998,37 @@ joinUnsafeTypeEnforced<const Table extends TTables | `${TTables} ${string}`,
         TCol2 extends GetJoinCols<TSources[number]>,
         TAlias extends string = never
     >(options: {
-        table: Table, src: TCol1, on: TCol2, alias?: TAlias
+        table: Table, src: TCol1, on: TCol2, alias?: TAlias,
+        where?: JoinWhereCriteria<Table, TAlias>, joinType?: JoinType
     }): _fJoinReturn<[...TSources, [TAlias] extends [never] ? Table : [Table, TAlias]], TFields & Record<Table, MakeNullable<GetFieldsFromTable<Table>>>, TCTEs>;
     leftJoinUnsafeIgnoreType<const TableInput extends TTables | `${TTables} ${string}`,
         Table extends TTables = ExtractTableName<TableInput>,
         TAlias extends string | never = ExtractAlias<TableInput>,
         TCol1 extends GetColsBaseTable<Table> = GetColsBaseTable<Table>,
         TCol2 extends GetJoinCols<TSources[number]> = GetJoinCols<TSources[number]>
-    >(table: TableInput, field: TCol1, reference: TCol2): _fJoinReturn<[...TSources, [TAlias] extends [never] ? Table : [Table, TAlias]], TFields & Record<Table, MakeNullable<GetFieldsFromTable<Table>>>, TCTEs>;
-    leftJoinUnsafeIgnoreType(tableOrOptions: any, field?: any, reference?: any): any {
-        return this._joinImpl("LEFT", tableOrOptions as any, field as any, reference as any) as any;
+    >(table: TableInput, field: TCol1, reference: TCol2, options?: { where?: JoinWhereCriteria<Table, TAlias>, joinType?: JoinType }): _fJoinReturn<[...TSources, [TAlias] extends [never] ? Table : [Table, TAlias]], TFields & Record<Table, MakeNullable<GetFieldsFromTable<Table>>>, TCTEs>;
+    leftJoinUnsafeIgnoreType(tableOrOptions: any, field?: any, reference?: any, opts?: any): any {
+        return this._joinImpl("LEFT", tableOrOptions as any, field as any, reference as any, opts) as any;
     }
 
     // rightJoinUnsafeTypeEnforced — RIGHT semantics, type-enforced columns
     rightJoinUnsafeTypeEnforced<const Table extends TTables | `${TTables} ${string}`,
         TCol1 extends GetColsBaseTable<Table>,
-        TCol2 extends GetJoinOnColsType<GetColumnType<Table, TCol1>, [...TSources, Table]>,
+        TCol2 extends GetJoinOnColsType<GetColumnType<Table, TCol1>, [...TSources, Table]> | GetCTECols<TCTEs>,
         TAlias extends string = never
     >(options: {
-        table: Table, src: TCol1, on: TCol2, alias?: TAlias
+        table: Table, src: TCol1, on: TCol2, alias?: TAlias,
+        where?: JoinWhereCriteria<Table, TAlias>, joinType?: JoinType
     }): _fJoinReturn<[...TSources, [TAlias] extends [undefined] ? Table : [Table, TAlias]], Prettify<NullifyTableFields<TFields> & Record<[TAlias] extends [undefined] ? Table : TAlias, GetFieldsFromTable<Table>>>, TCTEs>;
     rightJoinUnsafeTypeEnforced<const TableInput extends TTables | `${TTables} ${string}`,
         Table extends TTables = ExtractTableName<TableInput>,
         TAlias extends string | never = ExtractAlias<TableInput>,
         TCol1 extends GetColsBaseTable<Table> = GetColsBaseTable<Table>,
-        TCol2 extends GetJoinOnColsType<GetColumnType<Table, TCol1>, [...TSources, Table]> =
+        TCol2 extends GetJoinOnColsType<GetColumnType<Table, TCol1>, [...TSources, Table]> | GetCTECols<TCTEs> =
                       GetJoinOnColsType<GetColumnType<Table, TCol1>, [...TSources, Table]>
-    >(table: TableInput, field: TCol1, reference: TCol2): _fJoinReturn<[...TSources, [TAlias] extends [never] ? Table : [Table, TAlias]], Prettify<NullifyTableFields<TFields> & Record<[TAlias] extends [undefined] ? Table : TAlias, GetFieldsFromTable<Table>>>, TCTEs>;
-    rightJoinUnsafeTypeEnforced(tableOrOptions: any, field?: any, reference?: any): any {
-        return this._joinImpl("RIGHT", tableOrOptions as any, field as any, reference as any) as any;
+    >(table: TableInput, field: TCol1, reference: TCol2, options?: { where?: JoinWhereCriteria<Table, TAlias>, joinType?: JoinType }): _fJoinReturn<[...TSources, [TAlias] extends [never] ? Table : [Table, TAlias]], Prettify<NullifyTableFields<TFields> & Record<[TAlias] extends [undefined] ? Table : TAlias, GetFieldsFromTable<Table>>>, TCTEs>;
+    rightJoinUnsafeTypeEnforced(tableOrOptions: any, field?: any, reference?: any, opts?: any): any {
+        return this._joinImpl("RIGHT", tableOrOptions as any, field as any, reference as any, opts) as any;
     }
 
     // rightJoinUnsafeIgnoreType — RIGHT semantics, any columns
@@ -2976,35 +3037,37 @@ joinUnsafeTypeEnforced<const Table extends TTables | `${TTables} ${string}`,
         TCol2 extends GetJoinCols<TSources[number]>,
         TAlias extends string = never
     >(options: {
-        table: Table, src: TCol1, on: TCol2, alias?: TAlias
+        table: Table, src: TCol1, on: TCol2, alias?: TAlias,
+        where?: JoinWhereCriteria<Table, TAlias>, joinType?: JoinType
     }): _fJoinReturn<[...TSources, [TAlias] extends [never] ? Table : [Table, TAlias]], NullifyTableFields<TFields> & Record<Table, GetFieldsFromTable<Table>>, TCTEs>;
     rightJoinUnsafeIgnoreType<const TableInput extends TTables | `${TTables} ${string}`,
         Table extends TTables = ExtractTableName<TableInput>,
         TAlias extends string | never = ExtractAlias<TableInput>,
         TCol1 extends GetColsBaseTable<Table> = GetColsBaseTable<Table>,
         TCol2 extends GetJoinCols<TSources[number]> = GetJoinCols<TSources[number]>
-    >(table: TableInput, field: TCol1, reference: TCol2): _fJoinReturn<[...TSources, [TAlias] extends [never] ? Table : [Table, TAlias]], NullifyTableFields<TFields> & Record<Table, GetFieldsFromTable<Table>>, TCTEs>;
-    rightJoinUnsafeIgnoreType(tableOrOptions: any, field?: any, reference?: any): any {
-        return this._joinImpl("RIGHT", tableOrOptions as any, field as any, reference as any) as any;
+    >(table: TableInput, field: TCol1, reference: TCol2, options?: { where?: JoinWhereCriteria<Table, TAlias>, joinType?: JoinType }): _fJoinReturn<[...TSources, [TAlias] extends [never] ? Table : [Table, TAlias]], NullifyTableFields<TFields> & Record<Table, GetFieldsFromTable<Table>>, TCTEs>;
+    rightJoinUnsafeIgnoreType(tableOrOptions: any, field?: any, reference?: any, opts?: any): any {
+        return this._joinImpl("RIGHT", tableOrOptions as any, field as any, reference as any, opts) as any;
     }
 
     // fullJoinUnsafeTypeEnforced — FULL semantics, type-enforced columns
     fullJoinUnsafeTypeEnforced<const Table extends TTables | `${TTables} ${string}`,
         TCol1 extends GetColsBaseTable<Table>,
-        TCol2 extends GetJoinOnColsType<GetColumnType<Table, TCol1>, [...TSources, Table]>,
+        TCol2 extends GetJoinOnColsType<GetColumnType<Table, TCol1>, [...TSources, Table]> | GetCTECols<TCTEs>,
         TAlias extends string = never
     >(options: {
-        table: Table, src: TCol1, on: TCol2, alias?: TAlias
+        table: Table, src: TCol1, on: TCol2, alias?: TAlias,
+        where?: JoinWhereCriteria<Table, TAlias>, joinType?: JoinType
     }): _fJoinReturn<[...TSources, [TAlias] extends [undefined] ? Table : [Table, TAlias]], Prettify<NullifyTableFields<TFields> & Record<[TAlias] extends [undefined] ? Table : TAlias, MakeNullable<GetFieldsFromTable<Table>>>>, TCTEs>;
     fullJoinUnsafeTypeEnforced<const TableInput extends TTables | `${TTables} ${string}`,
         Table extends TTables = ExtractTableName<TableInput>,
         TAlias extends string | never = ExtractAlias<TableInput>,
         TCol1 extends GetColsBaseTable<Table> = GetColsBaseTable<Table>,
-        TCol2 extends GetJoinOnColsType<GetColumnType<Table, TCol1>, [...TSources, Table]> =
+        TCol2 extends GetJoinOnColsType<GetColumnType<Table, TCol1>, [...TSources, Table]> | GetCTECols<TCTEs> =
                       GetJoinOnColsType<GetColumnType<Table, TCol1>, [...TSources, Table]>
-    >(table: TableInput, field: TCol1, reference: TCol2): _fJoinReturn<[...TSources, [TAlias] extends [never] ? Table : [Table, TAlias]], Prettify<NullifyTableFields<TFields> & Record<[TAlias] extends [undefined] ? Table : TAlias, MakeNullable<GetFieldsFromTable<Table>>>>, TCTEs>;
-    fullJoinUnsafeTypeEnforced(tableOrOptions: any, field?: any, reference?: any): any {
-        return this._joinImpl("FULL", tableOrOptions as any, field as any, reference as any) as any;
+    >(table: TableInput, field: TCol1, reference: TCol2, options?: { where?: JoinWhereCriteria<Table, TAlias>, joinType?: JoinType }): _fJoinReturn<[...TSources, [TAlias] extends [never] ? Table : [Table, TAlias]], Prettify<NullifyTableFields<TFields> & Record<[TAlias] extends [undefined] ? Table : TAlias, MakeNullable<GetFieldsFromTable<Table>>>>, TCTEs>;
+    fullJoinUnsafeTypeEnforced(tableOrOptions: any, field?: any, reference?: any, opts?: any): any {
+        return this._joinImpl("FULL", tableOrOptions as any, field as any, reference as any, opts) as any;
     }
 
     // fullJoinUnsafeIgnoreType — FULL semantics, any columns
@@ -3013,16 +3076,17 @@ joinUnsafeTypeEnforced<const Table extends TTables | `${TTables} ${string}`,
         TCol2 extends GetJoinCols<TSources[number]>,
         TAlias extends string = never
     >(options: {
-        table: Table, src: TCol1, on: TCol2, alias?: TAlias
+        table: Table, src: TCol1, on: TCol2, alias?: TAlias,
+        where?: JoinWhereCriteria<Table, TAlias>, joinType?: JoinType
     }): _fJoinReturn<[...TSources, [TAlias] extends [never] ? Table : [Table, TAlias]], NullifyTableFields<TFields> & Record<Table, MakeNullable<GetFieldsFromTable<Table>>>, TCTEs>;
     fullJoinUnsafeIgnoreType<const TableInput extends TTables | `${TTables} ${string}`,
         Table extends TTables = ExtractTableName<TableInput>,
         TAlias extends string | never = ExtractAlias<TableInput>,
         TCol1 extends GetColsBaseTable<Table> = GetColsBaseTable<Table>,
         TCol2 extends GetJoinCols<TSources[number]> = GetJoinCols<TSources[number]>
-    >(table: TableInput, field: TCol1, reference: TCol2): _fJoinReturn<[...TSources, [TAlias] extends [never] ? Table : [Table, TAlias]], NullifyTableFields<TFields> & Record<Table, MakeNullable<GetFieldsFromTable<Table>>>, TCTEs>;
-    fullJoinUnsafeIgnoreType(tableOrOptions: any, field?: any, reference?: any): any {
-        return this._joinImpl("FULL", tableOrOptions as any, field as any, reference as any) as any;
+    >(table: TableInput, field: TCol1, reference: TCol2, options?: { where?: JoinWhereCriteria<Table, TAlias>, joinType?: JoinType }): _fJoinReturn<[...TSources, [TAlias] extends [never] ? Table : [Table, TAlias]], NullifyTableFields<TFields> & Record<Table, MakeNullable<GetFieldsFromTable<Table>>>, TCTEs>;
+    fullJoinUnsafeIgnoreType(tableOrOptions: any, field?: any, reference?: any, opts?: any): any {
+        return this._joinImpl("FULL", tableOrOptions as any, field as any, reference as any, opts) as any;
     }
 
     // crossJoinUnsafeTypeEnforced — CROSS semantics, type-enforced columns

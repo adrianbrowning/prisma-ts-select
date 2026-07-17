@@ -52,6 +52,65 @@ describe("PostgreSQL join dialect support", () => {
     });
 });
 
+describe("rightJoin/fullJoin with where option (PostgreSQL only)", () => {
+
+    test("rightJoin with where - positional", () => {
+        const sql = prisma.$from("User")
+            .rightJoin("Post", "authorId", "User.id", { where: { "Post.published": false } })
+            .getSQL();
+        expectSQL(sql, `FROM ${dialect.quote("User")} RIGHT JOIN ${dialect.quote("Post")} ON ${dialect.quoteQualifiedColumn("Post.authorId")} = ${dialect.quoteQualifiedColumn("User.id")} AND ${dialect.quoteQualifiedColumn("Post.published")} = false;`);
+    });
+
+    test("rightJoin with where - object syntax", () => {
+        const sql = prisma.$from("User")
+            .rightJoin({ table: "Post", src: "authorId", on: "User.id", where: { "Post.published": false } })
+            .getSQL();
+        expectSQL(sql, `FROM ${dialect.quote("User")} RIGHT JOIN ${dialect.quote("Post")} ON ${dialect.quoteQualifiedColumn("Post.authorId")} = ${dialect.quoteQualifiedColumn("User.id")} AND ${dialect.quoteQualifiedColumn("Post.published")} = false;`);
+    });
+
+    test("fullJoin with where - positional", () => {
+        const sql = prisma.$from("User")
+            .fullJoin("Post", "authorId", "User.id", { where: { "Post.published": false } })
+            .getSQL();
+        expectSQL(sql, `FROM ${dialect.quote("User")} FULL JOIN ${dialect.quote("Post")} ON ${dialect.quoteQualifiedColumn("Post.authorId")} = ${dialect.quoteQualifiedColumn("User.id")} AND ${dialect.quoteQualifiedColumn("Post.published")} = false;`);
+    });
+
+    test("fullJoin with where - object syntax", () => {
+        const sql = prisma.$from("User")
+            .fullJoin({ table: "Post", src: "authorId", on: "User.id", where: { "Post.published": false } })
+            .getSQL();
+        expectSQL(sql, `FROM ${dialect.quote("User")} FULL JOIN ${dialect.quote("Post")} ON ${dialect.quoteQualifiedColumn("Post.authorId")} = ${dialect.quoteQualifiedColumn("User.id")} AND ${dialect.quoteQualifiedColumn("Post.published")} = false;`);
+    });
+
+    test("rightJoinUnsafeTypeEnforced with where - positional", () => {
+        const sql = prisma.$from("User")
+            .rightJoinUnsafeTypeEnforced("Post", "id", "User.id", { where: { "Post.published": false } })
+            .getSQL();
+        expectSQL(sql, `FROM ${dialect.quote("User")} RIGHT JOIN ${dialect.quote("Post")} ON ${dialect.quoteQualifiedColumn("Post.id")} = ${dialect.quoteQualifiedColumn("User.id")} AND ${dialect.quoteQualifiedColumn("Post.published")} = false;`);
+    });
+
+    test("rightJoinUnsafeIgnoreType with where - positional", () => {
+        const sql = prisma.$from("User")
+            .rightJoinUnsafeIgnoreType("Post", "id", "User.email", { where: { "Post.published": false } })
+            .getSQL();
+        expectSQL(sql, `FROM ${dialect.quote("User")} RIGHT JOIN ${dialect.quote("Post")} ON ${dialect.quoteQualifiedColumn("Post.id")} = ${dialect.quoteQualifiedColumn("User.email")} AND ${dialect.quoteQualifiedColumn("Post.published")} = false;`);
+    });
+
+    test("fullJoinUnsafeTypeEnforced with where - positional", () => {
+        const sql = prisma.$from("User")
+            .fullJoinUnsafeTypeEnforced("Post", "id", "User.id", { where: { "Post.published": false } })
+            .getSQL();
+        expectSQL(sql, `FROM ${dialect.quote("User")} FULL JOIN ${dialect.quote("Post")} ON ${dialect.quoteQualifiedColumn("Post.id")} = ${dialect.quoteQualifiedColumn("User.id")} AND ${dialect.quoteQualifiedColumn("Post.published")} = false;`);
+    });
+
+    test("fullJoinUnsafeIgnoreType with where - positional", () => {
+        const sql = prisma.$from("User")
+            .fullJoinUnsafeIgnoreType("Post", "id", "User.email", { where: { "Post.published": false } })
+            .getSQL();
+        expectSQL(sql, `FROM ${dialect.quote("User")} FULL JOIN ${dialect.quote("Post")} ON ${dialect.quoteQualifiedColumn("Post.id")} = ${dialect.quoteQualifiedColumn("User.email")} AND ${dialect.quoteQualifiedColumn("Post.published")} = false;`);
+    });
+});
+
 describe("rightJoin/fullJoin nullability types (PostgreSQL only)", () => {
 
     test("rightJoin makes existing table fields nullable", () => {

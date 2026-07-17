@@ -757,7 +757,7 @@ Joins through Prisma's implicit or explicit many-to-many junction tables. Automa
 ##### Example
 ```typescript file=../usage-sqlite-v7/tests/readme/join-many-to-many.ts region=m2m-basic
 prisma.$from("M2M_Post")
-      .manyToManyJoin("M2M_Category");
+      .manyToManyJoin("M2M_Post", "M2M_Category");
 ```
 
 ##### SQL
@@ -777,7 +777,7 @@ JOIN M2M_Category ON M2M_Category.id = _M2M_CategoryToM2M_Post.A;
 ##### With Alias
 ```typescript file=../usage-sqlite-v7/tests/readme/join-many-to-many.ts region=m2m-alias
 prisma.$from("M2M_Post")
-      .manyToManyJoin("M2M_Category mc");
+      .manyToManyJoin("M2M_Post", "M2M_Category mc");
 ```
 
 ```sql file=../usage-sqlite-v7/tests/readme/join-many-to-many.ts region=m2m-alias-sql
@@ -792,7 +792,7 @@ Use `refName` when a model has multiple M2M relations to the same target:
 
 ```typescript file=../usage-sqlite-v7/tests/readme/join-many-to-many.ts region=m2m-refname
 prisma.$from("MMM_Post")
-      .manyToManyJoin("MMM_Category", { refName: "M2M_NC_M1" });
+      .manyToManyJoin("MMM_Post", "MMM_Category", { refName: "M2M_NC_M1" });
 ```
 
 ```sql file=../usage-sqlite-v7/tests/readme/join-many-to-many.ts region=m2m-refname-sql
@@ -807,7 +807,7 @@ Use `source` to pin the source alias and column when the source table is aliased
 
 ```typescript file=../usage-sqlite-v7/tests/readme/join-many-to-many.ts region=m2m-source
 prisma.$from("M2M_Post mp")
-      .manyToManyJoin("M2M_Category mc", { source: "mp.id" });
+      .manyToManyJoin("mp", "M2M_Category mc");
 ```
 
 ```sql file=../usage-sqlite-v7/tests/readme/join-many-to-many.ts region=m2m-source-sql
@@ -1310,8 +1310,8 @@ prisma.$from("User")
 
 ##### SQL
 ```sql file=../usage-sqlite-v7/tests/readme/select-all-omit.ts region=single-omit-sql
-SELECT `id`, `name`, `age` 
-FROM `User`;
+SELECT id, name, age 
+FROM User;
 ```
 
 #### Example - Multiple Columns

@@ -6,7 +6,7 @@ import { defineConfig } from 'tsup';
     "build3": "tsup-node src/generator-build/db.ts --dts --format esm,cjs --outDir dist/generator-build",
  */
 
-export default defineConfig((options) => [
+export default defineConfig(() => [
     {
         entry: ["src/bin.ts", "src/generator.ts"],
         splitting: true,
@@ -23,6 +23,7 @@ export default defineConfig((options) => [
     {
         entry: [
             'src/extend.ts',
+            'src/db.ts',
             'src/dialects/types.ts',
             'src/dialects/shared.ts',
             'src/dialects/sqlite.ts',

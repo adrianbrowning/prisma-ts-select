@@ -20,3 +20,5 @@ pnpm-debug.log
 /packages/usage-v7/generated/
 test-results/
 sorted-seeking-hoare.md
+/packages/prisma-ts-select/prisma-ts-select-*.tgz
+/packages/*bug*/

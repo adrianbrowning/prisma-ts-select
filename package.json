@@ -1,12 +1,13 @@
 {
   "type": "module",
   "devDependencies": {
-    "@commitlint/cli": "20.4.1",
-    "@commitlint/config-conventional": "20.4.1",
-    "husky": "7.0.4"
+    "@commitlint/cli": "21.0.1",
+    "@commitlint/config-conventional": "21.0.1",
+    "husky": "9.1.7"
   },
   "scripts": {
     "prepare": "husky install",
+    "run-tests": "node packages/run-tests-tui/src/index.ts",
     "test:v6": "./run-tests-v6.sh",
     "test:v7": "./run-tests-v7.sh",
     "test:isolated": "./run-tests-isolated.sh",
@@ -28,5 +29,6 @@
       "prisma",
       "puppeteer"
     ]
-  }
+  },
+  "version": "0.0.1-rc.1"
 }

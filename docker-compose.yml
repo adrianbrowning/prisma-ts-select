@@ -8,10 +8,11 @@ services:
     ports:
       - "3306:3306"
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-ptest"]
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-ptest"]
       interval: 5s
       timeout: 5s
-      retries: 10
+      retries: 15
+      start_period: 30s
 
   postgres:
     image: postgres:16

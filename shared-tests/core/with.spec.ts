@@ -457,4 +457,164 @@ describe("$with (CTE)", () => {
         );
     });
 
+    test("CTE column select with explicit alias uses alias in SQL", () => {
+        const posts = prisma.$from('Post').select('id').select('authorId');
+        const query = prisma
+            .$with('pp', posts)
+            .from('User')
+            .join('pp', 'authorId', 'User.id')
+            .select('pp.authorId', 'authorId');
+
+        // alias strip: 'pp.authorId' -> 'authorId'
+        expectSQL(query.getSQL(),
+            `WITH ${dialect.quoteTableIdentifier('pp', false)} AS (SELECT ${dialect.quote('id')}, ${dialect.quote('authorId')} FROM ${dialect.quote('Post')}) SELECT ${dialect.quoteQualifiedColumn('pp.authorId')} AS ${dialect.quote('authorId', true)} FROM ${dialect.quote('User')} JOIN ${dialect.quote('pp')} ON ${dialect.quoteQualifiedColumn('pp.authorId')} = ${dialect.quoteQualifiedColumn('User.id')};`
+        );
+
+        // Type check: result key should be 'authorId', not 'pp.authorId'
+        type Result = Awaited<ReturnType<typeof query.run>>[0];
+        typeCheck({} as Expect<Equal<keyof Result, 'authorId'>>);
+    });
+
+    test("CTE column select with no alias uses select string as alias in SQL", () => {
+        const posts = prisma.$from('Post').select('id').select('authorId');
+        const query = prisma
+            .$with('pp', posts)
+            .from('User')
+            .join('pp', 'authorId', 'User.id')
+            .select('pp.authorId'); // no alias — fallback: alias ?? select
+        expectSQL(query.getSQL(),
+            `WITH ${dialect.quoteTableIdentifier('pp', false)} AS (SELECT ${dialect.quote('id')}, ${dialect.quote('authorId')} FROM ${dialect.quote('Post')}) SELECT ${dialect.quoteQualifiedColumn('pp.authorId')} AS ${dialect.quote('pp.authorId', true)} FROM ${dialect.quote('User')} JOIN ${dialect.quote('pp')} ON ${dialect.quoteQualifiedColumn('pp.authorId')} = ${dialect.quoteQualifiedColumn('User.id')};`
+        );
+    });
+
+    test("runtime result correctness - CTE column select with alias", async (t) => {
+        const posts = prisma.$from('Post').select('id').select('authorId');
+        const result = await prisma
+            .$with('pp', posts)
+            .from('User')
+            .join('pp', 'authorId', 'User.id')
+            .select('pp.authorId', 'authorId')
+            .run();
+        t.assert.snapshot(result);
+    });
+
+    describe("CTE join - where option", () => {
+        test("CTE join with where - simple condition appended to ON clause", () => {
+            const inner = prisma.$from('Post').select('id').select('authorId').select('title');
+            const innerSQL = inner.getSQL().replace(/;$/, '');
+            const query = prisma
+                .$with('pp', inner)
+                .from('User')
+                .join('pp', 'authorId', 'User.id', { where: { 'pp.id': { op: '>', value: 1 } } });
+            const q = dialect.quoteTableIdentifier('pp', false);
+            const qUser = dialect.quoteTableIdentifier('User', false);
+            expectSQL(query.getSQL(),
+                `WITH ${q} AS (${innerSQL}) FROM ${qUser} JOIN ${q} ON ${dialect.quoteQualifiedColumn('pp.authorId')} = ${dialect.quoteQualifiedColumn('User.id')} AND ${dialect.quoteQualifiedColumn('pp.id')} > 1;`
+            );
+        });
+
+        test("CTE join with where - $AND logical operator", () => {
+            const inner = prisma.$from('Post').select('id').select('authorId').select('title');
+            const innerSQL = inner.getSQL().replace(/;$/, '');
+            const query = prisma
+                .$with('pp', inner)
+                .from('User')
+                .join('pp', 'authorId', 'User.id', {
+                    where: { $AND: [{ 'pp.id': { op: '>', value: 0 } }, { 'pp.authorId': 1 }] }
+                });
+            const q = dialect.quoteTableIdentifier('pp', false);
+            const qUser = dialect.quoteTableIdentifier('User', false);
+            expectSQL(query.getSQL(),
+                `WITH ${q} AS (${innerSQL}) FROM ${qUser} JOIN ${q} ON ${dialect.quoteQualifiedColumn('pp.authorId')} = ${dialect.quoteQualifiedColumn('User.id')} AND (${dialect.quoteQualifiedColumn('pp.id')} > 0 AND ${dialect.quoteQualifiedColumn('pp.authorId')} = 1);`
+            );
+        });
+
+        test("CTE join with where - runtime filters correctly", async () => {
+            const inner = prisma.$from('Post').select('id').select('authorId').select('title');
+            const result = await prisma
+                .$with('pp', inner)
+                .from('User')
+                .join('pp', 'authorId', 'User.id', { where: { 'pp.id': 1 } })
+                .select('User.name')
+                .select('pp.title')
+                .run();
+            assert.equal(result.length, 1, 'Should only return rows where pp.id = 1');
+            assert.deepStrictEqual(result[0], { name: 'John Doe', 'pp.title': 'Blog 1' });
+        });
+
+        test("type check - where accepts CTE-qualified field", () => {
+            const inner = prisma.$from('Post').select('id').select('authorId').select('title');
+            prisma
+                .$with('pp', inner)
+                .from('User')
+                .join('pp', 'authorId', 'User.id', { where: { 'pp.id': 1 } });
+        });
+
+        test("type check - where rejects non-CTE table fields", () => {
+            const inner = prisma.$from('Post').select('id').select('authorId').select('title');
+            prisma
+                .$with('pp', inner)
+                .from('User')
+                // @ts-expect-error 'User.name' is not a field of CTE 'pp'
+                .join('pp', 'authorId', 'User.id', {
+                    where: { 'User.name': 'foo' }
+                });
+        });
+
+        test("CTE join with where - $OR condition", () => {
+            const inner = prisma.$from('Post').select('id').select('authorId').select('title');
+            const query = prisma
+                .$with('pp', inner)
+                .from('User')
+                .join('pp', 'authorId', 'User.id', {
+                    where: { $OR: [{ 'pp.id': 1 }, { 'pp.authorId': 2 }] }
+                });
+            const sql = query.getSQL();
+            const expected = `AND (${dialect.quoteQualifiedColumn('pp.id')} = 1 OR ${dialect.quoteQualifiedColumn('pp.authorId')} = 2)`;
+            assert.ok(sql.includes(expected), `ON clause should have: ${expected}\nGot: ${sql}`);
+        });
+
+        test("CTE join with where - $NOT condition", () => {
+            const inner = prisma.$from('Post').select('id').select('authorId').select('title');
+            const query = prisma
+                .$with('pp', inner)
+                .from('User')
+                .join('pp', 'authorId', 'User.id', {
+                    where: { $NOT: [{ 'pp.id': 1 }] }
+                });
+            const sql = query.getSQL();
+            const expected = `AND (NOT(${dialect.quoteQualifiedColumn('pp.id')} = 1))`;
+            assert.ok(sql.includes(expected), `ON clause should have: ${expected}\nGot: ${sql}`);
+        });
+
+        test("CTE leftJoin with where - LEFT join type with ON clause filter", () => {
+            const inner = prisma.$from('Post').select('id').select('authorId').select('title');
+            const query = prisma
+                .$with('pp', inner)
+                .from('User')
+                .leftJoin('pp', 'authorId', 'User.id', { where: { 'pp.id': { op: '>', value: 1 } } });
+            const sql = query.getSQL();
+            assert.ok(sql.includes('LEFT JOIN'), `SQL should use LEFT JOIN\nGot: ${sql}`);
+            const expected = `AND ${dialect.quoteQualifiedColumn('pp.id')} > 1`;
+            assert.ok(sql.includes(expected), `ON clause should have: ${expected}\nGot: ${sql}`);
+        });
+
+        test("type check - innerJoin accepts CTE name with where", () => {
+            const inner = prisma.$from('Post').select('id').select('authorId').select('title');
+            prisma
+                .$with('pp', inner)
+                .from('User')
+                .innerJoin('pp', 'authorId', 'User.id', { where: { 'pp.id': 1 } });
+        });
+
+        test("type check - leftJoin rejects invalid CTE field in where", () => {
+            const inner = prisma.$from('Post').select('id').select('authorId').select('title');
+            prisma
+                .$with('pp', inner)
+                .from('User')
+                // @ts-expect-error 'User.name' is not a field of CTE 'pp'
+                .leftJoin('pp', 'authorId', 'User.id', { where: { 'User.name': 'foo' } });
+        });
+    });
+
 });
