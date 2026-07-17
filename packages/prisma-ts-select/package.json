@@ -90,7 +90,7 @@
     "@types/prettier": "2.4.2",
     "@typescript-eslint/eslint-plugin": "^6.19.1",
     "@typescript-eslint/parser": "^6.19.1",
-    "humanize-duration": "^3.30.0",
+    "humanize-duration": "^3.34.0",
     "jest": "27.4.7",
     "klaw-sync": "^8.0.0",
     "knip": "^5.9.4",
