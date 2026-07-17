@@ -1,6 +1,6 @@
 {
   "name": "prisma-ts-select",
-  "version": "0.1.8",
+  "version": "0.1.9-rc.2",
   "type": "module",
   "bin": {
     "prisma-ts-select": "dist/bin.cjs"
@@ -29,10 +29,11 @@
     }
   },
   "scripts": {
+    "pre-release": "pnpm version prerelease --preid=rc --no-git-tag-version && pnpm build && pnpm pack",
     "bp": "pnpm build && pnpm version patch && pnpm pack",
     "build": "pnpm exec rimraf dist && tsup",
     "reset": "rm -rf prisma/migrations/ && prisma migrate dev --name init  && prisma generate",
-    "start": "tsx src/index.ts",
+    "start": "node src/index.ts",
     "prisma-upgrade": "pnpm i --save-dev prisma@latest && pnpm i @prisma/client@latest",
     "lint:ts": "tsc --noEmit -p tsconfig.json",
     "lint:tsw": "pnpm tsc -w",
