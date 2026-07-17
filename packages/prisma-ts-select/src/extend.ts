@@ -9,8 +9,8 @@ import {dialect, dialectContextFns} from "./dialects/index.js";
 import {esc} from "./dialects/shared.js";
 import type {Dialect} from "./dialects/types.js";
 import {lit as _lit, sqlExpr, resolveArg, type SQLExpr, type LitToType} from "./sql-expr.js";
+import {DB, type DBType} from "./db.js";
 
-const DB: DBType = {} as const satisfies DBType;
 // Placeholder replaced by generator with actual M2M relationship map
 type M2MMap = {};
 const SAFE_IDENT_RE = /^\w+$/;
@@ -159,10 +159,7 @@ type IsNullable<str extends string> = str extends `?${string}` ? null : never;
  */
 export type RemoveNullChar<str extends string> = str extends `?${infer s}` ? s : str;
 
-export type DBType = Record<string, {
-    fields: Record<string, string>;
-    relations: Record<string, Record<string, Array<string>>>
-}>;
+
 
 /**
  * Filters type `a` to only include members that extend type `b`.
