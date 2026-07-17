@@ -92,7 +92,7 @@
     "@typescript-eslint/parser": "^6.19.1",
     "humanize-duration": "^3.30.0",
     "jest": "27.4.7",
-    "klaw-sync": "^6.0.0",
+    "klaw-sync": "^8.0.0",
     "knip": "^5.9.4",
     "log-with-statusbar": "^1.2.0",
     "markdown-toc": "^1.2.0",
