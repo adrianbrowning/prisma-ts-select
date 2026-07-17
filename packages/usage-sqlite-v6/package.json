@@ -26,7 +26,6 @@
     "@prisma/client": "6.19.2",
     "@types/node": "^24.0.0",
     "prisma": "6.19.2",
-    "tsx": "^4.21.0",
     "typescript": "^5.9.3"
   }
 }

@@ -22,10 +22,9 @@
     "@gcm/prisma-ts-select": "workspace:prisma-ts-select@*"
   },
   "devDependencies": {
-    "@prisma/client": "6.19.2",
-    "@types/node": "^24.0.0",
-    "prisma": "6.19.2",
-    "tsx": "^4.21.0",
+    "@prisma/client": "6.19.3",
+    "@types/node": "^24.12.4",
+    "prisma": "6.19.3",
     "typescript": "^5.9.3"
   }
 }

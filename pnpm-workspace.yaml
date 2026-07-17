@@ -9,3 +9,10 @@ onlyBuiltDependencies:
   - better-sqlite3
 
 ignoredBuiltDependencies: []
+
+minimumReleaseAge: 4320
+# trustPolicy: "no-downgrade"
+blockExoticSubdeps: true
+
+trustPolicyExclude:
+  - 'tinyexec@1.2.2'

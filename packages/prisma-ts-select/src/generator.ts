@@ -198,14 +198,26 @@ export { ${provider}Dialect as dialect, ${provider}Dialect, ${ctxName} as dialec
       fs.writeFileSync(path.join(dialectOutDir, `${ver}.d.ts`), dts);
     }
 
-    // Copy extend.js and inject DB model (ESM-only)
-    const extendContents = fs.readFileSync(path.join(srcDir, 'extend.js'), {encoding: 'utf-8'});
+    // Write db.js — the DB schema data as a standalone importable module
     writeFileSafely(
-      path.join(outputPath, 'extend.js'),
-      extendContents.replace('var DB = {};', `var DB = ${JSON.stringify(models, null, 2)};`)
+      path.join(outputPath, 'db.js'),
+      `export const DB = ${JSON.stringify(models, null, 2)};\n`
     );
 
     const declaration = generateReadonlyDeclaration(models);
+
+    // Write db.d.ts — exported readonly DB type
+    writeFileSafely(
+      path.join(outputPath, 'db.d.ts'),
+      `${declaration.replace('declare const DB:', 'export declare const DB:')}\n`
+    );
+
+    // Copy extend.js — replace inline stub with import from db.js
+    const extendContents = fs.readFileSync(path.join(srcDir, 'extend.js'), {encoding: 'utf-8'});
+    writeFileSafely(
+      path.join(outputPath, 'extend.js'),
+      extendContents.replace('var DB = {};', `import { DB } from './db.js';`)
+    );
 
     // Dialect join method support matrix (mirrors supportedJoinMethods in each dialect file)
     const ALL_JOIN_METHODS = [
@@ -251,7 +263,7 @@ export { ${provider}Dialect as dialect, ${provider}Dialect, ${ctxName} as dialec
       : `type _fJoinReturn<TSources extends TArrSources, TFields extends TFieldsType, TCTEs extends Record<string, Record<string, any>> = {}> = _fJoin<TSources, TFields, TCTEs>;`;
 
     const replacedExtendDts = extendDts
-      .replace('declare const DB: DBType;', declaration)
+      .replace('declare const DB: DBType;', `import type { DB } from './db.js';`)
       .replace('type M2MMap = {};', generateM2MMapDeclaration(m2mMap))
       .replace(
         PLACEHOLDER,
@@ -277,6 +289,7 @@ export { ${provider}Dialect as dialect, ${provider}Dialect, ${ctxName} as dialec
       type: "module",
       exports: {
         ".":            { types: "./extend.d.ts",         import: "./extend.js" },
+        "./db":         { types: "./db.d.ts",             import: "./db.js" },
         "./extend-v6":  { types: "./extend-v6.d.ts",      import: "./extend-v6.js" },
         "./extend-v7":  { types: "./extend-v7.d.ts",      import: "./extend-v7.js" },
         "./dialects":   { types: "./dialects/index.d.ts", import: "./dialects/index.js" },
@@ -288,7 +301,7 @@ export { ${provider}Dialect as dialect, ${provider}Dialect, ${ctxName} as dialec
 
     // Copy chunk .d.ts files (e.g. sql-expr-HASH.d.ts) that extend.d.ts imports
     for (const file of fs.readdirSync(srcDir)) {
-      if (file !== 'extend.d.ts' && file !== 'extend.js' && file.endsWith('.d.ts')) {
+      if (file !== 'extend.d.ts' && file !== 'extend.js' && file !== 'db.d.ts' && file !== 'db.js' && file.endsWith('.d.ts')) {
         fs.copyFileSync(path.join(srcDir, file), path.join(outputPath, file));
       }
     }
