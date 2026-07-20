@@ -1,12 +1,12 @@
 import type { Decimal } from "@prisma/client/runtime/client";
-import { resolveArg, sqlExpr, DISTINCT_BRAND } from "../sql-expr.js";
-import type { SQLExpr } from "../sql-expr.js";
+import { resolveArg, sqlExpr, DISTINCT_BRAND } from "../sql-expr.ts";
+import type { SQLExpr } from "../sql-expr.ts";
 // Re-exported for generated extend-v*.d.ts — required by type system, do not remove
 export { DISTINCT_BRAND };
-import { postgresqlContextFns, postgresqlDialect } from "./postgresql.js";
-import type { FilterCols, ColName } from "./shared.js";
+import { postgresqlContextFns, postgresqlDialect } from "./postgresql.ts";
+import type { FilterCols, ColName } from "./shared.ts";
 
-export type { PgExtractField, PgDateTruncUnit } from "./postgresql.js";
+export type { PgExtractField, PgDateTruncUnit } from "./postgresql.ts";
 export { postgresqlDialect };
 
 /**
@@ -19,9 +19,9 @@ export const postgresqlV6ContextFns = <TColEntries extends [string, unknown] = n
   quoteFn: (ref: string) => string
 ) => ({
   ...postgresqlContextFns<TColEntries>(quoteFn),
-  countAll:      (): SQLExpr<bigint> => sqlExpr('COUNT(*)'),
-  count:         (col: ColName<TColEntries> | '*' | SQLExpr<unknown>): SQLExpr<bigint> =>
-    sqlExpr(col === '*' ? 'COUNT(*)' : `COUNT(${resolveArg(col as string | SQLExpr<unknown>, quoteFn)})`),
+  countAll:      (): SQLExpr<bigint> => sqlExpr("COUNT(*)"),
+  count:         (col: ColName<TColEntries> | "*" | SQLExpr<unknown>): SQLExpr<bigint> =>
+    sqlExpr(col === "*" ? "COUNT(*)" : `COUNT(${resolveArg(col as string | SQLExpr<unknown>, quoteFn)})`),
   countDistinct: (col: ColName<TColEntries>): SQLExpr<bigint> =>
     sqlExpr(`COUNT(DISTINCT ${quoteFn(col)})`),
   ceil:  (col: FilterCols<TColEntries, number> | SQLExpr<number>): SQLExpr<number | Decimal> =>

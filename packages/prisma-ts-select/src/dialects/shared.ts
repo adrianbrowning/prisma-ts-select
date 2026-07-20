@@ -1,5 +1,5 @@
-import { resolveArg } from "../sql-expr.js";
-import type { SQLExpr } from "../sql-expr.js";
+import { resolveArg } from "../sql-expr.ts";
+import type { SQLExpr } from "../sql-expr.ts";
 
 /**
  * Shared SQL functions that work identically across all supported databases.

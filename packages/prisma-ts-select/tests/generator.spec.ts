@@ -4,7 +4,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { createHash } from "node:crypto";
-import { generateM2MMapDeclaration } from "../src/generator.ts";
+import { generateM2MMapDeclaration } from "../src/utils/m2m-map.ts";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -48,7 +48,7 @@ describe("Generator package.json output", () => {
 
   test("exports keys", () => {
     const { exports } = readPkgJson("usage-sqlite-v7");
-    assert.deepEqual(Object.keys(exports), [".", "./extend-v6", "./extend-v7", "./dialects", "./dialects/*"]);
+    assert.deepEqual(Object.keys(exports), [".", "./db", "./extend-v6", "./extend-v7", "./dialects", "./dialects/*"]);
   });
 
   test("exports shape", () => {
@@ -124,9 +124,11 @@ describe("Generator M2MMap output", () => {
 
   test("reciprocal: M2MBug_CatA maps back to M2MBug_Post", () => {
     const dts = readExtendDts(PKG);
-    // Find M2MBug_CatA section in M2MMap and check it has M2MBug_Post entry
+    // Find the M2MBug_CatA *source* block (starts with `"M2MBug_CatA": {`)
     const m2mMapIdx = dts.indexOf("type M2MMap");
-    const catASection = dts.indexOf('"M2MBug_CatA"', m2mMapIdx);
+    const sourcePattern = '"M2MBug_CatA": {';
+    const catASection = dts.indexOf(sourcePattern, m2mMapIdx);
+    assert.ok(catASection !== -1, "M2MBug_CatA source block must exist in M2MMap");
     const blockEnd = dts.indexOf("};", catASection);
     const snippet = dts.slice(catASection, blockEnd + 2);
     assert.ok(

@@ -1,11 +1,11 @@
-import { resolveArg, sqlExpr, DISTINCT_BRAND } from "../sql-expr.js";
-import type { SQLExpr } from "../sql-expr.js";
+import { resolveArg, sqlExpr, DISTINCT_BRAND } from "../sql-expr.ts";
+import type { SQLExpr } from "../sql-expr.ts";
 // Re-exported for generated extend-v*.d.ts — required by type system, do not remove
 export { DISTINCT_BRAND };
-import { mysqlContextFns, mysqlDialect } from "./mysql.js";
-import type { FilterCols, ColName } from "./shared.js";
+import { mysqlContextFns, mysqlDialect } from "./mysql.ts";
+import type { FilterCols, ColName } from "./shared.ts";
 
-export type { IntervalUnit } from "./mysql.js";
+export type { IntervalUnit } from "./mysql.ts";
 export { mysqlDialect };
 
 /**
@@ -18,9 +18,9 @@ export const mysqlV6ContextFns = <TColEntries extends [string, unknown] = never,
   condFn: (criteria: TCriteria) => string
 ) => ({
   ...mysqlContextFns<TColEntries, TCriteria>(quoteFn, condFn),
-  countAll:      (): SQLExpr<bigint> => sqlExpr('COUNT(*)'),
-  count:         (col: ColName<TColEntries> | '*' | SQLExpr<unknown>): SQLExpr<bigint> =>
-    sqlExpr(col === '*' ? 'COUNT(*)' : `COUNT(${resolveArg(col as string | SQLExpr<unknown>, quoteFn)})`),
+  countAll:      (): SQLExpr<bigint> => sqlExpr("COUNT(*)"),
+  count:         (col: ColName<TColEntries> | "*" | SQLExpr<unknown>): SQLExpr<bigint> =>
+    sqlExpr(col === "*" ? "COUNT(*)" : `COUNT(${resolveArg(col as string | SQLExpr<unknown>, quoteFn)})`),
   countDistinct: (col: ColName<TColEntries>): SQLExpr<bigint> =>
     sqlExpr(`COUNT(DISTINCT ${quoteFn(col)})`),
   length: (col: FilterCols<TColEntries, string> | SQLExpr<string>): SQLExpr<bigint> =>

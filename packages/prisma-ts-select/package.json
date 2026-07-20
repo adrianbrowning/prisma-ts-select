@@ -6,8 +6,7 @@
     "prisma-ts-select": "dist/bin.cjs"
   },
   "main": "./dist/generator.cjs",
-  "module": "./dist/generator.js",
-  "types": "./dist/generator.d.cts",
+  "types": "./dist/generator.d.ts",
   "exports": {
     "./extend": {
       "types": "./dist/extend/extend.d.ts",
@@ -15,23 +14,15 @@
       "default": "./dist/extend/extend.js"
     },
     ".": {
-      "import": {
-        "import": "./dist/generator.mjs",
-        "default": "./dist/generator.mjs",
-        "types": "./dist/generator.d.mts"
-      },
-      "require": {
-        "import": "./dist/generator.js",
-        "require": "./dist/generator.js",
-        "default": "./dist/generator.js",
-        "types": "./dist/generator.d.ts"
-      }
+      "types": "./dist/generator.d.ts",
+      "require": "./dist/generator.cjs",
+      "default": "./dist/generator.cjs"
     }
   },
   "scripts": {
     "pre-release": "pnpm version prerelease --preid=rc --no-git-tag-version && pnpm build && pnpm pack",
     "bp": "pnpm build && pnpm version patch && pnpm pack",
-    "build": "pnpm exec rimraf dist && tsup",
+    "build": "pnpm exec rimraf dist && node build.ts",
     "reset": "rm -rf prisma/migrations/ && prisma migrate dev --name init  && prisma generate",
     "start": "node src/index.ts",
     "prisma-upgrade": "pnpm i --save-dev prisma@latest && pnpm i @prisma/client@latest",
@@ -41,7 +32,6 @@
     "p:migrate": "pnpm exec prisma migrate dev",
     "p:update": "pnpm add -D prisma@latest && pnpm add @prisma/client@latest",
     "test": "node --test tests/**/*.spec.ts",
-    "test:jest": "jest",
     "2postinstall": "node src/scripts/postinstall.js",
     "doc": "pnpm exec markdown-toc -i README.md",
     "mdcode-ts": "pnpm exec mdcode",
