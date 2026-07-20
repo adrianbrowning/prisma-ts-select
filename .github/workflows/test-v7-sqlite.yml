@@ -13,46 +13,21 @@ jobs:
       matrix:
         node: [22.x, 24.x]
     steps:
-      - uses: actions/checkout@v4
-
-      - name: Use Node.js ${{ matrix.node }}
-        uses: actions/setup-node@v4
+      - uses: ./.github/actions/setup
         with:
           node-version: ${{ matrix.node }}
 
-      - name: Setup PNPM
-        uses: pnpm/action-setup@v4
-        with:
-          version: 10.18.x
-
-      - uses: actions/cache@v4
-        with:
-          path: "**/node_modules"
-          key: ${{ runner.os }}-node-${{ matrix.node }}-v7-sqlite-${{ hashFiles('**/pnpm-lock.yaml') }}
-
-      - name: Install dependencies
-        run: pnpm --filter prisma-ts-select i --no-frozen-lockfile
-
       - name: Build prisma-ts-select
-        working-directory: ./packages/prisma-ts-select
         run: pnpm --filter prisma-ts-select build
 
-      - name: Install dependencies (v7-sqlite)
-        working-directory: ./packages/usage-sqlite-v7
-        run: pnpm --filter usage-sqlite-v7 i --no-frozen-lockfile
-
       - name: Generate Prisma client
-        working-directory: ./packages/usage-sqlite-v7
         run: pnpm --filter usage-sqlite-v7 gen
 
       - name: Reset database
-        working-directory: ./packages/usage-sqlite-v7
         run: pnpm --filter usage-sqlite-v7 p:r
 
       - name: TypeScript check
-        working-directory: ./packages/usage-sqlite-v7
         run: pnpm --filter usage-sqlite-v7 lint:ts
 
       - name: Run tests
-        working-directory: ./packages/usage-sqlite-v7
         run: pnpm --filter usage-sqlite-v7 test

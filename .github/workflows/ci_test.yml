@@ -1,0 +1,19 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: ["*"]
+
+jobs:
+  prisma-ts-select:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: ./.github/actions/setup
+
+      - name: Build
+        run: pnpm --filter prisma-ts-select build
+
+      - name: Test
+        run: pnpm --filter prisma-ts-select test
