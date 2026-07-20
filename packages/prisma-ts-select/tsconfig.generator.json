@@ -1,0 +1,11 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "declaration": true,
+    "emitDeclarationOnly": true,
+    "allowImportingTsExtensions": true,
+    "outDir": "./dist",
+    "sourceMap": false
+  },
+  "include": ["src/bin.ts", "src/generator.ts", "src/constants.ts", "src/utils/**/*"]
+}
