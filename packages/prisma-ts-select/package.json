@@ -80,36 +80,12 @@
   },
   "devDependencies": {
     "@prisma/client": "6.19.3",
-    "@semantic-release/changelog": "^6.0.1",
-    "@semantic-release/git": "^10.0.1",
-    "@stylistic/eslint-plugin": "^1.5.4",
-    "@total-typescript/ts-reset": "^0.5.1",
-    "@types/better-sqlite3": "^7.6.13",
-    "@types/humanize-duration": "^3.27.2",
-    "@types/jest": "27.0.3",
-    "@types/klaw-sync": "^6.0.1",
-    "@types/lodash": "^4.14.197",
-    "@types/node": "20.11.30",
-    "@types/object-hash": "^3.0.4",
-    "@types/prettier": "2.4.2",
-    "@typescript-eslint/eslint-plugin": "^6.19.1",
-    "@typescript-eslint/parser": "^6.19.1",
-    "humanize-duration": "^3.34.0",
-    "jest": "27.4.7",
-    "klaw-sync": "^8.0.0",
-    "knip": "^5.9.4",
-    "log-with-statusbar": "^1.2.0",
+    "@types/node": "24.13.3",
+    "esbuild": "^0.28.1",
     "markdown-toc": "^1.2.0",
     "mdcode-ts": "^0.0.4",
     "prisma": "6.19.3",
-    "prisma-dbml-generator": "^0.12.0",
-    "prisma-docs-generator": "^0.8.0",
-    "progress-string": "^1.2.2",
-    "rimraf": "^6.1.3",
-    "semantic-release": "^18.0.1",
-    "ts-jest": "27.1.4",
-    "tsup": "^8.5.1",
-    "typescript": "^5.9.3"
+    "rimraf": "^6.1.3"
   },
   "keywords": [
     "prisma",
@@ -123,20 +99,6 @@
     "pnpm": ">= 8.6.12"
   },
   "target": "node",
-  "knip": {
-    "entry": [
-      "scripts/**/*.{js,ts}"
-    ],
-    "project": [
-      "**/*.{js,ts}"
-    ],
-    "ignoreBinaries": [
-      "date"
-    ],
-    "ignoreDependencies": [
-      "prisma-.+"
-    ]
-  },
   "release": {
     "branches": [
       "main"
