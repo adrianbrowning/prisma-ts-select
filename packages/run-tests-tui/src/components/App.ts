@@ -26,6 +26,7 @@ export default function App({ config }: { config: RunConfig; }): ReturnType<type
 
     orchestrate(config, initialPanelsRef.current, timestamp, dispatch).then(() => {
       clearInterval(timer);
+      return null;
     })
       .catch(() => {
         clearInterval(timer);
@@ -36,11 +37,9 @@ export default function App({ config }: { config: RunConfig; }): ReturnType<type
   }, [ config, timestamp ]);
 
   useEffect(() => {
-    if (state.done) {
-      const t = setTimeout(() => exit(), 150);
-      return () => clearTimeout(t);
-    }
-    return undefined;
+    if (!state.done) return () => {};
+    const t = setTimeout(() => exit(), 150);
+    return () => clearTimeout(t);
   }, [ state.done, exit ]);
 
   return h(Box, { flexDirection: "column", padding: 1 },

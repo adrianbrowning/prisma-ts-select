@@ -1,10 +1,13 @@
+import { spawn, execFile } from "node:child_process";
 import { createWriteStream } from "node:fs";
 import { mkdir } from "node:fs/promises";
-import { execa } from "execa";
+import { promisify } from "node:util";
 import type { RunConfig } from "./cli.ts";
 import type { Action, PanelState } from "./state.ts";
 
 type Dispatch = (action: Action) => void;
+
+const execFileAsync = promisify(execFile);
 
 function pad2(n: number): string {
   return String(n).padStart(2, "0");
@@ -17,8 +20,8 @@ export function makeTimestamp(): string {
 
 async function getBranchDbs(): Promise<{ v6: string; v7: string; }> {
   try {
-    const result = await execa("git", [ "rev-parse", "--abbrev-ref", "HEAD" ], { reject: false });
-    const branch = (result.stdout ?? "local").trim();
+    const result = await execFileAsync("git", [ "rev-parse", "--abbrev-ref", "HEAD" ]);
+    const branch = result.stdout.trim();
     const safe = branch.replace(/[^a-zA-Z0-9]/g, "_").toLowerCase()
       .slice(0, 60);
     return { v6: `${safe}_v6`, v7: `${safe}_v7` };
@@ -39,16 +42,39 @@ async function runStep(
   opts: { env?: Record<string, string>; cwd?: string; },
   onLine: (line: string) => void
 ): Promise<number> {
-  const proc = execa(cmd[0], cmd.slice(1), {
-    env: { ...process.env, ...(opts.env ?? {}) },
-    cwd: opts.cwd,
-    all: true,
-    reject: false,
+  return new Promise(resolve => {
+    const proc = spawn(cmd[0], cmd.slice(1), {
+      env: { ...process.env, ...(opts.env ?? {}) },
+      cwd: opts.cwd,
+      stdio: [ "ignore", "pipe", "pipe" ],
+    });
+
+    let buffer = "";
+    const flush = (chunk: Buffer): void => {
+      buffer += chunk.toString();
+      const lines = buffer.split("\n");
+      buffer = lines.pop()!;
+      for (const line of lines) onLine(line);
+    };
+
+    proc.stdout.on("data", flush);
+    proc.stderr.on("data", flush);
+    proc.on("close", code => {
+      if (buffer) onLine(buffer);
+      resolve(code ?? 1);
+    });
   });
-  for await (const line of proc.iterable({ from: "all" })) {
-    onLine(line);
+}
+
+async function execSimple(cmd: string, args: Array<string>): Promise<{ stdout: string; exitCode: number; }> {
+  try {
+    const result = await execFileAsync(cmd, args);
+    return { stdout: result.stdout, exitCode: 0 };
   }
-  return (await proc).exitCode ?? 1;
+  catch (err: unknown) {
+    const e = err as { stdout?: string; code?: number; };
+    return { stdout: e.stdout ?? "", exitCode: e.code ?? 1 };
+  }
 }
 
 async function runDocker(
@@ -65,31 +91,31 @@ async function runDocker(
 
   dispatch({ type: "SET_DOCKER", status: "running" });
 
-  const services: Array<string> = [];
+  const services: Array<"mysql" | "postgres"> = [];
+  // eslint-disable-next-line sonarjs/argument-type -- string literal satisfies Array<string>.includes
   if (dbs.includes("mysql")) services.push("mysql");
+  // eslint-disable-next-line sonarjs/argument-type
   if (dbs.includes("pg")) services.push("postgres");
 
-  // Check which services already running
-  const running = await execa("docker", [ "compose", "ps", "--services", "--filter", "status=running" ], { reject: false });
-  const runningList = (running.stdout ?? "").split("\n").filter(Boolean);
-  const needStart = services.some(s => !runningList.includes(s));
+  const running = await execSimple("docker", [ "compose", "ps", "--services", "--filter", "status=running" ]);
+  const runningSet = new Set(running.stdout.split("\n").filter(Boolean));
+  const needStart = services.some(s => !runningSet.has(s));
 
   if (!needStart) {
-    // Still create branch DBs even if already running
     await createBranchDbs(dbs, versions, branchDbs);
     dispatch({ type: "SET_DOCKER", status: "done" });
     return false;
   }
 
-  // Stop conflicting containers on required ports
-  const portMap: Record<string, number> = { postgres: 5432, mysql: 3306 };
+  const portMap = { postgres: 5432, mysql: 3306 } as const;
   for (const svc of services) {
     const port = portMap[svc];
-    if (!port) continue;
-    const conflict = await execa("docker", [ "ps", "--filter", `publish=${port}`, "--format", "{{.Names}}" ], { reject: false });
-    const names = (conflict.stdout ?? "").trim();
+    // eslint-disable-next-line no-await-in-loop -- must stop conflicts sequentially
+    const conflict = await execSimple("docker", [ "ps", "--filter", `publish=${port}`, "--format", "{{.Names}}" ]);
+    const names = conflict.stdout.trim();
     if (names) {
-      await execa("docker", [ "stop", ...names.split("\n").filter(Boolean) ], { reject: false });
+      // eslint-disable-next-line no-await-in-loop
+      await execSimple("docker", [ "stop", ...names.split("\n").filter(Boolean) ]);
     }
   }
 
@@ -113,10 +139,12 @@ async function createBranchDbs(
     for (const ver of versions) {
       const name = ver === "6" ? branchDbs.v6 : branchDbs.v7;
       if (db === "mysql") {
-        await execa("docker", [ "compose", "exec", "-T", "mysql", "mysql", "-uroot", "-ptest", "-e", `CREATE DATABASE IF NOT EXISTS \`${name}\`;` ], { reject: false });
+        // eslint-disable-next-line no-await-in-loop -- sequential DB creation
+        await execSimple("docker", [ "compose", "exec", "-T", "mysql", "mysql", "-uroot", "-ptest", "-e", `CREATE DATABASE IF NOT EXISTS \`${name}\`;` ]);
       }
       else if (db === "pg") {
-        await execa("docker", [ "compose", "exec", "-T", "postgres", "psql", "-U", "postgres", "-c", `CREATE DATABASE "${name}";` ], { reject: false });
+        // eslint-disable-next-line no-await-in-loop -- sequential DB creation
+        await execSimple("docker", [ "compose", "exec", "-T", "postgres", "psql", "-U", "postgres", "-c", `CREATE DATABASE "${name}";` ]);
       }
     }
   }
@@ -162,11 +190,9 @@ async function runPackage(
 
   dispatch({ type: "SET_PANEL", idx, updates: { status: "running", step: "gen" } });
 
-  // gen
   const genCode = await runStep([ "pnpm", "--filter", pkg, "gen" ], { env }, onLine);
   if (genCode !== 0) { fail("gen", genCode); return; }
 
-  // optional seed
   if (config.resetDb) {
     setStep("seed", "running");
     dispatch({ type: "SET_PANEL", idx, updates: { seeded: true } });
@@ -195,12 +221,10 @@ async function runPackage(
     dispatch({ type: "SET_PANEL", idx, updates: { exitCode: testCode } });
   }
   else {
-    // lint
     setStep("lint", "running");
     const lintCode = await runStep([ "pnpm", "--filter", pkg, "lint:ts" ], { env }, onLine);
     if (lintCode !== 0) { fail("lint", lintCode); return; }
 
-    // test
     setStep("test", "running");
     const testCode = await runStep([ "pnpm", "--filter", pkg, "test" ], { env }, onLine);
     setStep("test", testCode === 0 ? "done" : "failed");
@@ -210,6 +234,7 @@ async function runPackage(
   logStream.end();
 }
 
+// eslint-disable-next-line sonarjs/cognitive-complexity -- orchestration is inherently branchy
 export async function orchestrate(
   config: RunConfig,
   panels: Array<PanelState>,
@@ -222,7 +247,7 @@ export async function orchestrate(
 
   let dockerStarted = false;
   const cleanup = async (): Promise<void> => {
-    if (dockerStarted) await execa("docker", [ "compose", "down" ], { reject: false });
+    if (dockerStarted) await execSimple("docker", [ "compose", "down" ]);
   };
 
   process.on("SIGINT", () => {
@@ -243,7 +268,6 @@ export async function orchestrate(
     dispatch({ type: "SET_BUILD", status: "skipped" });
   }
 
-  // Pre-reset shared DBs (mysql/pg) sequentially before parallel runs
   if (config.resetDb) {
     for (const db of config.dbs) {
       if (db !== "mysql" && db !== "pg") continue;
@@ -251,17 +275,18 @@ export async function orchestrate(
         const pkg = `usage-${db}-v${ver}`;
         const env: Record<string, string> = {};
         env["DATABASE_URL"] = getDbUrl(db, ver, branchDbs);
+        // eslint-disable-next-line no-await-in-loop -- sequential seed is intentional
         await runStep([ "pnpm", "--filter", pkg, "p:r" ], { env }, () => {});
       }
     }
   }
 
   if (config.seedOnly) {
-    // Seed sqlite packages (mysql/pg already done above)
     for (const ver of config.versions) {
       for (const db of config.dbs) {
         if (db !== "sqlite") continue;
         const pkg = `usage-${db}-v${ver}`;
+        // eslint-disable-next-line no-await-in-loop -- sequential seed is intentional
         await runStep([ "pnpm", "--filter", pkg, "p:r" ], {}, () => {});
       }
     }

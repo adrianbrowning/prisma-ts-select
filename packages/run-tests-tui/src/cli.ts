@@ -31,12 +31,12 @@ Examples:
   program.parse(argv);
   const opts = program.opts();
 
-  if (opts["version"] != null && ![ "6", "7" ].includes(opts["version"] as string)) {
-    console.error(`Error: --version must be 6 or 7, got "${opts["version"]}"`);
+  if (opts["version"] != null && opts["version"] !== "6" && opts["version"] !== "7") {
+    process.stderr.write(`Error: --version must be 6 or 7, got "${opts["version"]}"\n`);
     process.exit(1);
   }
-  if (opts["db"] != null && ![ "sqlite", "mysql", "pg" ].includes(opts["db"] as string)) {
-    console.error(`Error: --db must be sqlite, mysql, or pg, got "${opts["db"]}"`);
+  if (opts["db"] != null && opts["db"] !== "sqlite" && opts["db"] !== "mysql" && opts["db"] !== "pg") {
+    process.stderr.write(`Error: --db must be sqlite, mysql, or pg, got "${opts["db"]}"\n`);
     process.exit(1);
   }
 
