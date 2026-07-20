@@ -23,3 +23,4 @@ sorted-seeking-hoare.md
 /packages/prisma-ts-select/prisma-ts-select-*.tgz
 /packages/*bug*/
 /packages/*/.eslintcache
+/.eslintcache
