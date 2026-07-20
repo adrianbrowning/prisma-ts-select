@@ -87,7 +87,7 @@
     "@types/lodash": "^4.14.197",
     "@types/node": "20.11.30",
     "@types/object-hash": "^3.0.4",
-    "@types/prettier": "2.4.2",
+    "@types/prettier": "3.0.0",
     "@typescript-eslint/eslint-plugin": "^6.19.1",
     "@typescript-eslint/parser": "^6.19.1",
     "humanize-duration": "^3.34.0",
