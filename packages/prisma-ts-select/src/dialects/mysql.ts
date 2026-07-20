@@ -76,7 +76,7 @@ export const mysqlContextFns = <TColEntries extends [string, unknown] = never, T
   second:    (col: FilterCols<TColEntries, Date> | SQLExpr<Date>): SQLExpr<number> => sqlExpr(`SECOND(${resolveArg(col, quoteFn)})`),
   // Control flow
   $if: <T>(cond: TCriteria | SQLExpr<unknown>, trueVal: SQLExpr<T>, falseVal: SQLExpr<T>): SQLExpr<T> => {
-    const condSql = typeof cond === "object" && cond !== null && "sql" in cond
+    const condSql = typeof cond === "object" && "sql" in cond
       ? (cond).sql
       : condFn(cond);
     return sqlExpr(`IF(${condSql}, ${trueVal.sql}, ${falseVal.sql})`);

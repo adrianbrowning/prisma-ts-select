@@ -79,7 +79,7 @@ export const sqliteContextFns = <TColEntries extends [string, unknown] = never, 
   // Note: SQLite has no GREATEST()/LEAST() functions — it uses scalar MAX(a,b)/MIN(a,b) instead.
   // Omitted here because the naming diverges from the MySQL/PG convention.
   iif: <T>(cond: TCriteria | SQLExpr<unknown>, trueVal: SQLExpr<T>, falseVal: SQLExpr<T>): SQLExpr<T> => {
-    const condSql = typeof cond === "object" && cond !== null && "sql" in cond
+    const condSql = typeof cond === "object" && "sql" in cond
       ? (cond).sql
       : condFn(cond);
     return sqlExpr(`IIF(${condSql}, ${trueVal.sql}, ${falseVal.sql})`);

@@ -7,8 +7,8 @@ import type { ConnectorType, DMMF } from "@prisma/generator-helper";
 import type { GeneratorOptions } from "@prisma/generator-helper";
 import { logger } from "@prisma/internals";
 import { GENERATOR_NAME } from "./constants.ts";
-import type { DBType } from "./utils/types.ts";
 import { generateM2MMapDeclaration } from "./utils/m2m-map.ts";
+import type { DBType } from "./utils/types.ts";
 import { writeFileSafely } from "./utils/writeFileSafely.ts";
 const _require = createRequire(import.meta.url);
 

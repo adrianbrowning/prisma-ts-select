@@ -129,7 +129,7 @@ export const postgresqlContextFns = <TColEntries extends [string, unknown] = nev
   jsonExtract: (col: FilterJsonCols<TColEntries> | SQLExpr<JSONValue>, path: string): SQLExpr<JSONValue> =>
     sqlExpr(`jsonb_path_query_first(${resolveArg(col, quoteFn)}, '${esc(path)}')`),
   jsonArray: (...args: [ColName<TColEntries> | SQLExpr<unknown>, ...Array<ColName<TColEntries> | SQLExpr<unknown>>]): SQLExpr<Array<JSONValue>> =>
-    sqlExpr(`jsonb_build_array(${args.map(a => resolveArg(a as ColName<TColEntries> | SQLExpr<unknown>, quoteFn)).join(", ")})`),
+    sqlExpr(`jsonb_build_array(${args.map(a => resolveArg(a, quoteFn)).join(", ")})`),
   jsonObject: (pairs: Array<[string, ColName<TColEntries> | SQLExpr<unknown>]>): SQLExpr<JSONObject> =>
     sqlExpr(`jsonb_build_object(${flattenJsonObjectPairs(pairs, quoteFn).join(", ")})`),
   // ── Type coercion ────────────────────────────────────────────────────────

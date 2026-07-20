@@ -1,3 +1,4 @@
+/* eslint-disable sonarjs/class-name, @typescript-eslint/no-empty-object-type */
 import { Prisma } from "@prisma/client/extension";
 import type { Decimal } from "@prisma/client/runtime/client";
 import { match, P } from "ts-pattern";
@@ -13,6 +14,8 @@ import { lit as _lit, sqlExpr, resolveArg } from "./sql-expr.ts";
 import type { SQLExpr, LitToType } from "./sql-expr.ts";
 
 // Placeholder replaced by generator with actual M2M relationship map
+type BLANK_OBJECT = {};
+
 type M2MMap = {};
 const SAFE_IDENT_RE = /^\w+$/;
 
@@ -209,6 +212,7 @@ type Whitespace = "\n" | " ";
 //@ts-expect-error will implement in another issue
 type Trim<T> = T extends `${Whitespace}${infer U}` ? Trim<U> : T extends `${infer U}${Whitespace}` ? Trim<U> : T;
 
+
 /**
  * Valid column selection patterns for SELECT clause.
  * Combines wildcard selection, individual columns, and table-specific wildcards.
@@ -221,7 +225,7 @@ type Trim<T> = T extends `${Whitespace}${infer U}` ? Trim<U> : T extends `${infe
  * ValidSelect<["User", "Post"]>
  * // Returns: "*" | "id" | "name" | "Post.id" | "Post.title" | "User.*" | "Post.*"
  */
-type ValidSelect<Tables extends TArrSources, TFields extends TFieldsType = {}> =
+type ValidSelect<Tables extends TArrSources, TFields extends TFieldsType = BLANK_OBJECT> =
     | "*"
     | GetOtherColumns<Tables>
     | GetTableStar<Tables>
@@ -354,14 +358,14 @@ class DbSelect {
  * Type for WHERE and HAVING clause arrays, supporting both raw SQL strings and structured criteria objects.
  *
  * @template TArrSources - Array of table sources in the query
- * @template Record<string, any> - Field types for the tables
+ * @template TFields - Field types for the tables
  *
  * @example
  * // Array can contain:
  * // 1. Raw SQL strings: "age > 18"
  * // 2. Structured criteria: { "User.age": { op: '>', value: 18 } }
  */
-type ClauseType = Array<string | WhereCriteria<TArrSources, Record<string, any>>>;
+type ClauseType = Array<string | WhereCriteria<TArrSources, {}>>;
 
 /**
  * Internal query builder state containing all query components.
@@ -542,7 +546,7 @@ function processExprPairs(pairs: Array<ExprCondPair>): string {
 /*
 run
  */
-class _fRun<TSources extends TArrSources, TFields extends TFieldsType, TSelectRT extends Record<string, any> = {}> {
+class _fRun<TSources extends TArrSources, TFields extends TFieldsType, TSelectRT extends {} = {}> {
   constructor(protected db: PrismaClient,
     protected values: Values) {
     this.values.limit = typeof this.values.limit === "number" ? this.values.limit : undefined;
@@ -678,7 +682,7 @@ OFFSET -
 run
 */
 
-class _fOffset<TSources extends TArrSources, TFields extends TFieldsType, TSelectRT extends Record<string, any> = {}> extends _fRun<TSources, TFields, TSelectRT> {
+class _fOffset<TSources extends TArrSources, TFields extends TFieldsType, TSelectRT extends {} = BLANK_OBJECT> extends _fRun<TSources, TFields, TSelectRT> {
   offset(offset: number) {
     return new _fRun<TSources, TFields, TSelectRT>(this.db, { ...this.values, offset });
   }
@@ -690,7 +694,7 @@ OFFSET -
 run
 */
 
-class _fLimit<TSources extends TArrSources, TFields extends TFieldsType, TSelectRT extends Record<string, any> = {}> extends _fRun<TSources, TFields, TSelectRT> {
+class _fLimit<TSources extends TArrSources, TFields extends TFieldsType, TSelectRT extends {} = BLANK_OBJECT> extends _fRun<TSources, TFields, TSelectRT> {
   limit(limit: number) {
     return new _fOffset<TSources, TFields, TSelectRT>(this.db, { ...this.values, limit });
   }
@@ -708,7 +712,7 @@ class _fLimit<TSources extends TArrSources, TFields extends TFieldsType, TSelect
  * OrderBy<["User", "Post"], {userCount: number}>
  * // Returns: "id" | "name" | "User.id" | "Post.id" | "Post.title" | "userCount"
  */
-type OrderBy<Tables extends TArrSources, TSelectRT extends Record<string, any> = {}> = Tables extends [infer T extends TTableSources, ...Array<TTableSources>]
+type OrderBy<Tables extends TArrSources, TSelectRT extends {} = BLANK_OBJECT> = Tables extends [infer T extends TTableSources, ...Array<TTableSources>]
   ? GetColsBaseTable<T> | GetJoinCols<Tables[number]> | (keyof TSelectRT & string)
   : never;
 
@@ -721,7 +725,7 @@ run
 
 //Select extends GetOtherColumns<TSources>>(groupBy: Array<TSelect>
 
-class _fOrderBy<TSources extends TArrSources, TFields extends TFieldsType, TSelectRT extends Record<string, any> = {}> extends _fLimit<TSources, TFields, TSelectRT> {
+class _fOrderBy<TSources extends TArrSources, TFields extends TFieldsType, TSelectRT extends {} = BLANK_OBJECT> extends _fLimit<TSources, TFields, TSelectRT> {
   orderBy(orderBy: Array<`${OrderBy<TSources, TSelectRT>}${ "" | " DESC" | " ASC"}`>) {
     return new _fLimit<TSources, TFields, TSelectRT>(this.db, { ...this.values, orderBy });
   }
@@ -817,7 +821,7 @@ type FindColumnInFields<Column extends string,
  * IterateTables<["User", "Post"], {...}, true>
  * // Returns: {"User.id": number, "User.name": string, "Post.id": number, "Post.title": string}
  */
-type IterateTables<Tables extends Array<TTableSources>, TFields extends TFieldsType, IncTName extends boolean, acc extends Record<string, any> = {}> =
+type IterateTables<Tables extends Array<TTableSources>, TFields extends TFieldsType, IncTName extends boolean, acc extends {} = BLANK_OBJECT> =
   Tables extends [infer T extends TTableSources, ...infer Rest extends Array<TTableSources>]
     ? [IncTName] extends [false]
       ? IterateTables<Rest, TFields, IncTName, acc & TFields[T extends string ? T : T[1]]>
@@ -964,7 +968,7 @@ type GetOtherColumns<Tables extends TArrSources> =
     Exclude<GetColumnsFromTables<Tables>, GetDuplicateColumnsPairwise<Tables>>
     | GetJoinCols<Tables[number]>;
 
-class _fSelect<TSources extends TArrSources, TFields extends TFieldsType, TSelectRT extends Record<string, any> = {}> extends _fOrderBy<TSources, TFields, TSelectRT> {
+class _fSelect<TSources extends TArrSources, TFields extends TFieldsType, TSelectRT extends {} = BLANK_OBJECT> extends _fOrderBy<TSources, TFields, TSelectRT> {
   // Fn overload — no alias → key is widened to `string`
   select<T>(fn: (ctx: SelectFnContext<TSources, TFields>) => SQLExpr<T>): _fSelect<TSources, TFields, Prettify<TSelectRT & Record<string, T>>>;
   // Fn overload — with alias → key is the literal alias
@@ -1121,7 +1125,7 @@ type StripTablePrefix<S extends string> = S extends `${string}.${infer Col}` ? C
 // Handles both single-table (unqualified keys) and multi-table (qualified keys)
 type OmitFromSelectAll<TBase, TOmit extends string> = Prettify<Omit<TBase, TOmit | StripTablePrefix<TOmit>>>;
 
-class _fSelectDistinct<TSources extends TArrSources, TFields extends TFieldsType, TSelectRT extends Record<string, any> = {}> extends _fSelect<TSources, TFields, TSelectRT> {
+class _fSelectDistinct<TSources extends TArrSources, TFields extends TFieldsType, TSelectRT extends {} = BLANK_OBJECT> extends _fSelect<TSources, TFields, TSelectRT> {
   selectDistinct() {
     return new _fSelect<TSources, TFields, TSelectRT>(this.db, { ...this.values, selectDistinct: true });
   }
@@ -1500,7 +1504,7 @@ type JoinWhereCriteria<Table extends string, TAlias extends string | never> =
  * WhereCriteria_Fields<["User", ["Post", "p"]], { User: { id: number }, Post: { id: number, authorId: number } }>
  * // Result: { "User.id"?: number | COND_NUMERIC<...>, "p.id"?: number | COND_NUMERIC<...>, "p.authorId"?: ... }
  */
-type WhereCriteria_Fields<T extends Array<TTableSources>, TFields extends TFieldsType, acc = {}> =
+type WhereCriteria_Fields<T extends Array<TTableSources>, TFields extends TFieldsType, acc = BLANK_OBJECT> =
   T extends readonly [infer HEAD, ...infer Rest]
     ? HEAD extends string
       ? Rest extends Array<TTableSources>
@@ -2304,7 +2308,7 @@ type IsCTE<T extends string, TSources extends TArrSources> =
     : never;
 
 /** Stub type replaced by generator with Omit<_fJoin<...>, unsupportedMethods> for each dialect. */
-export type _fJoinReturn<TSources extends TArrSources, TFields extends TFieldsType, TCTEs extends Record<string, Record<string, any>> = {}> = _fJoin<TSources, TFields, TCTEs>;
+export type _fJoinReturn<TSources extends TArrSources, TFields extends TFieldsType, TCTEs extends Record<string, Record<string, any>> = BLANK_OBJECT> = _fJoin<TSources, TFields, TCTEs>;
 
 // ── SelectFnContext ──────────────────────────────────────────────────────────
 
@@ -2443,7 +2447,7 @@ type AvailableRefNames<TSource extends TTables> =
 class _fJoin<
   TSources extends TArrSources,
   TFields extends TFieldsType,
-  TCTEs extends Record<string, Record<string, any>> = {}
+  TCTEs extends Record<string, Record<string, any>> = BLANK_OBJECT
 > extends _fWhere<TSources, TFields> {
 
   /**

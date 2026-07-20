@@ -47,12 +47,16 @@ jobs:
             exit 0
           fi
 
-          if grep -qiE "(warning|error)" lint-output.txt; then
+          # Check if there are any warnings or errors in the output (match actual ESLint problem lines)
+          if grep -qE "^\s+[0-9]+:[0-9]+\s+(warning|error)\s" lint-output.txt; then
             echo "has_issues=true" >> $GITHUB_OUTPUT
           else
             echo "has_issues=false" >> $GITHUB_OUTPUT
           fi
 
+          # Determine if output contains errors (not just warnings)
+
+          # Match only actual error lines (format: "  92:8  error"), not summary line
           if grep -E "^\s+[0-9]+:[0-9]+\s+error\s" lint-output.txt; then
             echo "has_errors=true" >> $GITHUB_OUTPUT
           else
