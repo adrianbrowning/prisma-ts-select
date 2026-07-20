@@ -35,11 +35,7 @@
     "reset": "rm -rf prisma/migrations/ && prisma migrate dev --name init  && prisma generate",
     "start": "node src/index.ts",
     "prisma-upgrade": "pnpm i --save-dev prisma@latest && pnpm i @prisma/client@latest",
-    "lint:ts": "tsc --noEmit -p tsconfig.json",
     "lint:tsw": "pnpm tsc -w",
-    "lint": "tsc --noEmit ; eslint \"scripts/**/*.{j,t}s{,x}\" --cache --max-warnings=0",
-    "lint:s": "eslint --config .eslintrc.style.json \"scripts/**/*.{j,t}s{,x}\" --cache --max-warnings=0",
-    "lint:fix": "eslint --config .eslintrc.style.json \"scripts/**/*.{j,t}s{,x}\" --cache --max-warnings=0 --fix",
     "p:gen": "pnpm exec prisma generate",
     "p:dbp": "pnpm exec prisma db push",
     "p:migrate": "pnpm exec prisma migrate dev",
@@ -51,7 +47,15 @@
     "mdcode-ts": "pnpm exec mdcode",
     "readme:extract": "pnpm mdcode extract README.md",
     "readme:update": "pnpm mdcode update --transform ./transforms/readme-sql-clean.ts README.md",
-    "readme:test": "pnpm --filter usage-sqlite-v7 test -- tests/readme"
+    "readme:test": "pnpm --filter usage-sqlite-v7 test -- tests/readme",
+    "lint:ts": "tsc --noEmit -p tsconfig.json",
+    "lint": "lint:ts ; lint:s",
+    "lint:esl": "eslint --config ../../eslint.config.ts \"{src,tests}/**/*.{j,t}s{,x}\" --cache --max-warnings=0",
+    "lint:esl:fix": "pnpm lint:esl --fix",
+    "lint:s": "eslint --config ../../eslint.config.style.ts \"{src,tests}/**/*.{j,t}s{,x}\" --cache --max-warnings=0",
+    "lint:fix": "pnpm lint:s --fix",
+    "lint:jscpd": "jscpd .",
+    "lint:e18e": "pnpm dlx @e18e/cli analyze"
   },
   "dependencies": {
     "@prisma/generator-helper": "^6.19.3",

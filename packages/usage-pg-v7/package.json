@@ -9,7 +9,15 @@
     "lint:ts": "tsc --noEmit",
     "test:core": "node --import ../../shared-tests/client-resolver.mjs --import ../../shared-tests/test-setup.mjs --test './tests/core/**/*.spec.ts'",
     "test:dialect": "node --import ../../shared-tests/client-resolver.mjs --import ../../shared-tests/test-setup.mjs --test './tests/dialect/pg/**/*.ts' --test './tests/dialect/pg-v7/**/*.ts'",
-    "p:r": "prisma db push --force-reset && prisma db seed"
+    "p:r": "prisma db push --force-reset && prisma db seed",
+    "lint:ts": "tsc --noEmit -p tsconfig.json",
+    "lint": "lint:ts ; lint:s",
+    "lint:esl": "eslint --config ../../eslint.config.ts \"{src,tests}/**/*.{j,t}s{,x}\" --cache --max-warnings=0",
+    "lint:esl:fix": "pnpm lint:esl --fix",
+    "lint:s": "eslint --config ../../eslint.config.style.ts \"{src,tests}/**/*.{j,t}s{,x}\" --cache --max-warnings=0",
+    "lint:fix": "pnpm lint:s --fix",
+    "lint:jscpd": "jscpd .",
+    "lint:e18e": "pnpm dlx @e18e/cli analyze"
   },
   "imports": {
     "#client": "./src/client.ts",
