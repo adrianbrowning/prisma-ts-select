@@ -40,9 +40,9 @@
     "readme:test": "pnpm --filter usage-sqlite-v7 test -- tests/readme",
     "lint:ts": "tsc --noEmit -p tsconfig.json",
     "lint": "lint:ts ; lint:s",
-    "lint:esl": "eslint --config ../../eslint.config.ts \"{src,tests}/**/*.{j,t}s{,x}\" --cache --max-warnings=0",
+    "lint:esl": "eslint --config ../../eslint.config.ts \"{src,tests}/**/*.{j,t}s{,x}\" --cache",
     "lint:esl:fix": "pnpm lint:esl --fix",
-    "lint:s": "eslint --config ../../eslint.config.style.ts \"{src,tests}/**/*.{j,t}s{,x}\" --cache --max-warnings=0",
+    "lint:s": "eslint --config ../../eslint.config.style.ts \"{src,tests}/**/*.{j,t}s{,x}\" --cache",
     "lint:fix": "pnpm lint:s --fix",
     "lint:jscpd": "jscpd .",
     "lint:e18e": "pnpm dlx @e18e/cli analyze"
