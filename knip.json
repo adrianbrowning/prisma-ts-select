@@ -4,6 +4,7 @@
   "ignoreDependencies": [
     "@gcm/prisma-ts-select"
   ],
+  "ignoreBinaries": ["gen"],
   "ignore": [
     "shared-tests/**",
     "shared-prisma/**"
