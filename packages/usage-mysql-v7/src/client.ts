@@ -1,7 +1,7 @@
-import { PrismaClient } from '../generated/prisma/client.ts'
-import tsSelectExtend from '../generated/prisma-ts-select/extend-v7.js'
-import { PrismaMariaDb } from '@prisma/adapter-mariadb'
 import { loadEnvFile } from "node:process";
+import { PrismaMariaDb } from "@prisma/adapter-mariadb";
+import { PrismaClient } from "../generated/prisma/client.ts";
+import tsSelectExtend from "../generated/prisma-ts-select/extend-v7.js";
 
 loadEnvFile(".env");
 
@@ -16,6 +16,6 @@ const adapter = new PrismaMariaDb({
   connectionLimit: 10,
   connectTimeout: 1e3,
   acquireTimeout: 1e3,
-})
+});
 
-export const prisma = new PrismaClient({ adapter }).$extends(tsSelectExtend)
+export const prisma = new PrismaClient({ adapter }).$extends(tsSelectExtend);

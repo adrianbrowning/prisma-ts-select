@@ -28,33 +28,14 @@ jobs:
           --health-retries=10
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - name: Use Node.js ${{ matrix.node }}
-        uses: actions/setup-node@v4
+      - uses: ./.github/actions/setup
         with:
           node-version: ${{ matrix.node }}
 
-      - name: Setup PNPM
-        uses: pnpm/action-setup@v4
-        with:
-          version: 10.18.x
-
-      - uses: actions/cache@v4
-        with:
-          path: "**/node_modules"
-          key: ${{ runner.os }}-node-${{ matrix.node }}-v6-pg-${{ hashFiles('**/pnpm-lock.yaml') }}
-
-      - name: Install dependencies
-        run: pnpm --filter prisma-ts-select i --no-frozen-lockfile
-
       - name: Build prisma-ts-select
-        working-directory: ./packages/prisma-ts-select
         run: pnpm --filter prisma-ts-select build
-
-      - name: Install dependencies (v6-pg)
-        working-directory: ./packages/usage-pg-v6
-        run: pnpm --filter usage-pg-v6 i --no-frozen-lockfile
 
       - name: Wait for PostgreSQL
         run: |
@@ -69,17 +50,13 @@ jobs:
           exit 1
 
       - name: Generate Prisma client
-        working-directory: ./packages/usage-pg-v6
         run: pnpm --filter usage-pg-v6 gen
 
       - name: Reset database
-        working-directory: ./packages/usage-pg-v6
         run: pnpm --filter usage-pg-v6 p:r
 
       - name: TypeScript check
-        working-directory: ./packages/usage-pg-v6
         run: pnpm --filter usage-pg-v6 lint:ts
 
       - name: Run tests
-        working-directory: ./packages/usage-pg-v6
         run: pnpm --filter usage-pg-v6 test

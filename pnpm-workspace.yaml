@@ -16,3 +16,9 @@ blockExoticSubdeps: true
 
 trustPolicyExclude:
   - 'tinyexec@1.2.2'
+
+strictDepBuilds: true
+minimumReleaseAgeExclude:
+  - '@gingacodemonkey/config'
+trustPolicyIgnoreAfter: 43200
+trustPolicy: no-downgrade

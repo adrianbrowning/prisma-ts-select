@@ -1,12 +1,19 @@
 {
   "type": "module",
   "devDependencies": {
-    "@commitlint/cli": "21.0.1",
-    "@commitlint/config-conventional": "21.0.1",
-    "husky": "9.1.7"
+    "@commitlint/cli": "21.2.1",
+    "@commitlint/config-conventional": "21.2.0",
+    "@gingacodemonkey/config": "^0.0.38",
+    "@types/node": "^24.12.4",
+    "eslint": "^9.39.5",
+    "husky": "9.1.7",
+    "jiti": "^2.7.0",
+    "jscpd": "^5.0.12",
+    "knip": "6.26.0",
+    "lint-staged": "17.0.8",
+    "typescript": "^6.0.3"
   },
   "scripts": {
-    "prepare": "husky install",
     "run-tests": "node packages/run-tests-tui/src/index.ts",
     "test:v6": "./run-tests-v6.sh",
     "test:v7": "./run-tests-v7.sh",
@@ -17,7 +24,16 @@
     "mysql-v6": "pnpm --filter usage-mysql-v6 gen; pnpm --filter usage-mysql-v6 test",
     "mysql-v7": "pnpm --filter usage-mysql-v7 gen; pnpm --filter usage-mysql-v7 test",
     "pg-v6": "pnpm --filter usage-pg-v6 gen; pnpm --filter usage-pg-v6 test",
-    "pg-v7": "pnpm --filter usage-pg-v7 gen; pnpm --filter usage-pg-v7 test"
+    "pg-v7": "pnpm --filter usage-pg-v7 gen; pnpm --filter usage-pg-v7 test",
+    "lint:ts": "pnpm -r lint:ts",
+    "lint:esl": "pnpm -r lint:esl",
+    "lint:esl:fix": "pnpm -r lint:esl:fix",
+    "lint:s": "pnpm -r lint:s",
+    "lint:fix": "pnpm -r lint:fix",
+    "lint:knip": "knip",
+    "lint:jscpd": "pnpm -r lint:jscpd",
+    "lint": "pnpm lint:ts && pnpm lint:s",
+    "lint:e18e": "pnpm dlx @e18e/cli analyze"
   },
   "pnpm": {
     "onlyBuiltDependencies": [
@@ -27,8 +43,14 @@
       "es5-ext",
       "esbuild",
       "prisma",
-      "puppeteer"
+      "puppeteer",
+      "unrs-resolver"
     ]
   },
-  "version": "0.0.1-rc.1"
+  "version": "0.0.1-rc.1",
+  "packageManager": "pnpm@10.34.5",
+  "engines": {
+    "node": ">=24.0.0",
+    "pnpm": ">=10.0.0"
+  }
 }

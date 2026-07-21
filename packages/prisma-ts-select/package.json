@@ -6,8 +6,7 @@
     "prisma-ts-select": "dist/bin.cjs"
   },
   "main": "./dist/generator.cjs",
-  "module": "./dist/generator.js",
-  "types": "./dist/generator.d.cts",
+  "types": "./dist/generator.d.ts",
   "exports": {
     "./extend": {
       "types": "./dist/extend/extend.d.ts",
@@ -15,43 +14,38 @@
       "default": "./dist/extend/extend.js"
     },
     ".": {
-      "import": {
-        "import": "./dist/generator.mjs",
-        "default": "./dist/generator.mjs",
-        "types": "./dist/generator.d.mts"
-      },
-      "require": {
-        "import": "./dist/generator.js",
-        "require": "./dist/generator.js",
-        "default": "./dist/generator.js",
-        "types": "./dist/generator.d.ts"
-      }
+      "types": "./dist/generator.d.ts",
+      "require": "./dist/generator.cjs",
+      "default": "./dist/generator.cjs"
     }
   },
   "scripts": {
     "pre-release": "pnpm version prerelease --preid=rc --no-git-tag-version && pnpm build && pnpm pack",
     "bp": "pnpm build && pnpm version patch && pnpm pack",
-    "build": "pnpm exec rimraf dist && tsup",
+    "build": "pnpm exec rimraf dist && node build.ts",
     "reset": "rm -rf prisma/migrations/ && prisma migrate dev --name init  && prisma generate",
     "start": "node src/index.ts",
     "prisma-upgrade": "pnpm i --save-dev prisma@latest && pnpm i @prisma/client@latest",
-    "lint:ts": "tsc --noEmit -p tsconfig.json",
     "lint:tsw": "pnpm tsc -w",
-    "lint": "tsc --noEmit ; eslint \"scripts/**/*.{j,t}s{,x}\" --cache --max-warnings=0",
-    "lint:s": "eslint --config .eslintrc.style.json \"scripts/**/*.{j,t}s{,x}\" --cache --max-warnings=0",
-    "lint:fix": "eslint --config .eslintrc.style.json \"scripts/**/*.{j,t}s{,x}\" --cache --max-warnings=0 --fix",
     "p:gen": "pnpm exec prisma generate",
     "p:dbp": "pnpm exec prisma db push",
     "p:migrate": "pnpm exec prisma migrate dev",
     "p:update": "pnpm add -D prisma@latest && pnpm add @prisma/client@latest",
     "test": "node --test tests/**/*.spec.ts",
-    "test:jest": "jest",
     "2postinstall": "node src/scripts/postinstall.js",
     "doc": "pnpm exec markdown-toc -i README.md",
     "mdcode-ts": "pnpm exec mdcode",
     "readme:extract": "pnpm mdcode extract README.md",
     "readme:update": "pnpm mdcode update --transform ./transforms/readme-sql-clean.ts README.md",
-    "readme:test": "pnpm --filter usage-sqlite-v7 test -- tests/readme"
+    "readme:test": "pnpm --filter usage-sqlite-v7 test -- tests/readme",
+    "lint:ts": "tsc --noEmit -p tsconfig.json",
+    "lint": "lint:ts ; lint:s",
+    "lint:esl": "eslint --config ../../eslint.config.ts \"{src,tests}/**/*.{j,t}s{,x}\" --cache",
+    "lint:esl:fix": "pnpm lint:esl --fix",
+    "lint:s": "eslint --config ../../eslint.config.style.ts \"{src,tests}/**/*.{j,t}s{,x}\" --cache",
+    "lint:fix": "pnpm lint:s --fix",
+    "lint:jscpd": "jscpd .",
+    "lint:e18e": "pnpm dlx @e18e/cli analyze"
   },
   "dependencies": {
     "@prisma/generator-helper": "^6.19.3",
@@ -76,36 +70,12 @@
   },
   "devDependencies": {
     "@prisma/client": "6.19.3",
-    "@semantic-release/changelog": "^6.0.1",
-    "@semantic-release/git": "^10.0.1",
-    "@stylistic/eslint-plugin": "^1.5.4",
-    "@total-typescript/ts-reset": "^0.5.1",
-    "@types/better-sqlite3": "^7.6.13",
-    "@types/humanize-duration": "^3.27.2",
-    "@types/jest": "27.0.3",
-    "@types/klaw-sync": "^6.0.1",
-    "@types/lodash": "^4.14.197",
-    "@types/node": "20.11.30",
-    "@types/object-hash": "^3.0.4",
-    "@types/prettier": "2.4.2",
-    "@typescript-eslint/eslint-plugin": "^6.19.1",
-    "@typescript-eslint/parser": "^6.19.1",
-    "humanize-duration": "^3.34.0",
-    "jest": "27.4.7",
-    "klaw-sync": "^8.0.0",
-    "knip": "^5.9.4",
-    "log-with-statusbar": "^1.2.0",
+    "@types/node": "24.13.3",
+    "esbuild": "^0.28.1",
     "markdown-toc": "^1.2.0",
     "mdcode-ts": "^0.0.4",
     "prisma": "6.19.3",
-    "prisma-dbml-generator": "^0.12.0",
-    "prisma-docs-generator": "^0.8.0",
-    "progress-string": "^1.2.2",
-    "rimraf": "^6.1.3",
-    "semantic-release": "^18.0.1",
-    "ts-jest": "27.1.4",
-    "tsup": "^8.5.1",
-    "typescript": "^5.9.3"
+    "rimraf": "^6.1.3"
   },
   "keywords": [
     "prisma",
@@ -115,24 +85,10 @@
     "typescript"
   ],
   "engines": {
-    "node": ">=18.17",
-    "pnpm": ">= 8.6.12"
+    "node": ">=24.0.0",
+    "pnpm": ">=10.0.0"
   },
   "target": "node",
-  "knip": {
-    "entry": [
-      "scripts/**/*.{js,ts}"
-    ],
-    "project": [
-      "**/*.{js,ts}"
-    ],
-    "ignoreBinaries": [
-      "date"
-    ],
-    "ignoreDependencies": [
-      "prisma-.+"
-    ]
-  },
   "release": {
     "branches": [
       "main"

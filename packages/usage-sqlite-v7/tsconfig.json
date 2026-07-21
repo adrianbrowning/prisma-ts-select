@@ -11,7 +11,7 @@
     "forceConsistentCasingInFileNames": true,
     "resolveJsonModule": true,
     "preserveSymlinks": true,
-    "baseUrl": ".",
+//    "baseUrl": ".",
     "paths": {
       "../client.ts": ["./client.ts"]
     }

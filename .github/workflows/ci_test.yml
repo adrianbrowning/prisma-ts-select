@@ -1,0 +1,24 @@
+name: CI Tests
+
+on:
+  pull_request:
+    branches:
+      - main
+    types: [ opened, synchronize, reopened ]
+
+jobs:
+  test-runner:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: ./.github/actions/setup
+
+      - name: Build
+        run: pnpm --filter prisma-ts-select build
+
+      - name: Test
+        run: pnpm --filter prisma-ts-select test

@@ -1,0 +1,12 @@
+{
+  "extends": "@gingacodemonkey/config/bundler/no-dom/library",
+  "compilerOptions": {},
+  "include": [
+    "eslint.config.ts",
+    "eslint.config.style.ts",
+    "./src/**.ts"
+  ],
+  "exclude": [
+    "node_modules"
+  ]
+}

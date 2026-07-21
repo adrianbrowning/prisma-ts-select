@@ -1,17 +1,23 @@
-import {Prisma} from "@prisma/client/extension";
-import {match, P} from "ts-pattern";
-import type {Decimal} from "@prisma/client/runtime/client";
+/* eslint-disable sonarjs/class-name, @typescript-eslint/no-empty-object-type */
+import { Prisma } from "@prisma/client/extension";
+import type { Decimal } from "@prisma/client/runtime/client";
+import { match, P } from "ts-pattern";
 
 // Type stub for PrismaClient to avoid DTS build issues when @prisma/client isn't generated
 // The actual PrismaClient type from @prisma/client will be used at runtime via getExtensionContext
-type PrismaClient = any;
-import {dialect, dialectContextFns} from "./dialects/index.js";
-import {esc} from "./dialects/shared.js";
-import type {Dialect} from "./dialects/types.js";
-import {lit as _lit, sqlExpr, resolveArg, type SQLExpr, type LitToType} from "./sql-expr.js";
-import {DB, type DBType} from "./db.js";
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type ANY_IS_OK = any;
+type PrismaClient = ANY_IS_OK;
+import { DB } from "./db.ts";
+import { dialect, dialectContextFns } from "./dialects/index.ts";
+import { esc } from "./dialects/shared.ts";
+import type { Dialect } from "./dialects/types.ts";
+import { lit as _lit, sqlExpr, resolveArg } from "./sql-expr.ts";
+import type { SQLExpr, LitToType } from "./sql-expr.ts";
 
 // Placeholder replaced by generator with actual M2M relationship map
+type BLANK_OBJECT = {};
+
 type M2MMap = {};
 const SAFE_IDENT_RE = /^\w+$/;
 
@@ -59,19 +65,18 @@ type _db = DeepWriteable<TDB>;
  * //          | { table: "Post", fields: { id: number, title: string }, relations: { ... } }
  */
 type DATABASE = {
-    [k in keyof _db]: {
-        table: k,
-        fields: {
-            [f in keyof _db[k]["fields"]]: StrTypeToTSType<_db[k]["fields"][f]>
-        },
-        relations: _db[k]["relations"]
-    }
+  [k in keyof _db]: {
+    table: k;
+    fields: {
+      [f in keyof _db[k]["fields"]]: StrTypeToTSType<_db[k]["fields"][f]>
+    };
+    relations: _db[k]["relations"];
+  }
 }[keyof TDB];
-
 
 export type JSONPrimitive = string | number | boolean | null;
 export type JSONValue = JSONPrimitive | JSONObject | JSONArray;
-export type JSONObject = { [member: string]: JSONValue | undefined };
+export type JSONObject = { [member: string]: JSONValue | undefined; };
 export type JSONArray = Array<JSONValue>;
 
 /**
@@ -97,7 +102,7 @@ type SUPPORTED_TYPES =
     | boolean
     | Date
     | Buffer;
-//TODO support for
+// See #105: add JSONValue support
 // | JSONValue;
 
 /**
@@ -117,16 +122,16 @@ type SUPPORTED_TYPES =
  * type E = GetTSType<"Json">;     // JSONValue
  */
 type GetTSType<str extends string> =
-    str extends `String` ? string
-        : str extends `BigInt` ? bigint
-            : str extends `Int` ? number
-                : str extends `Float` ? number
-                    : str extends `Decimal` ? number
-                        : str extends `Boolean` ? boolean
-                            : str extends `DateTime` ? Date
-                                : str extends `Bytes` ? Buffer
-                                    : str extends `Json` ? JSONValue
-                                        : "Unknown type";
+  str extends `String` ? string
+    : str extends `BigInt` ? bigint
+      : str extends `Int` ? number
+        : str extends `Float` ? number
+          : str extends `Decimal` ? number
+            : str extends `Boolean` ? boolean
+              : str extends `DateTime` ? Date
+                : str extends `Bytes` ? Buffer
+                  : str extends `Json` ? JSONValue
+                    : "Unknown type";
 
 /**
  * Checks if a Prisma type string represents a nullable field.
@@ -143,7 +148,6 @@ type GetTSType<str extends string> =
  */
 type IsNullable<str extends string> = str extends `?${string}` ? null : never;
 
-
 /**
  * Removes the nullable marker prefix (`?`) from a string type.
  *
@@ -158,8 +162,6 @@ type IsNullable<str extends string> = str extends `?${string}` ? null : never;
  * type NullableDate = RemoveNullChar<"?DateTime">; // "DateTime"
  */
 export type RemoveNullChar<str extends string> = str extends `?${infer s}` ? s : str;
-
-
 
 /**
  * Filters type `a` to only include members that extend type `b`.
@@ -194,7 +196,7 @@ type IsString<T> = T extends string ? T : never;
 /**
  * Whitespace characters that can be trimmed from strings.
  */
-type Whitespace = '\n' | ' ';
+type Whitespace = "\n" | " ";
 
 /**
  * Recursively removes leading and trailing whitespace from a string literal type.
@@ -210,7 +212,7 @@ type Whitespace = '\n' | ' ';
  * type Trimmed3 = Trim<"  \n  test  \n  ">; // "test"
  */
 //@ts-expect-error will implement in another issue
-type Trim<T> = T extends `${Whitespace}${infer U}` ? Trim<U> : T extends `${infer U}${Whitespace}` ? Trim<U> : T;
+type _Trim<T> = T extends `${Whitespace}${infer U}` ? _Trim<U> : T extends `${infer U}${Whitespace}` ? _Trim<U> : T;
 
 /**
  * Valid column selection patterns for SELECT clause.
@@ -224,7 +226,7 @@ type Trim<T> = T extends `${Whitespace}${infer U}` ? Trim<U> : T extends `${infe
  * ValidSelect<["User", "Post"]>
  * // Returns: "*" | "id" | "name" | "Post.id" | "Post.title" | "User.*" | "Post.*"
  */
-type ValidSelect<Tables extends TArrSources, TFields extends TFieldsType = {}> =
+type ValidSelect<Tables extends TArrSources, TFields extends TFieldsType = BLANK_OBJECT> =
     | "*"
     | GetOtherColumns<Tables>
     | GetTableStar<Tables>
@@ -243,10 +245,10 @@ type ValidSelect<Tables extends TArrSources, TFields extends TFieldsType = {}> =
  * // Returns: "User.*" | "p.*"
  */
 type GetTableStar<Tables extends TArrSources> = Tables extends [infer T extends TTableSources, ...Array<TTableSources>]
-    ? T extends TVirtualTableSource ? GetTableStarJoined<Tables[number]>
-      : T extends string ? `${T}.*` | GetTableStarJoined<Tables[number]>
+  ? T extends TVirtualTableSource ? GetTableStarJoined<Tables[number]>
+    : T extends string ? `${T}.*` | GetTableStarJoined<Tables[number]>
       : `${T[1]}.*` | GetTableStarJoined<Tables[number]>
-    : never
+  : never;
 
 /**
  * Converts a single table source to its "Table.*" pattern.
@@ -260,7 +262,7 @@ type GetTableStar<Tables extends TArrSources> = Tables extends [infer T extends 
  * GetTableStarJoined<["Post", "p"]> // Returns: "p.*"
  */
 type GetTableStarJoined<T extends TTableSources> = T extends TVirtualTableSource ? never
-    : T extends string ? `${T}.*` : `${T[1]}.*`
+  : T extends string ? `${T}.*` : `${T[1]}.*`;
 
 /**
  * Extracts the TypeScript type of a column for use in aliased selections.
@@ -280,19 +282,18 @@ type GetTableStarJoined<T extends TTableSources> = T extends TVirtualTableSource
  * // Returns: string (from base table User)
  */
 type ExtractColumnType<
-    Column extends string,
-    TSources extends TArrSources,
-    TFields extends TFieldsType
+  Column extends string,
+  TSources extends TArrSources,
+  TFields extends TFieldsType
 > = Column extends `${infer T}.${infer F}`
-    ? T extends keyof TFields
-        ? F extends keyof TFields[T]
-            ? TFields[T][F]
-            : never
-        : never
-    : Column extends keyof TFields[TSources[0] extends string ? TSources[0] : `Come back to 1`]
-        ? TFields[TSources[0] extends string ? TSources[0] : `Come back To 2`][Column]
-        : never;
-
+  ? T extends keyof TFields
+    ? F extends keyof TFields[T]
+      ? TFields[T][F]
+      : never
+    : never
+  : Column extends keyof TFields[TSources[0] extends string ? TSources[0] : `Come back to 1`]
+    ? TFields[TSources[0] extends string ? TSources[0] : `Come back To 2`][Column]
+    : never;
 
 export type TTables = DATABASE["table"];
 
@@ -331,27 +332,26 @@ export type TTableSources = DATABASE["table"] | [table: DATABASE["table"], alias
  */
 type TArrSources = [TTableSources, ...Array<TTableSources>];
 
-
 class DbSelect {
 
-    constructor(public db: PrismaClient) {
-    }
+  constructor(public db: PrismaClient) {
+  }
 
-    from<const TDBBase extends TTables,
-        const TAlias extends string = never,
-        TRT extends TArrSources = [TAlias] extends [never]  ? [TDBBase] : [[TDBBase, TAlias]]>(
-        baseTable: TDBBase,
-        alias?: TAlias
-    ): _fJoinReturn<TRT, Record<GetAliasTableNames<TRT[0]>, GetFieldsFromTable<TDBBase>>, {}> {
-        return new _fJoin<TRT,
-            Record<GetAliasTableNames<TRT[0]>, GetFieldsFromTable<TDBBase>>>(this.db, {
-            tables: [{
-                table:baseTable,
-                alias
-            }],
-            selects: []
-        }) as any;
-    }
+  from<const TDBBase extends TTables,
+    const TAlias extends string = never,
+    TRT extends TArrSources = [TAlias] extends [never] ? [TDBBase] : [[TDBBase, TAlias]]>(
+    baseTable: TDBBase,
+    alias?: TAlias
+  ): _fJoinReturn<TRT, Record<GetAliasTableNames<TRT[0]>, GetFieldsFromTable<TDBBase>>, {}> {
+    return new _fJoin<TRT,
+      Record<GetAliasTableNames<TRT[0]>, GetFieldsFromTable<TDBBase>>>(this.db, {
+      tables: [{
+        table:baseTable,
+        alias,
+      }],
+      selects: [],
+    });
+  }
 
 }
 
@@ -359,14 +359,14 @@ class DbSelect {
  * Type for WHERE and HAVING clause arrays, supporting both raw SQL strings and structured criteria objects.
  *
  * @template TArrSources - Array of table sources in the query
- * @template Record<string, any> - Field types for the tables
+ * @template TFields - Field types for the tables
  *
  * @example
  * // Array can contain:
  * // 1. Raw SQL strings: "age > 18"
  * // 2. Structured criteria: { "User.age": { op: '>', value: 18 } }
  */
-type ClauseType = Array<string | WhereCriteria<TArrSources, Record<string, any>>>;
+type ClauseType = Array<string | WhereCriteria<TArrSources, {}>>;
 
 /**
  * Internal query builder state containing all query components.
@@ -399,282 +399,288 @@ type ClauseType = Array<string | WhereCriteria<TArrSources, Record<string, any>>
 type JoinType = "INNER" | "LEFT" | "LEFT OUTER" | "RIGHT" | "RIGHT OUTER" | "FULL" | "FULL OUTER" | "CROSS";
 
 type Values = {
-    //baseTable: TTables,
-    //baseTableAlias?: string;
-    selectDistinct?: true;
-    selects: Array<string>;
-    tables: [{ table: string, alias?: string }, ...Array<{ table: string, local: string, remote: string, alias?: string, joinWhere?: ClauseType, joinType?: JoinType }>];
-    withs?: Array<{ name: string; sql: string; columns?: string[] }>;
-    limit?: number;
-    offset?: number;
-    where?: ClauseType;
-    having?: ClauseType;
-    groupBy?: Array<string>;
-    orderBy?: Array<`${string}${ "" | " DESC" | " ASC"}`>;
+  //baseTable: TTables,
+  //baseTableAlias?: string;
+  selectDistinct?: true;
+  selects: Array<string>;
+  tables: [{ table: string; alias?: string; }, ...Array<{ table: string; local: string; remote: string; alias?: string; joinWhere?: ClauseType; joinType?: JoinType; }>];
+  withs?: Array<{ name: string; sql: string; columns?: Array<string>; }>;
+  limit?: number;
+  offset?: number;
+  where?: ClauseType;
+  having?: ClauseType;
+  groupBy?: Array<string>;
+  orderBy?: Array<`${string}${ "" | " DESC" | " ASC"}`>;
 };
 
 function applyCondition(quotedField: string, value: unknown): string {
-    const sqlVal = (v: unknown): string => {
-        if (typeof v === 'string') return `'${esc(v)}'`;
-        if (v instanceof Date)     return `'${v.toISOString()}'`;
-        if (v === null)             return 'NULL';
-        if (typeof v === 'number' || typeof v === 'bigint' || typeof v === 'boolean')
-            return String(v);
-        throw new Error(`Unsupported value type in sqlVal: ${typeof v}`);
-    };
+  const sqlVal = (v: unknown): string => {
+    if (typeof v === "string") return `'${esc(v)}'`;
+    if (v instanceof Date) return `'${v.toISOString()}'`;
+    if (v === null) return "NULL";
+    if (typeof v === "number" || typeof v === "bigint" || typeof v === "boolean") return String(v);
+    throw new Error(`Unsupported value type in sqlVal: ${typeof v}`);
+  };
 
-    if (typeof value === 'object' && value !== null && !Array.isArray(value) && "op" in value) {
-        const opObj = value as { op: string; value?: unknown; values?: unknown[] };
-        switch (opObj.op) {
-            case 'IN':
-            case 'NOT IN': {
-                const valuesList = (opObj.values as unknown[]).map(v => sqlVal(v)).join(", ");
-                return `${quotedField} ${opObj.op} (${valuesList})`;
-            }
-            case 'BETWEEN': {
-                const [start, end] = opObj.values as [unknown, unknown];
-                return `${quotedField} BETWEEN ${sqlVal(start)} AND ${sqlVal(end)}`;
-            }
-            case 'LIKE':
-            case 'NOT LIKE':
-                return `${quotedField} ${opObj.op} '${esc(opObj.value as string)}'`;
-            case 'IS NULL':
-            case 'IS NOT NULL':
-                return `${quotedField} ${opObj.op}`;
-            case '>':
-            case '>=':
-            case '<':
-            case '<=':
-            case '!=':
-            case '=':
-                return `${quotedField} ${opObj.op} ${sqlVal(opObj.value)}`;
-            default:
-                throw new Error(`Unsupported operation: ${opObj.op}`);
-        }
-    } else if (value === null) {
-        return `${quotedField} IS NULL`;
-    } else if (Array.isArray(value)) {
-        if (value.length === 0) throw new Error(`empty array is not allowed for field "${quotedField}"`);
-        if (typeof value[0] === 'object' && value[0] !== null && 'op' in value[0]) {
-            const parts = (value as Array<unknown>).map(opObj => applyCondition(quotedField, opObj));
-            return parts.length === 1 ? parts[0]! : "(" + parts.join(" OR ") + ")";
-        }
-        const valuesList = value.map(v => sqlVal(v)).join(", ");
-        return `${quotedField} IN (${valuesList})`;
-    } else {
-        return `${quotedField} = ${sqlVal(value)}`;
+  if (typeof value === "object" && value !== null && !Array.isArray(value) && "op" in value) {
+    const opObj = value as { op: string; value?: unknown; values?: Array<unknown>; };
+    switch (opObj.op) {
+      case "IN":
+      case "NOT IN": {
+        const valuesList = (opObj.values as Array<unknown>).map(v => sqlVal(v)).join(", ");
+        return `${quotedField} ${opObj.op} (${valuesList})`;
+      }
+      case "BETWEEN": {
+        const [ start, end ] = opObj.values as [unknown, unknown];
+        return `${quotedField} BETWEEN ${sqlVal(start)} AND ${sqlVal(end)}`;
+      }
+      case "LIKE":
+      case "NOT LIKE":
+        return `${quotedField} ${opObj.op} '${esc(opObj.value as string)}'`;
+      case "IS NULL":
+      case "IS NOT NULL":
+        return `${quotedField} ${opObj.op}`;
+      case ">":
+      case ">=":
+      case "<":
+      case "<=":
+      case "!=":
+      case "=":
+        return `${quotedField} ${opObj.op} ${sqlVal(opObj.value)}`;
+      default:
+        throw new Error(`Unsupported operation: ${opObj.op}`);
     }
+  }
+  else if (value === null) {
+    return `${quotedField} IS NULL`;
+  }
+  else if (Array.isArray(value)) {
+    if (value.length === 0) throw new Error(`empty array is not allowed for field "${quotedField}"`);
+    if (typeof value[0] === "object" && value[0] !== null && "op" in value[0]) {
+      const parts = (value as Array<unknown>).map(opObj => applyCondition(quotedField, opObj));
+      return parts.length === 1 ? parts[0]! : "(" + parts.join(" OR ") + ")";
+    }
+    const valuesList = value.map(v => sqlVal(v)).join(", ");
+    return `${quotedField} IN (${valuesList})`;
+  }
+  else {
+    return `${quotedField} = ${sqlVal(value)}`;
+  }
 }
 
 function processConditions(condition: BasicOpTypes, formatted = false): string {
-    const r = Object.keys(condition).map((field) => {
-        const value = condition[field];
-        const quotedField = dialect.quoteQualifiedColumn(String(field));
-        return applyCondition(quotedField, value);
-    });
+  const r = Object.keys(condition).map(field => {
+    const value = condition[field];
+    const quotedField = dialect.quoteQualifiedColumn(String(field));
+    return applyCondition(quotedField, value);
+  });
 
-    return r.length === 1
-       ? r[0]!.trim()
-       : "(" + r.join(" AND " + (formatted ? "\n" : "")).trim() + ")";
+  if (r.length === 1) return r[0]!.trim();
+  return "(" + r.join(" AND " + (formatted ? "\n" : "")).trim() + ")";
 }
 
 function processCriteria(main: ClauseType, joinType: "AND" | "OR" = "AND", formatted = false): string {
-    const results: Array<string> = [];
-    for (const criteria of main) {
-        if (typeof criteria === 'string') {
-            // Only reached from whereRaw / explicitly-marked raw escape-hatch paths
-            results.push(criteria);
-            continue;
-        }
-        let toProcess: BasicOpTypes = {};
-        const processPending = () => {
-            if (Object.keys(toProcess).length > 0) {
-                results.push(processConditions(toProcess, formatted));
-                toProcess = {};
-            }
-        };
-        for (const criterion in criteria) {
-                const r = match(criterion)
-                  .returnType<string>()
-                  .with("$AND", (criterion) => {
-                      processPending();
-                    return "(" +
-                        //@ts-expect-error criterion
-                        processCriteria(criteria[criterion], "AND", formatted)
-                        + ")"
-                  })
-                  .with("$OR", (criterion) => {
-                      processPending();
-                    return "(" +
-                        //@ts-expect-error criterion
-                        processCriteria(criteria[criterion], "OR", formatted)
-                        + ")"
-                  })
-                  .with("$NOT", (criterion) => {
-                      processPending();
-                    return "(NOT(" +
-                        //@ts-expect-error criterion
-                        processCriteria(criteria[criterion], "AND", formatted)
-                        + "))"
-                  })
-                  .with("$NOR", (criterion) => {
-                      processPending();
-                    return "(NOT(" +
-                        //@ts-expect-error criterion
-                        processCriteria(criteria[criterion], "OR", formatted)
-                        + "))"
-                  })
-                .with(P.string, (key) => {
-                        //@ts-expect-error criterion
-                        toProcess[key]=  criteria[key];
-                    return "";
-                  })
-                  .exhaustive();
-                  if (r) results.push(r);
-        }
-        processPending();
+  const results: Array<string> = [];
+  for (const criteria of main) {
+    if (typeof criteria === "string") {
+      // Only reached from whereRaw / explicitly-marked raw escape-hatch paths
+      results.push(criteria);
+      continue;
     }
-    return results.join((formatted ? "\n" : " ") + joinType + (formatted ? "\n" : " ")).trim();
+    let toProcess: BasicOpTypes = {};
+    const processPending = () => {
+      if (Object.keys(toProcess).length > 0) {
+        results.push(processConditions(toProcess, formatted));
+        toProcess = {};
+      }
+    };
+    for (const criterion in criteria) {
+      const r = match(criterion)
+        .returnType<string>()
+        .with("$AND", criterion => {
+          processPending();
+          return "(" +
+                        //@ts-expect-error criterion
+                        processCriteria(criteria[criterion], "AND", formatted)
+                        + ")";
+        })
+        .with("$OR", criterion => {
+          processPending();
+          return "(" +
+                        //@ts-expect-error criterion
+                        processCriteria(criteria[criterion], "OR", formatted)
+                        + ")";
+        })
+        .with("$NOT", criterion => {
+          processPending();
+          return "(NOT(" +
+                        //@ts-expect-error criterion
+                        processCriteria(criteria[criterion], "AND", formatted)
+                        + "))";
+        })
+        .with("$NOR", criterion => {
+          processPending();
+          return "(NOT(" +
+                        //@ts-expect-error criterion
+                        processCriteria(criteria[criterion], "OR", formatted)
+                        + "))";
+        })
+        .with(P.string, key => {
+          //@ts-expect-error criterion
+          toProcess[key]= criteria[key];
+          return "";
+        })
+        .exhaustive();
+      if (r) results.push(r);
+    }
+    processPending();
+  }
+  return results.join((formatted ? "\n" : " ") + joinType + (formatted ? "\n" : " ")).trim();
 }
 
 function processExprPairs(pairs: Array<ExprCondPair>): string {
-    const parts = pairs.map(([expr, value]) => applyCondition((expr as { sql: string }).sql, value));
-    return parts.length === 1 ? parts[0]! : parts.join(' AND ');
+  const parts = pairs.map(([ expr, value ]) => applyCondition((expr as { sql: string; }).sql, value));
+  return parts.length === 1 ? parts[0]! : parts.join(" AND ");
+}
+
+function quoteSelectColumn(select: string): string {
+  if (select === "*") return "*";
+  if (select.includes(".")) return dialect.quoteQualifiedColumn(select);
+  return dialect.quote(select, false);
 }
 
 /*
 run
  */
-class _fRun<TSources extends TArrSources, TFields extends TFieldsType, TSelectRT extends Record<string, any> = {}> {
-    constructor(protected db: PrismaClient,
-                protected values: Values) {
-        this.values.limit = typeof this.values.limit === "number" ? this.values.limit : undefined;
-        this.values.offset = typeof this.values.offset === "number" ? this.values.offset : undefined;
-    }
+class _fRun<TSources extends TArrSources, TFields extends TFieldsType, TSelectRT extends {} = {}> {
+  constructor(protected db: PrismaClient,
+    protected values: Values) {
+    this.values.limit = typeof this.values.limit === "number" ? this.values.limit : undefined;
+    this.values.offset = typeof this.values.offset === "number" ? this.values.offset : undefined;
+  }
+   
+  async run() {
+    const results = await this.db.$queryRawUnsafe(
+      this.getSQL()
+    ) as unknown as Array<TSelectRT>;
 
-    async run() {
-        const results = await this.db.$queryRawUnsafe(
-            this.getSQL()
-        ) as unknown as Array<TSelectRT>;
+    // Coerce 0/1 → false/true for Boolean fields in SQLite/MySQL
+    if (dialect.needsBooleanCoercion()) {
+      // eslint-disable-next-line sonarjs/cognitive-complexity
+      return results.map(row => {
+        const coerced = { ...row };
+        for (const key in coerced) {
+          const value = coerced[key];
+          if (typeof value !== "number" || (value !== 0 && value !== 1)) continue;
 
-        // Coerce 0/1 → false/true for Boolean fields in SQLite/MySQL
-        if (dialect.needsBooleanCoercion()) {
-            return results.map(row => {
-                const coerced = { ...row };
-                for (const key in coerced) {
-                    const value = coerced[key];
-                    if (typeof value !== 'number' || (value !== 0 && value !== 1)) continue;
+          // Parse key to get table and column (format: "Table.column" or "column")
+          const parts = key.split(".");
+          let table: string;
+          let column: string;
 
-                    // Parse key to get table and column (format: "Table.column" or "column")
-                    const parts = key.split('.');
-                    let table: string;
-                    let column: string;
+          if (parts.length === 2 && parts[0] && parts[1]) {
+            table = parts[0];
+            column = parts[1];
+          }
+          else {
+            // No table prefix - search all tables for this column
+            column = key;
+            let foundTable: string | undefined;
+            for (const tableObj of this.values.tables) {
+              const tableName = tableObj.table;
+              if (DB[tableName]?.fields[column]) {
+                foundTable = tableName;
+                break;
+              }
+            }
+            if (!foundTable) continue;
+            table = foundTable;
+          }
 
-                    if (parts.length === 2 && parts[0] && parts[1]) {
-                        table = parts[0];
-                        column = parts[1];
-                    } else {
-                        // No table prefix - search all tables for this column
-                        column = key;
-                        let foundTable: string | undefined;
-                        for (const tableObj of this.values.tables) {
-                            const tableName = tableObj.table;
-                            if (DB[tableName]?.fields[column]) {
-                                foundTable = tableName;
-                                break;
-                            }
-                        }
-                        if (!foundTable) continue;
-                        table = foundTable;
-                    }
-
-                    // Check if field is Boolean type in schema
-                    const fieldType = DB[table]?.fields[column];
-                    if (fieldType && fieldType.replace('?', '') === 'Boolean') {
-                        (coerced as any)[key] = value === 1;
-                    }
-                }
-                return coerced;
-            });
+          // Check if field is Boolean type in schema
+          const fieldType = DB[table]?.fields[column];
+          if (fieldType && fieldType.replace("?", "") === "Boolean") {
+            (coerced as ANY_IS_OK)[key] = value === 1;
+          }
         }
-
-        return results;
+        return coerced;
+      });
     }
 
-    getTables() {
-        return {} as TSources;
-    }
+    return results;
+  }
 
-    getFields() {
-        return {} as TFields;
-    }
+  getTables() {
+    return {} as TSources;
+  }
 
-    getResultType() {
-        return {} as Array<TSelectRT>;
-    }
+  getFields() {
+    return {} as TFields;
+  }
 
-    getSQL(formatted: boolean = false) {
+  getResultType() {
+    return {} as Array<TSelectRT>;
+  }
+   
+  getSQL(formatted: boolean = false) {
 
-        const withClause = this.values.withs?.length
-            ? `WITH ${this.values.withs.map(w =>
-                `${dialect.quoteTableIdentifier(w.name, false)} AS (${w.sql})`
-              ).join(', ')}`
-            : '';
+    const withClause = this.values.withs?.length
+      ? `WITH ${this.values.withs.map(w =>
+        `${dialect.quoteTableIdentifier(w.name, false)} AS (${w.sql})`
+      ).join(", ")}`
+      : "";
 
-        const whereClause = this.values.where !== undefined ? processCriteria(this.values.where,  "AND", formatted) : undefined;
-        const havingClause = this.values.having !== undefined ? processCriteria(this.values.having,  "AND", formatted) : undefined;
+    const whereClause = this.values.where !== undefined ? processCriteria(this.values.where, "AND", formatted) : undefined;
+    const havingClause = this.values.having !== undefined ? processCriteria(this.values.having, "AND", formatted) : undefined;
 
-        const [base, ...joins] = this.values.tables;
+    const [ base, ...joins ] = this.values.tables;
 
-        const quotedTable = dialect.quoteTableIdentifier(base.table, false);
-        const baseTable = base.alias
-            ? `${quotedTable} AS ${dialect.quoteTableIdentifier(base.alias, true)}`
-            : quotedTable;
+    const quotedTable = dialect.quoteTableIdentifier(base.table, false);
+    const baseTable = base.alias
+      ? `${quotedTable} AS ${dialect.quoteTableIdentifier(base.alias, true)}`
+      : quotedTable;
 
+    const distinctPrefix = this.values.selectDistinct ? "DISTINCT " : "";
+    const selectClause = this.values.selects.length === 0
+      ? ""
+      : "SELECT " + distinctPrefix + this.values.selects.join(", ");
 
-
-        return [
-            withClause,
-            this.values.selects.length === 0
-                ? ""
-                : ("SELECT " +
-                    (this.values.selectDistinct === true
-                        ? "DISTINCT "
-                        : "")
-                    + this.values.selects.join(', ')),
-            `FROM ${baseTable}`,
-            joins.map(({
-                                         table,
-                                         local,
-                                         remote,
-                                         alias,
-                                         joinWhere,
-                                         joinType
-                                     }) => {
-                const quotedTable = dialect.quoteTableIdentifier(table, false);
-                const tableStr = alias ? `${quotedTable} AS ${dialect.quoteTableIdentifier(alias, true)}` : quotedTable;
-                const typePrefix = joinType ? `${joinType} ` : "";
-                if (joinType === "CROSS") {
-                    return `${typePrefix}JOIN ${tableStr}`;
-                }
-                const tLocal = (alias || table) + "." + local;
-                const quotedLocal = dialect.quoteQualifiedColumn(tLocal);
-                const quotedRemote = dialect.quoteQualifiedColumn(remote);
-                const onClause = `${quotedLocal} = ${quotedRemote}`;
-                const joinWhereStr = joinWhere ? ` AND ${processCriteria(joinWhere, "AND", formatted)}` : "";
-                return `${typePrefix}JOIN ${tableStr} ON ${onClause}${joinWhereStr}`;
-            }).join(formatted ? "\n" : " ") ?? "",
-            !whereClause ? "" : `WHERE ${whereClause}`,
-            !this.values.groupBy?.length ? "" : `GROUP BY ${this.values.groupBy.map(g => dialect.quoteQualifiedColumn(g)).join(', ')}`,
-            !havingClause ? "" : `HAVING ${havingClause}`,
-            !(this.values.orderBy && this.values.orderBy.length > 0) ? "" : "ORDER BY " + this.values.orderBy.map(o => dialect.quoteOrderByClause(o)).join(', '),
-            !this.values.limit ? "" : `LIMIT ${this.values.limit}`,
-            !this.values.offset ? "" : `OFFSET ${this.values.offset}`
-        ]
-            .filter(Boolean)
-            .join(formatted ? "\n" : " ")
-            .trim() + ";";
-    }
+    return [
+      withClause,
+      selectClause,
+      `FROM ${baseTable}`,
+      joins.map(({
+        table,
+        local,
+        remote,
+        alias,
+        joinWhere,
+        joinType,
+      }) => {
+        const quotedTable = dialect.quoteTableIdentifier(table, false);
+        const tableStr = alias ? `${quotedTable} AS ${dialect.quoteTableIdentifier(alias, true)}` : quotedTable;
+        const typePrefix = joinType ? `${joinType} ` : "";
+        if (joinType === "CROSS") {
+          return `${typePrefix}JOIN ${tableStr}`;
+        }
+        const tLocal = (alias || table) + "." + local;
+        const quotedLocal = dialect.quoteQualifiedColumn(tLocal);
+        const quotedRemote = dialect.quoteQualifiedColumn(remote);
+        const onClause = `${quotedLocal} = ${quotedRemote}`;
+        const joinWhereStr = joinWhere ? ` AND ${processCriteria(joinWhere, "AND", formatted)}` : "";
+        return `${typePrefix}JOIN ${tableStr} ON ${onClause}${joinWhereStr}`;
+      }).join(formatted ? "\n" : " "),
+      whereClause ? `WHERE ${whereClause}` : "",
+      this.values.groupBy?.length ? `GROUP BY ${this.values.groupBy.map(g => dialect.quoteQualifiedColumn(g)).join(", ")}` : "",
+      havingClause ? `HAVING ${havingClause}` : "",
+      this.values.orderBy && this.values.orderBy.length > 0 ? "ORDER BY " + this.values.orderBy.map(o => dialect.quoteOrderByClause(o)).join(", ") : "",
+      this.values.limit ? `LIMIT ${this.values.limit}` : "",
+      this.values.offset ? `OFFSET ${this.values.offset}` : "",
+    ]
+      .filter(Boolean)
+      .join(formatted ? "\n" : " ")
+      .trim() + ";";
+  }
 }
 
 /*
@@ -682,10 +688,10 @@ OFFSET -
 run
 */
 
-class _fOffset<TSources extends TArrSources, TFields extends TFieldsType, TSelectRT extends Record<string, any> = {}> extends _fRun<TSources, TFields, TSelectRT> {
-    offset(offset: number) {
-        return new _fRun<TSources, TFields, TSelectRT>(this.db, {...this.values, offset});
-    }
+class _fOffset<TSources extends TArrSources, TFields extends TFieldsType, TSelectRT extends {} = BLANK_OBJECT> extends _fRun<TSources, TFields, TSelectRT> {
+  offset(offset: number) {
+    return new _fRun<TSources, TFields, TSelectRT>(this.db, { ...this.values, offset });
+  }
 }
 
 /*
@@ -694,13 +700,11 @@ OFFSET -
 run
 */
 
-class _fLimit<TSources extends TArrSources, TFields extends TFieldsType, TSelectRT extends Record<string, any> = {}> extends _fRun<TSources, TFields, TSelectRT> {
-    limit(limit: number) {
-        return new _fOffset<TSources, TFields, TSelectRT>(this.db, {...this.values, limit});
-    }
+class _fLimit<TSources extends TArrSources, TFields extends TFieldsType, TSelectRT extends {} = BLANK_OBJECT> extends _fRun<TSources, TFields, TSelectRT> {
+  limit(limit: number) {
+    return new _fOffset<TSources, TFields, TSelectRT>(this.db, { ...this.values, limit });
+  }
 }
-
-
 
 /**
  * Valid column names for ORDER BY clause.
@@ -714,9 +718,9 @@ class _fLimit<TSources extends TArrSources, TFields extends TFieldsType, TSelect
  * OrderBy<["User", "Post"], {userCount: number}>
  * // Returns: "id" | "name" | "User.id" | "Post.id" | "Post.title" | "userCount"
  */
-type OrderBy<Tables extends TArrSources, TSelectRT extends Record<string, any> = {}> = Tables extends [infer T extends TTableSources, ...Array<TTableSources>]
-    ? GetColsBaseTable<T> | GetJoinCols<Tables[number]> | (keyof TSelectRT & string)
-    : never;
+type OrderBy<Tables extends TArrSources, TSelectRT extends {} = BLANK_OBJECT> = Tables extends [infer T extends TTableSources, ...Array<TTableSources>]
+  ? GetColsBaseTable<T> | GetJoinCols<Tables[number]> | (keyof TSelectRT & string)
+  : never;
 
 /*
 ORDER BY - the final data is sorted.
@@ -727,12 +731,11 @@ run
 
 //Select extends GetOtherColumns<TSources>>(groupBy: Array<TSelect>
 
-class _fOrderBy<TSources extends TArrSources, TFields extends TFieldsType, TSelectRT extends Record<string, any> = {}> extends _fLimit<TSources, TFields, TSelectRT> {
-    orderBy(orderBy: Array<`${OrderBy<TSources, TSelectRT>}${ "" | " DESC" | " ASC"}`>) {
-        return new _fLimit<TSources, TFields, TSelectRT>(this.db, {...this.values, orderBy});
-    }
+class _fOrderBy<TSources extends TArrSources, TFields extends TFieldsType, TSelectRT extends {} = BLANK_OBJECT> extends _fLimit<TSources, TFields, TSelectRT> {
+  orderBy(orderBy: Array<`${OrderBy<TSources, TSelectRT>}${ "" | " DESC" | " ASC"}`>) {
+    return new _fLimit<TSources, TFields, TSelectRT>(this.db, { ...this.values, orderBy });
+  }
 }
-
 
 /**
  * Transforms a field selection pattern into its corresponding TypeScript type structure.
@@ -767,44 +770,42 @@ class _fOrderBy<TSources extends TArrSources, TFields extends TFieldsType, TSele
  */
 
 type MergeItems<Field extends string,
-    TSources extends TArrSources,
-    TFields extends TFieldsType,
-    IncTName extends boolean = false,
-    TLTables extends string = TablesArray2Name<TSources>[number]> =
-    Field extends "*"
-      ? Prettify<IterateTables<TSources, TFields, IncTName>>
-      : Field extends `${infer T}.*`
+  TSources extends TArrSources,
+  TFields extends TFieldsType,
+  IncTName extends boolean = false,
+  TLTables extends string = TablesArray2Name<TSources>[number]> =
+  Field extends "*"
+    ? Prettify<IterateTables<TSources, TFields, IncTName>>
+    : Field extends `${infer T}.*`
+      ? T extends keyof TFields
+        ? [TSources] extends [[T]]
+        // Single table - no prefix
+          ? TFields[T]
+        // Multiple tables - with prefix
+          : T extends string ? IterateTablesFromFields<T, TFields[T], true> : never
+        : never
+      : Field extends `${infer T extends TLTables}.${infer F extends string}`
         ? T extends keyof TFields
-          ? [TSources] extends [[T]]
-            // Single table - no prefix
-            ? TFields[T]
-            // Multiple tables - with prefix
-            : T extends string ? IterateTablesFromFields<T, TFields[T], true> : never
-          : never
-        : Field extends `${infer T extends TLTables}.${infer F extends string}`
-          ? T extends keyof TFields
-            ? F extends keyof TFields[T]
-              // [never] extends [never] = true means NOT a CTE → use uniqueness check
-              ? [IsCTE<T, TSources>] extends [never]
-                ? IsColumnUnique<F, TSources> extends true
-                  ? Prettify<Pick<TFields[T], F>>
-                  : Prettify<{[K in Field]: TFields[T][F]}>
+          ? F extends keyof TFields[T]
+          // [never] extends [never] = true means NOT a CTE → use uniqueness check
+            ? [IsCTE<T, TSources>] extends [never]
+              ? IsColumnUnique<F, TSources> extends true
+                ? Prettify<Pick<TFields[T], F>>
+                : Prettify<{ [K in Field]: TFields[T][F] }>
                 // CTE column — always keep qualified name
-                : Prettify<{[K in Field]: TFields[T][F]}>
-              : never
+              : Prettify<{ [K in Field]: TFields[T][F] }>
             : never
-          : FindColumnInFields<Field, TFields>//Pick<TFields[GetAliasTableNames<TSources[0]>], Field>;
+          : never
+        : FindColumnInFields<Field, TFields>;//Pick<TFields[GetAliasTableNames<TSources[0]>], Field>;
 
 type FindColumnInFields<Column extends string,
-    TFields extends TFieldsType,
-    Tables extends keyof TFields = keyof TFields
-    > = Tables extends keyof TFields
-         ? TFields[Tables] extends Record<Column, any>
-             ? Pick<TFields[Tables], Column>
-             : never
-         : never
-
-
+  TFields extends TFieldsType,
+  Tables extends keyof TFields = keyof TFields
+> = Tables extends keyof TFields
+  ? TFields[Tables] extends Record<Column, ANY_IS_OK>
+    ? Pick<TFields[Tables], Column>
+    : never
+  : never;
 
 /**
  * Recursively iterates through an array of tables and accumulates their fields into a single type.
@@ -826,12 +827,12 @@ type FindColumnInFields<Column extends string,
  * IterateTables<["User", "Post"], {...}, true>
  * // Returns: {"User.id": number, "User.name": string, "Post.id": number, "Post.title": string}
  */
-type IterateTables<Tables extends Array<TTableSources>, TFields extends TFieldsType, IncTName extends boolean, acc extends Record<string, any> = {}> =
-    Tables extends [infer T extends TTableSources, ...infer Rest extends Array<TTableSources>]
-        ? [IncTName] extends [false]
-            ? IterateTables<Rest, TFields, IncTName, acc & TFields[T extends string ? T : T[1]]>
-            : IterateTables<Rest, TFields, IncTName, acc & IterateTablesFromFields<T, TFields[T extends string ? T : T[1]], IncTName>>
-        : acc;
+type IterateTables<Tables extends Array<TTableSources>, TFields extends TFieldsType, IncTName extends boolean, acc extends {} = BLANK_OBJECT> =
+  Tables extends [infer T extends TTableSources, ...infer Rest extends Array<TTableSources>]
+    ? [IncTName] extends [false]
+      ? IterateTables<Rest, TFields, IncTName, acc & TFields[T extends string ? T : T[1]]>
+      : IterateTables<Rest, TFields, IncTName, acc & IterateTablesFromFields<T, TFields[T extends string ? T : T[1]], IncTName>>
+    : acc;
 
 /**
  * Generates a field name with or without table prefix based on the IncName flag.
@@ -847,9 +848,9 @@ type IterateTables<Tables extends Array<TTableSources>, TFields extends TFieldsT
  * GenName<"User", "id", true>  // Returns: "User.id"
  */
 type GenName<T extends string, F extends unknown, IncName extends boolean> = F extends string
-    ? [IncName] extends [false]
-        ? F
-        : `${T}.${F}` : never;
+  ? [IncName] extends [false]
+    ? F
+    : `${T}.${F}` : never;
 
 /**
  * Transforms a table's field definitions by optionally prefixing field names with the table name.
@@ -871,14 +872,13 @@ type GenName<T extends string, F extends unknown, IncName extends boolean> = F e
  * // Returns: {"User.id": number, "User.name": string}
  */
 type IterateTablesFromFields<Table extends TTableSources, TFields extends Record<string, string>, IncTName extends boolean> = {
-    // Assumes TTableSources is either string or [any, string] tuple — new shapes must be added here
-    [f in keyof TFields as GenName<Table extends string ? Table : Table extends readonly [any, infer Name extends string] ? Name : never, f, IncTName>]: TFields[f]
-    // (f extends string
-    //     ? [IncTName] extends [false]
-    //         ? Record<f, TFields[f]>
-    //         : Record<`${Table}.${f}`, TFields[f]> : never)
+  // Assumes TTableSources is either string or [ANY_IS_OK, string] tuple — new shapes must be added here
+  [f in keyof TFields as GenName<Table extends string ? Table : Table extends readonly [ANY_IS_OK, infer Name extends string] ? Name : never, f, IncTName>]: TFields[f]
+  // (f extends string
+  //     ? [IncTName] extends [false]
+  //         ? Record<f, TFields[f]>
+  //         : Record<`${Table}.${f}`, TFields[f]> : never)
 };
-
 
 /**
  * Extracts alias or table names from an array of table sources.
@@ -895,10 +895,9 @@ type IterateTablesFromFields<Table extends TTableSources, TFields extends Record
  * TablesArray2Name<["User"]> // ["User"]
  */
 type TablesArray2Name<TSources extends Array<TTableSources>, acc extends Array<string> = []> =
-    TSources extends [infer T extends TTableSources, ...infer Rest extends Array<TTableSources>]
+  TSources extends [infer T extends TTableSources, ...infer Rest extends Array<TTableSources>]
     ? TablesArray2Name<Rest, [...acc, GetAliasTableNames<T>]>
     : acc;
-
 
 /**
  * Extracts unqualified column names from a single table source.
@@ -912,9 +911,9 @@ type TablesArray2Name<TSources extends Array<TTableSources>, acc extends Array<s
  * GetColumnNamesFromTable<["Post", "p"]> // "id" | "title" | "authorId"
  */
 type GetColumnNamesFromTable<TDBBase extends TTableSources> =
-    TDBBase extends TVirtualTableSource
-        ? never
-        : keyof GetFieldsFromTable<GetRealTableNames<TDBBase>>;
+  TDBBase extends TVirtualTableSource
+    ? never
+    : keyof GetFieldsFromTable<GetRealTableNames<TDBBase>>;
 
 /**
  * Recursively collects all column names from an array of table sources.
@@ -928,9 +927,9 @@ type GetColumnNamesFromTable<TDBBase extends TTableSources> =
  * // Returns: "id" | "name" | "email" | "title" | "authorId" | ...
  */
 type GetColumnsFromTables<Tables extends Array<TTableSources>> =
-    Tables extends [infer T extends TTableSources, ...infer Rest extends Array<TTableSources>]
-        ? GetColumnNamesFromTable<T> | GetColumnsFromTables<Rest>
-        : never;
+  Tables extends [infer T extends TTableSources, ...infer Rest extends Array<TTableSources>]
+    ? GetColumnNamesFromTable<T> | GetColumnsFromTables<Rest>
+    : never;
 
 /**
  * Finds column names that appear in multiple tables via pairwise intersection.
@@ -949,11 +948,11 @@ type GetColumnsFromTables<Tables extends Array<TTableSources>> =
  * GetDuplicateColumnsPairwise<["User", "Post", "Comment"]> // "id"
  */
 type GetDuplicateColumnsPairwise<Tables extends TArrSources> =
-    Tables extends [infer T1 extends TTableSources, infer T2 extends TTableSources, ...infer Rest extends Array<TTableSources>]
-        ? (GetColumnNamesFromTable<T1> & GetColumnNamesFromTable<T2>)
+  Tables extends [infer T1 extends TTableSources, infer T2 extends TTableSources, ...infer Rest extends Array<TTableSources>]
+    ? (GetColumnNamesFromTable<T1> & GetColumnNamesFromTable<T2>)
         | GetDuplicateColumnsPairwise<[T1, ...Rest]>
         | GetDuplicateColumnsPairwise<[T2, ...Rest]>
-        : never;
+    : never;
 
 /**
  * Checks if a column name is unique across all tables in the query.
@@ -968,151 +967,139 @@ type GetDuplicateColumnsPairwise<Tables extends TArrSources> =
  * IsColumnUnique<"id", ["User", "Post"]> // false (both have "id")
  */
 type IsColumnUnique<Col extends string, Tables extends TArrSources> =
-    Col extends GetDuplicateColumnsPairwise<Tables> ? false : true;
+  Col extends GetDuplicateColumnsPairwise<Tables> ? false : true;
 
 // Updated: Returns unique column names (unqualified) + all table.column syntax
 type GetOtherColumns<Tables extends TArrSources> =
     Exclude<GetColumnsFromTables<Tables>, GetDuplicateColumnsPairwise<Tables>>
     | GetJoinCols<Tables[number]>;
 
-
-class _fSelect<TSources extends TArrSources, TFields extends TFieldsType, TSelectRT extends Record<string, any> = {}> extends _fOrderBy<TSources, TFields, TSelectRT> {
-    // Fn overload — no alias → key is widened to `string`
-    select<T>(fn: (ctx: SelectFnContext<TSources, TFields>) => SQLExpr<T>)
-        : _fSelect<TSources, TFields, Prettify<TSelectRT & Record<string, T>>>
-    // Fn overload — with alias → key is the literal alias
-    select<T, A extends string>(fn: (ctx: SelectFnContext<TSources, TFields>) => SQLExpr<T>, alias: A)
-        : _fSelect<TSources, TFields, Prettify<TSelectRT & Record<A, T>>>
-    // String column — no alias
-    select<const TSelect extends ValidSelect<TSources, TFields>>(select: TSelect)
-        : _fSelect<TSources, TFields, Prettify<TSelectRT & MergeItems<TSelect, TSources, TFields, CountKeys<TSources> extends 1 ? false : true>>>
-    // String column — with alias
-    select<const TSelect extends ValidSelect<TSources, TFields>, TAlias extends string>(select: TSelect, alias: TAlias)
-        : _fSelect<TSources, TFields, Prettify<TSelectRT & Record<TAlias, ExtractColumnType<TSelect, TSources, TFields>>>>
-    // Implementation (not visible to callers)
-    select(
-        select: ((ctx: SelectFnContext<TSources, TFields>) => SQLExpr<any>) | ValidSelect<TSources, TFields>,
-        alias?: string
-    ): _fSelect<TSources, TFields, any>
-    {
-        // Function overload: first arg is a callback
-        if (typeof select === 'function') {
-            const ctx = buildContext<TSources, TFields>(dialect);
-            const expr = (select as (ctx: SelectFnContext<TSources, TFields>) => SQLExpr<any>)(ctx);
-            const aliasArg = alias as string | undefined;
-            const sqlStr = aliasArg !== undefined
-                ? `${expr.sql} AS ${dialect.quote(aliasArg, true)}`
-                : expr.sql;
-            return new _fSelect(this.db, {
-                ...this.values,
-                selects: [...this.values.selects, sqlStr]
-            }) as any;
-        }
-
-        // Check if select is "Table.*" pattern
-        const tableColMatch = select.match(/^(\w+)\.(.*?)$/);
-        if (tableColMatch) {
-            const [,tableName, colName] = tableColMatch as [string, string, string];
-            // Expand Table.* to all columns from that table
-            const tableObject = this.values.tables.find(t => (t.alias || t.table) === tableName);
-            if (!tableObject) throw new Error(`Table "${tableName}" not found in query`);
-            const tableFields = DB[tableObject.table];
-            if (!tableFields) {
-                if (colName === "*") {
-                    throw new Error(`Cannot expand "${tableName}.*" — CTE columns must be selected explicitly`);
-                }
-                return new _fSelect(this.db, {
-                    ...this.values,
-                    selects: [...this.values.selects, `${dialect.quoteQualifiedColumn(select)} AS ${dialect.quote(alias ?? select, true)}`]
-                }) as any;
-            }
-
-            if (colName === "*") {
-                const hasMultipleTables = (this.values.tables && this.values.tables.length > 1) || false;
-
-                const expandedSelects = Object.keys(tableFields.fields).map((field) => {
-                    if (hasMultipleTables) {
-                        const tableIdentifier = tableObject.alias || tableName;
-                        const qualifiedCol = `${tableIdentifier}.${field}`;
-                        return `${dialect.quoteQualifiedColumn(qualifiedCol)} AS ${dialect.quote(`${tableName}.${field}`, true)}`;
-                    }
-                    return field === "*" ? "*" : dialect.quote(field, false);
-                });
-
-                return new _fSelect(this.db, {
-                    ...this.values,
-                    selects: [...this.values.selects, ...expandedSelects]
-                }) as any;
-            }
-            // alias provided → falls through to generic alias handler below
-            else if (!alias && !!colName) {  //table.column
-
-                //Check if column is a unique
-                // if is a unique strip table
-                // else use table.column
-                const currentTablesWithFields = this.values.tables.reduce<Record<string, number>>((acc, table) => {
-                    const {table:real} = table;
-                    if (!DB[real]) return acc; // skip CTEs
-                    for (const col in DB[real]!.fields) {
-                        acc[col] = acc[col] ? acc[col] + 1 : 1;
-                    }
-                    return acc;
-                }, {});
-
-                if (!currentTablesWithFields[colName]) {
-                    throw new Error(`Column "${colName}" not found in database schema`);
-                }
-
-
-                if (currentTablesWithFields[colName] > 1) {
-                    return new _fSelect(this.db, {
-                        ...this.values,
-                        selects: [...this.values.selects, `${dialect.quoteQualifiedColumn(select)} AS ${dialect.quote(select, true)}`]
-                    }) as any;
-                } else {
-                    return new _fSelect(this.db, {
-                        ...this.values,
-                        selects: [...this.values.selects, dialect.quote(colName, false)]
-                    }) as any;
-                }
-            }
-        }
-
-        // Check if alias is provided
-        if (alias !== undefined) {
-            if (select === "*" && this.values.tables.length > 1) {
-                throw new Error(`select("*", alias) is not supported on multi-table queries — use explicit column names or select("*") without alias`);
-            }
-            const quotedSelect = select === "*"
-                ? "*"
-                : select.includes('.')
-                    ? dialect.quoteQualifiedColumn(select)
-                    : dialect.quote(select, false);
-            return new _fSelect(this.db, {
-                ...this.values,
-                selects: [...this.values.selects, `${quotedSelect} AS ${dialect.quote(alias, true)}`]
-            }) as any;
-        }
-
-        // Expand "*" for multi-table queries
-        if (select === "*" && this.values.tables.length > 1) {
-            const expandedSelects = this.values.tables.flatMap(tableObj =>
-                expandToQualifiedSelects(tableObj, this.values.withs)
-            );
-            return new _fSelect(this.db, { ...this.values, selects: [...this.values.selects, ...expandedSelects] }) as any;
-        }
-
-        // Default: quote based on whether it's qualified or not
-        const quotedSelect = select === "*"
-            ? "*"
-            : select.includes('.')
-                ? dialect.quoteQualifiedColumn(select)
-                : dialect.quote(select, false);
-        return new _fSelect(this.db, {
-            ...this.values,
-            selects: [...this.values.selects, quotedSelect]
-        }) as any;
+class _fSelect<TSources extends TArrSources, TFields extends TFieldsType, TSelectRT extends {} = BLANK_OBJECT> extends _fOrderBy<TSources, TFields, TSelectRT> {
+  // Fn overload — no alias → key is widened to `string`
+  select<T>(fn: (ctx: SelectFnContext<TSources, TFields>) => SQLExpr<T>): _fSelect<TSources, TFields, Prettify<TSelectRT & Record<string, T>>>;
+  // Fn overload — with alias → key is the literal alias
+  select<T, A extends string>(fn: (ctx: SelectFnContext<TSources, TFields>) => SQLExpr<T>, alias: A): _fSelect<TSources, TFields, Prettify<TSelectRT & Record<A, T>>>;
+  // String column — no alias
+  select<const TSelect extends ValidSelect<TSources, TFields>>(select: TSelect): _fSelect<TSources, TFields, Prettify<TSelectRT & MergeItems<TSelect, TSources, TFields, CountKeys<TSources> extends 1 ? false : true>>>;
+  // String column — with alias
+  select<const TSelect extends ValidSelect<TSources, TFields>, TAlias extends string>(select: TSelect, alias: TAlias): _fSelect<TSources, TFields, Prettify<TSelectRT & Record<TAlias, ExtractColumnType<TSelect, TSources, TFields>>>>;
+  // Implementation (not visible to callers)
+  // eslint-disable-next-line sonarjs/cognitive-complexity
+  select(
+    select: ((ctx: SelectFnContext<TSources, TFields>) => SQLExpr<ANY_IS_OK>) | ValidSelect<TSources, TFields>,
+    alias?: string
+  ): _fSelect<TSources, TFields, ANY_IS_OK> {
+    // Function overload: first arg is a callback
+    if (typeof select === "function") {
+      const ctx = buildContext<TSources, TFields>(dialect);
+      const expr = (select as (ctx: SelectFnContext<TSources, TFields>) => SQLExpr<ANY_IS_OK>)(ctx);
+      const aliasArg = alias;
+      const sqlStr = aliasArg !== undefined
+        ? `${expr.sql} AS ${dialect.quote(aliasArg, true)}`
+        : expr.sql;
+      return new _fSelect(this.db, {
+        ...this.values,
+        selects: [ ...this.values.selects, sqlStr ],
+      }) as ANY_IS_OK;
     }
+
+    // Check if select is "Table.*" pattern
+    const tableColMatch = /^(\w+)\.(.*?)$/.exec(select);
+    if (tableColMatch) {
+      const tableName = tableColMatch[1]!;
+      const colName = tableColMatch[2]!;
+      // Expand Table.* to all columns from that table
+      const tableObject = this.values.tables.find(t => (t.alias || t.table) === tableName);
+      if (!tableObject) throw new Error(`Table "${tableName}" not found in query`);
+      const tableFields = DB[tableObject.table];
+      if (!tableFields) {
+        if (colName === "*") {
+          throw new Error(`Cannot expand "${tableName}.*" — CTE columns must be selected explicitly`);
+        }
+        return new _fSelect(this.db, {
+          ...this.values,
+          selects: [ ...this.values.selects, `${dialect.quoteQualifiedColumn(select)} AS ${dialect.quote(alias ?? select, true)}` ],
+        }) as ANY_IS_OK;
+      }
+
+      if (colName === "*") {
+        const hasMultipleTables = this.values.tables.length > 1;
+
+        const expandedSelects = Object.keys(tableFields.fields).map(field => {
+          if (hasMultipleTables) {
+            const tableIdentifier = tableObject.alias || tableName;
+            const qualifiedCol = `${tableIdentifier}.${field}`;
+            return `${dialect.quoteQualifiedColumn(qualifiedCol)} AS ${dialect.quote(`${tableName}.${field}`, true)}`;
+          }
+          return field === "*" ? "*" : dialect.quote(field, false);
+        });
+
+        return new _fSelect(this.db, {
+          ...this.values,
+          selects: [ ...this.values.selects, ...expandedSelects ],
+        }) as ANY_IS_OK;
+      }
+      // alias provided → falls through to generic alias handler below
+      else if (!alias && !!colName) { //table.column
+
+        //Check if column is a unique
+        // if is a unique strip table
+        // else use table.column
+        const currentTablesWithFields = this.values.tables.reduce<Record<string, number>>((acc, table) => {
+          const { table:real } = table;
+          if (!DB[real]) return acc; // skip CTEs
+          for (const col in DB[real].fields) {
+            acc[col] = acc[col] ? acc[col] + 1 : 1;
+          }
+          return acc;
+        }, {});
+
+        if (!currentTablesWithFields[colName]) {
+          throw new Error(`Column "${colName}" not found in database schema`);
+        }
+
+        if (currentTablesWithFields[colName] > 1) {
+          return new _fSelect(this.db, {
+            ...this.values,
+            selects: [ ...this.values.selects, `${dialect.quoteQualifiedColumn(select)} AS ${dialect.quote(select, true)}` ],
+          }) as ANY_IS_OK;
+        }
+        else {
+          return new _fSelect(this.db, {
+            ...this.values,
+            selects: [ ...this.values.selects, dialect.quote(colName, false) ],
+          }) as ANY_IS_OK;
+        }
+      }
+    }
+
+    // Check if alias is provided
+    if (alias !== undefined) {
+      if (select === "*" && this.values.tables.length > 1) {
+        throw new Error(`select("*", alias) is not supported on multi-table queries — use explicit column names or select("*") without alias`);
+      }
+      const quotedSelect = quoteSelectColumn(select);
+      return new _fSelect(this.db, {
+        ...this.values,
+        selects: [ ...this.values.selects, `${quotedSelect} AS ${dialect.quote(alias, true)}` ],
+      }) as ANY_IS_OK;
+    }
+
+    // Expand "*" for multi-table queries
+    if (select === "*" && this.values.tables.length > 1) {
+      const expandedSelects = this.values.tables.flatMap(tableObj =>
+        expandToQualifiedSelects(tableObj, this.values.withs)
+      );
+      return new _fSelect(this.db, { ...this.values, selects: [ ...this.values.selects, ...expandedSelects ] }) as ANY_IS_OK;
+    }
+
+    // Default: quote based on whether it's qualified or not
+    const quotedSelect = quoteSelectColumn(select);
+    return new _fSelect(this.db, {
+      ...this.values,
+      selects: [ ...this.values.selects, quotedSelect ],
+    }) as ANY_IS_OK;
+  }
 }
 
 /**
@@ -1133,79 +1120,71 @@ class _fSelect<TSources extends TArrSources, TFields extends TFieldsType, TSelec
 type CountKeys<T extends Array<TTableSources>, acc extends Array<true> = []> = T extends [TTableSources, ...infer R extends Array<TTableSources>] ? CountKeys<R, [...acc, true]> : acc["length"];
 
 // "User.email" → "email"
-type StripTablePrefix<S extends string> = S extends `${string}.${infer Col}` ? Col : S
+type StripTablePrefix<S extends string> = S extends `${string}.${infer Col}` ? Col : S;
 
 // Handles both single-table (unqualified keys) and multi-table (qualified keys)
-type OmitFromSelectAll<TBase, TOmit extends string> = Prettify<Omit<TBase, TOmit | StripTablePrefix<TOmit>>>
+type OmitFromSelectAll<TBase, TOmit extends string> = Prettify<Omit<TBase, TOmit | StripTablePrefix<TOmit>>>;
 
-class _fSelectDistinct<TSources extends TArrSources, TFields extends TFieldsType, TSelectRT extends Record<string, any> = {}> extends _fSelect<TSources, TFields, TSelectRT> {
-    selectDistinct() {
-        return new _fSelect<TSources, TFields, TSelectRT>(this.db, {...this.values, selectDistinct: true});
-    }
+class _fSelectDistinct<TSources extends TArrSources, TFields extends TFieldsType, TSelectRT extends {} = BLANK_OBJECT> extends _fSelect<TSources, TFields, TSelectRT> {
+  selectDistinct() {
+    return new _fSelect<TSources, TFields, TSelectRT>(this.db, { ...this.values, selectDistinct: true });
+  }
 
-    selectAll<TableCount = CountKeys<TSources>>() {
-        //TODO
-        // Need to loop through DATABASE object
-        // if 1 table, no prefix
-        // if more prefix with table name
+  selectAll<TableCount = CountKeys<TSources>>() {
+    // See #106: loop DATABASE, prefix with table name when multi-table
 
+    const selects = (function (values: Values) {
+      if (values.tables.length > 1) {
+        return values.tables.reduce<Array<string>>((acc, tableObj): Array<string> => acc.concat(expandToQualifiedSelects(tableObj, values.withs)), []);
+      }
+      const t = values.tables[0];
+      if (!DB[t.table]) throw new Error(`selectAll() is not supported when the base table is a CTE ("${t.table}"). Use select() with explicit column references.`);
+      return Object.keys(DB[t.table]!.fields).map(field => dialect.quote(field, false));
+    }(this.values));
 
-        const selects = (function (values: Values) {
-            if (values.tables && values.tables.length > 1) {
-                return values.tables.reduce<Array<string>>((acc, tableObj): Array<string> => {
-                    return acc.concat(expandToQualifiedSelects(tableObj, values.withs));
-                }, []);
-            }
-            const t = values.tables[0];
-            if (!DB[t.table]) throw new Error(`selectAll() is not supported when the base table is a CTE ("${t.table}"). Use select() with explicit column references.`);
-            return Object.keys(DB[t.table]!.fields).map(field => dialect.quote(field, false));
-        }(this.values))
+    return new _fOrderBy<TSources, TFields, MergeItems<"*", /*TablesArray2Name<TSources>*/TSources, TFields, TableCount extends 1 ? false : true>>(this.db, {
+      ...this.values,
+      selects,
+    });
+  }
 
-        return new _fOrderBy<TSources, TFields, MergeItems<"*", /*TablesArray2Name<TSources>*/TSources, TFields, TableCount extends 1 ? false : true>>(this.db, {
-            ...this.values,
-            selects
-        });
-    }
+  selectAllOmit<
+    const TSelect extends GetOtherColumns<TSources>,
+    TableCount = CountKeys<TSources>
+  >(omit: Array<TSelect>) {
+    const omitSet = new Set(omit as Array<string>);
+    const selects = (function(values: Values) {
 
+      if (values.tables.length === 1) {
+        const t = values.tables[0];
+        const tableIdentifier = t.alias || t.table;
+        return Object.keys(DB[t.table]!.fields)
+          .filter(f => !omitSet.has(f) && !omitSet.has(`${tableIdentifier}.${f}`))
+          .map(f => dialect.quote(f, false));
+      }
 
+      return values.tables.reduce<Array<string>>((acc, tableObj) => {
+        const tableIdentifier = tableObj.alias || tableObj.table;
+        if (!DB[tableObj.table]) return acc; // skip CTEs
+        return acc.concat(
+          Object.keys(DB[tableObj.table]!.fields)
+            .filter(f => !omitSet.has(f) && !omitSet.has(`${tableIdentifier}.${f}`))
+            .map(f => {
+              const q = `${tableIdentifier}.${f}`;
+              return `${dialect.quoteQualifiedColumn(q)} AS ${dialect.quote(q, true)}`;
+            })
+        );
+      }, []);
 
-    selectAllOmit<
-        const TSelect extends GetOtherColumns<TSources>,
-        TableCount = CountKeys<TSources>
-    >(omit: Array<TSelect>) {
-        const omitSet = new Set(omit as Array<string>);
-        const selects = (function(values: Values) {
+    })(this.values);
 
-            if (values.tables.length === 1) {
-                const t = values.tables[0];
-                const tableIdentifier = t.alias || t.table;
-                return Object.keys(DB[t.table]!.fields)
-                    .filter(f => !omitSet.has(f) && !omitSet.has(`${tableIdentifier}.${f}`))
-                    .map(f => dialect.quote(f, false));
-            }
-
-            return values.tables.reduce<Array<string>>((acc, tableObj) => {
-                const tableIdentifier = tableObj.alias || tableObj.table;
-                if (!DB[tableObj.table]) return acc; // skip CTEs
-                return acc.concat(
-                    Object.keys(DB[tableObj.table]!.fields)
-                        .filter(f => !omitSet.has(f) && !omitSet.has(`${tableIdentifier}.${f}`))
-                        .map(f => {
-                            const q = `${tableIdentifier}.${f}`;
-                            return `${dialect.quoteQualifiedColumn(q)} AS ${dialect.quote(q, true)}`;
-                        })
-                );
-            }, []);
-
-        })(this.values);
-
-        type Base = MergeItems<"*", TSources, TFields, TableCount extends 1 ? false : true>;
-        return new _fOrderBy<TSources, TFields, OmitFromSelectAll<Base, TSelect>>(this.db, {
-            ...this.values,
-            selects
-        });
-    }}
-
+    type Base = MergeItems<"*", TSources, TFields, TableCount extends 1 ? false : true>;
+    return new _fOrderBy<TSources, TFields, OmitFromSelectAll<Base, TSelect>>(this.db, {
+      ...this.values,
+      selects,
+    });
+  }
+}
 
 /*
 HAVING - the grouped base data is filtered.
@@ -1216,26 +1195,25 @@ OFFSET -
 */
 
 class _fHaving<TSources extends TArrSources, TFields extends TFieldsType> extends _fSelect<TSources, TFields> {
-    // Keep selectDistinct() available after groupBy(), but not selectAll()
-    selectDistinct() {
-        return new _fSelect<TSources, TFields>(this.db, {...this.values, selectDistinct: true});
-    }
+  // Keep selectDistinct() available after groupBy(), but not selectAll()
+  selectDistinct() {
+    return new _fSelect<TSources, TFields>(this.db, { ...this.values, selectDistinct: true });
+  }
 
-    // TODO Allowed Fields
-    //  - specified in groupBy
-    having<const TCriteria extends WhereCriteria<TSources, TFields>>(criteria: TCriteria): _fHaving<TSources, TFields>
-    having(fn: (ctx: SelectFnContext<TSources, TFields>) => Array<ExprCondPair>): _fHaving<TSources, TFields>
-    having(
-        criteriaOrFn: WhereCriteria<TSources, TFields> | ((ctx: SelectFnContext<TSources, TFields>) => Array<ExprCondPair>)
-    ): _fHaving<TSources, TFields> {
-        const existing = this.values.having ?? [];
-        if (typeof criteriaOrFn === 'function') {
-            const ctx = buildContext<TSources, TFields>(dialect);
-            const sql = processExprPairs(criteriaOrFn(ctx));
-            return new _fHaving<TSources, TFields>(this.db, { ...this.values, having: [...existing, sql] });
-        }
-        return new _fHaving<TSources, TFields>(this.db, { ...this.values, having: [...existing, criteriaOrFn] });
+  // See #107: restrict to groupBy columns only
+  having<const TCriteria extends WhereCriteria<TSources, TFields>>(criteria: TCriteria): _fHaving<TSources, TFields>;
+  having(fn: (ctx: SelectFnContext<TSources, TFields>) => Array<ExprCondPair>): _fHaving<TSources, TFields>;
+  having(
+    criteriaOrFn: WhereCriteria<TSources, TFields> | ((ctx: SelectFnContext<TSources, TFields>) => Array<ExprCondPair>)
+  ): _fHaving<TSources, TFields> {
+    const existing = this.values.having ?? [];
+    if (typeof criteriaOrFn === "function") {
+      const ctx = buildContext<TSources, TFields>(dialect);
+      const sql = processExprPairs(criteriaOrFn(ctx));
+      return new _fHaving<TSources, TFields>(this.db, { ...this.values, having: [ ...existing, sql ] });
     }
+    return new _fHaving<TSources, TFields>(this.db, { ...this.values, having: [ ...existing, criteriaOrFn ] });
+  }
 }
 
 /*
@@ -1249,27 +1227,26 @@ OFFSET -
 
 class _fGroupBy<TSources extends TArrSources, TFields extends TFieldsType> extends _fSelectDistinct<TSources, TFields> {
 
-    // having() method for queries without GROUP BY - allows selectAll()
-    having<const TCriteria extends WhereCriteria<TSources, TFields>>(criteria: TCriteria): _fSelectDistinct<TSources, TFields>
-    having(fn: (ctx: SelectFnContext<TSources, TFields>) => Array<ExprCondPair>): _fSelectDistinct<TSources, TFields>
-    having(
-        criteriaOrFn: WhereCriteria<TSources, TFields> | ((ctx: SelectFnContext<TSources, TFields>) => Array<ExprCondPair>)
-    ): _fSelectDistinct<TSources, TFields> {
-        const existing = this.values.having ?? [];
-        if (typeof criteriaOrFn === 'function') {
-            const ctx = buildContext<TSources, TFields>(dialect);
-            const sql = processExprPairs(criteriaOrFn(ctx));
-            return new _fSelectDistinct<TSources, TFields>(this.db, { ...this.values, having: [...existing, sql] });
-        }
-        return new _fSelectDistinct<TSources, TFields>(this.db, { ...this.values, having: [...existing, criteriaOrFn] });
+  // having() method for queries without GROUP BY - allows selectAll()
+  having<const TCriteria extends WhereCriteria<TSources, TFields>>(criteria: TCriteria): _fSelectDistinct<TSources, TFields>;
+  having(fn: (ctx: SelectFnContext<TSources, TFields>) => Array<ExprCondPair>): _fSelectDistinct<TSources, TFields>;
+  having(
+    criteriaOrFn: WhereCriteria<TSources, TFields> | ((ctx: SelectFnContext<TSources, TFields>) => Array<ExprCondPair>)
+  ): _fSelectDistinct<TSources, TFields> {
+    const existing = this.values.having ?? [];
+    if (typeof criteriaOrFn === "function") {
+      const ctx = buildContext<TSources, TFields>(dialect);
+      const sql = processExprPairs(criteriaOrFn(ctx));
+      return new _fSelectDistinct<TSources, TFields>(this.db, { ...this.values, having: [ ...existing, sql ] });
     }
+    return new _fSelectDistinct<TSources, TFields>(this.db, { ...this.values, having: [ ...existing, criteriaOrFn ] });
+  }
 
-    //TODO this should only accept columns for tables in play
-    groupBy<TSelect extends GetOtherColumns<TSources> | GetCTEColumns<TSources, TFields>>(groupBy: Array<TSelect>) {
-        return new _fHaving<TSources, TFields>(this.db, {...this.values, groupBy: groupBy});
-    }
+  // See #108: restrict to columns from joined tables only
+  groupBy<TSelect extends GetOtherColumns<TSources> | GetCTEColumns<TSources, TFields>>(groupBy: Array<TSelect>) {
+    return new _fHaving<TSources, TFields>(this.db, { ...this.values, groupBy: groupBy });
+  }
 }
-
 
 /*
 WHERE - the base data is filtered.
@@ -1280,7 +1257,6 @@ ORDER BY - the final data is sorted.
 LIMIT - the returned data is limited to row count.
 OFFSET -
 */
-
 
 /**
  * Creates a record type where all properties with key type K have optional values of type V.
@@ -1293,7 +1269,7 @@ OFFSET -
  * OptionalRecord<"id" | "name", string>
  * // Result: { id?: string; name?: string; }
  */
-type OptionalRecord<K extends PropertyKey, V> = { [key in K]?: V; }
+type OptionalRecord<K extends PropertyKey, V> = { [key in K]?: V; };
 
 /**
  * Transforms all properties of a record type to optional properties.
@@ -1305,32 +1281,32 @@ type OptionalRecord<K extends PropertyKey, V> = { [key in K]?: V; }
  * OptionalObject<{ id: number; name: string }>
  * // Result: { id?: number; name?: string; }
  */
-type OptionalObject<K extends Record<PropertyKey, unknown>> = { [key in keyof K]?: K[key]; }
+type OptionalObject<K extends Record<PropertyKey, unknown>> = { [key in keyof K]?: K[key]; };
 
 type NonEmptyArray<T> = [T, ...Array<T>];
 
-type COND_NUMERIC_OP = '>' | '>=' | '<' | '<=' | '!=' | '=';
+type COND_NUMERIC_OP = ">" | ">=" | "<" | "<=" | "!=" | "=";
 
 /** Numeric condition value — accepts number | bigint for cross-dialect compatibility (count returns bigint in SQLite, number in PG). */
 type NumericCondValue =
     | number | bigint
-    | { op: COND_NUMERIC_OP; value: number | bigint }
-    | { op: 'IN' | 'NOT IN'; values: Array<number | bigint> }
-    | { op: 'BETWEEN'; values: [low: number | bigint, high: number | bigint] };
+    | { op: COND_NUMERIC_OP; value: number | bigint; }
+    | { op: "IN" | "NOT IN"; values: Array<number | bigint>; }
+    | { op: "BETWEEN"; values: [low: number | bigint, high: number | bigint]; };
 
 type StringCondValue =
     | string
-    | { op: 'LIKE' | 'NOT LIKE'; value: string }
-    | { op: '!='; value: string }
-    | { op: 'IN' | 'NOT IN'; values: Array<string> };
+    | { op: "LIKE" | "NOT LIKE"; value: string; }
+    | { op: "!="; value: string; }
+    | { op: "IN" | "NOT IN"; values: Array<string>; };
 
 type DateCondValue =
     | Date
-    | { op: COND_NUMERIC_OP; value: Date }
-    | { op: 'BETWEEN'; values: [Date, Date] }
-    | { op: 'IN' | 'NOT IN'; values: Array<Date> };
+    | { op: COND_NUMERIC_OP; value: Date; }
+    | { op: "BETWEEN"; values: [Date, Date]; }
+    | { op: "IN" | "NOT IN"; values: Array<Date>; };
 
-type BoolExprCondValue = boolean | { op: '!='; value: boolean };
+type BoolExprCondValue = boolean | { op: "!="; value: boolean; };
 
 /** Discriminated pair: [SQLExpr<T>, condition for T]. Used in where(fn) and having(fn) overloads. */
 type ExprCondPair =
@@ -1340,7 +1316,6 @@ type ExprCondPair =
     | [SQLExpr<string | null>, StringCondValue]
     | [SQLExpr<Date | null>, DateCondValue]
     | [SQLExpr<boolean | null>, BoolExprCondValue];
-
 
 /**
  * Defines all valid SQL condition patterns for numeric types (number, bigint).
@@ -1358,10 +1333,10 @@ type ExprCondPair =
 type COND_NUMERIC<key extends PropertyKey, keyType> =
     | OptionalRecord<key, keyType>
     | OptionalRecord<key, NonEmptyArray<keyType>>
-    | OptionalRecord<key, { op: 'IN' | 'NOT IN'; values: Array<keyType> }>
-    | OptionalRecord<key, { op: 'BETWEEN'; values: [keyType, keyType] }>
-    | OptionalRecord<key, { op: COND_NUMERIC_OP; value: keyType }>
-    | OptionalRecord<key, NonEmptyArray<{ op: COND_NUMERIC_OP; value: keyType }>>;
+    | OptionalRecord<key, { op: "IN" | "NOT IN"; values: Array<keyType>; }>
+    | OptionalRecord<key, { op: "BETWEEN"; values: [keyType, keyType]; }>
+    | OptionalRecord<key, { op: COND_NUMERIC_OP; value: keyType; }>
+    | OptionalRecord<key, NonEmptyArray<{ op: COND_NUMERIC_OP; value: keyType; }>>;
 
 /**
  * Defines all valid SQL condition patterns for string types.
@@ -1378,10 +1353,10 @@ type COND_NUMERIC<key extends PropertyKey, keyType> =
 type COND_STRING<key extends PropertyKey> =
     | OptionalRecord<key, string>
     | OptionalRecord<key, NonEmptyArray<string>>
-    | OptionalRecord<key, { op: 'IN' | 'NOT IN'; values: Array<string> }>
-    | OptionalRecord<key, { op: 'LIKE' | 'NOT LIKE'; value: string }>
-    | OptionalRecord<key, { op: '!='; value: string }>
-    | OptionalRecord<key, NonEmptyArray<{ op: 'LIKE' | 'NOT LIKE' | '!=' | '='; value: string }>>;
+    | OptionalRecord<key, { op: "IN" | "NOT IN"; values: Array<string>; }>
+    | OptionalRecord<key, { op: "LIKE" | "NOT LIKE"; value: string; }>
+    | OptionalRecord<key, { op: "!="; value: string; }>
+    | OptionalRecord<key, NonEmptyArray<{ op: "LIKE" | "NOT LIKE" | "!=" | "="; value: string; }>>;
 
 /**
  * Defines all valid SQL condition patterns for DateTime/Date types.
@@ -1399,10 +1374,10 @@ type COND_STRING<key extends PropertyKey> =
 type COND_DATETIME<key extends PropertyKey, keyType> =
     | OptionalRecord<key, keyType>
     | OptionalRecord<key, NonEmptyArray<keyType>>
-    | OptionalRecord<key, { op: 'IN' | 'NOT IN'; values: Array<keyType> }>
-    | OptionalRecord<key, { op: 'BETWEEN'; values: [keyType, keyType] }>
-    | OptionalRecord<key, { op: COND_NUMERIC_OP; value: keyType }>
-    | OptionalRecord<key, NonEmptyArray<{ op: COND_NUMERIC_OP; value: keyType }>>;
+    | OptionalRecord<key, { op: "IN" | "NOT IN"; values: Array<keyType>; }>
+    | OptionalRecord<key, { op: "BETWEEN"; values: [keyType, keyType]; }>
+    | OptionalRecord<key, { op: COND_NUMERIC_OP; value: keyType; }>
+    | OptionalRecord<key, NonEmptyArray<{ op: COND_NUMERIC_OP; value: keyType; }>>;
 
 /**
  * Defines all valid SQL condition patterns for boolean types.
@@ -1418,7 +1393,7 @@ type COND_DATETIME<key extends PropertyKey, keyType> =
  */
 type COND_BOOLEAN<key extends PropertyKey, keyType> =
     | OptionalRecord<key, keyType>
-    | OptionalRecord<key, { op: '!='; value: keyType }>;
+    | OptionalRecord<key, { op: "!="; value: keyType; }>;
 
 /**
  * Defines SQL NULL checking conditions (IS NULL / IS NOT NULL).
@@ -1436,9 +1411,8 @@ type COND_BOOLEAN<key extends PropertyKey, keyType> =
  * // Result: never (cannot use NULL checks on non-nullable fields)
  */
 type COND_NULL<key extends PropertyKey, keyType> = keyType extends null ? OptionalRecord<key, {
-    op: 'IS NULL' | 'IS NOT NULL'
+  op: "IS NULL" | "IS NOT NULL";
 }> : never;
-
 
 /**
  * Maps each field in a record type to its appropriate SQL condition type based on the field's TypeScript type.
@@ -1455,25 +1429,24 @@ type COND_NULL<key extends PropertyKey, keyType> = keyType extends null ? Option
  * // { "User.email": { op: 'IS NULL' } }
  */
 type SQLCondition<T> = Prettify<{
-    [K in keyof T]?:
+  [K in keyof T]?:
     (Exclude<T[K], null> extends number ? COND_NUMERIC<K, Exclude<T[K], null>> :
-        Exclude<T[K], null> extends bigint ? COND_NUMERIC<K, Exclude<T[K], null>> :
-            Exclude<T[K], null> extends string ? COND_STRING<K> :
-                Exclude<T[K], null> extends boolean ? COND_BOOLEAN<K, Exclude<T[K], null>> :
-                    Exclude<T[K], null> extends Date ? COND_DATETIME<K, Exclude<T[K], null>> :
-                        "Unsupported Data Type") | COND_NULL<K, T[K]>
-}[keyof T]>
-
+      Exclude<T[K], null> extends bigint ? COND_NUMERIC<K, Exclude<T[K], null>> :
+        Exclude<T[K], null> extends string ? COND_STRING<K> :
+          Exclude<T[K], null> extends boolean ? COND_BOOLEAN<K, Exclude<T[K], null>> :
+            Exclude<T[K], null> extends Date ? COND_DATETIME<K, Exclude<T[K], null>> :
+              "Unsupported Data Type") | COND_NULL<K, T[K]>
+}[keyof T]>;
 
 type BasicOpTypes =
     | OptionalRecord<PropertyKey, SUPPORTED_TYPES>
     | OptionalRecord<PropertyKey, NonEmptyArray<SUPPORTED_TYPES>>
-    | OptionalRecord<PropertyKey, { op: 'IN' | 'NOT IN'; values: Array<SUPPORTED_TYPES> }>
-    | OptionalRecord<PropertyKey, { op: 'BETWEEN'; values: [SUPPORTED_TYPES, SUPPORTED_TYPES] }>
-    | OptionalRecord<PropertyKey, { op: 'LIKE' | 'NOT LIKE'; value: string }>
-    | OptionalRecord<PropertyKey, { op: 'IS NULL' | 'IS NOT NULL' }>
-    | OptionalRecord<PropertyKey, { op: COND_NUMERIC_OP; value: SUPPORTED_TYPES }>
-    | OptionalRecord<PropertyKey, NonEmptyArray<{ op: COND_NUMERIC_OP | 'LIKE' | 'NOT LIKE'; value: SUPPORTED_TYPES }>>;
+    | OptionalRecord<PropertyKey, { op: "IN" | "NOT IN"; values: Array<SUPPORTED_TYPES>; }>
+    | OptionalRecord<PropertyKey, { op: "BETWEEN"; values: [SUPPORTED_TYPES, SUPPORTED_TYPES]; }>
+    | OptionalRecord<PropertyKey, { op: "LIKE" | "NOT LIKE"; value: string; }>
+    | OptionalRecord<PropertyKey, { op: "IS NULL" | "IS NOT NULL"; }>
+    | OptionalRecord<PropertyKey, { op: COND_NUMERIC_OP; value: SUPPORTED_TYPES; }>
+    | OptionalRecord<PropertyKey, NonEmptyArray<{ op: COND_NUMERIC_OP | "LIKE" | "NOT LIKE"; value: SUPPORTED_TYPES; }>>;
 
 /**
  * Transforms a table's fields into a record where keys are prefixed with the table name ("Table.field").
@@ -1486,33 +1459,33 @@ type BasicOpTypes =
  * TableFieldType<"User", { id: number; email: string }>
  * // Result: { "User.id": number; "User.email": string }
  */
-type TableFieldType<Table extends string, Fields extends Record<string, any>> = {
-    [f in keyof Fields as CombineToString<f, Table>]: Fields[f];
-}
+type TableFieldType<Table extends string, Fields extends Record<string, ANY_IS_OK>> = {
+  [f in keyof Fields as CombineToString<f, Table>]: Fields[f];
+};
 
-type LogicalOperator = '$AND' | '$OR' | '$NOT' | "$NOR";
+type LogicalOperator = "$AND" | "$OR" | "$NOT" | "$NOR";
 
 type WhereCriteriaSingle<TFields extends Record<string, unknown>> = WhereCriteria_Fields_Single<TFields> & {
-    [k in LogicalOperator]?: [WhereCriteria_Fields_Single<TFields>, ...Array<WhereCriteria_Fields_Single<TFields>>];
+  [k in LogicalOperator]?: [WhereCriteria_Fields_Single<TFields>, ...Array<WhereCriteria_Fields_Single<TFields>>];
 };
 
-type WhereCriteria_Fields_Single<TFields extends Record<string, unknown>> = OptionalObject<(TFields)>  | OptionalObject< SQLCondition<TFields>>;
+type WhereCriteria_Fields_Single<TFields extends Record<string, unknown>> = OptionalObject<(TFields)> | OptionalObject< SQLCondition<TFields>>;
 
 type WhereCriteriaMulti<T extends TArrSources, TFields extends TFieldsType, F = WhereCriteria_Fields<T, TFields>> = F & {
-    [k in LogicalOperator]?: [WhereCriteriaMulti<T, TFields, F>, ...Array<WhereCriteriaMulti<T, TFields, F>>];
+  [k in LogicalOperator]?: [WhereCriteriaMulti<T, TFields, F>, ...Array<WhereCriteriaMulti<T, TFields, F>>];
 };
 
-type WhereCriteria<T extends TArrSources, TFields extends TFieldsType> = T['length'] extends 1
-    ? T[0] extends TVirtualTableSource
-        ? WhereCriteriaMulti<T, TFields>
-        : WhereCriteriaSingle<TFields[GetAliasTableNames<T[0]>]>
-    : WhereCriteriaMulti<T, TFields>;
+type WhereCriteria<T extends TArrSources, TFields extends TFieldsType> = T["length"] extends 1
+  ? T[0] extends TVirtualTableSource
+    ? WhereCriteriaMulti<T, TFields>
+    : WhereCriteriaSingle<TFields[GetAliasTableNames<T[0]>]>
+  : WhereCriteriaMulti<T, TFields>;
 
 /** Criteria type scoped to a single joined table. Keys are "Table.field" (or "Alias.field"). */
 type JoinWhereCriteria<Table extends string, TAlias extends string | never> =
-    [TAlias] extends [never]
-        ? WhereCriteriaMulti<[Table], Record<Table, GetFieldsFromTable<Table>>>
-        : WhereCriteriaMulti<[[Table, TAlias]], Record<Table, GetFieldsFromTable<Table>>>;
+  [TAlias] extends [never]
+    ? WhereCriteriaMulti<[Table], Record<Table, GetFieldsFromTable<Table>>>
+    : WhereCriteriaMulti<[[Table, TAlias]], Record<Table, GetFieldsFromTable<Table>>>;
 
 /**
  * Recursively builds the field condition types for all tables in the query.
@@ -1527,24 +1500,23 @@ type JoinWhereCriteria<Table extends string, TAlias extends string | never> =
  * WhereCriteria_Fields<["User", ["Post", "p"]], { User: { id: number }, Post: { id: number, authorId: number } }>
  * // Result: { "User.id"?: number | COND_NUMERIC<...>, "p.id"?: number | COND_NUMERIC<...>, "p.authorId"?: ... }
  */
-type WhereCriteria_Fields<T extends Array<TTableSources>, TFields extends TFieldsType, acc = {}> =
-    T extends readonly [infer HEAD, ...infer Rest]
-        ? HEAD extends string
-            ? Rest extends Array<TTableSources>
-                ? WhereCriteria_Fields<Rest, TFields, OptionalObject<acc & (TableFieldType<HEAD, TFields[HEAD]> | SQLCondition<TableFieldType<HEAD, TFields[HEAD]>>)>>
-                : WhereCriteria_Fields<[], TFields, OptionalObject<acc & (TableFieldType<HEAD, TFields[HEAD]> | SQLCondition<TableFieldType<HEAD, TFields[HEAD]>>)>>
-            : HEAD extends readonly ["__cte__", infer CTE_NAME extends string]
-                // CTE source — use CTE_NAME as key into TFields
-                ? Rest extends Array<TTableSources>
-                    ? WhereCriteria_Fields<Rest, TFields, OptionalObject<acc & (TableFieldType<CTE_NAME, TFields[CTE_NAME]> | SQLCondition<TableFieldType<CTE_NAME, TFields[CTE_NAME]>>)>>
-                    : WhereCriteria_Fields<[], TFields, OptionalObject<acc & (TableFieldType<CTE_NAME, TFields[CTE_NAME]> | SQLCondition<TableFieldType<CTE_NAME, TFields[CTE_NAME]>>)>>
-            : HEAD extends [infer R_NAME extends string, infer A_NAME extends string]
-                ? Rest extends Array<TTableSources>
-                    ? WhereCriteria_Fields<Rest, TFields, OptionalObject<acc & (TableFieldType<A_NAME, TFields[R_NAME]> | SQLCondition<TableFieldType<A_NAME, TFields[R_NAME]>>)>>
-                    : WhereCriteria_Fields<[], TFields, OptionalObject<acc & (TableFieldType<A_NAME, TFields[R_NAME]> | SQLCondition<TableFieldType<A_NAME, TFields[R_NAME]>>)>>
-: never
-        : acc;
-
+type WhereCriteria_Fields<T extends Array<TTableSources>, TFields extends TFieldsType, acc = BLANK_OBJECT> =
+  T extends readonly [infer HEAD, ...infer Rest]
+    ? HEAD extends string
+      ? Rest extends Array<TTableSources>
+        ? WhereCriteria_Fields<Rest, TFields, OptionalObject<acc & (TableFieldType<HEAD, TFields[HEAD]> | SQLCondition<TableFieldType<HEAD, TFields[HEAD]>>)>>
+        : WhereCriteria_Fields<[], TFields, OptionalObject<acc & (TableFieldType<HEAD, TFields[HEAD]> | SQLCondition<TableFieldType<HEAD, TFields[HEAD]>>)>>
+      : HEAD extends readonly ["__cte__", infer CTE_NAME extends string]
+      // CTE source — use CTE_NAME as key into TFields
+        ? Rest extends Array<TTableSources>
+          ? WhereCriteria_Fields<Rest, TFields, OptionalObject<acc & (TableFieldType<CTE_NAME, TFields[CTE_NAME]> | SQLCondition<TableFieldType<CTE_NAME, TFields[CTE_NAME]>>)>>
+          : WhereCriteria_Fields<[], TFields, OptionalObject<acc & (TableFieldType<CTE_NAME, TFields[CTE_NAME]> | SQLCondition<TableFieldType<CTE_NAME, TFields[CTE_NAME]>>)>>
+        : HEAD extends [infer R_NAME extends string, infer A_NAME extends string]
+          ? Rest extends Array<TTableSources>
+            ? WhereCriteria_Fields<Rest, TFields, OptionalObject<acc & (TableFieldType<A_NAME, TFields[R_NAME]> | SQLCondition<TableFieldType<A_NAME, TFields[R_NAME]>>)>>
+            : WhereCriteria_Fields<[], TFields, OptionalObject<acc & (TableFieldType<A_NAME, TFields[R_NAME]> | SQLCondition<TableFieldType<A_NAME, TFields[R_NAME]>>)>>
+          : never
+    : acc;
 
 /**
  * Conditional type that returns R only if T is exactly null, otherwise returns never.
@@ -1571,10 +1543,10 @@ type OnlyNull<T, R> = T extends null ? R : never;
  * // Result: "User.email" (only nullable field)
  */
 type FindColsWithNull<TFields extends TFieldsType> = Prettify<{
-    [Table in keyof TFields]: {
-        [Field in keyof TFields[Table]]: OnlyNull<TFields[Table][Field], CombineToString<Field, Table>>
-    }[keyof TFields[Table]]
-}[keyof TFields]>
+  [Table in keyof TFields]: {
+    [Field in keyof TFields[Table]]: OnlyNull<TFields[Table][Field], CombineToString<Field, Table>>
+  }[keyof TFields[Table]]
+}[keyof TFields]>;
 
 /**
  * Type guard that ensures raw SQL strings for `.whereRaw()` do not start with "WHERE".
@@ -1603,82 +1575,80 @@ type NO_START_WITH_WHERE<RAW extends string> = Uppercase<TRIM<RAW>> extends `WHE
 type TRIM<S extends string> = S extends ` ${infer S2}` ? TRIM<S2> : S;
 class _fWhere<TSources extends TArrSources, TFields extends TFieldsType> extends _fGroupBy<TSources, TFields> {
 
+  whereNotNull<const TColWithNull extends FindColsWithNull<TFields>>(col: TColWithNull) {
 
-    whereNotNull<const TColWithNull extends FindColsWithNull<TFields>>(col: TColWithNull) {
+    type RemoveNullFromField<T extends unknown, TFields extends TFieldsType> = T extends `${infer table}.${infer col}` ?
+      Prettify<Omit<TFields, table> & Prettify<Record<table, Omit<Pick<TFields, table>[table], col> & Record<col, Exclude<Pick<TFields, table>[table][col], null>>>>>
+      : never;
 
+    return new _fWhere<TSources, RemoveNullFromField<TColWithNull, TFields>>(this.db, {
+      ...this.values,
+      where: [
+        ...(this.values.where || []),
+        {
 
-        type RemoveNullFromField<T extends unknown, TFields extends TFieldsType> = T extends `${infer table}.${infer col}` ?
-            Prettify<Omit<TFields, table> & Prettify<Record<table, Omit<Pick<TFields, table>[table], col> & Record<col, Exclude<Pick<TFields, table>[table][col], null>>>>>
-            : never;
+          $AND:
+                        [{ [(col as unknown as string)]: { op: "IS NOT NULL" } }],
+        },
+      ],
+    });
+  }
 
-        return new _fWhere<TSources, RemoveNullFromField<TColWithNull, TFields>>(this.db, {
-            ...this.values,
-            where: [
-                ...(this.values.where || []),
-                {
+  whereIsNull<const TColWithNull extends FindColsWithNull<TFields>>(col: TColWithNull) {
 
-                    $AND:
-                        [{[(col as unknown as string)]: {op: "IS NOT NULL"}}]
-                }
-            ],
-        });
+    type RemoveNonNullFromField<T extends unknown, TFields extends TFieldsType> = T extends `${infer table}.${infer col}` ?
+      Prettify<Omit<TFields, table> & Prettify<Record<table, Omit<Pick<TFields, table>[table], col> & Record<col, null>>>>
+      : never;
+
+    return new _fWhere<TSources, RemoveNonNullFromField<TColWithNull, TFields>>(this.db, {
+      ...this.values,
+      where: [
+        ...(this.values.where || []),
+        {
+
+          $AND:
+                        [{ [(col as unknown as string)]: { op: "IS NULL" } }],
+        },
+      ],
+    });
+  }
+
+  where(fn: (ctx: SelectFnContext<TSources, TFields>) => Array<ExprCondPair>): _fGroupBy<TSources, TFields>;
+  where<const TCriteria extends WhereCriteria<TSources, TFields>>(criteria: TCriteria): _fGroupBy<TSources, TFields>;
+  where(
+    criteriaOrFn: WhereCriteria<TSources, TFields> | ((ctx: SelectFnContext<TSources, TFields>) => Array<ExprCondPair>)
+  ): _fGroupBy<TSources, TFields> {
+    if (typeof criteriaOrFn === "function") {
+      const ctx = buildContext<TSources, TFields>(dialect);
+      const sql = processExprPairs(criteriaOrFn(ctx));
+      return new _fGroupBy<TSources, TFields>(this.db, {
+        ...this.values,
+        where: [ ...this.values.where || [], sql ],
+      });
     }
+    return new _fGroupBy<TSources, TFields>(this.db, {
+      ...this.values,
+      where: [ ...this.values.where || [], criteriaOrFn ],
+    });
+  }
 
-    whereIsNull<const TColWithNull extends FindColsWithNull<TFields>>(col: TColWithNull) {
-
-        type RemoveNonNullFromField<T extends unknown, TFields extends TFieldsType> = T extends `${infer table}.${infer col}` ?
-            Prettify<Omit<TFields, table> & Prettify<Record<table, Omit<Pick<TFields, table>[table], col> & Record<col, null>>>>
-            : never;
-
-        return new _fWhere<TSources, RemoveNonNullFromField<TColWithNull, TFields>>(this.db, {
-            ...this.values,
-            where: [
-                ...(this.values.where || []),
-                {
-
-                    $AND:
-                        [{[(col as unknown as string)]: {op: "IS NULL"}}]
-                }
-            ],
-        });
-    }
-
-    where(fn: (ctx: SelectFnContext<TSources, TFields>) => Array<ExprCondPair>): _fGroupBy<TSources, TFields>
-    where<const TCriteria extends WhereCriteria<TSources, TFields>>(criteria: TCriteria): _fGroupBy<TSources, TFields>
-    where(
-        criteriaOrFn: WhereCriteria<TSources, TFields> | ((ctx: SelectFnContext<TSources, TFields>) => Array<ExprCondPair>)
-    ): _fGroupBy<TSources, TFields> {
-        if (typeof criteriaOrFn === 'function') {
-            const ctx = buildContext<TSources, TFields>(dialect);
-            const sql = processExprPairs(criteriaOrFn(ctx));
-            return new _fGroupBy<TSources, TFields>(this.db, {
-                ...this.values,
-                where: [...this.values.where || [], sql],
-            });
-        }
-        return new _fGroupBy<TSources, TFields>(this.db, {
-            ...this.values,
-            where: [...this.values.where || [], criteriaOrFn],
-        });
-    }
-
-    /**
+  /**
      * @security NEVER pass user-supplied input. Inserts SQL verbatim into $queryRawUnsafe without parameterization.
      */
-    whereRaw<RAW extends string >(where:NO_START_WITH_WHERE<RAW>) {
+  whereRaw<RAW extends string >(where: NO_START_WITH_WHERE<RAW>) {
 
-        return new _fGroupBy<TSources, TFields>(this.db, {
-            ...this.values,
-            where: [...(this.values.where || []), where.replace(/^\s*where\s*/i, "").trim()],
-        });
-    }
+    return new _fGroupBy<TSources, TFields>(this.db, {
+      ...this.values,
+      where: [ ...(this.values.where || []), where.replace(/^\s*where\s*/i, "").trim() ],
+    });
+  }
 
 }
 
 /*function processCriteria(criteria: WhereCriteria<T>): string {
     if ('AND' in criteria || 'OR' in criteria) {
         return Object.keys(criteria).map((operator) => {
-            const subCriteria = (criteria as any)[operator] as WhereCriteria<T>[];
+            const subCriteria = (criteria as ANY_IS_OK)[operator] as WhereCriteria<T>[];
             const subConditions = subCriteria.map(subCriterion => processCriteria(subCriterion)).join(` ${operator} `);
             return `(${subConditions})`;
         }).join(" ");
@@ -1711,7 +1681,6 @@ LIMIT - the returned data is limited to row count.
 OFFSET -
 */
 
-
 /**
  * Extracts the fields object from a table source.
  *
@@ -1731,7 +1700,7 @@ OFFSET -
  * type UserFields = GetFieldsFromTable<["User", "u"]>;
  * // Returns: { id: number, name: string, email: string, ... }
  */
-type GetFieldsFromTable<TDBBase extends TTableSources> = Extract<DATABASE, { table: GetRealTableNames<TDBBase> }>["fields"];
+type GetFieldsFromTable<TDBBase extends TTableSources> = Extract<DATABASE, { table: GetRealTableNames<TDBBase>; }>["fields"];
 
 /**
  * Extracts column names from a table source.
@@ -1753,8 +1722,8 @@ type GetFieldsFromTable<TDBBase extends TTableSources> = Extract<DATABASE, { tab
  * // Returns: "id" | "name" | "email" | ...
  */
 type GetColsBaseTable<TDBBase extends TTableSources> = TDBBase extends string
-    ? keyof GetFieldsFromTable<TDBBase> & string
-    : keyof GetFieldsFromTable<TDBBase[0]> & string;
+  ? keyof GetFieldsFromTable<TDBBase> & string
+  : keyof GetFieldsFromTable<TDBBase[0]> & string;
 
 /**
  * Generates fully-qualified column references for join operations.
@@ -1776,8 +1745,8 @@ type GetColsBaseTable<TDBBase extends TTableSources> = TDBBase extends string
  * // Returns: "u.id" | "u.name" | "u.email" | ...
  */
 type GetJoinCols<TDBBase extends TTableSources> = TDBBase extends string
-    ? IterateFields<TDBBase, IsString<GetColsBaseTable<TDBBase>>>
-    : IterateFields<TDBBase[1], IsString<GetColsBaseTable<TDBBase[0]>>>;
+  ? IterateFields<TDBBase, IsString<GetColsBaseTable<TDBBase>>>
+  : IterateFields<TDBBase[1], IsString<GetColsBaseTable<TDBBase[0]>>>;
 
 /**
  * Creates fully-qualified column references by prefixing field names with table/alias.
@@ -1810,7 +1779,7 @@ type IterateFields<TDBBase extends TTableSources, F extends string> = `${TDBBase
  * Relations<"Post"> // { User: { authorId: ["id"] }, Category: { categoryId: ["id"] } }
  * Relations<["Post", "p"]> // Same as above, ignores alias
  */
-type Relations<Table extends TTableSources> = Extract<DATABASE, { table: GetRealTableNames<Table> }>["relations"];
+type Relations<Table extends TTableSources> = Extract<DATABASE, { table: GetRealTableNames<Table>; }>["relations"];
 
 // type UnionToIntersection<U> =
 //     (U extends any ? (k: U) => void : never) extends (k: infer I) => void ? I : never;
@@ -1843,12 +1812,11 @@ type Relations<Table extends TTableSources> = Extract<DATABASE, { table: GetReal
  * AvailableJoins<["Post", "User"]> // "User" | "Category" | "Post" | "Profile"
  */
 type AvailableJoins<Tables extends Array<TTableSources>, acc extends TTableSources = never> =
-    Tables extends [infer T extends TTableSources, ...infer Rest extends Array<TTableSources>]
-        ? AvailableJoins<Rest,
-            //@ts-expect-error todo come back to
+  Tables extends [infer T extends TTableSources, ...infer Rest extends Array<TTableSources>]
+    ? AvailableJoins<Rest,
+            //@ts-expect-error See #109
             acc | keyof Relations<T>>
-        : acc;
-
+    : acc;
 
 // type MapAliasToTable<
 //     TAliasMap extends TTableAliases,
@@ -1867,11 +1835,11 @@ type AvailableJoins<Tables extends Array<TTableSources>, acc extends TTableSourc
  * GetRealTableNames<["User", "u"]> // "User"
  * GetRealTableNames<"User" | ["Post", "p"]> // "User" | "Post"
  */
-type GetRealTableNames<Tables extends TTableSources> = Tables extends any
-    ? Tables extends string
-        ? Tables
-        : Tables[0]
-    : never;
+type GetRealTableNames<Tables extends TTableSources> = Tables extends ANY_IS_OK
+  ? Tables extends string
+    ? Tables
+    : Tables[0]
+  : never;
 
 /**
  * Extracts the alias or table name from a table source for use in queries.
@@ -1885,11 +1853,11 @@ type GetRealTableNames<Tables extends TTableSources> = Tables extends any
  * GetAliasTableNames<["User", "u"]> // "u"
  * GetAliasTableNames<"User" | ["Post", "p"]> // "User" | "p"
  */
-type GetAliasTableNames<Tables extends TTableSources> = Tables extends any
-    ? Tables extends string
-        ? Tables
-        : Tables[1]
-    : never;
+type GetAliasTableNames<Tables extends TTableSources> = Tables extends ANY_IS_OK
+  ? Tables extends string
+    ? Tables
+    : Tables[1]
+  : never;
 
 /*
 
@@ -1919,9 +1887,9 @@ returns {
 type IsTargetCTE<TJTable> = TJTable extends TVirtualTableSource ? string : never;
 
 export type SafeJoins<TNewJoin extends TTables,
-    TJoins extends TArrSources,
-    TRelations = Relations<TNewJoin>
-> = { [k in keyof TRelations as Filter<k,GetRealTableNames<TJoins[number]>>]: TRelations[k] };
+  TJoins extends TArrSources,
+  TRelations = Relations<TNewJoin>
+> = { [k in keyof TRelations as Filter<k, GetRealTableNames<TJoins[number]>>]: TRelations[k] };
 
 /**
  * Converts an array type to a union of its element types.
@@ -1950,7 +1918,7 @@ type ToUnion<TJoins extends TArrSources> = TJoins[number];
  * // Result: { u: { posts: ["userId"] } }
  */
 export type MapJoinsToKnownTables<TSafeJoins extends Record<string, unknown>, TJoins extends TArrSources> = {
-    [k in ToUnion<TJoins> as GetAliasTableNames<k> ]: TSafeJoins[GetRealTableNames<k>]
+  [k in ToUnion<TJoins> as GetAliasTableNames<k> ]: TSafeJoins[GetRealTableNames<k>]
 };
 
 /**
@@ -1967,10 +1935,10 @@ export type MapJoinsToKnownTables<TSafeJoins extends Record<string, unknown>, TJ
  * CombineToString<123, "User"> // never (A must be string)
  */
 type CombineToString<A extends unknown, T extends unknown> = A extends string
-    ? T extends string
-        ? `${T}.${A}`
-        : never
-    : never;
+  ? T extends string
+    ? `${T}.${A}`
+    : never
+  : never;
 
 /**
  * Transforms a safe joins object into a union of tuple pairs representing valid join columns.
@@ -1985,17 +1953,17 @@ type CombineToString<A extends unknown, T extends unknown> = A extends string
  * // Returns: ["userId", "User.id"] | ["postId", "Posts.id"]
  */
 export type GetUnionOfRelations<TSafe> = {
-    [T in keyof TSafe]: {
-        [TLocal in keyof TSafe[T]]:
-        [
-            TLocal,
-            T extends string
-                ? TSafe[T][TLocal] extends Array<string>
-                    ? CombineToString<TSafe[T][TLocal][number], T>
-                    : never
-                : never
-        ]
-    }[keyof TSafe[T]];
+  [T in keyof TSafe]: {
+    [TLocal in keyof TSafe[T]]:
+    [
+      TLocal,
+      T extends string
+        ? TSafe[T][TLocal] extends Array<string>
+          ? CombineToString<TSafe[T][TLocal][number], T>
+          : never
+        : never
+    ]
+  }[keyof TSafe[T]];
 }[keyof TSafe];
 
 /**
@@ -2030,11 +1998,11 @@ type ValidStringTuple<T> = T extends [string, string] ? T : never;
  * find<["userId", "User.id"] | ["postId", "Post.id"], "invalid"> // never
  */
 type find<TJoinCols extends [string, string], toFind extends string> =
-    TJoinCols extends [infer col1, infer col2]
-        ? col1 extends toFind
-            ? col2
-            : never
-        : never;
+  TJoinCols extends [infer col1, infer col2]
+    ? col1 extends toFind
+      ? col2
+      : never
+    : never;
 
 // type CleanUpFromNames<TFromTable extends TTableSources, TCols extends string> = TCols extends `${TFromTable}.${infer Col}` ? Col : TCols;
 
@@ -2065,10 +2033,9 @@ type RemoveNullable<T extends string> = T extends `?${infer R}` ? R : T;
  * type Swapped = SwapKeysAndValues<Original>;
  * // Result: { Int: "id" | "age", String: "name" }
  */
-type SwapKeysAndValues<T extends Record<string, any>> = {
-    [K in keyof T as RemoveNullable<T[K]>]: K;
+type SwapKeysAndValues<T extends Record<string, ANY_IS_OK>> = {
+  [K in keyof T as RemoveNullable<T[K]>]: K;
 };
-
 
 /**
  * Flattens a complex intersection type into a single object type for better IDE display.
@@ -2086,7 +2053,7 @@ type SwapKeysAndValues<T extends Record<string, any>> = {
  * // Instead of: { a: string } & { b: number } & { c: boolean }
  */
 type Prettify<T> = {
-    [K in keyof T]: T[K];
+  [K in keyof T]: T[K];
 } & {};
 
 /**
@@ -2107,7 +2074,7 @@ type Prettify<T> = {
  * // Returns: "Post"
  */
 type ExtractTableName<T extends string> =
-    T extends `${infer Table} ${string}` ? Table : T;
+  T extends `${infer Table} ${string}` ? Table : T;
 
 /**
  * Extracts the alias from a string that contains an inline table alias.
@@ -2127,8 +2094,7 @@ type ExtractTableName<T extends string> =
  * // Returns: never
  */
 type ExtractAlias<T extends string> =
-    T extends `${string} ${infer Alias}` ? Alias : never;
-
+  T extends `${string} ${infer Alias}` ? Alias : never;
 
 /**
  * Creates a reverse mapping from tables to their field types.
@@ -2140,8 +2106,8 @@ type ExtractAlias<T extends string> =
  * // Result: { User: { Int: "id" | "age", String: "name" } }
  */
 type FieldsByTableByType = Prettify<{
-    [Table in TTables]: SwapKeysAndValues<_db[Table]["fields"]>;
-}>
+  [Table in TTables]: SwapKeysAndValues<_db[Table]["fields"]>;
+}>;
 
 /**
  * Extracts all unique Prisma type strings used across all tables.
@@ -2152,7 +2118,7 @@ type FieldsByTableByType = Prettify<{
  * // Result: { Int: {}, String: {}, Boolean: {} }
  */
 type GetTypes = {
-    [Type in keyof FieldsByTableByType as keyof FieldsByTableByType[Type]]: {};
+  [Type in keyof FieldsByTableByType as keyof FieldsByTableByType[Type]]: {};
 };
 
 /**
@@ -2168,9 +2134,9 @@ type GetTypes = {
  * // }
  */
 type FieldsByTypeByTable = Prettify<{
-    [Type in keyof GetTypes]: {
-        [Table in keyof FieldsByTableByType as [FieldsByTableByType[Table][Filter<keyof FieldsByTableByType[Table], Type>]] extends [never] ? never : Table]: FieldsByTableByType[Table][Filter<keyof FieldsByTableByType[Table], Type>]
-    };
+  [Type in keyof GetTypes]: {
+    [Table in keyof FieldsByTableByType as [FieldsByTableByType[Table][Filter<keyof FieldsByTableByType[Table], Type>]] extends [never] ? never : Table]: FieldsByTableByType[Table][Filter<keyof FieldsByTableByType[Table], Type>]
+  };
 }>;
 
 /**
@@ -2191,7 +2157,7 @@ type FieldsByTypeByTable = Prettify<{
  * type PostTitleType = GetColumnType<["Post", "p"], "title">;
  * // Returns: string
  */
-type GetColumnType<Table extends TTableSources, Col1 extends keyof _db[Table extends string ? Table : `Come back to 8`]["fields"]> = RemoveNullChar<IsString<_db[Table extends string ? Table : `Come back to 9`]["fields"][Col1]>>
+type GetColumnType<Table extends TTableSources, Col1 extends keyof _db[Table extends string ? Table : `Come back to 8`]["fields"]> = RemoveNullChar<IsString<_db[Table extends string ? Table : `Come back to 9`]["fields"][Col1]>>;
 
 // type FieldsByTableByType<TFields extends TFieldsType> = Prettify<{
 //     [Table in  TTableSources] : SwapKeysAndValues<TFields[Table]>;
@@ -2226,11 +2192,11 @@ type GetColumnType<Table extends TTableSources, Col1 extends keyof _db[Table ext
  */
 type GetJoinOnColsType<Type extends string, TSources extends TArrSources> =
 // GetColsFromTableType<TDBBase, Type>
-    GetJoinColsType<TSources[number], Type>;
+  GetJoinColsType<TSources[number], Type>;
 
 /** Produces "CTEName.field" strings for all fields in all CTEs. Used to widen TCol2 in *TypeEnforced joins so CTE columns are valid references. */
-type GetCTECols<TCTEs extends Record<string, Record<string, any>>> =
-    { [K in keyof TCTEs & string]: `${K}.${keyof TCTEs[K] & string}` }[keyof TCTEs & string];
+type GetCTECols<TCTEs extends Record<string, Record<string, ANY_IS_OK>>> =
+  { [K in keyof TCTEs & string]: `${K}.${keyof TCTEs[K] & string}` }[keyof TCTEs & string];
 
 /**
  * Extracts columns of a specific type from a single table source.
@@ -2252,7 +2218,7 @@ type GetCTECols<TCTEs extends Record<string, Record<string, any>>> =
  */
 type GetColsFromTableType<TDBBase extends TTableSources, Type extends string> =
 //@ts-expect-error Try and come back to
-    FieldsByTypeByTable[Loop<keyof FieldsByTypeByTable, Type>][GetRealTableNames<TDBBase>];
+  FieldsByTypeByTable[Loop<keyof FieldsByTypeByTable, Type>][GetRealTableNames<TDBBase>];
 
 /**
  * Filters a union of keys to find those that match a specific type string.
@@ -2273,7 +2239,6 @@ type GetColsFromTableType<TDBBase extends TTableSources, Type extends string> =
  * // Returns: never
  */
 type Loop<Keys extends string, Type extends string> = Keys extends Type ? Type : never;
-
 
 /**
  * Generates fully-qualified column references for columns of a specific type from a table source.
@@ -2306,40 +2271,40 @@ type GetJoinColsType<TDBBase extends TTableSources, Type extends string> = Itera
  *   Post: { id: number, title: string }
  * };
  */
-type TFieldsType = Record<string, Record<string, any>>;
+type TFieldsType = Record<string, Record<string, ANY_IS_OK>>;
 
 /** Makes all values in a table's fields nullable. */
-type MakeNullable<T extends Record<string, any>> = { [K in keyof T]: T[K] | null };
+type MakeNullable<T extends Record<string, ANY_IS_OK>> = { [K in keyof T]: T[K] | null };
 
 /** Makes all fields in all tables nullable (used for RIGHT/FULL join existing tables). */
 type NullifyTableFields<TFields extends TFieldsType> = { [T in keyof TFields]: MakeNullable<TFields[T]> };
 
 /** Extracts result row type from a _fRun query — used by $with to capture CTE shape. */
-export type InferCTEShape<T> = T extends _fRun<any, any, infer TSelectRT> ? TSelectRT : never;
+export type InferCTEShape<T> = T extends _fRun<ANY_IS_OK, ANY_IS_OK, infer TSelectRT> ? TSelectRT : never;
 
 /** CTE names present in TSources (tagged with "__cte__" discriminant). */
 type CTENames<TSources extends TArrSources> = TSources[number] extends infer S
-    ? S extends readonly ["__cte__", infer Name extends string]
-        ? Name
-        : never
-    : never;
+  ? S extends readonly ["__cte__", infer Name extends string]
+    ? Name
+    : never
+  : never;
 
 /** Qualified column refs for CTE sources: "cteName.col" for each CTE in TSources. */
 type GetCTEColumns<TSources extends TArrSources, TFields extends TFieldsType> =
-    CTENames<TSources> extends infer CTE extends string & keyof TFields
-        ? `${CTE}.${string & keyof TFields[CTE]}`
-        : never;
+  CTENames<TSources> extends infer CTE extends string & keyof TFields
+    ? `${CTE}.${string & keyof TFields[CTE]}`
+    : never;
 
 /** True when table T (by alias/name) is a CTE source in TSources. */
 type IsCTE<T extends string, TSources extends TArrSources> =
-    TSources[number] extends infer S
-        ? S extends readonly ["__cte__", T]
-            ? true
-            : never
-        : never;
+  TSources[number] extends infer S
+    ? S extends readonly ["__cte__", T]
+      ? true
+      : never
+    : never;
 
 /** Stub type replaced by generator with Omit<_fJoin<...>, unsupportedMethods> for each dialect. */
-export type _fJoinReturn<TSources extends TArrSources, TFields extends TFieldsType, TCTEs extends Record<string, Record<string, any>> = {}> = _fJoin<TSources, TFields, TCTEs>;
+export type _fJoinReturn<TSources extends TArrSources, TFields extends TFieldsType, TCTEs extends Record<string, Record<string, ANY_IS_OK>> = BLANK_OBJECT> = _fJoin<TSources, TFields, TCTEs>;
 
 // ── SelectFnContext ──────────────────────────────────────────────────────────
 
@@ -2376,7 +2341,7 @@ type BaseSelectFnContext<_TSources extends TArrSources, _TFields extends TFields
   coalesce: <T>(...args: [GetColumnsOfType<_TSources, _TFields, T> | SQLExpr<T>, ...Array<GetColumnsOfType<_TSources, _TFields, T> | SQLExpr<T>>]) => SQLExpr<NonNullable<T>>;
   nullif: <T>(expr1: SQLExpr<T>, expr2: SQLExpr<T>) => SQLExpr<T | null>;
   caseWhen: <T, TElse extends SQLExpr<T> | undefined = undefined>(
-    cases: [{ when: WhereCriteria<_TSources, _TFields>; then: SQLExpr<T> }, ...Array<{ when: WhereCriteria<_TSources, _TFields>; then: SQLExpr<T> }>],
+    cases: [{ when: WhereCriteria<_TSources, _TFields>; then: SQLExpr<T>; }, ...Array<{ when: WhereCriteria<_TSources, _TFields>; then: SQLExpr<T>; }>],
     elseVal?: TElse
   ) => TElse extends SQLExpr<T> ? SQLExpr<T> : SQLExpr<T | null>;
 };
@@ -2392,27 +2357,27 @@ function buildContext<TSources extends TArrSources, TFields extends TFieldsType>
 
   return {
     lit: _lit,
-    min:           (col) => sqlExpr(`MIN(${resolveArg(col, quoteFn)})`),
-    max:           (col) => sqlExpr(`MAX(${resolveArg(col, quoteFn)})`),
+    min:           col => sqlExpr(`MIN(${resolveArg(col, quoteFn)})`),
+    max:           col => sqlExpr(`MAX(${resolveArg(col, quoteFn)})`),
     replace:       (col, from, to) => sqlExpr(`REPLACE(${resolveArg(col, quoteFn)}, '${from.replace(/'/g, "''")}', '${to.replace(/'/g, "''")}')`),
-    upper:         (col) => sqlExpr(`UPPER(${resolveArg(col, quoteFn)})`),
-    lower:         (col) => sqlExpr(`LOWER(${resolveArg(col, quoteFn)})`),
-    trim:          (col) => sqlExpr(`TRIM(${resolveArg(col, quoteFn)})`),
-    ltrim:         (col) => sqlExpr(`LTRIM(${resolveArg(col, quoteFn)})`),
-    rtrim:         (col) => sqlExpr(`RTRIM(${resolveArg(col, quoteFn)})`),
-    cond:          (criteria) => sqlExpr(processCriteria([criteria as any])),
+    upper:         col => sqlExpr(`UPPER(${resolveArg(col, quoteFn)})`),
+    lower:         col => sqlExpr(`LOWER(${resolveArg(col, quoteFn)})`),
+    trim:          col => sqlExpr(`TRIM(${resolveArg(col, quoteFn)})`),
+    ltrim:         col => sqlExpr(`LTRIM(${resolveArg(col, quoteFn)})`),
+    rtrim:         col => sqlExpr(`RTRIM(${resolveArg(col, quoteFn)})`),
+    cond:          criteria => sqlExpr(processCriteria([ criteria as ANY_IS_OK ])),
     coalesce:      (...args) => {
-      if (args.length === 0) throw new Error('coalesce: requires at least one argument');
-      return sqlExpr(`COALESCE(${args.map(a => resolveArg(a as any, quoteFn)).join(', ')})`);
+      if (args.length === 0) throw new Error("coalesce: requires at least one argument");
+      return sqlExpr(`COALESCE(${args.map(a => resolveArg(a as ANY_IS_OK, quoteFn)).join(", ")})`);
     },
     nullif:        (expr1, expr2) => sqlExpr(`NULLIF(${expr1.sql}, ${expr2.sql})`),
     caseWhen:      (cases, elseVal?) => {
-      if (cases.length === 0) throw new Error('caseWhen: requires at least one WHEN clause');
-      const parts = cases.map(c => `WHEN ${processCriteria([c.when as any])} THEN ${c.then.sql}`).join(' ');
-      return sqlExpr(`CASE ${parts}${elseVal ? ` ELSE ${elseVal.sql}` : ''} END`);
+      if (cases.length === 0) throw new Error("caseWhen: requires at least one WHEN clause");
+      const parts = cases.map(c => `WHEN ${processCriteria([ c.when as ANY_IS_OK ])} THEN ${c.then.sql}`).join(" ");
+      return sqlExpr(`CASE ${parts}${elseVal ? ` ELSE ${elseVal.sql}` : ""} END`);
     },
     // Partial<> cast: SelectFnContext is a stub here; generator injects DialectFns at codegen time.
-    ...(dialectContextFns(quoteFn, (c: unknown) => processCriteria([c as any])) as unknown as Partial<SelectFnContext<TSources, TFields>>),
+    ...(dialectContextFns(quoteFn, (c: unknown) => processCriteria([ c as ANY_IS_OK ])) as unknown as Partial<SelectFnContext<TSources, TFields>>),
   } as SelectFnContext<TSources, TFields>;
 }
 
@@ -2423,201 +2388,202 @@ function buildContext<TSources extends TArrSources, TFields extends TFieldsType>
  * True if T is a union type (distributing check).
  * @returns {never} when T is never
  */
-type IsUnion<T, _T extends T = T> = _T extends _T ? ([T] extends [_T] ? false : true) : never
+type IsUnion<T, _T extends T = T> = _T extends _T ? ([T] extends [_T] ? false : true) : never;
 
 /** Maps source input (real name OR alias) → actual TTables name */
 type ResolveSourceTable<TSources extends TArrSources, TInput extends string> =
-    TSources[number] extends infer T
-        ? T extends TVirtualTableSource
-            ? never
-            : T extends string
-                ? T extends TInput ? T & TTables : never
-                : T extends [infer Table extends TTables, infer Alias extends string]
-                    ? Alias extends TInput ? Table
-                      : Table extends TInput ? Table
-                      : never
-                : never
-        : never
+  TSources[number] extends infer T
+    ? T extends TVirtualTableSource
+      ? never
+      : T extends string
+        ? T extends TInput ? T & TTables : never
+        : T extends [infer Table extends TTables, infer Alias extends string]
+          ? Alias extends TInput ? Table
+            : Table extends TInput ? Table
+              : never
+          : never
+    : never;
 
 /** M2M-capable source inputs: real name for plain-string sources; alias-only for aliased sources */
 type AvailableM2MSources<TSources extends TArrSources> =
-    TSources[number] extends infer T
-        ? T extends TVirtualTableSource
-            ? never
-            : T extends string
-                ? T extends keyof M2MMap ? T : never
-                : T extends [infer Table extends string, infer Alias extends string]
-                    ? Table extends keyof M2MMap ? Alias : never
-                    : never
-        : never
+  TSources[number] extends infer T
+    ? T extends TVirtualTableSource
+      ? never
+      : T extends string
+        ? T extends keyof M2MMap ? T : never
+        : T extends [infer Table extends string, infer Alias extends string]
+          ? Table extends keyof M2MMap ? Alias : never
+          : never
+    : never;
 
 /** Non-_-prefixed targets reachable from a specific source */
 type AvailableM2MTargets<TSource extends TTables> =
-    TSource extends keyof M2MMap
-        ? keyof M2MMap[TSource] & string
-        : never
+  TSource extends keyof M2MMap
+    ? keyof M2MMap[TSource] & string
+    : never;
 
 /** Junction table for a given source→target pair (union if ambiguous) */
 type GetJunctionTable<TSource extends TTables, TTarget extends TTables> =
-    TSource extends keyof M2MMap
-        ? TTarget extends keyof M2MMap[TSource]
-            ? M2MMap[TSource][TTarget & keyof M2MMap[TSource]] & TTables
-            : never
-        : never
+  TSource extends keyof M2MMap
+    ? TTarget extends keyof M2MMap[TSource]
+      ? M2MMap[TSource][TTarget & keyof M2MMap[TSource]] & TTables
+      : never
+    : never;
 
 /** Valid refName strings (part after `_` in junction table names from a specific source) */
 type AvailableRefNames<TSource extends TTables> =
-    TSource extends keyof M2MMap
-        ? M2MMap[TSource][keyof M2MMap[TSource]] extends infer J
-            ? J extends `_${infer R}` ? R : never
-            : never
-        : never
+  TSource extends keyof M2MMap
+    ? M2MMap[TSource][keyof M2MMap[TSource]] extends infer J
+      ? J extends `_${infer R}` ? R : never
+      : never
+    : never;
 
 // ────────────────────────────────────────────────────────────────────────────
 
 class _fJoin<
-    TSources extends TArrSources,
-    TFields extends TFieldsType,
-    TCTEs extends Record<string, Record<string, any>> = {}
+  TSources extends TArrSources,
+  TFields extends TFieldsType,
+  TCTEs extends Record<string, Record<string, ANY_IS_OK>> = BLANK_OBJECT
 > extends _fWhere<TSources, TFields> {
 
-    /**
+  /**
      * CTE join overload — when table name is a known CTE.
      */
-    join<const TName extends keyof TCTEs & string>(
-        cteName: TName,
-        local: keyof TCTEs[TName] & string,
-        remote: GetJoinCols<TSources[number]>,
-        opts?: {
-            where?: WhereCriteriaMulti<[readonly ["__cte__", TName]], Record<TName, TCTEs[TName]>>,
-            joinType?: JoinType
-        }
-    ): _fJoin<[...TSources, readonly ["__cte__", TName]], TFields & Record<TName, TCTEs[TName]>, TCTEs>
+  join<const TName extends keyof TCTEs & string>(
+    cteName: TName,
+    local: keyof TCTEs[TName] & string,
+    remote: GetJoinCols<TSources[number]>,
+    opts?: {
+      where?: WhereCriteriaMulti<[readonly ["__cte__", TName]], Record<TName, TCTEs[TName]>>;
+      joinType?: JoinType;
+    }
+  ): _fJoin<[...TSources, readonly ["__cte__", TName]], TFields & Record<TName, TCTEs[TName]>, TCTEs>;
 
-    // Overload 1: Object syntax
-    join<const Table extends AvailableJoins<TSources>,
-        TJoinCols extends [string, string] = ValidStringTuple<GetUnionOfRelations<MapJoinsToKnownTables<SafeJoins<Table,  TSources>,TSources>>>,
-        TCol1 extends TJoinCols[0] = never,
-        TAlias extends string = never
-    >(options: {
-        table: Table,
-        src: TCol1,
-        on: find<TJoinCols, TCol1>,
-        alias?: TAlias,
-        where?: JoinWhereCriteria<Table, TAlias>,
-        joinType?: JoinType
-    }): _fJoinReturn<[...TSources, [TAlias] extends [undefined] ? Table : [Table, TAlias]], Prettify<TFields & Record<[TAlias] extends [undefined] ? Table : TAlias, GetFieldsFromTable<Table>>>, TCTEs>;
+  // Overload 1: Object syntax
+  join<const Table extends AvailableJoins<TSources>,
+    TJoinCols extends [string, string] = ValidStringTuple<GetUnionOfRelations<MapJoinsToKnownTables<SafeJoins<Table, TSources>, TSources>>>,
+    TCol1 extends TJoinCols[0] = never,
+    TAlias extends string = never
+  >(options: {
+    table: Table;
+    src: TCol1;
+    on: find<TJoinCols, TCol1>;
+    alias?: TAlias;
+    where?: JoinWhereCriteria<Table, TAlias>;
+    joinType?: JoinType;
+  }): _fJoinReturn<[...TSources, [TAlias] extends [undefined] ? Table : [Table, TAlias]], Prettify<TFields & Record<[TAlias] extends [undefined] ? Table : TAlias, GetFieldsFromTable<Table>>>, TCTEs>;
 
-    // Overload 2: Positional syntax with inline alias (e.g., "User u")
-    join<const TableInput extends `${AvailableJoins<TSources>}` | `${AvailableJoins<TSources>} ${string}`,
-        Table extends AvailableJoins<TSources> = ExtractTableName<TableInput> & AvailableJoins<TSources>,
-        TAlias extends string | never = ExtractAlias<TableInput>,
-        TJoinCols extends [string, string] = ValidStringTuple<GetUnionOfRelations<MapJoinsToKnownTables<SafeJoins<Table, TSources>, TSources>>>,
-        // TJTable is TVirtualTableSource when: target is a CTE, OR no real tables in sources (can't infer join cols)
-        TJTable = Table extends keyof TCTEs ? TVirtualTableSource
-            : [Extract<TSources[number], string>] extends [never] ? TVirtualTableSource : never,
-        TCol1 extends (TJoinCols[0] | IsTargetCTE<TJTable>) = never
-    >(table: TableInput, field: TCol1, reference: find<TJoinCols, TCol1> | IsTargetCTE<TJTable>, options?: { where?: JoinWhereCriteria<Table, TAlias>, joinType?: JoinType }):
-        _fJoinReturn<[...TSources, [TAlias] extends [never] ? Table : [Table, TAlias]],
-            Prettify<TFields & Record<[TAlias] extends [never] ? Table : TAlias, GetFieldsFromTable<Table>>>, TCTEs>;
+  // Overload 2: Positional syntax with inline alias (e.g., "User u")
+  join<const TableInput extends `${AvailableJoins<TSources>}` | `${AvailableJoins<TSources>} ${string}`,
+    Table extends AvailableJoins<TSources> = ExtractTableName<TableInput> & AvailableJoins<TSources>,
+    TAlias extends string | never = ExtractAlias<TableInput>,
+    TJoinCols extends [string, string] = ValidStringTuple<GetUnionOfRelations<MapJoinsToKnownTables<SafeJoins<Table, TSources>, TSources>>>,
+    // TJTable is TVirtualTableSource when: target is a CTE, OR no real tables in sources (can't infer join cols)
+    TJTable = Table extends keyof TCTEs ? TVirtualTableSource
+      : [Extract<TSources[number], string>] extends [never] ? TVirtualTableSource : never,
+    TCol1 extends (TJoinCols[0] | IsTargetCTE<TJTable>) = never
+  >(table: TableInput, field: TCol1, reference: find<TJoinCols, TCol1> | IsTargetCTE<TJTable>, options?: { where?: JoinWhereCriteria<Table, TAlias>; joinType?: JoinType; }):
+  _fJoinReturn<[...TSources, [TAlias] extends [never] ? Table : [Table, TAlias]],
+    Prettify<TFields & Record<[TAlias] extends [never] ? Table : TAlias, GetFieldsFromTable<Table>>>, TCTEs>;
 
-    // Implementation
-    join<const TableInput extends `${AvailableJoins<TSources>}` | `${AvailableJoins<TSources>} ${string}`,
-        Table extends AvailableJoins<TSources> = ExtractTableName<TableInput> & AvailableJoins<TSources>,
-        //TAlias extends string | never = ExtractAlias<TableInput>,
-        TJoinCols extends [string, string] = ValidStringTuple<GetUnionOfRelations<MapJoinsToKnownTables<SafeJoins<Table, TSources>, TSources>>>,
-        TCol1 extends TJoinCols[0] = never
-    >(
-        tableOrOptions: TableInput | {table: TableInput, src: TCol1, on: find<TJoinCols, TCol1>, alias?: string, where?: ClauseType[number], joinType?: JoinType},
-        field?: TCol1,
-        reference?: find<TJoinCols, TCol1>,
-        _opts?: { where?: ClauseType[number], joinType?: JoinType }
-    ): any {
-        return this._joinImpl(undefined, tableOrOptions as any, field as any, reference as any, _opts);
+  // Implementation
+  join<const TableInput extends `${AvailableJoins<TSources>}` | `${AvailableJoins<TSources>} ${string}`,
+    Table extends AvailableJoins<TSources> = ExtractTableName<TableInput> & AvailableJoins<TSources>,
+    //TAlias extends string | never = ExtractAlias<TableInput>,
+    TJoinCols extends [string, string] = ValidStringTuple<GetUnionOfRelations<MapJoinsToKnownTables<SafeJoins<Table, TSources>, TSources>>>,
+    TCol1 extends TJoinCols[0] = never
+  >(
+    tableOrOptions: TableInput | { table: TableInput; src: TCol1; on: find<TJoinCols, TCol1>; alias?: string; where?: ClauseType[number]; joinType?: JoinType; },
+    field?: TCol1,
+    reference?: find<TJoinCols, TCol1>,
+    _opts?: { where?: ClauseType[number]; joinType?: JoinType; }
+  ): ANY_IS_OK {
+    return this._joinImpl(undefined, tableOrOptions, field, reference, _opts);
+  }
+
+  private _joinImpl(
+    joinType: JoinType | undefined,
+    tableOrOptions: string | { table: string; src: string; on: string; alias?: string; where?: ClauseType[number]; joinType?: JoinType; },
+    field?: string,
+    reference?: string,
+    _opts?: { where?: ClauseType[number]; joinType?: JoinType; }
+  ): _fJoin<ANY_IS_OK, ANY_IS_OK> {
+    let table: string;
+    let local: string;
+    let remote: string;
+    let tableAlias: string | undefined;
+    let joinWhere: ClauseType | undefined;
+
+    if (typeof tableOrOptions === "object" && "table" in tableOrOptions) {
+      table = tableOrOptions.table.trim();
+      local = tableOrOptions.src;
+      remote = tableOrOptions.on;
+      tableAlias = tableOrOptions.alias?.trim();
+      joinWhere = tableOrOptions.where ? [ tableOrOptions.where ] : undefined;
+      joinType = tableOrOptions.joinType ?? joinType;
+    }
+    else {
+      const parts = tableOrOptions.split(" ");
+      table = parts[0]!;
+      tableAlias = parts[1]?.trim();
+      local = field ?? "";
+      remote = reference ?? "";
+      joinWhere = _opts?.where ? [ _opts.where ] : undefined;
+      joinType = _opts?.joinType ?? joinType;
     }
 
-    private _joinImpl(
-        joinType: JoinType | undefined,
-        tableOrOptions: string | {table: string, src: string, on: string, alias?: string, where?: ClauseType[number], joinType?: JoinType},
-        field?: string,
-        reference?: string,
-        _opts?: { where?: ClauseType[number], joinType?: JoinType }
-    ): _fJoin<any, any> {
-        let table: string;
-        let local: string;
-        let remote: string;
-        let tableAlias: string | undefined;
-        let joinWhere: ClauseType | undefined;
+    return new _fJoin(this.db, {
+      ...this.values,
+      tables: [ ...this.values.tables, {
+        table: table,
+        local,
+        remote,
+        alias: tableAlias,
+        ...(joinWhere ? { joinWhere } : {}),
+        joinType,
+      }],
+    });
+  }
 
-        if (typeof tableOrOptions === 'object' && 'table' in tableOrOptions) {
-            table = tableOrOptions.table.trim();
-            local = tableOrOptions.src;
-            remote = tableOrOptions.on;
-            tableAlias = tableOrOptions.alias?.trim();
-            joinWhere = tableOrOptions.where ? [tableOrOptions.where] : undefined;
-            joinType = tableOrOptions.joinType ?? joinType;
-        } else {
-            const parts = tableOrOptions.split(' ');
-            table = parts[0]!;
-            tableAlias = parts[1]?.trim();
-            local = field ?? "";
-            remote = reference ?? "";
-            joinWhere = _opts?.where ? [_opts.where] : undefined;
-            joinType = _opts?.joinType ?? joinType;
-        }
+  // Overload 1: Object syntax
+  joinUnsafeTypeEnforced<const Table extends TTables | `${TTables} ${string}`,
+    TCol1 extends GetColsBaseTable<Table>,
+    TCol2 extends GetJoinOnColsType<GetColumnType<Table, TCol1>, [...TSources, Table]> | GetCTECols<TCTEs>,
+    TAlias extends string = never
+  >(options: {
+    table: Table;
+    src: TCol1;
+    on: TCol2;
+    alias?: TAlias;
+    where?: JoinWhereCriteria<Table, TAlias>;
+    joinType?: JoinType;
+  }): _fJoinReturn<[...TSources, [TAlias] extends [undefined] ? Table : [Table, TAlias]], Prettify<TFields & Record<[TAlias] extends [undefined] ? Table : TAlias, GetFieldsFromTable<Table>>>, TCTEs>;
 
-        return new _fJoin(this.db, {
-            ...this.values,
-            tables: [...this.values.tables || [], {
-                table: table as TTables,
-                local,
-                remote,
-                alias: tableAlias,
-                ...(joinWhere ? { joinWhere } : {}),
-                ...(joinType ? { joinType } : {})
-            }]
-        });
-    }
+  // Overload 2: Positional syntax with inline alias (e.g., "User u2")
+  joinUnsafeTypeEnforced<const TableInput extends TTables | `${TTables} ${string}`/*`${AvailableJoins<TSources>}` | `${AvailableJoins<TSources>} ${string}`*/,
+    Table extends TTables = ExtractTableName<TableInput>, // & AvailableJoins<TSources>,
+    TAlias extends string | never = ExtractAlias<TableInput>,
+    TCol1 extends GetColsBaseTable<Table> = GetColsBaseTable<Table>,
+    TCol2 extends GetJoinOnColsType<GetColumnType<Table, TCol1>, [...TSources, Table]> | GetCTECols<TCTEs> =
+      GetJoinOnColsType<GetColumnType<Table, TCol1>, [...TSources, Table]>
+  >(table: TableInput, field: TCol1, reference: TCol2, options?: { where?: JoinWhereCriteria<Table, TAlias>; joinType?: JoinType; }): _fJoinReturn<[...TSources, [TAlias] extends [never] ? Table : [Table, TAlias]], Prettify<TFields & Record<[TAlias] extends [undefined] ? Table : TAlias, GetFieldsFromTable<Table>>>, TCTEs>;
 
-    // Overload 1: Object syntax
-joinUnsafeTypeEnforced<const Table extends TTables | `${TTables} ${string}`,
-        TCol1 extends GetColsBaseTable<Table>,
-        TCol2 extends GetJoinOnColsType<GetColumnType<Table, TCol1>, [...TSources, Table]> | GetCTECols<TCTEs>,
-        TAlias extends string = never
-    >(options: {
-        table: Table,
-        src: TCol1,
-        on: TCol2,
-        alias?: TAlias,
-        where?: JoinWhereCriteria<Table, TAlias>,
-        joinType?: JoinType
-    }): _fJoinReturn<[...TSources, [TAlias] extends [undefined] ? Table : [Table, TAlias]], Prettify<TFields & Record<[TAlias] extends [undefined] ? Table : TAlias, GetFieldsFromTable<Table>>>, TCTEs>;
+  // Implementation
+  joinUnsafeTypeEnforced<const TableInput extends TTables,
+    Table extends TTables = ExtractTableName<TableInput>, // & AvailableJoins<TSources>,
+    TCol1 extends GetColsBaseTable<Table> = GetColsBaseTable<Table>,
+    TCol2 extends GetJoinOnColsType<GetColumnType<Table, TCol1>, [...TSources, Table]> =
+      GetJoinOnColsType<GetColumnType<Table, TCol1>, [...TSources, Table]>
+  >(
+    tableOrOptions: TableInput | { table: TableInput; src: TCol1; on: TCol2; alias?: string; where?: ClauseType[number]; joinType?: JoinType; },
+    field?: TCol1,
+    reference?: TCol2,
+    _opts?: { where?: ClauseType[number]; joinType?: JoinType; }
+  ) {
+    //@ts-expect-error call normal join function
+    return this.join(tableOrOptions, field, reference, _opts) as ANY_IS_OK;
 
-    // Overload 2: Positional syntax with inline alias (e.g., "User u2")
-    joinUnsafeTypeEnforced<const TableInput extends TTables | `${TTables} ${string}`/*`${AvailableJoins<TSources>}` | `${AvailableJoins<TSources>} ${string}`*/,
-        Table extends TTables = ExtractTableName<TableInput>,// & AvailableJoins<TSources>,
-        TAlias extends string | never = ExtractAlias<TableInput>,
-        TCol1 extends GetColsBaseTable<Table> = GetColsBaseTable<Table>,
-        TCol2 extends GetJoinOnColsType<GetColumnType<Table, TCol1>, [...TSources, Table]> | GetCTECols<TCTEs> =
-                      GetJoinOnColsType<GetColumnType<Table, TCol1>, [...TSources, Table]>
-    >(table: TableInput, field: TCol1, reference: TCol2, options?: { where?: JoinWhereCriteria<Table, TAlias>, joinType?: JoinType }): _fJoinReturn<[...TSources, [TAlias] extends [never] ? Table : [Table, TAlias]], Prettify<TFields & Record<[TAlias] extends [undefined] ? Table : TAlias, GetFieldsFromTable<Table>>>, TCTEs>;
-
-    // Implementation
-    joinUnsafeTypeEnforced<const TableInput extends TTables,
-        Table extends TTables = ExtractTableName<TableInput>,// & AvailableJoins<TSources>,
-        TCol1 extends GetColsBaseTable<Table> = GetColsBaseTable<Table>,
-        TCol2 extends GetJoinOnColsType<GetColumnType<Table, TCol1>, [...TSources, Table]> =
-                      GetJoinOnColsType<GetColumnType<Table, TCol1>, [...TSources, Table]>
-    >(
-        tableOrOptions: TableInput | {table: TableInput, src: TCol1, on: TCol2, alias?: string, where?: ClauseType[number], joinType?: JoinType},
-        field?: TCol1,
-        reference?: TCol2,
-        _opts?: { where?: ClauseType[number], joinType?: JoinType }
-    ) {
-        //@ts-expect-error call normal join function
-        return this.join(tableOrOptions, field, reference, _opts) as any;
-
-        /*
+    /*
                 let table: string;
                 let local: string;
                 let remote: string;
@@ -2647,44 +2613,44 @@ joinUnsafeTypeEnforced<const Table extends TTables | `${TTables} ${string}`,
                         alias: tableAlias
                     }]
                 });*/
-    }
+  }
 
-    // Overload 1: Object syntax
-    joinUnsafeIgnoreType<const Table extends TTables,
-        TCol1 extends GetColsBaseTable<Table>,
-        TCol2 extends GetJoinCols<TSources[number]>,
-        TAlias extends string = never
-    >(options: {
-        table: Table,
-        src: TCol1,
-        on: TCol2,
-        alias?: TAlias,
-        where?: JoinWhereCriteria<Table, TAlias>,
-        joinType?: JoinType
-    }): _fJoinReturn<[...TSources, [TAlias] extends [never] ? Table : [Table, TAlias]], TFields & Record<Table, GetFieldsFromTable<Table>>, TCTEs>;
+  // Overload 1: Object syntax
+  joinUnsafeIgnoreType<const Table extends TTables,
+    TCol1 extends GetColsBaseTable<Table>,
+    TCol2 extends GetJoinCols<TSources[number]>,
+    TAlias extends string = never
+  >(options: {
+    table: Table;
+    src: TCol1;
+    on: TCol2;
+    alias?: TAlias;
+    where?: JoinWhereCriteria<Table, TAlias>;
+    joinType?: JoinType;
+  }): _fJoinReturn<[...TSources, [TAlias] extends [never] ? Table : [Table, TAlias]], TFields & Record<Table, GetFieldsFromTable<Table>>, TCTEs>;
 
-    // Overload 2: Positional syntax with inline alias (e.g., "User u2")
-    joinUnsafeIgnoreType<const TableInput extends TTables | `${TTables} ${string}`,
-        Table extends TTables = ExtractTableName<TableInput>,
-        TAlias extends string | never = ExtractAlias<TableInput>,
-        TCol1 extends GetColsBaseTable<Table> = GetColsBaseTable<Table>,
-        TCol2 extends GetJoinCols<TSources[number]> = GetJoinCols<TSources[number]>
-    >(table: TableInput, field: TCol1, reference: TCol2, options?: { where?: JoinWhereCriteria<Table, TAlias>, joinType?: JoinType }): _fJoinReturn<[...TSources, [TAlias] extends [never] ? Table : [Table, TAlias]], TFields & Record<Table, GetFieldsFromTable<Table>>, TCTEs>;
+  // Overload 2: Positional syntax with inline alias (e.g., "User u2")
+  joinUnsafeIgnoreType<const TableInput extends TTables | `${TTables} ${string}`,
+    Table extends TTables = ExtractTableName<TableInput>,
+    TAlias extends string | never = ExtractAlias<TableInput>,
+    TCol1 extends GetColsBaseTable<Table> = GetColsBaseTable<Table>,
+    TCol2 extends GetJoinCols<TSources[number]> = GetJoinCols<TSources[number]>
+  >(table: TableInput, field: TCol1, reference: TCol2, options?: { where?: JoinWhereCriteria<Table, TAlias>; joinType?: JoinType; }): _fJoinReturn<[...TSources, [TAlias] extends [never] ? Table : [Table, TAlias]], TFields & Record<Table, GetFieldsFromTable<Table>>, TCTEs>;
 
-    // Implementation
-    joinUnsafeIgnoreType<const TableInput extends TTables,
-        Table extends TTables = ExtractTableName<TableInput>,
-        TCol1 extends GetColsBaseTable<Table> = GetColsBaseTable<Table>,
-        TCol2 extends GetJoinCols<TSources[number]> = GetJoinCols<TSources[number]>
-    >(
-        tableOrOptions: TableInput | {table: TableInput, src: TCol1, on: TCol2, alias?: string, where?: ClauseType[number], joinType?: JoinType},
-        field?: TCol1,
-        reference?: TCol2,
-        _opts?: { where?: ClauseType[number], joinType?: JoinType }
-    ) {
-        //@ts-expect-error call normal join function
-        return this.join(tableOrOptions, field, reference, _opts) as any;
-        /*let table: string;
+  // Implementation
+  joinUnsafeIgnoreType<const TableInput extends TTables,
+    Table extends TTables = ExtractTableName<TableInput>,
+    TCol1 extends GetColsBaseTable<Table> = GetColsBaseTable<Table>,
+    TCol2 extends GetJoinCols<TSources[number]> = GetJoinCols<TSources[number]>
+  >(
+    tableOrOptions: TableInput | { table: TableInput; src: TCol1; on: TCol2; alias?: string; where?: ClauseType[number]; joinType?: JoinType; },
+    field?: TCol1,
+    reference?: TCol2,
+    _opts?: { where?: ClauseType[number]; joinType?: JoinType; }
+  ) {
+    //@ts-expect-error call normal join function
+    return this.join(tableOrOptions, field, reference, _opts) as ANY_IS_OK;
+    /*let table: string;
         let local: string;
         let remote: string;
         let tableAlias: string | undefined;
@@ -2713,401 +2679,448 @@ joinUnsafeTypeEnforced<const Table extends TTables | `${TTables} ${string}`,
                 alias: tableAlias
             }]
         });*/
-    }
+  }
 
-    manyToManyJoin<
-        const TSourceInput extends AvailableM2MSources<TSources>,
-        TSource extends TTables = ResolveSourceTable<TSources, TSourceInput>,
-        const TTargetInput extends
+  manyToManyJoin<
+    const TSourceInput extends AvailableM2MSources<TSources>,
+    TSource extends TTables = ResolveSourceTable<TSources, TSourceInput>,
+    const TTargetInput extends
             `${AvailableM2MTargets<TSource>}` |
             `${AvailableM2MTargets<TSource>} ${string}` = never,
-        TTarget extends TTables = ExtractTableName<TTargetInput> & TTables,
-        TAlias extends string | never = ExtractAlias<TTargetInput>,
-        const TRefName extends AvailableRefNames<TSource> | undefined = undefined,
-        TJunction extends TTables = TRefName extends string
-            ? `_${TRefName}` & TTables
-            : GetJunctionTable<TSource, TTarget>
-    >(
-        sourceTable: TSourceInput,
-        targetTable: TTargetInput,
-        ...args: IsUnion<TJunction> extends true
-            ? [options: { refName: AvailableRefNames<TSource> }]
-            : [options?: { refName?: AvailableRefNames<TSource> }]
-    ): _fJoin<
-        [...TSources, TJunction, [TAlias] extends [never] ? TTarget : [TTarget, TAlias]],
-        Prettify<TFields &
+    TTarget extends TTables = ExtractTableName<TTargetInput> & TTables,
+    TAlias extends string | never = ExtractAlias<TTargetInput>,
+    const TRefName extends AvailableRefNames<TSource> | undefined = undefined,
+    TJunction extends TTables = TRefName extends string
+      ? `_${TRefName}` & TTables
+      : GetJunctionTable<TSource, TTarget>
+  >(
+    sourceTable: TSourceInput,
+    targetTable: TTargetInput,
+    ...args: IsUnion<TJunction> extends true
+      ? [options: { refName: AvailableRefNames<TSource>; }]
+      : [options?: { refName?: AvailableRefNames<TSource>; }]
+  ): _fJoin<
+    [...TSources, TJunction, [TAlias] extends [never] ? TTarget : [TTarget, TAlias]],
+    Prettify<TFields &
             Record<TJunction, GetFieldsFromTable<TJunction>> &
             Record<[TAlias] extends [never] ? TTarget : TAlias, GetFieldsFromTable<TTarget>>>
-    > {
-        const opts = args[0];
-        const refName = opts?.refName as string | undefined;
-        const safeIdent = (v: string, ctx: string) => {
-            if (!SAFE_IDENT_RE.test(v)) throw new Error(`manyToManyJoin: unsafe identifier in ${ctx}: "${v}"`);
-            return v;
-        };
+  > {
+    const opts = args[0];
+    const refName = opts?.refName as string | undefined;
+    const safeIdent = (v: string, ctx: string) => {
+      if (!SAFE_IDENT_RE.test(v)) throw new Error(`manyToManyJoin: unsafe identifier in ${ctx}: "${v}"`);
+      return v;
+    };
 
-        const [sourceTblRaw] = (sourceTable as string).split(" ");
-        const safeSourceTbl = safeIdent(sourceTblRaw!, "source");
-        const sourceEntry = this.values.tables.find(
-            t => t.table === safeSourceTbl || t.alias === safeSourceTbl
-        );
-        if (!sourceEntry) throw new Error(`manyToManyJoin: source "${safeSourceTbl}" not in joined tables (by table name or alias)`);
-        const sourceTableName = sourceEntry.table as string;
-        const sourceAlias = (sourceEntry.alias || sourceEntry.table) as string;
+    const [ sourceTblRaw ] = (sourceTable as string).split(" ");
+    const safeSourceTbl = safeIdent(sourceTblRaw!, "source");
+    const sourceEntry = this.values.tables.find(
+      t => t.table === safeSourceTbl || t.alias === safeSourceTbl
+    );
+    if (!sourceEntry) throw new Error(`manyToManyJoin: source "${safeSourceTbl}" not in joined tables (by table name or alias)`);
+    const sourceTableName = sourceEntry.table;
+    const sourceAlias = (sourceEntry.alias || sourceEntry.table);
 
-        const [tbl, alias] = (targetTable as string).split(" ");
-        const safeTbl = safeIdent(tbl!, "target");
-        const safeAlias = alias ? safeIdent(alias, "alias") : undefined;
-        const safeRef = refName ? safeIdent(refName, "refName") : undefined;
+    const [ tbl, alias ] = (targetTable as string).split(" ");
+    const safeTbl = safeIdent(tbl!, "target");
+    const safeAlias = alias ? safeIdent(alias, "alias") : undefined;
+    const safeRef = refName ? safeIdent(refName, "refName") : undefined;
 
-        const srcEntry = (DB as DBType)[sourceTableName];
-        if (!srcEntry) throw new Error(`manyToManyJoin: unknown source table "${sourceTableName}"`);
-        const srcRelations = srcEntry.relations as Record<string, Record<string, string[]>>;
-        const junctionTable = safeRef
-            ? `_${safeRef}`
-            : Object.keys(srcRelations).find(k =>
-                k.startsWith("_") && (DB as DBType)[k]?.relations?.[safeTbl] !== undefined
-            );
-        if (!junctionTable) throw new Error(
-            `manyToManyJoin: no junction between "${sourceTableName}" and "${safeTbl}"`
-        );
+    const srcEntry = (DB)[sourceTableName];
+    if (!srcEntry) throw new Error(`manyToManyJoin: unknown source table "${sourceTableName}"`);
+    const srcRelations = srcEntry.relations;
+    const junctionTable = safeRef
+      ? `_${safeRef}`
+      : Object.keys(srcRelations).find(k =>
+        k.startsWith("_") && (DB)[k]!.relations[safeTbl] !== undefined
+      );
+    if (!junctionTable) throw new Error(
+      `manyToManyJoin: no junction between "${sourceTableName}" and "${safeTbl}"`
+    );
 
-        const junctionRelEntry = srcRelations[junctionTable];
-        const junctionKeys = junctionRelEntry ? Object.keys(junctionRelEntry) : [];
-        if (junctionRelEntry && junctionKeys.length === 0) throw new Error(
-            `manyToManyJoin: junction "${junctionTable}" has no relation columns for source "${sourceTableName}"`
-        );
-        const srcLocalCol = junctionKeys[0] ?? (() => { throw new Error(`manyToManyJoin: cannot determine source local col for junction "${junctionTable}"`); })();
-        const srcJunctionCol = junctionRelEntry?.[srcLocalCol]?.[0] ?? (() => { throw new Error(`manyToManyJoin: cannot determine source junction col for "${junctionTable}"`); })();
-        const tgtRelEntry = (DB as DBType)[junctionTable]?.relations?.[safeTbl] as Record<string, string[]> | undefined;
-        const tgtKeys = tgtRelEntry ? Object.keys(tgtRelEntry) : [];
-        if (tgtRelEntry && tgtKeys.length === 0) throw new Error(
-            `manyToManyJoin: junction "${junctionTable}" has no relation columns for target "${safeTbl}"`
-        );
-        const tgtJunctionCol = tgtKeys[0] ?? (() => { throw new Error(`manyToManyJoin: cannot determine target junction col for "${junctionTable}"`); })();
-        const tgtLocalCol = tgtRelEntry?.[tgtJunctionCol]?.[0] ?? (() => { throw new Error(`manyToManyJoin: cannot determine target local col for "${junctionTable}"`); })();
-        const remoteRef = `${sourceAlias}.${srcLocalCol}`;
+    const junctionRelEntry = srcRelations[junctionTable];
+    const junctionKeys = junctionRelEntry ? Object.keys(junctionRelEntry) : [];
+    if (junctionRelEntry && junctionKeys.length === 0) throw new Error(
+      `manyToManyJoin: junction "${junctionTable}" has no relation columns for source "${sourceTableName}"`
+    );
+    const srcLocalCol = junctionKeys[0] ?? (() => { throw new Error(`manyToManyJoin: cannot determine source local col for junction "${junctionTable}"`); })();
+    const srcJunctionCol = junctionRelEntry![srcLocalCol]![0] ?? (() => { throw new Error(`manyToManyJoin: cannot determine source junction col for "${junctionTable}"`); })();
+    const tgtRelEntry = (DB)[junctionTable]!.relations[safeTbl];
+    const tgtKeys = tgtRelEntry ? Object.keys(tgtRelEntry) : [];
+    if (tgtRelEntry && tgtKeys.length === 0) throw new Error(
+      `manyToManyJoin: junction "${junctionTable}" has no relation columns for target "${safeTbl}"`
+    );
+    const tgtJunctionCol = tgtKeys[0] ?? (() => { throw new Error(`manyToManyJoin: cannot determine target junction col for "${junctionTable}"`); })();
+    const tgtLocalCol = tgtRelEntry![tgtJunctionCol]?.[0] ?? (() => { throw new Error(`manyToManyJoin: cannot determine target local col for "${junctionTable}"`); })();
+    const remoteRef = `${sourceAlias}.${srcLocalCol}`;
 
-        // joinUnsafeIgnoreType overloads require statically-typed table/column names via
-        // template literal types; runtime-validated strings can't satisfy those constraints.
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        return (this as any)
-            .joinUnsafeIgnoreType(junctionTable, srcJunctionCol, remoteRef)
-            .joinUnsafeIgnoreType(safeAlias ? `${safeTbl} ${safeAlias}` : safeTbl, tgtLocalCol, `${junctionTable}.${tgtJunctionCol}`);
-    }
+    // joinUnsafeIgnoreType overloads require statically-typed table/column names via
+    // template literal types; runtime-validated strings can't satisfy those constraints.
+     
+    return (this as ANY_IS_OK)
+      .joinUnsafeIgnoreType(junctionTable, srcJunctionCol, remoteRef)
+      .joinUnsafeIgnoreType(safeAlias ? `${safeTbl} ${safeAlias}` : safeTbl, tgtLocalCol, `${junctionTable}.${tgtJunctionCol}`);
+  }
 
-    // ── Named join methods ───────────────────────────────────────────────
+  // ── Named join methods ───────────────────────────────────────────────
 
-    /**
+  /**
      * CTE innerJoin — `where` appends conditions to the ON clause.
      * Scoped to CTE fields only; use `join()` for cross-table conditions.
      */
-    innerJoin<const TName extends keyof TCTEs & string>(
-        cteName: TName,
-        local: keyof TCTEs[TName] & string,
-        remote: GetJoinCols<TSources[number]>,
-        opts?: { where?: WhereCriteriaMulti<[readonly ["__cte__", TName]], Record<TName, TCTEs[TName]>> }
-    ): _fJoin<[...TSources, readonly ["__cte__", TName]], TFields & Record<TName, TCTEs[TName]>, TCTEs>
-    // Overload 1: Object syntax
-    innerJoin<const Table extends AvailableJoins<TSources>,
-        TJoinCols extends [string, string] = ValidStringTuple<GetUnionOfRelations<MapJoinsToKnownTables<SafeJoins<Table, TSources>, TSources>>>,
-        TCol1 extends TJoinCols[0] = never,
-        TAlias extends string = never
-    >(options: {
-        table: Table, src: TCol1, on: find<TJoinCols, TCol1>, alias?: TAlias,
-        where?: JoinWhereCriteria<Table, TAlias>, joinType?: JoinType
-    }): _fJoinReturn<[...TSources, [TAlias] extends [undefined] ? Table : [Table, TAlias]], Prettify<TFields & Record<[TAlias] extends [undefined] ? Table : TAlias, GetFieldsFromTable<Table>>>, TCTEs>;
-    // Overload 2: Positional syntax
-    innerJoin<const TableInput extends `${AvailableJoins<TSources>}` | `${AvailableJoins<TSources>} ${string}`,
-        Table extends AvailableJoins<TSources> = ExtractTableName<TableInput> & AvailableJoins<TSources>,
-        TAlias extends string | never = ExtractAlias<TableInput>,
-        TJoinCols extends [string, string] = ValidStringTuple<GetUnionOfRelations<MapJoinsToKnownTables<SafeJoins<Table, TSources>, TSources>>>,
-        TCol1 extends TJoinCols[0] = never
-    >(table: TableInput, field: TCol1, reference: find<TJoinCols, TCol1>, options?: { where?: JoinWhereCriteria<Table, TAlias>, joinType?: JoinType }):
-        _fJoinReturn<[...TSources, [TAlias] extends [never] ? Table : [Table, TAlias]], Prettify<TFields & Record<[TAlias] extends [never] ? Table : TAlias, GetFieldsFromTable<Table>>>, TCTEs>;
-    innerJoin(tableOrOptions: any, field?: any, reference?: any, opts?: any): any {
-        return this._joinImpl("INNER", tableOrOptions, field, reference, opts);
-    }
+  innerJoin<const TName extends keyof TCTEs & string>(
+    cteName: TName,
+    local: keyof TCTEs[TName] & string,
+    remote: GetJoinCols<TSources[number]>,
+    opts?: { where?: WhereCriteriaMulti<[readonly ["__cte__", TName]], Record<TName, TCTEs[TName]>>; }
+  ): _fJoin<[...TSources, readonly ["__cte__", TName]], TFields & Record<TName, TCTEs[TName]>, TCTEs>;
+  // Overload 1: Object syntax
+  innerJoin<const Table extends AvailableJoins<TSources>,
+    TJoinCols extends [string, string] = ValidStringTuple<GetUnionOfRelations<MapJoinsToKnownTables<SafeJoins<Table, TSources>, TSources>>>,
+    TCol1 extends TJoinCols[0] = never,
+    TAlias extends string = never
+  >(options: {
+    table: Table;
+    src: TCol1;
+    on: find<TJoinCols, TCol1>;
+    alias?: TAlias;
+    where?: JoinWhereCriteria<Table, TAlias>;
+    joinType?: JoinType;
+  }): _fJoinReturn<[...TSources, [TAlias] extends [undefined] ? Table : [Table, TAlias]], Prettify<TFields & Record<[TAlias] extends [undefined] ? Table : TAlias, GetFieldsFromTable<Table>>>, TCTEs>;
+  // Overload 2: Positional syntax
+  innerJoin<const TableInput extends `${AvailableJoins<TSources>}` | `${AvailableJoins<TSources>} ${string}`,
+    Table extends AvailableJoins<TSources> = ExtractTableName<TableInput> & AvailableJoins<TSources>,
+    TAlias extends string | never = ExtractAlias<TableInput>,
+    TJoinCols extends [string, string] = ValidStringTuple<GetUnionOfRelations<MapJoinsToKnownTables<SafeJoins<Table, TSources>, TSources>>>,
+    TCol1 extends TJoinCols[0] = never
+  >(table: TableInput, field: TCol1, reference: find<TJoinCols, TCol1>, options?: { where?: JoinWhereCriteria<Table, TAlias>; joinType?: JoinType; }):
+  _fJoinReturn<[...TSources, [TAlias] extends [never] ? Table : [Table, TAlias]], Prettify<TFields & Record<[TAlias] extends [never] ? Table : TAlias, GetFieldsFromTable<Table>>>, TCTEs>;
+  innerJoin(tableOrOptions: ANY_IS_OK, field?: ANY_IS_OK, reference?: ANY_IS_OK, opts?: ANY_IS_OK): ANY_IS_OK {
+    return this._joinImpl("INNER", tableOrOptions, field, reference, opts);
+  }
 
-    /**
+  /**
      * CTE leftJoin — `where` appends conditions to the ON clause.
      * Scoped to CTE fields only; use `join()` for cross-table conditions.
      */
-    leftJoin<const TName extends keyof TCTEs & string>(
-        cteName: TName,
-        local: keyof TCTEs[TName] & string,
-        remote: GetJoinCols<TSources[number]>,
-        opts?: { where?: WhereCriteriaMulti<[readonly ["__cte__", TName]], Record<TName, TCTEs[TName]>> }
-    ): _fJoin<[...TSources, readonly ["__cte__", TName]], TFields & Record<TName, TCTEs[TName]>, TCTEs>
-    // Overload 1: Object syntax
-    leftJoin<const Table extends AvailableJoins<TSources>,
-        TJoinCols extends [string, string] = ValidStringTuple<GetUnionOfRelations<MapJoinsToKnownTables<SafeJoins<Table, TSources>, TSources>>>,
-        TCol1 extends TJoinCols[0] = never,
-        TAlias extends string = never
-    >(options: {
-        table: Table, src: TCol1, on: find<TJoinCols, TCol1>, alias?: TAlias,
-        where?: JoinWhereCriteria<Table, TAlias>, joinType?: JoinType
-    }): _fJoinReturn<[...TSources, [TAlias] extends [undefined] ? Table : [Table, TAlias]], Prettify<TFields & Record<[TAlias] extends [undefined] ? Table : TAlias, MakeNullable<GetFieldsFromTable<Table>>>>, TCTEs>;
-    // Overload 2: Positional syntax
-    leftJoin<const TableInput extends `${AvailableJoins<TSources>}` | `${AvailableJoins<TSources>} ${string}`,
-        Table extends AvailableJoins<TSources> = ExtractTableName<TableInput> & AvailableJoins<TSources>,
-        TAlias extends string | never = ExtractAlias<TableInput>,
-        TJoinCols extends [string, string] = ValidStringTuple<GetUnionOfRelations<MapJoinsToKnownTables<SafeJoins<Table, TSources>, TSources>>>,
-        TCol1 extends TJoinCols[0] = never
-    >(table: TableInput, field: TCol1, reference: find<TJoinCols, TCol1>, options?: { where?: JoinWhereCriteria<Table, TAlias>, joinType?: JoinType }):
-        _fJoinReturn<[...TSources, [TAlias] extends [never] ? Table : [Table, TAlias]], Prettify<TFields & Record<[TAlias] extends [never] ? Table : TAlias, MakeNullable<GetFieldsFromTable<Table>>>>, TCTEs>;
-    leftJoin(tableOrOptions: any, field?: any, reference?: any, opts?: any): any {
-        return this._joinImpl("LEFT", tableOrOptions, field, reference, opts);
-    }
+  leftJoin<const TName extends keyof TCTEs & string>(
+    cteName: TName,
+    local: keyof TCTEs[TName] & string,
+    remote: GetJoinCols<TSources[number]>,
+    opts?: { where?: WhereCriteriaMulti<[readonly ["__cte__", TName]], Record<TName, TCTEs[TName]>>; }
+  ): _fJoin<[...TSources, readonly ["__cte__", TName]], TFields & Record<TName, TCTEs[TName]>, TCTEs>;
+  // Overload 1: Object syntax
+  leftJoin<const Table extends AvailableJoins<TSources>,
+    TJoinCols extends [string, string] = ValidStringTuple<GetUnionOfRelations<MapJoinsToKnownTables<SafeJoins<Table, TSources>, TSources>>>,
+    TCol1 extends TJoinCols[0] = never,
+    TAlias extends string = never
+  >(options: {
+    table: Table;
+    src: TCol1;
+    on: find<TJoinCols, TCol1>;
+    alias?: TAlias;
+    where?: JoinWhereCriteria<Table, TAlias>;
+    joinType?: JoinType;
+  }): _fJoinReturn<[...TSources, [TAlias] extends [undefined] ? Table : [Table, TAlias]], Prettify<TFields & Record<[TAlias] extends [undefined] ? Table : TAlias, MakeNullable<GetFieldsFromTable<Table>>>>, TCTEs>;
+  // Overload 2: Positional syntax
+  leftJoin<const TableInput extends `${AvailableJoins<TSources>}` | `${AvailableJoins<TSources>} ${string}`,
+    Table extends AvailableJoins<TSources> = ExtractTableName<TableInput> & AvailableJoins<TSources>,
+    TAlias extends string | never = ExtractAlias<TableInput>,
+    TJoinCols extends [string, string] = ValidStringTuple<GetUnionOfRelations<MapJoinsToKnownTables<SafeJoins<Table, TSources>, TSources>>>,
+    TCol1 extends TJoinCols[0] = never
+  >(table: TableInput, field: TCol1, reference: find<TJoinCols, TCol1>, options?: { where?: JoinWhereCriteria<Table, TAlias>; joinType?: JoinType; }):
+  _fJoinReturn<[...TSources, [TAlias] extends [never] ? Table : [Table, TAlias]], Prettify<TFields & Record<[TAlias] extends [never] ? Table : TAlias, MakeNullable<GetFieldsFromTable<Table>>>>, TCTEs>;
+  leftJoin(tableOrOptions: ANY_IS_OK, field?: ANY_IS_OK, reference?: ANY_IS_OK, opts?: ANY_IS_OK): ANY_IS_OK {
+    return this._joinImpl("LEFT", tableOrOptions, field, reference, opts);
+  }
 
-    /**
+  /**
      * CTE rightJoin — `where` appends conditions to the ON clause.
      * Scoped to CTE fields only; use `join()` for cross-table conditions.
      */
-    rightJoin<const TName extends keyof TCTEs & string>(
-        cteName: TName,
-        local: keyof TCTEs[TName] & string,
-        remote: GetJoinCols<TSources[number]>,
-        opts?: { where?: WhereCriteriaMulti<[readonly ["__cte__", TName]], Record<TName, TCTEs[TName]>> }
-    ): _fJoin<[...TSources, readonly ["__cte__", TName]], TFields & Record<TName, TCTEs[TName]>, TCTEs>
-    // Overload 1: Object syntax
-    rightJoin<const Table extends AvailableJoins<TSources>,
-        TJoinCols extends [string, string] = ValidStringTuple<GetUnionOfRelations<MapJoinsToKnownTables<SafeJoins<Table, TSources>, TSources>>>,
-        TCol1 extends TJoinCols[0] = never,
-        TAlias extends string = never
-    >(options: {
-        table: Table, src: TCol1, on: find<TJoinCols, TCol1>, alias?: TAlias,
-        where?: JoinWhereCriteria<Table, TAlias>, joinType?: JoinType
-    }): _fJoinReturn<[...TSources, [TAlias] extends [undefined] ? Table : [Table, TAlias]], Prettify<NullifyTableFields<TFields> & Record<[TAlias] extends [undefined] ? Table : TAlias, GetFieldsFromTable<Table>>>, TCTEs>;
-    // Overload 2: Positional syntax
-    rightJoin<const TableInput extends `${AvailableJoins<TSources>}` | `${AvailableJoins<TSources>} ${string}`,
-        Table extends AvailableJoins<TSources> = ExtractTableName<TableInput> & AvailableJoins<TSources>,
-        TAlias extends string | never = ExtractAlias<TableInput>,
-        TJoinCols extends [string, string] = ValidStringTuple<GetUnionOfRelations<MapJoinsToKnownTables<SafeJoins<Table, TSources>, TSources>>>,
-        TCol1 extends TJoinCols[0] = never
-    >(table: TableInput, field: TCol1, reference: find<TJoinCols, TCol1>, options?: { where?: JoinWhereCriteria<Table, TAlias>, joinType?: JoinType }):
-        _fJoinReturn<[...TSources, [TAlias] extends [never] ? Table : [Table, TAlias]], Prettify<NullifyTableFields<TFields> & Record<[TAlias] extends [never] ? Table : TAlias, GetFieldsFromTable<Table>>>, TCTEs>;
-    rightJoin(tableOrOptions: any, field?: any, reference?: any, opts?: any): any {
-        return this._joinImpl("RIGHT", tableOrOptions, field, reference, opts);
-    }
+  rightJoin<const TName extends keyof TCTEs & string>(
+    cteName: TName,
+    local: keyof TCTEs[TName] & string,
+    remote: GetJoinCols<TSources[number]>,
+    opts?: { where?: WhereCriteriaMulti<[readonly ["__cte__", TName]], Record<TName, TCTEs[TName]>>; }
+  ): _fJoin<[...TSources, readonly ["__cte__", TName]], TFields & Record<TName, TCTEs[TName]>, TCTEs>;
+  // Overload 1: Object syntax
+  rightJoin<const Table extends AvailableJoins<TSources>,
+    TJoinCols extends [string, string] = ValidStringTuple<GetUnionOfRelations<MapJoinsToKnownTables<SafeJoins<Table, TSources>, TSources>>>,
+    TCol1 extends TJoinCols[0] = never,
+    TAlias extends string = never
+  >(options: {
+    table: Table;
+    src: TCol1;
+    on: find<TJoinCols, TCol1>;
+    alias?: TAlias;
+    where?: JoinWhereCriteria<Table, TAlias>;
+    joinType?: JoinType;
+  }): _fJoinReturn<[...TSources, [TAlias] extends [undefined] ? Table : [Table, TAlias]], Prettify<NullifyTableFields<TFields> & Record<[TAlias] extends [undefined] ? Table : TAlias, GetFieldsFromTable<Table>>>, TCTEs>;
+  // Overload 2: Positional syntax
+  rightJoin<const TableInput extends `${AvailableJoins<TSources>}` | `${AvailableJoins<TSources>} ${string}`,
+    Table extends AvailableJoins<TSources> = ExtractTableName<TableInput> & AvailableJoins<TSources>,
+    TAlias extends string | never = ExtractAlias<TableInput>,
+    TJoinCols extends [string, string] = ValidStringTuple<GetUnionOfRelations<MapJoinsToKnownTables<SafeJoins<Table, TSources>, TSources>>>,
+    TCol1 extends TJoinCols[0] = never
+  >(table: TableInput, field: TCol1, reference: find<TJoinCols, TCol1>, options?: { where?: JoinWhereCriteria<Table, TAlias>; joinType?: JoinType; }):
+  _fJoinReturn<[...TSources, [TAlias] extends [never] ? Table : [Table, TAlias]], Prettify<NullifyTableFields<TFields> & Record<[TAlias] extends [never] ? Table : TAlias, GetFieldsFromTable<Table>>>, TCTEs>;
+  rightJoin(tableOrOptions: ANY_IS_OK, field?: ANY_IS_OK, reference?: ANY_IS_OK, opts?: ANY_IS_OK): ANY_IS_OK {
+    return this._joinImpl("RIGHT", tableOrOptions, field, reference, opts);
+  }
 
-    /**
+  /**
      * CTE fullJoin — `where` appends conditions to the ON clause.
      * Scoped to CTE fields only; use `join()` for cross-table conditions.
      */
-    fullJoin<const TName extends keyof TCTEs & string>(
-        cteName: TName,
-        local: keyof TCTEs[TName] & string,
-        remote: GetJoinCols<TSources[number]>,
-        opts?: { where?: WhereCriteriaMulti<[readonly ["__cte__", TName]], Record<TName, TCTEs[TName]>> }
-    ): _fJoin<[...TSources, readonly ["__cte__", TName]], TFields & Record<TName, TCTEs[TName]>, TCTEs>
-    // Overload 1: Object syntax
-    fullJoin<const Table extends AvailableJoins<TSources>,
-        TJoinCols extends [string, string] = ValidStringTuple<GetUnionOfRelations<MapJoinsToKnownTables<SafeJoins<Table, TSources>, TSources>>>,
-        TCol1 extends TJoinCols[0] = never,
-        TAlias extends string = never
-    >(options: {
-        table: Table, src: TCol1, on: find<TJoinCols, TCol1>, alias?: TAlias,
-        where?: JoinWhereCriteria<Table, TAlias>, joinType?: JoinType
-    }): _fJoinReturn<[...TSources, [TAlias] extends [undefined] ? Table : [Table, TAlias]], Prettify<NullifyTableFields<TFields> & Record<[TAlias] extends [undefined] ? Table : TAlias, MakeNullable<GetFieldsFromTable<Table>>>>, TCTEs>;
-    // Overload 2: Positional syntax
-    fullJoin<const TableInput extends `${AvailableJoins<TSources>}` | `${AvailableJoins<TSources>} ${string}`,
-        Table extends AvailableJoins<TSources> = ExtractTableName<TableInput> & AvailableJoins<TSources>,
-        TAlias extends string | never = ExtractAlias<TableInput>,
-        TJoinCols extends [string, string] = ValidStringTuple<GetUnionOfRelations<MapJoinsToKnownTables<SafeJoins<Table, TSources>, TSources>>>,
-        TCol1 extends TJoinCols[0] = never
-    >(table: TableInput, field: TCol1, reference: find<TJoinCols, TCol1>, options?: { where?: JoinWhereCriteria<Table, TAlias>, joinType?: JoinType }):
-        _fJoinReturn<[...TSources, [TAlias] extends [never] ? Table : [Table, TAlias]], Prettify<NullifyTableFields<TFields> & Record<[TAlias] extends [never] ? Table : TAlias, MakeNullable<GetFieldsFromTable<Table>>>>, TCTEs>;
-    fullJoin(tableOrOptions: any, field?: any, reference?: any, opts?: any): any {
-        return this._joinImpl("FULL", tableOrOptions, field, reference, opts);
-    }
+  fullJoin<const TName extends keyof TCTEs & string>(
+    cteName: TName,
+    local: keyof TCTEs[TName] & string,
+    remote: GetJoinCols<TSources[number]>,
+    opts?: { where?: WhereCriteriaMulti<[readonly ["__cte__", TName]], Record<TName, TCTEs[TName]>>; }
+  ): _fJoin<[...TSources, readonly ["__cte__", TName]], TFields & Record<TName, TCTEs[TName]>, TCTEs>;
+  // Overload 1: Object syntax
+  fullJoin<const Table extends AvailableJoins<TSources>,
+    TJoinCols extends [string, string] = ValidStringTuple<GetUnionOfRelations<MapJoinsToKnownTables<SafeJoins<Table, TSources>, TSources>>>,
+    TCol1 extends TJoinCols[0] = never,
+    TAlias extends string = never
+  >(options: {
+    table: Table;
+    src: TCol1;
+    on: find<TJoinCols, TCol1>;
+    alias?: TAlias;
+    where?: JoinWhereCriteria<Table, TAlias>;
+    joinType?: JoinType;
+  }): _fJoinReturn<[...TSources, [TAlias] extends [undefined] ? Table : [Table, TAlias]], Prettify<NullifyTableFields<TFields> & Record<[TAlias] extends [undefined] ? Table : TAlias, MakeNullable<GetFieldsFromTable<Table>>>>, TCTEs>;
+  // Overload 2: Positional syntax
+  fullJoin<const TableInput extends `${AvailableJoins<TSources>}` | `${AvailableJoins<TSources>} ${string}`,
+    Table extends AvailableJoins<TSources> = ExtractTableName<TableInput> & AvailableJoins<TSources>,
+    TAlias extends string | never = ExtractAlias<TableInput>,
+    TJoinCols extends [string, string] = ValidStringTuple<GetUnionOfRelations<MapJoinsToKnownTables<SafeJoins<Table, TSources>, TSources>>>,
+    TCol1 extends TJoinCols[0] = never
+  >(table: TableInput, field: TCol1, reference: find<TJoinCols, TCol1>, options?: { where?: JoinWhereCriteria<Table, TAlias>; joinType?: JoinType; }):
+  _fJoinReturn<[...TSources, [TAlias] extends [never] ? Table : [Table, TAlias]], Prettify<NullifyTableFields<TFields> & Record<[TAlias] extends [never] ? Table : TAlias, MakeNullable<GetFieldsFromTable<Table>>>>, TCTEs>;
+  fullJoin(tableOrOptions: ANY_IS_OK, field?: ANY_IS_OK, reference?: ANY_IS_OK, opts?: ANY_IS_OK): ANY_IS_OK {
+    return this._joinImpl("FULL", tableOrOptions, field, reference, opts);
+  }
 
-    // crossJoin: no ON clause — table only (with optional inline alias)
-    crossJoin<const TableInput extends `${AvailableJoins<TSources>}` | `${AvailableJoins<TSources>} ${string}`,
-        Table extends AvailableJoins<TSources> = ExtractTableName<TableInput> & AvailableJoins<TSources>,
-        TAlias extends string | never = ExtractAlias<TableInput>
-    >(table: TableInput):
-        _fJoinReturn<[...TSources, [TAlias] extends [never] ? Table : [Table, TAlias]], Prettify<TFields & Record<[TAlias] extends [never] ? Table : TAlias, GetFieldsFromTable<Table>>>, TCTEs> {
-        return this._joinImpl("CROSS", table as string) as any;
-    }
+  // crossJoin: no ON clause — table only (with optional inline alias)
+  crossJoin<const TableInput extends `${AvailableJoins<TSources>}` | `${AvailableJoins<TSources>} ${string}`,
+    Table extends AvailableJoins<TSources> = ExtractTableName<TableInput> & AvailableJoins<TSources>,
+    TAlias extends string | never = ExtractAlias<TableInput>
+  >(table: TableInput):
+  _fJoinReturn<[...TSources, [TAlias] extends [never] ? Table : [Table, TAlias]], Prettify<TFields & Record<[TAlias] extends [never] ? Table : TAlias, GetFieldsFromTable<Table>>>, TCTEs> {
+    return this._joinImpl("CROSS", table) as ANY_IS_OK;
+  }
 
-    // ── New unsafe variants ──────────────────────────────────────────────
+  // ── New unsafe variants ──────────────────────────────────────────────
 
-    // innerJoinUnsafeTypeEnforced — INNER semantics, type-enforced columns
-    innerJoinUnsafeTypeEnforced<const Table extends TTables | `${TTables} ${string}`,
-        TCol1 extends GetColsBaseTable<Table>,
-        TCol2 extends GetJoinOnColsType<GetColumnType<Table, TCol1>, [...TSources, Table]> | GetCTECols<TCTEs>,
-        TAlias extends string = never
-    >(options: {
-        table: Table, src: TCol1, on: TCol2, alias?: TAlias,
-        where?: JoinWhereCriteria<Table, TAlias>, joinType?: JoinType
-    }): _fJoinReturn<[...TSources, [TAlias] extends [undefined] ? Table : [Table, TAlias]], Prettify<TFields & Record<[TAlias] extends [undefined] ? Table : TAlias, GetFieldsFromTable<Table>>>, TCTEs>;
-    innerJoinUnsafeTypeEnforced<const TableInput extends TTables | `${TTables} ${string}`,
-        Table extends TTables = ExtractTableName<TableInput>,
-        TAlias extends string | never = ExtractAlias<TableInput>,
-        TCol1 extends GetColsBaseTable<Table> = GetColsBaseTable<Table>,
-        TCol2 extends GetJoinOnColsType<GetColumnType<Table, TCol1>, [...TSources, Table]> | GetCTECols<TCTEs> =
-                      GetJoinOnColsType<GetColumnType<Table, TCol1>, [...TSources, Table]>
-    >(table: TableInput, field: TCol1, reference: TCol2, options?: { where?: JoinWhereCriteria<Table, TAlias>, joinType?: JoinType }): _fJoinReturn<[...TSources, [TAlias] extends [never] ? Table : [Table, TAlias]], Prettify<TFields & Record<[TAlias] extends [undefined] ? Table : TAlias, GetFieldsFromTable<Table>>>, TCTEs>;
-    innerJoinUnsafeTypeEnforced(tableOrOptions: any, field?: any, reference?: any, opts?: any): any {
-        return this._joinImpl("INNER", tableOrOptions as any, field as any, reference as any, opts) as any;
-    }
+  // innerJoinUnsafeTypeEnforced — INNER semantics, type-enforced columns
+  innerJoinUnsafeTypeEnforced<const Table extends TTables | `${TTables} ${string}`,
+    TCol1 extends GetColsBaseTable<Table>,
+    TCol2 extends GetJoinOnColsType<GetColumnType<Table, TCol1>, [...TSources, Table]> | GetCTECols<TCTEs>,
+    TAlias extends string = never
+  >(options: {
+    table: Table;
+    src: TCol1;
+    on: TCol2;
+    alias?: TAlias;
+    where?: JoinWhereCriteria<Table, TAlias>;
+    joinType?: JoinType;
+  }): _fJoinReturn<[...TSources, [TAlias] extends [undefined] ? Table : [Table, TAlias]], Prettify<TFields & Record<[TAlias] extends [undefined] ? Table : TAlias, GetFieldsFromTable<Table>>>, TCTEs>;
+  innerJoinUnsafeTypeEnforced<const TableInput extends TTables | `${TTables} ${string}`,
+    Table extends TTables = ExtractTableName<TableInput>,
+    TAlias extends string | never = ExtractAlias<TableInput>,
+    TCol1 extends GetColsBaseTable<Table> = GetColsBaseTable<Table>,
+    TCol2 extends GetJoinOnColsType<GetColumnType<Table, TCol1>, [...TSources, Table]> | GetCTECols<TCTEs> =
+      GetJoinOnColsType<GetColumnType<Table, TCol1>, [...TSources, Table]>
+  >(table: TableInput, field: TCol1, reference: TCol2, options?: { where?: JoinWhereCriteria<Table, TAlias>; joinType?: JoinType; }): _fJoinReturn<[...TSources, [TAlias] extends [never] ? Table : [Table, TAlias]], Prettify<TFields & Record<[TAlias] extends [undefined] ? Table : TAlias, GetFieldsFromTable<Table>>>, TCTEs>;
+  innerJoinUnsafeTypeEnforced(tableOrOptions: ANY_IS_OK, field?: ANY_IS_OK, reference?: ANY_IS_OK, opts?: ANY_IS_OK): ANY_IS_OK {
+    return this._joinImpl("INNER", tableOrOptions, field, reference, opts) as ANY_IS_OK;
+  }
 
-    // innerJoinUnsafeIgnoreType — INNER semantics, any columns
-    innerJoinUnsafeIgnoreType<const Table extends TTables,
-        TCol1 extends GetColsBaseTable<Table>,
-        TCol2 extends GetJoinCols<TSources[number]>,
-        TAlias extends string = never
-    >(options: {
-        table: Table, src: TCol1, on: TCol2, alias?: TAlias,
-        where?: JoinWhereCriteria<Table, TAlias>, joinType?: JoinType
-    }): _fJoinReturn<[...TSources, [TAlias] extends [never] ? Table : [Table, TAlias]], TFields & Record<Table, GetFieldsFromTable<Table>>, TCTEs>;
-    innerJoinUnsafeIgnoreType<const TableInput extends TTables | `${TTables} ${string}`,
-        Table extends TTables = ExtractTableName<TableInput>,
-        TAlias extends string | never = ExtractAlias<TableInput>,
-        TCol1 extends GetColsBaseTable<Table> = GetColsBaseTable<Table>,
-        TCol2 extends GetJoinCols<TSources[number]> = GetJoinCols<TSources[number]>
-    >(table: TableInput, field: TCol1, reference: TCol2, options?: { where?: JoinWhereCriteria<Table, TAlias>, joinType?: JoinType }): _fJoinReturn<[...TSources, [TAlias] extends [never] ? Table : [Table, TAlias]], TFields & Record<Table, GetFieldsFromTable<Table>>, TCTEs>;
-    innerJoinUnsafeIgnoreType(tableOrOptions: any, field?: any, reference?: any, opts?: any): any {
-        return this._joinImpl("INNER", tableOrOptions as any, field as any, reference as any, opts) as any;
-    }
+  // innerJoinUnsafeIgnoreType — INNER semantics, any columns
+  innerJoinUnsafeIgnoreType<const Table extends TTables,
+    TCol1 extends GetColsBaseTable<Table>,
+    TCol2 extends GetJoinCols<TSources[number]>,
+    TAlias extends string = never
+  >(options: {
+    table: Table;
+    src: TCol1;
+    on: TCol2;
+    alias?: TAlias;
+    where?: JoinWhereCriteria<Table, TAlias>;
+    joinType?: JoinType;
+  }): _fJoinReturn<[...TSources, [TAlias] extends [never] ? Table : [Table, TAlias]], TFields & Record<Table, GetFieldsFromTable<Table>>, TCTEs>;
+  innerJoinUnsafeIgnoreType<const TableInput extends TTables | `${TTables} ${string}`,
+    Table extends TTables = ExtractTableName<TableInput>,
+    TAlias extends string | never = ExtractAlias<TableInput>,
+    TCol1 extends GetColsBaseTable<Table> = GetColsBaseTable<Table>,
+    TCol2 extends GetJoinCols<TSources[number]> = GetJoinCols<TSources[number]>
+  >(table: TableInput, field: TCol1, reference: TCol2, options?: { where?: JoinWhereCriteria<Table, TAlias>; joinType?: JoinType; }): _fJoinReturn<[...TSources, [TAlias] extends [never] ? Table : [Table, TAlias]], TFields & Record<Table, GetFieldsFromTable<Table>>, TCTEs>;
+  innerJoinUnsafeIgnoreType(tableOrOptions: ANY_IS_OK, field?: ANY_IS_OK, reference?: ANY_IS_OK, opts?: ANY_IS_OK): ANY_IS_OK {
+    return this._joinImpl("INNER", tableOrOptions, field, reference, opts) as ANY_IS_OK;
+  }
 
-    // leftJoinUnsafeTypeEnforced — LEFT semantics, type-enforced columns
-    leftJoinUnsafeTypeEnforced<const Table extends TTables | `${TTables} ${string}`,
-        TCol1 extends GetColsBaseTable<Table>,
-        TCol2 extends GetJoinOnColsType<GetColumnType<Table, TCol1>, [...TSources, Table]> | GetCTECols<TCTEs>,
-        TAlias extends string = never
-    >(options: {
-        table: Table, src: TCol1, on: TCol2, alias?: TAlias,
-        where?: JoinWhereCriteria<Table, TAlias>, joinType?: JoinType
-    }): _fJoinReturn<[...TSources, [TAlias] extends [undefined] ? Table : [Table, TAlias]], Prettify<TFields & Record<[TAlias] extends [undefined] ? Table : TAlias, MakeNullable<GetFieldsFromTable<Table>>>>, TCTEs>;
-    leftJoinUnsafeTypeEnforced<const TableInput extends TTables | `${TTables} ${string}`,
-        Table extends TTables = ExtractTableName<TableInput>,
-        TAlias extends string | never = ExtractAlias<TableInput>,
-        TCol1 extends GetColsBaseTable<Table> = GetColsBaseTable<Table>,
-        TCol2 extends GetJoinOnColsType<GetColumnType<Table, TCol1>, [...TSources, Table]> | GetCTECols<TCTEs> =
-                      GetJoinOnColsType<GetColumnType<Table, TCol1>, [...TSources, Table]>
-    >(table: TableInput, field: TCol1, reference: TCol2, options?: { where?: JoinWhereCriteria<Table, TAlias>, joinType?: JoinType }): _fJoinReturn<[...TSources, [TAlias] extends [never] ? Table : [Table, TAlias]], Prettify<TFields & Record<[TAlias] extends [undefined] ? Table : TAlias, MakeNullable<GetFieldsFromTable<Table>>>>, TCTEs>;
-    leftJoinUnsafeTypeEnforced(tableOrOptions: any, field?: any, reference?: any, opts?: any): any {
-        return this._joinImpl("LEFT", tableOrOptions as any, field as any, reference as any, opts) as any;
-    }
+  // leftJoinUnsafeTypeEnforced — LEFT semantics, type-enforced columns
+  leftJoinUnsafeTypeEnforced<const Table extends TTables | `${TTables} ${string}`,
+    TCol1 extends GetColsBaseTable<Table>,
+    TCol2 extends GetJoinOnColsType<GetColumnType<Table, TCol1>, [...TSources, Table]> | GetCTECols<TCTEs>,
+    TAlias extends string = never
+  >(options: {
+    table: Table;
+    src: TCol1;
+    on: TCol2;
+    alias?: TAlias;
+    where?: JoinWhereCriteria<Table, TAlias>;
+    joinType?: JoinType;
+  }): _fJoinReturn<[...TSources, [TAlias] extends [undefined] ? Table : [Table, TAlias]], Prettify<TFields & Record<[TAlias] extends [undefined] ? Table : TAlias, MakeNullable<GetFieldsFromTable<Table>>>>, TCTEs>;
+  leftJoinUnsafeTypeEnforced<const TableInput extends TTables | `${TTables} ${string}`,
+    Table extends TTables = ExtractTableName<TableInput>,
+    TAlias extends string | never = ExtractAlias<TableInput>,
+    TCol1 extends GetColsBaseTable<Table> = GetColsBaseTable<Table>,
+    TCol2 extends GetJoinOnColsType<GetColumnType<Table, TCol1>, [...TSources, Table]> | GetCTECols<TCTEs> =
+      GetJoinOnColsType<GetColumnType<Table, TCol1>, [...TSources, Table]>
+  >(table: TableInput, field: TCol1, reference: TCol2, options?: { where?: JoinWhereCriteria<Table, TAlias>; joinType?: JoinType; }): _fJoinReturn<[...TSources, [TAlias] extends [never] ? Table : [Table, TAlias]], Prettify<TFields & Record<[TAlias] extends [undefined] ? Table : TAlias, MakeNullable<GetFieldsFromTable<Table>>>>, TCTEs>;
+  leftJoinUnsafeTypeEnforced(tableOrOptions: ANY_IS_OK, field?: ANY_IS_OK, reference?: ANY_IS_OK, opts?: ANY_IS_OK): ANY_IS_OK {
+    return this._joinImpl("LEFT", tableOrOptions, field, reference, opts) as ANY_IS_OK;
+  }
 
-    // leftJoinUnsafeIgnoreType — LEFT semantics, any columns
-    leftJoinUnsafeIgnoreType<const Table extends TTables,
-        TCol1 extends GetColsBaseTable<Table>,
-        TCol2 extends GetJoinCols<TSources[number]>,
-        TAlias extends string = never
-    >(options: {
-        table: Table, src: TCol1, on: TCol2, alias?: TAlias,
-        where?: JoinWhereCriteria<Table, TAlias>, joinType?: JoinType
-    }): _fJoinReturn<[...TSources, [TAlias] extends [never] ? Table : [Table, TAlias]], TFields & Record<Table, MakeNullable<GetFieldsFromTable<Table>>>, TCTEs>;
-    leftJoinUnsafeIgnoreType<const TableInput extends TTables | `${TTables} ${string}`,
-        Table extends TTables = ExtractTableName<TableInput>,
-        TAlias extends string | never = ExtractAlias<TableInput>,
-        TCol1 extends GetColsBaseTable<Table> = GetColsBaseTable<Table>,
-        TCol2 extends GetJoinCols<TSources[number]> = GetJoinCols<TSources[number]>
-    >(table: TableInput, field: TCol1, reference: TCol2, options?: { where?: JoinWhereCriteria<Table, TAlias>, joinType?: JoinType }): _fJoinReturn<[...TSources, [TAlias] extends [never] ? Table : [Table, TAlias]], TFields & Record<Table, MakeNullable<GetFieldsFromTable<Table>>>, TCTEs>;
-    leftJoinUnsafeIgnoreType(tableOrOptions: any, field?: any, reference?: any, opts?: any): any {
-        return this._joinImpl("LEFT", tableOrOptions as any, field as any, reference as any, opts) as any;
-    }
+  // leftJoinUnsafeIgnoreType — LEFT semantics, any columns
+  leftJoinUnsafeIgnoreType<const Table extends TTables,
+    TCol1 extends GetColsBaseTable<Table>,
+    TCol2 extends GetJoinCols<TSources[number]>,
+    TAlias extends string = never
+  >(options: {
+    table: Table;
+    src: TCol1;
+    on: TCol2;
+    alias?: TAlias;
+    where?: JoinWhereCriteria<Table, TAlias>;
+    joinType?: JoinType;
+  }): _fJoinReturn<[...TSources, [TAlias] extends [never] ? Table : [Table, TAlias]], TFields & Record<Table, MakeNullable<GetFieldsFromTable<Table>>>, TCTEs>;
+  leftJoinUnsafeIgnoreType<const TableInput extends TTables | `${TTables} ${string}`,
+    Table extends TTables = ExtractTableName<TableInput>,
+    TAlias extends string | never = ExtractAlias<TableInput>,
+    TCol1 extends GetColsBaseTable<Table> = GetColsBaseTable<Table>,
+    TCol2 extends GetJoinCols<TSources[number]> = GetJoinCols<TSources[number]>
+  >(table: TableInput, field: TCol1, reference: TCol2, options?: { where?: JoinWhereCriteria<Table, TAlias>; joinType?: JoinType; }): _fJoinReturn<[...TSources, [TAlias] extends [never] ? Table : [Table, TAlias]], TFields & Record<Table, MakeNullable<GetFieldsFromTable<Table>>>, TCTEs>;
+  leftJoinUnsafeIgnoreType(tableOrOptions: ANY_IS_OK, field?: ANY_IS_OK, reference?: ANY_IS_OK, opts?: ANY_IS_OK): ANY_IS_OK {
+    return this._joinImpl("LEFT", tableOrOptions, field, reference, opts) as ANY_IS_OK;
+  }
 
-    // rightJoinUnsafeTypeEnforced — RIGHT semantics, type-enforced columns
-    rightJoinUnsafeTypeEnforced<const Table extends TTables | `${TTables} ${string}`,
-        TCol1 extends GetColsBaseTable<Table>,
-        TCol2 extends GetJoinOnColsType<GetColumnType<Table, TCol1>, [...TSources, Table]> | GetCTECols<TCTEs>,
-        TAlias extends string = never
-    >(options: {
-        table: Table, src: TCol1, on: TCol2, alias?: TAlias,
-        where?: JoinWhereCriteria<Table, TAlias>, joinType?: JoinType
-    }): _fJoinReturn<[...TSources, [TAlias] extends [undefined] ? Table : [Table, TAlias]], Prettify<NullifyTableFields<TFields> & Record<[TAlias] extends [undefined] ? Table : TAlias, GetFieldsFromTable<Table>>>, TCTEs>;
-    rightJoinUnsafeTypeEnforced<const TableInput extends TTables | `${TTables} ${string}`,
-        Table extends TTables = ExtractTableName<TableInput>,
-        TAlias extends string | never = ExtractAlias<TableInput>,
-        TCol1 extends GetColsBaseTable<Table> = GetColsBaseTable<Table>,
-        TCol2 extends GetJoinOnColsType<GetColumnType<Table, TCol1>, [...TSources, Table]> | GetCTECols<TCTEs> =
-                      GetJoinOnColsType<GetColumnType<Table, TCol1>, [...TSources, Table]>
-    >(table: TableInput, field: TCol1, reference: TCol2, options?: { where?: JoinWhereCriteria<Table, TAlias>, joinType?: JoinType }): _fJoinReturn<[...TSources, [TAlias] extends [never] ? Table : [Table, TAlias]], Prettify<NullifyTableFields<TFields> & Record<[TAlias] extends [undefined] ? Table : TAlias, GetFieldsFromTable<Table>>>, TCTEs>;
-    rightJoinUnsafeTypeEnforced(tableOrOptions: any, field?: any, reference?: any, opts?: any): any {
-        return this._joinImpl("RIGHT", tableOrOptions as any, field as any, reference as any, opts) as any;
-    }
+  // rightJoinUnsafeTypeEnforced — RIGHT semantics, type-enforced columns
+  rightJoinUnsafeTypeEnforced<const Table extends TTables | `${TTables} ${string}`,
+    TCol1 extends GetColsBaseTable<Table>,
+    TCol2 extends GetJoinOnColsType<GetColumnType<Table, TCol1>, [...TSources, Table]> | GetCTECols<TCTEs>,
+    TAlias extends string = never
+  >(options: {
+    table: Table;
+    src: TCol1;
+    on: TCol2;
+    alias?: TAlias;
+    where?: JoinWhereCriteria<Table, TAlias>;
+    joinType?: JoinType;
+  }): _fJoinReturn<[...TSources, [TAlias] extends [undefined] ? Table : [Table, TAlias]], Prettify<NullifyTableFields<TFields> & Record<[TAlias] extends [undefined] ? Table : TAlias, GetFieldsFromTable<Table>>>, TCTEs>;
+  rightJoinUnsafeTypeEnforced<const TableInput extends TTables | `${TTables} ${string}`,
+    Table extends TTables = ExtractTableName<TableInput>,
+    TAlias extends string | never = ExtractAlias<TableInput>,
+    TCol1 extends GetColsBaseTable<Table> = GetColsBaseTable<Table>,
+    TCol2 extends GetJoinOnColsType<GetColumnType<Table, TCol1>, [...TSources, Table]> | GetCTECols<TCTEs> =
+      GetJoinOnColsType<GetColumnType<Table, TCol1>, [...TSources, Table]>
+  >(table: TableInput, field: TCol1, reference: TCol2, options?: { where?: JoinWhereCriteria<Table, TAlias>; joinType?: JoinType; }): _fJoinReturn<[...TSources, [TAlias] extends [never] ? Table : [Table, TAlias]], Prettify<NullifyTableFields<TFields> & Record<[TAlias] extends [undefined] ? Table : TAlias, GetFieldsFromTable<Table>>>, TCTEs>;
+  rightJoinUnsafeTypeEnforced(tableOrOptions: ANY_IS_OK, field?: ANY_IS_OK, reference?: ANY_IS_OK, opts?: ANY_IS_OK): ANY_IS_OK {
+    return this._joinImpl("RIGHT", tableOrOptions, field, reference, opts) as ANY_IS_OK;
+  }
 
-    // rightJoinUnsafeIgnoreType — RIGHT semantics, any columns
-    rightJoinUnsafeIgnoreType<const Table extends TTables,
-        TCol1 extends GetColsBaseTable<Table>,
-        TCol2 extends GetJoinCols<TSources[number]>,
-        TAlias extends string = never
-    >(options: {
-        table: Table, src: TCol1, on: TCol2, alias?: TAlias,
-        where?: JoinWhereCriteria<Table, TAlias>, joinType?: JoinType
-    }): _fJoinReturn<[...TSources, [TAlias] extends [never] ? Table : [Table, TAlias]], NullifyTableFields<TFields> & Record<Table, GetFieldsFromTable<Table>>, TCTEs>;
-    rightJoinUnsafeIgnoreType<const TableInput extends TTables | `${TTables} ${string}`,
-        Table extends TTables = ExtractTableName<TableInput>,
-        TAlias extends string | never = ExtractAlias<TableInput>,
-        TCol1 extends GetColsBaseTable<Table> = GetColsBaseTable<Table>,
-        TCol2 extends GetJoinCols<TSources[number]> = GetJoinCols<TSources[number]>
-    >(table: TableInput, field: TCol1, reference: TCol2, options?: { where?: JoinWhereCriteria<Table, TAlias>, joinType?: JoinType }): _fJoinReturn<[...TSources, [TAlias] extends [never] ? Table : [Table, TAlias]], NullifyTableFields<TFields> & Record<Table, GetFieldsFromTable<Table>>, TCTEs>;
-    rightJoinUnsafeIgnoreType(tableOrOptions: any, field?: any, reference?: any, opts?: any): any {
-        return this._joinImpl("RIGHT", tableOrOptions as any, field as any, reference as any, opts) as any;
-    }
+  // rightJoinUnsafeIgnoreType — RIGHT semantics, any columns
+  rightJoinUnsafeIgnoreType<const Table extends TTables,
+    TCol1 extends GetColsBaseTable<Table>,
+    TCol2 extends GetJoinCols<TSources[number]>,
+    TAlias extends string = never
+  >(options: {
+    table: Table;
+    src: TCol1;
+    on: TCol2;
+    alias?: TAlias;
+    where?: JoinWhereCriteria<Table, TAlias>;
+    joinType?: JoinType;
+  }): _fJoinReturn<[...TSources, [TAlias] extends [never] ? Table : [Table, TAlias]], NullifyTableFields<TFields> & Record<Table, GetFieldsFromTable<Table>>, TCTEs>;
+  rightJoinUnsafeIgnoreType<const TableInput extends TTables | `${TTables} ${string}`,
+    Table extends TTables = ExtractTableName<TableInput>,
+    TAlias extends string | never = ExtractAlias<TableInput>,
+    TCol1 extends GetColsBaseTable<Table> = GetColsBaseTable<Table>,
+    TCol2 extends GetJoinCols<TSources[number]> = GetJoinCols<TSources[number]>
+  >(table: TableInput, field: TCol1, reference: TCol2, options?: { where?: JoinWhereCriteria<Table, TAlias>; joinType?: JoinType; }): _fJoinReturn<[...TSources, [TAlias] extends [never] ? Table : [Table, TAlias]], NullifyTableFields<TFields> & Record<Table, GetFieldsFromTable<Table>>, TCTEs>;
+  rightJoinUnsafeIgnoreType(tableOrOptions: ANY_IS_OK, field?: ANY_IS_OK, reference?: ANY_IS_OK, opts?: ANY_IS_OK): ANY_IS_OK {
+    return this._joinImpl("RIGHT", tableOrOptions, field, reference, opts) as ANY_IS_OK;
+  }
 
-    // fullJoinUnsafeTypeEnforced — FULL semantics, type-enforced columns
-    fullJoinUnsafeTypeEnforced<const Table extends TTables | `${TTables} ${string}`,
-        TCol1 extends GetColsBaseTable<Table>,
-        TCol2 extends GetJoinOnColsType<GetColumnType<Table, TCol1>, [...TSources, Table]> | GetCTECols<TCTEs>,
-        TAlias extends string = never
-    >(options: {
-        table: Table, src: TCol1, on: TCol2, alias?: TAlias,
-        where?: JoinWhereCriteria<Table, TAlias>, joinType?: JoinType
-    }): _fJoinReturn<[...TSources, [TAlias] extends [undefined] ? Table : [Table, TAlias]], Prettify<NullifyTableFields<TFields> & Record<[TAlias] extends [undefined] ? Table : TAlias, MakeNullable<GetFieldsFromTable<Table>>>>, TCTEs>;
-    fullJoinUnsafeTypeEnforced<const TableInput extends TTables | `${TTables} ${string}`,
-        Table extends TTables = ExtractTableName<TableInput>,
-        TAlias extends string | never = ExtractAlias<TableInput>,
-        TCol1 extends GetColsBaseTable<Table> = GetColsBaseTable<Table>,
-        TCol2 extends GetJoinOnColsType<GetColumnType<Table, TCol1>, [...TSources, Table]> | GetCTECols<TCTEs> =
-                      GetJoinOnColsType<GetColumnType<Table, TCol1>, [...TSources, Table]>
-    >(table: TableInput, field: TCol1, reference: TCol2, options?: { where?: JoinWhereCriteria<Table, TAlias>, joinType?: JoinType }): _fJoinReturn<[...TSources, [TAlias] extends [never] ? Table : [Table, TAlias]], Prettify<NullifyTableFields<TFields> & Record<[TAlias] extends [undefined] ? Table : TAlias, MakeNullable<GetFieldsFromTable<Table>>>>, TCTEs>;
-    fullJoinUnsafeTypeEnforced(tableOrOptions: any, field?: any, reference?: any, opts?: any): any {
-        return this._joinImpl("FULL", tableOrOptions as any, field as any, reference as any, opts) as any;
-    }
+  // fullJoinUnsafeTypeEnforced — FULL semantics, type-enforced columns
+  fullJoinUnsafeTypeEnforced<const Table extends TTables | `${TTables} ${string}`,
+    TCol1 extends GetColsBaseTable<Table>,
+    TCol2 extends GetJoinOnColsType<GetColumnType<Table, TCol1>, [...TSources, Table]> | GetCTECols<TCTEs>,
+    TAlias extends string = never
+  >(options: {
+    table: Table;
+    src: TCol1;
+    on: TCol2;
+    alias?: TAlias;
+    where?: JoinWhereCriteria<Table, TAlias>;
+    joinType?: JoinType;
+  }): _fJoinReturn<[...TSources, [TAlias] extends [undefined] ? Table : [Table, TAlias]], Prettify<NullifyTableFields<TFields> & Record<[TAlias] extends [undefined] ? Table : TAlias, MakeNullable<GetFieldsFromTable<Table>>>>, TCTEs>;
+  fullJoinUnsafeTypeEnforced<const TableInput extends TTables | `${TTables} ${string}`,
+    Table extends TTables = ExtractTableName<TableInput>,
+    TAlias extends string | never = ExtractAlias<TableInput>,
+    TCol1 extends GetColsBaseTable<Table> = GetColsBaseTable<Table>,
+    TCol2 extends GetJoinOnColsType<GetColumnType<Table, TCol1>, [...TSources, Table]> | GetCTECols<TCTEs> =
+      GetJoinOnColsType<GetColumnType<Table, TCol1>, [...TSources, Table]>
+  >(table: TableInput, field: TCol1, reference: TCol2, options?: { where?: JoinWhereCriteria<Table, TAlias>; joinType?: JoinType; }): _fJoinReturn<[...TSources, [TAlias] extends [never] ? Table : [Table, TAlias]], Prettify<NullifyTableFields<TFields> & Record<[TAlias] extends [undefined] ? Table : TAlias, MakeNullable<GetFieldsFromTable<Table>>>>, TCTEs>;
+  fullJoinUnsafeTypeEnforced(tableOrOptions: ANY_IS_OK, field?: ANY_IS_OK, reference?: ANY_IS_OK, opts?: ANY_IS_OK): ANY_IS_OK {
+    return this._joinImpl("FULL", tableOrOptions, field, reference, opts) as ANY_IS_OK;
+  }
 
-    // fullJoinUnsafeIgnoreType — FULL semantics, any columns
-    fullJoinUnsafeIgnoreType<const Table extends TTables,
-        TCol1 extends GetColsBaseTable<Table>,
-        TCol2 extends GetJoinCols<TSources[number]>,
-        TAlias extends string = never
-    >(options: {
-        table: Table, src: TCol1, on: TCol2, alias?: TAlias,
-        where?: JoinWhereCriteria<Table, TAlias>, joinType?: JoinType
-    }): _fJoinReturn<[...TSources, [TAlias] extends [never] ? Table : [Table, TAlias]], NullifyTableFields<TFields> & Record<Table, MakeNullable<GetFieldsFromTable<Table>>>, TCTEs>;
-    fullJoinUnsafeIgnoreType<const TableInput extends TTables | `${TTables} ${string}`,
-        Table extends TTables = ExtractTableName<TableInput>,
-        TAlias extends string | never = ExtractAlias<TableInput>,
-        TCol1 extends GetColsBaseTable<Table> = GetColsBaseTable<Table>,
-        TCol2 extends GetJoinCols<TSources[number]> = GetJoinCols<TSources[number]>
-    >(table: TableInput, field: TCol1, reference: TCol2, options?: { where?: JoinWhereCriteria<Table, TAlias>, joinType?: JoinType }): _fJoinReturn<[...TSources, [TAlias] extends [never] ? Table : [Table, TAlias]], NullifyTableFields<TFields> & Record<Table, MakeNullable<GetFieldsFromTable<Table>>>, TCTEs>;
-    fullJoinUnsafeIgnoreType(tableOrOptions: any, field?: any, reference?: any, opts?: any): any {
-        return this._joinImpl("FULL", tableOrOptions as any, field as any, reference as any, opts) as any;
-    }
+  // fullJoinUnsafeIgnoreType — FULL semantics, any columns
+  fullJoinUnsafeIgnoreType<const Table extends TTables,
+    TCol1 extends GetColsBaseTable<Table>,
+    TCol2 extends GetJoinCols<TSources[number]>,
+    TAlias extends string = never
+  >(options: {
+    table: Table;
+    src: TCol1;
+    on: TCol2;
+    alias?: TAlias;
+    where?: JoinWhereCriteria<Table, TAlias>;
+    joinType?: JoinType;
+  }): _fJoinReturn<[...TSources, [TAlias] extends [never] ? Table : [Table, TAlias]], NullifyTableFields<TFields> & Record<Table, MakeNullable<GetFieldsFromTable<Table>>>, TCTEs>;
+  fullJoinUnsafeIgnoreType<const TableInput extends TTables | `${TTables} ${string}`,
+    Table extends TTables = ExtractTableName<TableInput>,
+    TAlias extends string | never = ExtractAlias<TableInput>,
+    TCol1 extends GetColsBaseTable<Table> = GetColsBaseTable<Table>,
+    TCol2 extends GetJoinCols<TSources[number]> = GetJoinCols<TSources[number]>
+  >(table: TableInput, field: TCol1, reference: TCol2, options?: { where?: JoinWhereCriteria<Table, TAlias>; joinType?: JoinType; }): _fJoinReturn<[...TSources, [TAlias] extends [never] ? Table : [Table, TAlias]], NullifyTableFields<TFields> & Record<Table, MakeNullable<GetFieldsFromTable<Table>>>, TCTEs>;
+  fullJoinUnsafeIgnoreType(tableOrOptions: ANY_IS_OK, field?: ANY_IS_OK, reference?: ANY_IS_OK, opts?: ANY_IS_OK): ANY_IS_OK {
+    return this._joinImpl("FULL", tableOrOptions, field, reference, opts) as ANY_IS_OK;
+  }
 
-    // crossJoinUnsafeTypeEnforced — CROSS semantics, type-enforced columns
-    crossJoinUnsafeTypeEnforced<const TableInput extends TTables | `${TTables} ${string}`,
-        Table extends TTables = ExtractTableName<TableInput>,
-        TAlias extends string | never = ExtractAlias<TableInput>
-    >(table: TableInput):
-        _fJoinReturn<[...TSources, [TAlias] extends [never] ? Table : [Table, TAlias]], Prettify<TFields & Record<[TAlias] extends [never] ? Table : TAlias, GetFieldsFromTable<Table>>>, TCTEs> {
-        return this._joinImpl("CROSS", table as string) as any;
-    }
+  // crossJoinUnsafeTypeEnforced — CROSS semantics, type-enforced columns
+  crossJoinUnsafeTypeEnforced<const TableInput extends TTables | `${TTables} ${string}`,
+    Table extends TTables = ExtractTableName<TableInput>,
+    TAlias extends string | never = ExtractAlias<TableInput>
+  >(table: TableInput):
+  _fJoinReturn<[...TSources, [TAlias] extends [never] ? Table : [Table, TAlias]], Prettify<TFields & Record<[TAlias] extends [never] ? Table : TAlias, GetFieldsFromTable<Table>>>, TCTEs> {
+    return this._joinImpl("CROSS", table) as ANY_IS_OK;
+  }
 
-    // crossJoinUnsafeIgnoreType — CROSS semantics, any columns
-    crossJoinUnsafeIgnoreType<const TableInput extends TTables | `${TTables} ${string}`,
-        Table extends TTables = ExtractTableName<TableInput>,
-        TAlias extends string | never = ExtractAlias<TableInput>
-    >(table: TableInput):
-        _fJoinReturn<[...TSources, [TAlias] extends [never] ? Table : [Table, TAlias]], Prettify<TFields & Record<[TAlias] extends [never] ? Table : TAlias, GetFieldsFromTable<Table>>>, TCTEs> {
-        return this._joinImpl("CROSS", table as string) as any;
-    }
+  // crossJoinUnsafeIgnoreType — CROSS semantics, any columns
+  crossJoinUnsafeIgnoreType<const TableInput extends TTables | `${TTables} ${string}`,
+    Table extends TTables = ExtractTableName<TableInput>,
+    TAlias extends string | never = ExtractAlias<TableInput>
+  >(table: TableInput):
+  _fJoinReturn<[...TSources, [TAlias] extends [never] ? Table : [Table, TAlias]], Prettify<TFields & Record<[TAlias] extends [never] ? Table : TAlias, GetFieldsFromTable<Table>>>, TCTEs> {
+    return this._joinImpl("CROSS", table) as ANY_IS_OK;
+  }
 }
-
 
 /* ALL
 FROM - tables are joined to get the base data.
@@ -3121,41 +3134,40 @@ LIMIT - the returned data is limited to row count.
 OFFSET -
  */
 
-
-
 function expandToQualifiedSelects(
-    tableObj: { table: string; alias?: string },
-    withs: Values["withs"]
+  tableObj: { table: string; alias?: string; },
+  withs: Values["withs"]
 ): Array<string> {
-    const tId = tableObj.alias || tableObj.table;
-    if (DB[tableObj.table]) {
-        return Object.keys(DB[tableObj.table]!.fields).map(field => {
-            const q = `${tId}.${field}`;
-            return `${dialect.quoteQualifiedColumn(q)} AS ${dialect.quote(q, true)}`;
-        });
-    }
-    const cte = withs?.find(w => w.name === tableObj.table);
-    if (!cte?.columns?.length) throw new Error(`Cannot expand * for CTE "${tableObj.table}" — select columns explicitly`);
-    return cte.columns.map(col => {
-        const q = `${tId}.${col}`;
-        return `${dialect.quoteQualifiedColumn(q)} AS ${dialect.quote(q, true)}`;
+  const tId = tableObj.alias || tableObj.table;
+  if (DB[tableObj.table]) {
+    return Object.keys(DB[tableObj.table]!.fields).map(field => {
+      const q = `${tId}.${field}`;
+      return `${dialect.quoteQualifiedColumn(q)} AS ${dialect.quote(q, true)}`;
     });
+  }
+  const cte = withs?.find(w => w.name === tableObj.table);
+  if (!cte?.columns?.length) throw new Error(`Cannot expand * for CTE "${tableObj.table}" — select columns explicitly`);
+  return cte.columns.map(col => {
+    const q = `${tId}.${col}`;
+    return `${dialect.quoteQualifiedColumn(q)} AS ${dialect.quote(q, true)}`;
+  });
 }
 
 /**
  * Extracts the output alias from a SQL select expression.
  * Computed expressions (CASE, function calls) without an explicit `AS alias` return null.
  */
+// eslint-disable-next-line sonarjs/function-return-type
 function extractSelectAlias(expr: string): string | null {
-    // "col" AS `alias` or "col" AS 'alias'
-    const aliased = / AS ["'`](.+?)["'`]\s*$/i.exec(expr);
-    if (aliased) return aliased[1]!;
-    // `col` or "col" or 'col' (dialect-quoted bare identifier)
-    const quoted = /^["'`](.+?)["'`]$/.exec(expr);
-    if (quoted) return quoted[1]!;
-    // plain unquoted identifier (e.g. sqlite without quoting) — must be simple word
-    if (/^\w+$/.test(expr)) return expr;
-    return null;
+  // "col" AS `alias` or "col" AS 'alias'
+  const aliased = / AS ["'`](.+?)["'`]\s*$/i.exec(expr);
+  if (aliased) return aliased[1]!;
+  // `col` or "col" or 'col' (dialect-quoted bare identifier)
+  const quoted = /^["'`](.+?)["'`]$/.exec(expr);
+  if (quoted) return quoted[1]!;
+  // plain unquoted identifier (e.g. sqlite without quoting) — must be simple word
+  if (/^\w+$/.test(expr)) return expr;
+  return null;
 }
 
 /**
@@ -3163,73 +3175,72 @@ function extractSelectAlias(expr: string): string | null {
  * Computed expressions (CASE, function calls) without an explicit `AS alias`
  * return null from extractSelectAlias and are excluded from the result.
  */
-function extractCTEColumns(query: _fRun<any, any, any>): string[] {
-    return (query as any).values.selects
-        .map(extractSelectAlias)
-        .filter((c: string | null): c is string => c !== null);
+function extractCTEColumns(query: _fRun<ANY_IS_OK, ANY_IS_OK, ANY_IS_OK>): Array<string> {
+  return (query as ANY_IS_OK).values.selects
+    .map(extractSelectAlias)
+    .filter((c: string | null): c is string => c !== null);
 }
 
-class DbWith<TCTEs extends Record<string, Record<string, any>>> {
-    constructor(
-        private db: PrismaClient,
-        private _withs: Array<{ name: string; sql: string; columns?: string[] }>
-    ) {}
+class DbWith<TCTEs extends Record<string, Record<string, ANY_IS_OK>>> {
+  constructor(
+    private db: PrismaClient,
+    private _withs: Array<{ name: string; sql: string; columns?: Array<string>; }>
+  ) {}
 
-    with<const TName extends string, TQuery extends _fRun<any, any, any>>(
-        name: TName,
-        query: TQuery
-    ): DbWith<TCTEs & Record<TName, InferCTEShape<TQuery>>> {
-        const columns = extractCTEColumns(query);
-        return new DbWith(this.db, [
-            ...this._withs,
-            { name, sql: query.getSQL().replace(/;$/, ''), columns }
-        ]) as any;
-    }
+  with<const TName extends string, TQuery extends _fRun<ANY_IS_OK, ANY_IS_OK, ANY_IS_OK>>(
+    name: TName,
+    query: TQuery
+  ): DbWith<TCTEs & Record<TName, InferCTEShape<TQuery>>> {
+    const columns = extractCTEColumns(query);
+    return new DbWith(this.db, [
+      ...this._withs,
+      { name, sql: query.getSQL().replace(/;$/, ""), columns },
+    ]) as ANY_IS_OK;
+  }
 
-    from<const TName extends keyof TCTEs & string>(
-        cteName: TName
-    ): _fJoinReturn<[readonly ["__cte__", TName]], Record<TName, TCTEs[TName]>, TCTEs>
-    from<const TDBBase extends TTables,
-        const TAlias extends string = never,
-        TRT extends TArrSources = [TAlias] extends [never] ? [TDBBase] : [[TDBBase, TAlias]]
-    >(
-        baseTable: TDBBase,
-        alias?: TAlias
-    ): _fJoinReturn<TRT, Record<GetAliasTableNames<TRT[0]>, GetFieldsFromTable<TDBBase>>, TCTEs>
-    from(baseTableOrCTE: string, alias?: string): any {
-        return new _fJoin(this.db, {
-            tables: [{ table: baseTableOrCTE, alias }],
-            selects: [],
-            withs: this._withs,
-        }) as any;
-    }
+  from<const TName extends keyof TCTEs & string>(
+    cteName: TName
+  ): _fJoinReturn<[readonly ["__cte__", TName]], Record<TName, TCTEs[TName]>, TCTEs>;
+  from<const TDBBase extends TTables,
+    const TAlias extends string = never,
+    TRT extends TArrSources = [TAlias] extends [never] ? [TDBBase] : [[TDBBase, TAlias]]
+  >(
+    baseTable: TDBBase,
+    alias?: TAlias
+  ): _fJoinReturn<TRT, Record<GetAliasTableNames<TRT[0]>, GetFieldsFromTable<TDBBase>>, TCTEs>;
+  from(baseTableOrCTE: string, alias?: string): ANY_IS_OK {
+    return new _fJoin(this.db, {
+      tables: [{ table: baseTableOrCTE, alias }],
+      selects: [],
+      withs: this._withs,
+    }) as ANY_IS_OK;
+  }
 }
 
-const extendedPrismaClient =  {
-    name: "prisma-ts-select",
-    client: {
-        $from<const T extends TTables | `${TTables} ${string}`,
-            Table extends TTables = ExtractTableName<T>,
-            TAlias extends string | never = ExtractAlias<T>,
-        >(table: T) {
-            const client = Prisma.getExtensionContext(this) as unknown as PrismaClient;
+const extendedPrismaClient = {
+  name: "prisma-ts-select",
+  client: {
+    $from<const T extends TTables | `${TTables} ${string}`,
+      Table extends TTables = ExtractTableName<T>,
+      TAlias extends string | never = ExtractAlias<T>
+    >(table: T) {
+      const client = Prisma.getExtensionContext(this) as unknown as PrismaClient;
 
-            const [base, ...aliases] = table.split(' ');
+      const [ base, ...aliases ] = table.split(" ");
 
-
-            return new DbSelect(client)
-                .from(base!.trim() as Table, (aliases.join().trim() || undefined) as TAlias)
-        },
-        /** @note `query` must be produced by the same prisma-ts-select builder instance. */
-        $with<const TName extends string, TQuery extends _fRun<any, any, any>>(
-            name: TName,
-            query: TQuery
-        ): DbWith<Record<TName, InferCTEShape<TQuery>>> {
-            const client = Prisma.getExtensionContext(this) as unknown as PrismaClient;
-            const columns = extractCTEColumns(query);
-            return new DbWith(client, [{ name, sql: query.getSQL().replace(/;$/, ''), columns }]);
-        },
+      return new DbSelect(client)
+        .from(base!.trim() as Table, (aliases.join().trim() || undefined) as TAlias);
     },
+    /** @note `query` must be produced by the same prisma-ts-select builder instance. */
+    $with<const TName extends string, TQuery extends _fRun<ANY_IS_OK, ANY_IS_OK, ANY_IS_OK>>(
+      name: TName,
+      query: TQuery
+    ): DbWith<Record<TName, InferCTEShape<TQuery>>> {
+      const client = Prisma.getExtensionContext(this) as unknown as PrismaClient;
+      const columns = extractCTEColumns(query);
+      return new DbWith(client, [{ name, sql: query.getSQL().replace(/;$/, ""), columns }]);
+    },
+  },
 };
 
 export default extendedPrismaClient;

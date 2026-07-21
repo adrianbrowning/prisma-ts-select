@@ -1,0 +1,61 @@
+{
+  "$schema": "https://unpkg.com/knip@latest/schema.json",
+  "prisma": false,
+  "ignoreDependencies": [
+    "@gcm/prisma-ts-select"
+  ],
+  "ignoreBinaries": ["gen"],
+  "ignore": [
+    "shared-tests/**",
+    "shared-prisma/**"
+  ],
+  "workspaces": {
+    ".": {
+      "entry": ["scripts/**/*.{js,mjs}"],
+      "ignore": ["shared-tests/**", "shared-prisma/**"]
+    },
+    "packages/prisma-ts-select": {
+      "entry": ["src/extend.ts", "src/db.ts", "src/fn-context.ts", "src/dialects/*.ts", "transforms/**/*.ts"],
+      "project": ["src/**/*.{js,ts}", "transforms/**/*.ts"]
+    },
+    "packages/run-tests-tui": {
+      "entry": ["src/cli.ts"],
+      "project": ["src/**/*.{js,ts}"]
+    },
+    "packages/usage-sqlite-v6": {
+      "entry": ["tests/**/*.{ts,mjs}", "prisma/seed.ts"],
+      "project": ["src/**/*.ts", "tests/**/*.{ts,mjs}", "prisma/**/*.ts"],
+      "ignore": ["generated/**"]
+    },
+    "packages/usage-sqlite-v7": {
+      "entry": ["tests/**/*.{ts,mjs}", "prisma/seed.ts"],
+      "project": ["src/**/*.ts", "tests/**/*.{ts,mjs}", "prisma/**/*.ts"],
+      "ignore": ["generated/**"]
+    },
+    "packages/usage-mysql-v6": {
+      "entry": ["tests/**/*.{ts,mjs}", "prisma/seed.ts"],
+      "project": ["src/**/*.ts", "tests/**/*.{ts,mjs}", "prisma/**/*.ts"],
+      "ignore": ["generated/**"]
+    },
+    "packages/usage-mysql-v7": {
+      "entry": ["tests/**/*.{ts,mjs}", "prisma/seed.ts"],
+      "project": ["src/**/*.ts", "tests/**/*.{ts,mjs}", "prisma/**/*.ts"],
+      "ignore": ["generated/**"]
+    },
+    "packages/usage-pg-v6": {
+      "entry": ["tests/**/*.{ts,mjs}", "prisma/seed.ts"],
+      "project": ["src/**/*.ts", "tests/**/*.{ts,mjs}", "prisma/**/*.ts"],
+      "ignore": ["generated/**"]
+    },
+    "packages/usage-pg-v7": {
+      "entry": ["tests/**/*.{ts,mjs}", "prisma/seed.ts"],
+      "project": ["src/**/*.ts", "tests/**/*.{ts,mjs}", "prisma/**/*.ts"],
+      "ignore": ["generated/**"]
+    },
+    "packages/bug-test": {
+      "entry": ["src/**/*.ts", "prisma/seed.ts"],
+      "project": ["src/**/*.ts", "prisma/**/*.ts"],
+      "ignore": ["generated/**"]
+    }
+  }
+}

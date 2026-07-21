@@ -1,4 +1,5 @@
-import {resolveArg, type SQLExpr} from "../sql-expr.js";
+import { resolveArg } from "../sql-expr.ts";
+import type { SQLExpr } from "../sql-expr.ts";
 
 /**
  * Shared SQL functions that work identically across all supported databases.
@@ -17,10 +18,10 @@ export const esc = (s: string) => s.replace(/'/g, "''");
  * @param quoteFn
  */
 export const flattenJsonObjectPairs = (
-  pairs: [string, string | SQLExpr<unknown>][],
-  quoteFn: (ref: string) => string,
-): string[] =>
-  pairs.flatMap(([k, v]) => [`'${esc(k)}'`, resolveArg(v, quoteFn)]);
+  pairs: Array<[string, string | SQLExpr<unknown>]>,
+  quoteFn: (ref: string) => string
+): Array<string> =>
+  pairs.flatMap(([ k, v ]) => [ `'${esc(k)}'`, resolveArg(v, quoteFn) ]);
 
 /** Filters col-entry tuple union to names whose type matches T. */
 export type FilterCols<TEntries extends [string, unknown], T> =

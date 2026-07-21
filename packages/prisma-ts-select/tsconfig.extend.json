@@ -1,0 +1,20 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "declaration": true,
+    "emitDeclarationOnly": true,
+    "allowImportingTsExtensions": true,
+    "outDir": "./dist/extend",
+    "rootDir": "./src",
+    "sourceMap": false,
+    "types": ["node"]
+  },
+  "include": [
+    "src/extend.ts",
+    "src/db.ts",
+    "src/sql-expr.ts",
+    "src/fn-context.ts",
+    "src/dialects/**/*",
+    "src/utils/types.ts"
+  ]
+}
