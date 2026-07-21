@@ -52,6 +52,10 @@ runs:
       shell: bash
       run: pnpm install --frozen-lockfile
 
+    - name: Build generator
+      shell: bash
+      run: pnpm --filter prisma-ts-select build
+
     - name: Run Gen
       shell: bash
       run: pnpm -r gen
