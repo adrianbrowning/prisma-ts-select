@@ -42,7 +42,7 @@ generatorHandler({
     const packageName = (options.generator.config.packageName as string | undefined) ?? generatePackageName(outputPath);
 
     fs.mkdirSync(outputPath, { recursive: true });
-     
+
     console.log(`${GENERATOR_NAME}: Generating to ${outputPath}`);
 
     const validDS = options

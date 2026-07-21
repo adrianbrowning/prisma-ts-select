@@ -54,7 +54,7 @@ void describe("Generator package.json output", () => {
   });
 
   void test("exports shape", () => {
-    const { exports } = readPkgJson("usage-sqlite-v7");
+    const { exports } = readPkgJson("usage-sqlite-v7") as { exports: Record<string, { types: string; import: string; }>; };
     for (const entry of Object.values(exports)) {
       assert.strictEqual(typeof entry.types, "string");
       assert.strictEqual(typeof entry.import, "string");

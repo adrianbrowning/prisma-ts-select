@@ -4,6 +4,7 @@ import type { Linter } from "eslint";
 export const extraRules: Array<Linter.Config> = [{
   rules: {
     "no-barrel-files/no-barrel-files": "off",
+    "no-console": "off",
   },
 }];
 
