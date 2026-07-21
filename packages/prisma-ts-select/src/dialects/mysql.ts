@@ -76,7 +76,7 @@ export const mysqlContextFns = <TColEntries extends [string, unknown] = never, T
   second:    (col: FilterCols<TColEntries, Date> | SQLExpr<Date>): SQLExpr<number> => sqlExpr(`SECOND(${resolveArg(col, quoteFn)})`),
   // Control flow
   $if: <T>(cond: TCriteria | SQLExpr<unknown>, trueVal: SQLExpr<T>, falseVal: SQLExpr<T>): SQLExpr<T> => {
-    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition, sonarjs/different-types-comparison, sonarjs/in-operator-type-error -- TCriteria is generic
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition, sonarjs/different-types-comparison -- TCriteria is generic
     const condSql = typeof cond === "object" && cond !== null && "sql" in cond
       ? (cond).sql
       : condFn(cond);

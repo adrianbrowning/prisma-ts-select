@@ -3157,7 +3157,7 @@ function expandToQualifiedSelects(
  * Extracts the output alias from a SQL select expression.
  * Computed expressions (CASE, function calls) without an explicit `AS alias` return null.
  */
-// eslint-disable-next-line sonarjs/function-return-type
+ 
 function extractSelectAlias(expr: string): string | null {
   // "col" AS `alias` or "col" AS 'alias'
   const aliased = / AS ["'`](.+?)["'`]\s*$/i.exec(expr);

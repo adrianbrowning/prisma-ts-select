@@ -31,9 +31,9 @@ function statusColor(status: Phase): string {
 const STEPS: Array<Step> = [ "gen", "seed", "lint", "test" ];
 
 function resolveStepStatus(panel: PanelState, step: Step): Phase {
-  // eslint-disable-next-line sonarjs/argument-type -- Step satisfies Array<Step>.indexOf
+   
   const stepIdx = STEPS.indexOf(step);
-  // eslint-disable-next-line sonarjs/argument-type -- narrowed to Step after "done" check
+   
   const curIdx = panel.step === "done" ? STEPS.length : STEPS.indexOf(panel.step);
 
   if (stepIdx < curIdx) {

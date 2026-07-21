@@ -38,7 +38,7 @@ export type LitToType<T extends LitValue> =
 export function lit<T extends LitValue>(value: T): SQLExpr<LitToType<T>> {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   type ANY_IS_OK = any;
-  // eslint-disable-next-line sonarjs/different-types-comparison -- runtime null is valid for LitValue union
+   
   if (value === null) return sqlExpr("NULL") as ANY_IS_OK;
   if (typeof value === "boolean") return sqlExpr(value ? "1" : "0") as ANY_IS_OK;
   if (typeof value === "string") return sqlExpr(`'${value.replace(/'/g, "''")}'`) as ANY_IS_OK;

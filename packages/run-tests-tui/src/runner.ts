@@ -92,9 +92,9 @@ async function runDocker(
   dispatch({ type: "SET_DOCKER", status: "running" });
 
   const services: Array<"mysql" | "postgres"> = [];
-  // eslint-disable-next-line sonarjs/argument-type -- string literal satisfies Array<string>.includes
+   
   if (dbs.includes("mysql")) services.push("mysql");
-  // eslint-disable-next-line sonarjs/argument-type
+   
   if (dbs.includes("pg")) services.push("postgres");
 
   const running = await execSimple("docker", [ "compose", "ps", "--services", "--filter", "status=running" ]);
