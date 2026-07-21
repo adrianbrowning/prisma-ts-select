@@ -85,8 +85,8 @@
     "typescript"
   ],
   "engines": {
-    "node": ">=18.17",
-    "pnpm": ">= 8.6.12"
+    "node": ">=24.0.0",
+    "pnpm": ">=10.0.0"
   },
   "target": "node",
   "release": {

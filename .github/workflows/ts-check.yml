@@ -14,27 +14,27 @@ concurrency:
 jobs:
   tscheck:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      pull-requests: write
 
     steps:
+      - uses: actions/checkout@v7
+
       - uses: ./.github/actions/setup
         with:
-          checkout-ref: ${{ github.head_ref }}
-          checkout-fetch-depth: '0'
+          checkout-ref: ${{ github.head_ref || github.ref_name }}
 
       - name: Run TypeScript Check
         id: ts-check
         continue-on-error: true
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set +e
           set -o pipefail
-
           pnpm run lint:ts 2>&1 | tee ts-check-output.txt
           TS_EXIT_CODE=$?
-
           echo "exit_code=$TS_EXIT_CODE" >> $GITHUB_OUTPUT
-
           if [ $TS_EXIT_CODE -ne 0 ]; then
             echo "TypeScript checks failed. TS_EXIT_CODE=$TS_EXIT_CODE"
             exit 1

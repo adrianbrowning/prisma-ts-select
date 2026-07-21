@@ -1,15 +1,20 @@
-name: CI
+name: CI Tests
 
 on:
-  push:
-    branches: [main]
   pull_request:
-    branches: ["*"]
+    branches:
+      - main
+    types: [ opened, synchronize, reopened ]
 
 jobs:
-  prisma-ts-select:
+  test-runner:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
     steps:
+      - uses: actions/checkout@v7
+
       - uses: ./.github/actions/setup
 
       - name: Build

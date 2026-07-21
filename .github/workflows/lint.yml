@@ -14,49 +14,41 @@ concurrency:
 jobs:
   eslint:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      pull-requests: write
 
     steps:
-      - name: Check if commit is made by bot
-        if: github.actor == 'github-actions[bot]'
-        run: echo "Commit made by bot. Exiting workflow." && exit 0
+      - uses: actions/checkout@v7
 
       - uses: ./.github/actions/setup
         with:
-          checkout-ref: ${{ github.head_ref }}
-          checkout-fetch-depth: '0'
+          checkout-ref: ${{ github.head_ref || github.ref_name }}
 
-      - name: Run ESLint Check for Errors
+      - name: Run ESLint Check
         id: lint-check
         continue-on-error: true
         shell: bash
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set +e
           set -o pipefail
-
           pnpm run lint:s 2>&1 | tee lint-output.txt
           LINT_EXIT_CODE=$?
-
           echo "exit_code=$LINT_EXIT_CODE" >> $GITHUB_OUTPUT
 
           if [ ! -s lint-output.txt ]; then
-            echo "No lint output generated"
             echo "has_issues=false" >> $GITHUB_OUTPUT
             echo "has_errors=false" >> $GITHUB_OUTPUT
             exit 0
           fi
 
-          # Check if there are any warnings or errors in the output (match actual ESLint problem lines)
           if grep -qE "^\s+[0-9]+:[0-9]+\s+(warning|error)\s" lint-output.txt; then
             echo "has_issues=true" >> $GITHUB_OUTPUT
           else
             echo "has_issues=false" >> $GITHUB_OUTPUT
           fi
 
-          # Determine if output contains errors (not just warnings)
-
-          # Match only actual error lines (format: "  92:8  error"), not summary line
           if grep -E "^\s+[0-9]+:[0-9]+\s+error\s" lint-output.txt; then
             echo "has_errors=true" >> $GITHUB_OUTPUT
           else
@@ -65,7 +57,9 @@ jobs:
 
       - name: Fail on ESLint errors
         if: steps.lint-check.outputs.has_errors == 'true'
-        run: exit 1
+        run: |
+          echo "ESLint found errors. Failing workflow."
+          exit 1
 
       - name: Comment lint results on PR
         if: always() && github.event_name == 'pull_request' && steps.lint-check.outputs.has_issues == 'true'

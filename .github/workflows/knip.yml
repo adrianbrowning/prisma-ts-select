@@ -8,18 +8,23 @@ on:
   workflow_dispatch:
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
   knip:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      pull-requests: write
 
     steps:
+      - uses: actions/checkout@v7
+
       - uses: ./.github/actions/setup
         with:
-          checkout-ref: ${{ github.head_ref }}
-          checkout-fetch-depth: '0'
+          checkout-ref: ${{ github.head_ref || github.ref_name }}
 
       - name: Run knip
         id: knip-check
