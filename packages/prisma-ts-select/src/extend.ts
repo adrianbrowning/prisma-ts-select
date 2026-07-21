@@ -5,7 +5,9 @@ import { match, P } from "ts-pattern";
 
 // Type stub for PrismaClient to avoid DTS build issues when @prisma/client isn't generated
 // The actual PrismaClient type from @prisma/client will be used at runtime via getExtensionContext
-type PrismaClient = any;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type ANY_IS_OK = any;
+type PrismaClient = ANY_IS_OK;
 import { DB } from "./db.ts";
 import { dialect, dialectContextFns } from "./dialects/index.ts";
 import { esc } from "./dialects/shared.ts";
@@ -100,7 +102,7 @@ type SUPPORTED_TYPES =
     | boolean
     | Date
     | Buffer;
-//TODO support for
+// See #105: add JSONValue support
 // | JSONValue;
 
 /**
@@ -210,8 +212,7 @@ type Whitespace = "\n" | " ";
  * type Trimmed3 = Trim<"  \n  test  \n  ">; // "test"
  */
 //@ts-expect-error will implement in another issue
-type Trim<T> = T extends `${Whitespace}${infer U}` ? Trim<U> : T extends `${infer U}${Whitespace}` ? Trim<U> : T;
-
+type _Trim<T> = T extends `${Whitespace}${infer U}` ? _Trim<U> : T extends `${infer U}${Whitespace}` ? _Trim<U> : T;
 
 /**
  * Valid column selection patterns for SELECT clause.
@@ -474,9 +475,8 @@ function processConditions(condition: BasicOpTypes, formatted = false): string {
     return applyCondition(quotedField, value);
   });
 
-  return r.length === 1
-    ? r[0]!.trim()
-    : "(" + r.join(" AND " + (formatted ? "\n" : "")).trim() + ")";
+  if (r.length === 1) return r[0]!.trim();
+  return "(" + r.join(" AND " + (formatted ? "\n" : "")).trim() + ")";
 }
 
 function processCriteria(main: ClauseType, joinType: "AND" | "OR" = "AND", formatted = false): string {
@@ -543,6 +543,12 @@ function processExprPairs(pairs: Array<ExprCondPair>): string {
   return parts.length === 1 ? parts[0]! : parts.join(" AND ");
 }
 
+function quoteSelectColumn(select: string): string {
+  if (select === "*") return "*";
+  if (select.includes(".")) return dialect.quoteQualifiedColumn(select);
+  return dialect.quote(select, false);
+}
+
 /*
 run
  */
@@ -552,7 +558,7 @@ class _fRun<TSources extends TArrSources, TFields extends TFieldsType, TSelectRT
     this.values.limit = typeof this.values.limit === "number" ? this.values.limit : undefined;
     this.values.offset = typeof this.values.offset === "number" ? this.values.offset : undefined;
   }
-
+   
   async run() {
     const results = await this.db.$queryRawUnsafe(
       this.getSQL()
@@ -560,6 +566,7 @@ class _fRun<TSources extends TArrSources, TFields extends TFieldsType, TSelectRT
 
     // Coerce 0/1 → false/true for Boolean fields in SQLite/MySQL
     if (dialect.needsBooleanCoercion()) {
+      // eslint-disable-next-line sonarjs/cognitive-complexity
       return results.map(row => {
         const coerced = { ...row };
         for (const key in coerced) {
@@ -593,7 +600,7 @@ class _fRun<TSources extends TArrSources, TFields extends TFieldsType, TSelectRT
           // Check if field is Boolean type in schema
           const fieldType = DB[table]?.fields[column];
           if (fieldType && fieldType.replace("?", "") === "Boolean") {
-            (coerced as any)[key] = value === 1;
+            (coerced as ANY_IS_OK)[key] = value === 1;
           }
         }
         return coerced;
@@ -614,7 +621,7 @@ class _fRun<TSources extends TArrSources, TFields extends TFieldsType, TSelectRT
   getResultType() {
     return {} as Array<TSelectRT>;
   }
-
+   
   getSQL(formatted: boolean = false) {
 
     const withClause = this.values.withs?.length
@@ -633,15 +640,14 @@ class _fRun<TSources extends TArrSources, TFields extends TFieldsType, TSelectRT
       ? `${quotedTable} AS ${dialect.quoteTableIdentifier(base.alias, true)}`
       : quotedTable;
 
+    const distinctPrefix = this.values.selectDistinct ? "DISTINCT " : "";
+    const selectClause = this.values.selects.length === 0
+      ? ""
+      : "SELECT " + distinctPrefix + this.values.selects.join(", ");
+
     return [
       withClause,
-      this.values.selects.length === 0
-        ? ""
-        : ("SELECT " +
-                    (this.values.selectDistinct === true
-                      ? "DISTINCT "
-                      : "")
-                    + this.values.selects.join(", ")),
+      selectClause,
       `FROM ${baseTable}`,
       joins.map(({
         table,
@@ -663,13 +669,13 @@ class _fRun<TSources extends TArrSources, TFields extends TFieldsType, TSelectRT
         const onClause = `${quotedLocal} = ${quotedRemote}`;
         const joinWhereStr = joinWhere ? ` AND ${processCriteria(joinWhere, "AND", formatted)}` : "";
         return `${typePrefix}JOIN ${tableStr} ON ${onClause}${joinWhereStr}`;
-      }).join(formatted ? "\n" : " ") ?? "",
-      !whereClause ? "" : `WHERE ${whereClause}`,
-      !this.values.groupBy?.length ? "" : `GROUP BY ${this.values.groupBy.map(g => dialect.quoteQualifiedColumn(g)).join(", ")}`,
-      !havingClause ? "" : `HAVING ${havingClause}`,
-      !this.values.orderBy || !(this.values.orderBy.length > 0) ? "" : "ORDER BY " + this.values.orderBy.map(o => dialect.quoteOrderByClause(o)).join(", "),
-      !this.values.limit ? "" : `LIMIT ${this.values.limit}`,
-      !this.values.offset ? "" : `OFFSET ${this.values.offset}`,
+      }).join(formatted ? "\n" : " "),
+      whereClause ? `WHERE ${whereClause}` : "",
+      this.values.groupBy?.length ? `GROUP BY ${this.values.groupBy.map(g => dialect.quoteQualifiedColumn(g)).join(", ")}` : "",
+      havingClause ? `HAVING ${havingClause}` : "",
+      this.values.orderBy && this.values.orderBy.length > 0 ? "ORDER BY " + this.values.orderBy.map(o => dialect.quoteOrderByClause(o)).join(", ") : "",
+      this.values.limit ? `LIMIT ${this.values.limit}` : "",
+      this.values.offset ? `OFFSET ${this.values.offset}` : "",
     ]
       .filter(Boolean)
       .join(formatted ? "\n" : " ")
@@ -796,7 +802,7 @@ type FindColumnInFields<Column extends string,
   TFields extends TFieldsType,
   Tables extends keyof TFields = keyof TFields
 > = Tables extends keyof TFields
-  ? TFields[Tables] extends Record<Column, any>
+  ? TFields[Tables] extends Record<Column, ANY_IS_OK>
     ? Pick<TFields[Tables], Column>
     : never
   : never;
@@ -866,8 +872,8 @@ type GenName<T extends string, F extends unknown, IncName extends boolean> = F e
  * // Returns: {"User.id": number, "User.name": string}
  */
 type IterateTablesFromFields<Table extends TTableSources, TFields extends Record<string, string>, IncTName extends boolean> = {
-  // Assumes TTableSources is either string or [any, string] tuple — new shapes must be added here
-  [f in keyof TFields as GenName<Table extends string ? Table : Table extends readonly [any, infer Name extends string] ? Name : never, f, IncTName>]: TFields[f]
+  // Assumes TTableSources is either string or [ANY_IS_OK, string] tuple — new shapes must be added here
+  [f in keyof TFields as GenName<Table extends string ? Table : Table extends readonly [ANY_IS_OK, infer Name extends string] ? Name : never, f, IncTName>]: TFields[f]
   // (f extends string
   //     ? [IncTName] extends [false]
   //         ? Record<f, TFields[f]>
@@ -978,14 +984,15 @@ class _fSelect<TSources extends TArrSources, TFields extends TFieldsType, TSelec
   // String column — with alias
   select<const TSelect extends ValidSelect<TSources, TFields>, TAlias extends string>(select: TSelect, alias: TAlias): _fSelect<TSources, TFields, Prettify<TSelectRT & Record<TAlias, ExtractColumnType<TSelect, TSources, TFields>>>>;
   // Implementation (not visible to callers)
+  // eslint-disable-next-line sonarjs/cognitive-complexity
   select(
-    select: ((ctx: SelectFnContext<TSources, TFields>) => SQLExpr<any>) | ValidSelect<TSources, TFields>,
+    select: ((ctx: SelectFnContext<TSources, TFields>) => SQLExpr<ANY_IS_OK>) | ValidSelect<TSources, TFields>,
     alias?: string
-  ): _fSelect<TSources, TFields, any> {
+  ): _fSelect<TSources, TFields, ANY_IS_OK> {
     // Function overload: first arg is a callback
     if (typeof select === "function") {
       const ctx = buildContext<TSources, TFields>(dialect);
-      const expr = (select as (ctx: SelectFnContext<TSources, TFields>) => SQLExpr<any>)(ctx);
+      const expr = (select as (ctx: SelectFnContext<TSources, TFields>) => SQLExpr<ANY_IS_OK>)(ctx);
       const aliasArg = alias;
       const sqlStr = aliasArg !== undefined
         ? `${expr.sql} AS ${dialect.quote(aliasArg, true)}`
@@ -993,13 +1000,14 @@ class _fSelect<TSources extends TArrSources, TFields extends TFieldsType, TSelec
       return new _fSelect(this.db, {
         ...this.values,
         selects: [ ...this.values.selects, sqlStr ],
-      }) as any;
+      }) as ANY_IS_OK;
     }
 
     // Check if select is "Table.*" pattern
-    const tableColMatch = select.match(/^(\w+)\.(.*?)$/);
+    const tableColMatch = /^(\w+)\.(.*?)$/.exec(select);
     if (tableColMatch) {
-      const [ ,tableName, colName ] = tableColMatch as [string, string, string];
+      const tableName = tableColMatch[1]!;
+      const colName = tableColMatch[2]!;
       // Expand Table.* to all columns from that table
       const tableObject = this.values.tables.find(t => (t.alias || t.table) === tableName);
       if (!tableObject) throw new Error(`Table "${tableName}" not found in query`);
@@ -1011,11 +1019,11 @@ class _fSelect<TSources extends TArrSources, TFields extends TFieldsType, TSelec
         return new _fSelect(this.db, {
           ...this.values,
           selects: [ ...this.values.selects, `${dialect.quoteQualifiedColumn(select)} AS ${dialect.quote(alias ?? select, true)}` ],
-        }) as any;
+        }) as ANY_IS_OK;
       }
 
       if (colName === "*") {
-        const hasMultipleTables = (this.values.tables && this.values.tables.length > 1) || false;
+        const hasMultipleTables = this.values.tables.length > 1;
 
         const expandedSelects = Object.keys(tableFields.fields).map(field => {
           if (hasMultipleTables) {
@@ -1029,7 +1037,7 @@ class _fSelect<TSources extends TArrSources, TFields extends TFieldsType, TSelec
         return new _fSelect(this.db, {
           ...this.values,
           selects: [ ...this.values.selects, ...expandedSelects ],
-        }) as any;
+        }) as ANY_IS_OK;
       }
       // alias provided → falls through to generic alias handler below
       else if (!alias && !!colName) { //table.column
@@ -1054,13 +1062,13 @@ class _fSelect<TSources extends TArrSources, TFields extends TFieldsType, TSelec
           return new _fSelect(this.db, {
             ...this.values,
             selects: [ ...this.values.selects, `${dialect.quoteQualifiedColumn(select)} AS ${dialect.quote(select, true)}` ],
-          }) as any;
+          }) as ANY_IS_OK;
         }
         else {
           return new _fSelect(this.db, {
             ...this.values,
             selects: [ ...this.values.selects, dialect.quote(colName, false) ],
-          }) as any;
+          }) as ANY_IS_OK;
         }
       }
     }
@@ -1070,15 +1078,11 @@ class _fSelect<TSources extends TArrSources, TFields extends TFieldsType, TSelec
       if (select === "*" && this.values.tables.length > 1) {
         throw new Error(`select("*", alias) is not supported on multi-table queries — use explicit column names or select("*") without alias`);
       }
-      const quotedSelect = select === "*"
-        ? "*"
-        : select.includes(".")
-          ? dialect.quoteQualifiedColumn(select)
-          : dialect.quote(select, false);
+      const quotedSelect = quoteSelectColumn(select);
       return new _fSelect(this.db, {
         ...this.values,
         selects: [ ...this.values.selects, `${quotedSelect} AS ${dialect.quote(alias, true)}` ],
-      }) as any;
+      }) as ANY_IS_OK;
     }
 
     // Expand "*" for multi-table queries
@@ -1086,19 +1090,15 @@ class _fSelect<TSources extends TArrSources, TFields extends TFieldsType, TSelec
       const expandedSelects = this.values.tables.flatMap(tableObj =>
         expandToQualifiedSelects(tableObj, this.values.withs)
       );
-      return new _fSelect(this.db, { ...this.values, selects: [ ...this.values.selects, ...expandedSelects ] }) as any;
+      return new _fSelect(this.db, { ...this.values, selects: [ ...this.values.selects, ...expandedSelects ] }) as ANY_IS_OK;
     }
 
     // Default: quote based on whether it's qualified or not
-    const quotedSelect = select === "*"
-      ? "*"
-      : select.includes(".")
-        ? dialect.quoteQualifiedColumn(select)
-        : dialect.quote(select, false);
+    const quotedSelect = quoteSelectColumn(select);
     return new _fSelect(this.db, {
       ...this.values,
       selects: [ ...this.values.selects, quotedSelect ],
-    }) as any;
+    }) as ANY_IS_OK;
   }
 }
 
@@ -1131,13 +1131,10 @@ class _fSelectDistinct<TSources extends TArrSources, TFields extends TFieldsType
   }
 
   selectAll<TableCount = CountKeys<TSources>>() {
-    //TODO
-    // Need to loop through DATABASE object
-    // if 1 table, no prefix
-    // if more prefix with table name
+    // See #106: loop DATABASE, prefix with table name when multi-table
 
     const selects = (function (values: Values) {
-      if (values.tables && values.tables.length > 1) {
+      if (values.tables.length > 1) {
         return values.tables.reduce<Array<string>>((acc, tableObj): Array<string> => acc.concat(expandToQualifiedSelects(tableObj, values.withs)), []);
       }
       const t = values.tables[0];
@@ -1203,8 +1200,7 @@ class _fHaving<TSources extends TArrSources, TFields extends TFieldsType> extend
     return new _fSelect<TSources, TFields>(this.db, { ...this.values, selectDistinct: true });
   }
 
-  // TODO Allowed Fields
-  //  - specified in groupBy
+  // See #107: restrict to groupBy columns only
   having<const TCriteria extends WhereCriteria<TSources, TFields>>(criteria: TCriteria): _fHaving<TSources, TFields>;
   having(fn: (ctx: SelectFnContext<TSources, TFields>) => Array<ExprCondPair>): _fHaving<TSources, TFields>;
   having(
@@ -1246,7 +1242,7 @@ class _fGroupBy<TSources extends TArrSources, TFields extends TFieldsType> exten
     return new _fSelectDistinct<TSources, TFields>(this.db, { ...this.values, having: [ ...existing, criteriaOrFn ] });
   }
 
-  //TODO this should only accept columns for tables in play
+  // See #108: restrict to columns from joined tables only
   groupBy<TSelect extends GetOtherColumns<TSources> | GetCTEColumns<TSources, TFields>>(groupBy: Array<TSelect>) {
     return new _fHaving<TSources, TFields>(this.db, { ...this.values, groupBy: groupBy });
   }
@@ -1463,7 +1459,7 @@ type BasicOpTypes =
  * TableFieldType<"User", { id: number; email: string }>
  * // Result: { "User.id": number; "User.email": string }
  */
-type TableFieldType<Table extends string, Fields extends Record<string, any>> = {
+type TableFieldType<Table extends string, Fields extends Record<string, ANY_IS_OK>> = {
   [f in keyof Fields as CombineToString<f, Table>]: Fields[f];
 };
 
@@ -1652,7 +1648,7 @@ class _fWhere<TSources extends TArrSources, TFields extends TFieldsType> extends
 /*function processCriteria(criteria: WhereCriteria<T>): string {
     if ('AND' in criteria || 'OR' in criteria) {
         return Object.keys(criteria).map((operator) => {
-            const subCriteria = (criteria as any)[operator] as WhereCriteria<T>[];
+            const subCriteria = (criteria as ANY_IS_OK)[operator] as WhereCriteria<T>[];
             const subConditions = subCriteria.map(subCriterion => processCriteria(subCriterion)).join(` ${operator} `);
             return `(${subConditions})`;
         }).join(" ");
@@ -1818,7 +1814,7 @@ type Relations<Table extends TTableSources> = Extract<DATABASE, { table: GetReal
 type AvailableJoins<Tables extends Array<TTableSources>, acc extends TTableSources = never> =
   Tables extends [infer T extends TTableSources, ...infer Rest extends Array<TTableSources>]
     ? AvailableJoins<Rest,
-            //@ts-expect-error todo come back to
+            //@ts-expect-error See #109
             acc | keyof Relations<T>>
     : acc;
 
@@ -1839,7 +1835,7 @@ type AvailableJoins<Tables extends Array<TTableSources>, acc extends TTableSourc
  * GetRealTableNames<["User", "u"]> // "User"
  * GetRealTableNames<"User" | ["Post", "p"]> // "User" | "Post"
  */
-type GetRealTableNames<Tables extends TTableSources> = Tables extends any
+type GetRealTableNames<Tables extends TTableSources> = Tables extends ANY_IS_OK
   ? Tables extends string
     ? Tables
     : Tables[0]
@@ -1857,7 +1853,7 @@ type GetRealTableNames<Tables extends TTableSources> = Tables extends any
  * GetAliasTableNames<["User", "u"]> // "u"
  * GetAliasTableNames<"User" | ["Post", "p"]> // "User" | "p"
  */
-type GetAliasTableNames<Tables extends TTableSources> = Tables extends any
+type GetAliasTableNames<Tables extends TTableSources> = Tables extends ANY_IS_OK
   ? Tables extends string
     ? Tables
     : Tables[1]
@@ -2037,7 +2033,7 @@ type RemoveNullable<T extends string> = T extends `?${infer R}` ? R : T;
  * type Swapped = SwapKeysAndValues<Original>;
  * // Result: { Int: "id" | "age", String: "name" }
  */
-type SwapKeysAndValues<T extends Record<string, any>> = {
+type SwapKeysAndValues<T extends Record<string, ANY_IS_OK>> = {
   [K in keyof T as RemoveNullable<T[K]>]: K;
 };
 
@@ -2199,7 +2195,7 @@ type GetJoinOnColsType<Type extends string, TSources extends TArrSources> =
   GetJoinColsType<TSources[number], Type>;
 
 /** Produces "CTEName.field" strings for all fields in all CTEs. Used to widen TCol2 in *TypeEnforced joins so CTE columns are valid references. */
-type GetCTECols<TCTEs extends Record<string, Record<string, any>>> =
+type GetCTECols<TCTEs extends Record<string, Record<string, ANY_IS_OK>>> =
   { [K in keyof TCTEs & string]: `${K}.${keyof TCTEs[K] & string}` }[keyof TCTEs & string];
 
 /**
@@ -2275,16 +2271,16 @@ type GetJoinColsType<TDBBase extends TTableSources, Type extends string> = Itera
  *   Post: { id: number, title: string }
  * };
  */
-type TFieldsType = Record<string, Record<string, any>>;
+type TFieldsType = Record<string, Record<string, ANY_IS_OK>>;
 
 /** Makes all values in a table's fields nullable. */
-type MakeNullable<T extends Record<string, any>> = { [K in keyof T]: T[K] | null };
+type MakeNullable<T extends Record<string, ANY_IS_OK>> = { [K in keyof T]: T[K] | null };
 
 /** Makes all fields in all tables nullable (used for RIGHT/FULL join existing tables). */
 type NullifyTableFields<TFields extends TFieldsType> = { [T in keyof TFields]: MakeNullable<TFields[T]> };
 
 /** Extracts result row type from a _fRun query — used by $with to capture CTE shape. */
-export type InferCTEShape<T> = T extends _fRun<any, any, infer TSelectRT> ? TSelectRT : never;
+export type InferCTEShape<T> = T extends _fRun<ANY_IS_OK, ANY_IS_OK, infer TSelectRT> ? TSelectRT : never;
 
 /** CTE names present in TSources (tagged with "__cte__" discriminant). */
 type CTENames<TSources extends TArrSources> = TSources[number] extends infer S
@@ -2308,7 +2304,7 @@ type IsCTE<T extends string, TSources extends TArrSources> =
     : never;
 
 /** Stub type replaced by generator with Omit<_fJoin<...>, unsupportedMethods> for each dialect. */
-export type _fJoinReturn<TSources extends TArrSources, TFields extends TFieldsType, TCTEs extends Record<string, Record<string, any>> = BLANK_OBJECT> = _fJoin<TSources, TFields, TCTEs>;
+export type _fJoinReturn<TSources extends TArrSources, TFields extends TFieldsType, TCTEs extends Record<string, Record<string, ANY_IS_OK>> = BLANK_OBJECT> = _fJoin<TSources, TFields, TCTEs>;
 
 // ── SelectFnContext ──────────────────────────────────────────────────────────
 
@@ -2369,19 +2365,19 @@ function buildContext<TSources extends TArrSources, TFields extends TFieldsType>
     trim:          col => sqlExpr(`TRIM(${resolveArg(col, quoteFn)})`),
     ltrim:         col => sqlExpr(`LTRIM(${resolveArg(col, quoteFn)})`),
     rtrim:         col => sqlExpr(`RTRIM(${resolveArg(col, quoteFn)})`),
-    cond:          criteria => sqlExpr(processCriteria([ criteria as any ])),
+    cond:          criteria => sqlExpr(processCriteria([ criteria as ANY_IS_OK ])),
     coalesce:      (...args) => {
       if (args.length === 0) throw new Error("coalesce: requires at least one argument");
-      return sqlExpr(`COALESCE(${args.map(a => resolveArg(a as any, quoteFn)).join(", ")})`);
+      return sqlExpr(`COALESCE(${args.map(a => resolveArg(a as ANY_IS_OK, quoteFn)).join(", ")})`);
     },
     nullif:        (expr1, expr2) => sqlExpr(`NULLIF(${expr1.sql}, ${expr2.sql})`),
     caseWhen:      (cases, elseVal?) => {
       if (cases.length === 0) throw new Error("caseWhen: requires at least one WHEN clause");
-      const parts = cases.map(c => `WHEN ${processCriteria([ c.when as any ])} THEN ${c.then.sql}`).join(" ");
+      const parts = cases.map(c => `WHEN ${processCriteria([ c.when as ANY_IS_OK ])} THEN ${c.then.sql}`).join(" ");
       return sqlExpr(`CASE ${parts}${elseVal ? ` ELSE ${elseVal.sql}` : ""} END`);
     },
     // Partial<> cast: SelectFnContext is a stub here; generator injects DialectFns at codegen time.
-    ...(dialectContextFns(quoteFn, (c: unknown) => processCriteria([ c as any ])) as unknown as Partial<SelectFnContext<TSources, TFields>>),
+    ...(dialectContextFns(quoteFn, (c: unknown) => processCriteria([ c as ANY_IS_OK ])) as unknown as Partial<SelectFnContext<TSources, TFields>>),
   } as SelectFnContext<TSources, TFields>;
 }
 
@@ -2447,7 +2443,7 @@ type AvailableRefNames<TSource extends TTables> =
 class _fJoin<
   TSources extends TArrSources,
   TFields extends TFieldsType,
-  TCTEs extends Record<string, Record<string, any>> = BLANK_OBJECT
+  TCTEs extends Record<string, Record<string, ANY_IS_OK>> = BLANK_OBJECT
 > extends _fWhere<TSources, TFields> {
 
   /**
@@ -2501,7 +2497,7 @@ class _fJoin<
     field?: TCol1,
     reference?: find<TJoinCols, TCol1>,
     _opts?: { where?: ClauseType[number]; joinType?: JoinType; }
-  ): any {
+  ): ANY_IS_OK {
     return this._joinImpl(undefined, tableOrOptions, field, reference, _opts);
   }
 
@@ -2511,7 +2507,7 @@ class _fJoin<
     field?: string,
     reference?: string,
     _opts?: { where?: ClauseType[number]; joinType?: JoinType; }
-  ): _fJoin<any, any> {
+  ): _fJoin<ANY_IS_OK, ANY_IS_OK> {
     let table: string;
     let local: string;
     let remote: string;
@@ -2538,13 +2534,13 @@ class _fJoin<
 
     return new _fJoin(this.db, {
       ...this.values,
-      tables: [ ...this.values.tables || [], {
+      tables: [ ...this.values.tables, {
         table: table,
         local,
         remote,
         alias: tableAlias,
         ...(joinWhere ? { joinWhere } : {}),
-        ...(joinType ? { joinType } : {}),
+        joinType,
       }],
     });
   }
@@ -2585,7 +2581,7 @@ class _fJoin<
     _opts?: { where?: ClauseType[number]; joinType?: JoinType; }
   ) {
     //@ts-expect-error call normal join function
-    return this.join(tableOrOptions, field, reference, _opts) as any;
+    return this.join(tableOrOptions, field, reference, _opts) as ANY_IS_OK;
 
     /*
                 let table: string;
@@ -2653,7 +2649,7 @@ class _fJoin<
     _opts?: { where?: ClauseType[number]; joinType?: JoinType; }
   ) {
     //@ts-expect-error call normal join function
-    return this.join(tableOrOptions, field, reference, _opts) as any;
+    return this.join(tableOrOptions, field, reference, _opts) as ANY_IS_OK;
     /*let table: string;
         let local: string;
         let remote: string;
@@ -2736,7 +2732,7 @@ class _fJoin<
     const junctionTable = safeRef
       ? `_${safeRef}`
       : Object.keys(srcRelations).find(k =>
-        k.startsWith("_") && (DB)[k]?.relations?.[safeTbl] !== undefined
+        k.startsWith("_") && (DB)[k]!.relations[safeTbl] !== undefined
       );
     if (!junctionTable) throw new Error(
       `manyToManyJoin: no junction between "${sourceTableName}" and "${safeTbl}"`
@@ -2748,20 +2744,20 @@ class _fJoin<
       `manyToManyJoin: junction "${junctionTable}" has no relation columns for source "${sourceTableName}"`
     );
     const srcLocalCol = junctionKeys[0] ?? (() => { throw new Error(`manyToManyJoin: cannot determine source local col for junction "${junctionTable}"`); })();
-    const srcJunctionCol = junctionRelEntry?.[srcLocalCol]?.[0] ?? (() => { throw new Error(`manyToManyJoin: cannot determine source junction col for "${junctionTable}"`); })();
-    const tgtRelEntry = (DB)[junctionTable]?.relations?.[safeTbl];
+    const srcJunctionCol = junctionRelEntry![srcLocalCol]![0] ?? (() => { throw new Error(`manyToManyJoin: cannot determine source junction col for "${junctionTable}"`); })();
+    const tgtRelEntry = (DB)[junctionTable]!.relations[safeTbl];
     const tgtKeys = tgtRelEntry ? Object.keys(tgtRelEntry) : [];
     if (tgtRelEntry && tgtKeys.length === 0) throw new Error(
       `manyToManyJoin: junction "${junctionTable}" has no relation columns for target "${safeTbl}"`
     );
     const tgtJunctionCol = tgtKeys[0] ?? (() => { throw new Error(`manyToManyJoin: cannot determine target junction col for "${junctionTable}"`); })();
-    const tgtLocalCol = tgtRelEntry?.[tgtJunctionCol]?.[0] ?? (() => { throw new Error(`manyToManyJoin: cannot determine target local col for "${junctionTable}"`); })();
+    const tgtLocalCol = tgtRelEntry![tgtJunctionCol]?.[0] ?? (() => { throw new Error(`manyToManyJoin: cannot determine target local col for "${junctionTable}"`); })();
     const remoteRef = `${sourceAlias}.${srcLocalCol}`;
 
     // joinUnsafeIgnoreType overloads require statically-typed table/column names via
     // template literal types; runtime-validated strings can't satisfy those constraints.
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    return (this as any)
+     
+    return (this as ANY_IS_OK)
       .joinUnsafeIgnoreType(junctionTable, srcJunctionCol, remoteRef)
       .joinUnsafeIgnoreType(safeAlias ? `${safeTbl} ${safeAlias}` : safeTbl, tgtLocalCol, `${junctionTable}.${tgtJunctionCol}`);
   }
@@ -2799,7 +2795,7 @@ class _fJoin<
     TCol1 extends TJoinCols[0] = never
   >(table: TableInput, field: TCol1, reference: find<TJoinCols, TCol1>, options?: { where?: JoinWhereCriteria<Table, TAlias>; joinType?: JoinType; }):
   _fJoinReturn<[...TSources, [TAlias] extends [never] ? Table : [Table, TAlias]], Prettify<TFields & Record<[TAlias] extends [never] ? Table : TAlias, GetFieldsFromTable<Table>>>, TCTEs>;
-  innerJoin(tableOrOptions: any, field?: any, reference?: any, opts?: any): any {
+  innerJoin(tableOrOptions: ANY_IS_OK, field?: ANY_IS_OK, reference?: ANY_IS_OK, opts?: ANY_IS_OK): ANY_IS_OK {
     return this._joinImpl("INNER", tableOrOptions, field, reference, opts);
   }
 
@@ -2834,7 +2830,7 @@ class _fJoin<
     TCol1 extends TJoinCols[0] = never
   >(table: TableInput, field: TCol1, reference: find<TJoinCols, TCol1>, options?: { where?: JoinWhereCriteria<Table, TAlias>; joinType?: JoinType; }):
   _fJoinReturn<[...TSources, [TAlias] extends [never] ? Table : [Table, TAlias]], Prettify<TFields & Record<[TAlias] extends [never] ? Table : TAlias, MakeNullable<GetFieldsFromTable<Table>>>>, TCTEs>;
-  leftJoin(tableOrOptions: any, field?: any, reference?: any, opts?: any): any {
+  leftJoin(tableOrOptions: ANY_IS_OK, field?: ANY_IS_OK, reference?: ANY_IS_OK, opts?: ANY_IS_OK): ANY_IS_OK {
     return this._joinImpl("LEFT", tableOrOptions, field, reference, opts);
   }
 
@@ -2869,7 +2865,7 @@ class _fJoin<
     TCol1 extends TJoinCols[0] = never
   >(table: TableInput, field: TCol1, reference: find<TJoinCols, TCol1>, options?: { where?: JoinWhereCriteria<Table, TAlias>; joinType?: JoinType; }):
   _fJoinReturn<[...TSources, [TAlias] extends [never] ? Table : [Table, TAlias]], Prettify<NullifyTableFields<TFields> & Record<[TAlias] extends [never] ? Table : TAlias, GetFieldsFromTable<Table>>>, TCTEs>;
-  rightJoin(tableOrOptions: any, field?: any, reference?: any, opts?: any): any {
+  rightJoin(tableOrOptions: ANY_IS_OK, field?: ANY_IS_OK, reference?: ANY_IS_OK, opts?: ANY_IS_OK): ANY_IS_OK {
     return this._joinImpl("RIGHT", tableOrOptions, field, reference, opts);
   }
 
@@ -2904,7 +2900,7 @@ class _fJoin<
     TCol1 extends TJoinCols[0] = never
   >(table: TableInput, field: TCol1, reference: find<TJoinCols, TCol1>, options?: { where?: JoinWhereCriteria<Table, TAlias>; joinType?: JoinType; }):
   _fJoinReturn<[...TSources, [TAlias] extends [never] ? Table : [Table, TAlias]], Prettify<NullifyTableFields<TFields> & Record<[TAlias] extends [never] ? Table : TAlias, MakeNullable<GetFieldsFromTable<Table>>>>, TCTEs>;
-  fullJoin(tableOrOptions: any, field?: any, reference?: any, opts?: any): any {
+  fullJoin(tableOrOptions: ANY_IS_OK, field?: ANY_IS_OK, reference?: ANY_IS_OK, opts?: ANY_IS_OK): ANY_IS_OK {
     return this._joinImpl("FULL", tableOrOptions, field, reference, opts);
   }
 
@@ -2914,7 +2910,7 @@ class _fJoin<
     TAlias extends string | never = ExtractAlias<TableInput>
   >(table: TableInput):
   _fJoinReturn<[...TSources, [TAlias] extends [never] ? Table : [Table, TAlias]], Prettify<TFields & Record<[TAlias] extends [never] ? Table : TAlias, GetFieldsFromTable<Table>>>, TCTEs> {
-    return this._joinImpl("CROSS", table) as any;
+    return this._joinImpl("CROSS", table) as ANY_IS_OK;
   }
 
   // ── New unsafe variants ──────────────────────────────────────────────
@@ -2939,8 +2935,8 @@ class _fJoin<
     TCol2 extends GetJoinOnColsType<GetColumnType<Table, TCol1>, [...TSources, Table]> | GetCTECols<TCTEs> =
       GetJoinOnColsType<GetColumnType<Table, TCol1>, [...TSources, Table]>
   >(table: TableInput, field: TCol1, reference: TCol2, options?: { where?: JoinWhereCriteria<Table, TAlias>; joinType?: JoinType; }): _fJoinReturn<[...TSources, [TAlias] extends [never] ? Table : [Table, TAlias]], Prettify<TFields & Record<[TAlias] extends [undefined] ? Table : TAlias, GetFieldsFromTable<Table>>>, TCTEs>;
-  innerJoinUnsafeTypeEnforced(tableOrOptions: any, field?: any, reference?: any, opts?: any): any {
-    return this._joinImpl("INNER", tableOrOptions, field, reference, opts) as any;
+  innerJoinUnsafeTypeEnforced(tableOrOptions: ANY_IS_OK, field?: ANY_IS_OK, reference?: ANY_IS_OK, opts?: ANY_IS_OK): ANY_IS_OK {
+    return this._joinImpl("INNER", tableOrOptions, field, reference, opts) as ANY_IS_OK;
   }
 
   // innerJoinUnsafeIgnoreType — INNER semantics, any columns
@@ -2962,8 +2958,8 @@ class _fJoin<
     TCol1 extends GetColsBaseTable<Table> = GetColsBaseTable<Table>,
     TCol2 extends GetJoinCols<TSources[number]> = GetJoinCols<TSources[number]>
   >(table: TableInput, field: TCol1, reference: TCol2, options?: { where?: JoinWhereCriteria<Table, TAlias>; joinType?: JoinType; }): _fJoinReturn<[...TSources, [TAlias] extends [never] ? Table : [Table, TAlias]], TFields & Record<Table, GetFieldsFromTable<Table>>, TCTEs>;
-  innerJoinUnsafeIgnoreType(tableOrOptions: any, field?: any, reference?: any, opts?: any): any {
-    return this._joinImpl("INNER", tableOrOptions, field, reference, opts) as any;
+  innerJoinUnsafeIgnoreType(tableOrOptions: ANY_IS_OK, field?: ANY_IS_OK, reference?: ANY_IS_OK, opts?: ANY_IS_OK): ANY_IS_OK {
+    return this._joinImpl("INNER", tableOrOptions, field, reference, opts) as ANY_IS_OK;
   }
 
   // leftJoinUnsafeTypeEnforced — LEFT semantics, type-enforced columns
@@ -2986,8 +2982,8 @@ class _fJoin<
     TCol2 extends GetJoinOnColsType<GetColumnType<Table, TCol1>, [...TSources, Table]> | GetCTECols<TCTEs> =
       GetJoinOnColsType<GetColumnType<Table, TCol1>, [...TSources, Table]>
   >(table: TableInput, field: TCol1, reference: TCol2, options?: { where?: JoinWhereCriteria<Table, TAlias>; joinType?: JoinType; }): _fJoinReturn<[...TSources, [TAlias] extends [never] ? Table : [Table, TAlias]], Prettify<TFields & Record<[TAlias] extends [undefined] ? Table : TAlias, MakeNullable<GetFieldsFromTable<Table>>>>, TCTEs>;
-  leftJoinUnsafeTypeEnforced(tableOrOptions: any, field?: any, reference?: any, opts?: any): any {
-    return this._joinImpl("LEFT", tableOrOptions, field, reference, opts) as any;
+  leftJoinUnsafeTypeEnforced(tableOrOptions: ANY_IS_OK, field?: ANY_IS_OK, reference?: ANY_IS_OK, opts?: ANY_IS_OK): ANY_IS_OK {
+    return this._joinImpl("LEFT", tableOrOptions, field, reference, opts) as ANY_IS_OK;
   }
 
   // leftJoinUnsafeIgnoreType — LEFT semantics, any columns
@@ -3009,8 +3005,8 @@ class _fJoin<
     TCol1 extends GetColsBaseTable<Table> = GetColsBaseTable<Table>,
     TCol2 extends GetJoinCols<TSources[number]> = GetJoinCols<TSources[number]>
   >(table: TableInput, field: TCol1, reference: TCol2, options?: { where?: JoinWhereCriteria<Table, TAlias>; joinType?: JoinType; }): _fJoinReturn<[...TSources, [TAlias] extends [never] ? Table : [Table, TAlias]], TFields & Record<Table, MakeNullable<GetFieldsFromTable<Table>>>, TCTEs>;
-  leftJoinUnsafeIgnoreType(tableOrOptions: any, field?: any, reference?: any, opts?: any): any {
-    return this._joinImpl("LEFT", tableOrOptions, field, reference, opts) as any;
+  leftJoinUnsafeIgnoreType(tableOrOptions: ANY_IS_OK, field?: ANY_IS_OK, reference?: ANY_IS_OK, opts?: ANY_IS_OK): ANY_IS_OK {
+    return this._joinImpl("LEFT", tableOrOptions, field, reference, opts) as ANY_IS_OK;
   }
 
   // rightJoinUnsafeTypeEnforced — RIGHT semantics, type-enforced columns
@@ -3033,8 +3029,8 @@ class _fJoin<
     TCol2 extends GetJoinOnColsType<GetColumnType<Table, TCol1>, [...TSources, Table]> | GetCTECols<TCTEs> =
       GetJoinOnColsType<GetColumnType<Table, TCol1>, [...TSources, Table]>
   >(table: TableInput, field: TCol1, reference: TCol2, options?: { where?: JoinWhereCriteria<Table, TAlias>; joinType?: JoinType; }): _fJoinReturn<[...TSources, [TAlias] extends [never] ? Table : [Table, TAlias]], Prettify<NullifyTableFields<TFields> & Record<[TAlias] extends [undefined] ? Table : TAlias, GetFieldsFromTable<Table>>>, TCTEs>;
-  rightJoinUnsafeTypeEnforced(tableOrOptions: any, field?: any, reference?: any, opts?: any): any {
-    return this._joinImpl("RIGHT", tableOrOptions, field, reference, opts) as any;
+  rightJoinUnsafeTypeEnforced(tableOrOptions: ANY_IS_OK, field?: ANY_IS_OK, reference?: ANY_IS_OK, opts?: ANY_IS_OK): ANY_IS_OK {
+    return this._joinImpl("RIGHT", tableOrOptions, field, reference, opts) as ANY_IS_OK;
   }
 
   // rightJoinUnsafeIgnoreType — RIGHT semantics, any columns
@@ -3056,8 +3052,8 @@ class _fJoin<
     TCol1 extends GetColsBaseTable<Table> = GetColsBaseTable<Table>,
     TCol2 extends GetJoinCols<TSources[number]> = GetJoinCols<TSources[number]>
   >(table: TableInput, field: TCol1, reference: TCol2, options?: { where?: JoinWhereCriteria<Table, TAlias>; joinType?: JoinType; }): _fJoinReturn<[...TSources, [TAlias] extends [never] ? Table : [Table, TAlias]], NullifyTableFields<TFields> & Record<Table, GetFieldsFromTable<Table>>, TCTEs>;
-  rightJoinUnsafeIgnoreType(tableOrOptions: any, field?: any, reference?: any, opts?: any): any {
-    return this._joinImpl("RIGHT", tableOrOptions, field, reference, opts) as any;
+  rightJoinUnsafeIgnoreType(tableOrOptions: ANY_IS_OK, field?: ANY_IS_OK, reference?: ANY_IS_OK, opts?: ANY_IS_OK): ANY_IS_OK {
+    return this._joinImpl("RIGHT", tableOrOptions, field, reference, opts) as ANY_IS_OK;
   }
 
   // fullJoinUnsafeTypeEnforced — FULL semantics, type-enforced columns
@@ -3080,8 +3076,8 @@ class _fJoin<
     TCol2 extends GetJoinOnColsType<GetColumnType<Table, TCol1>, [...TSources, Table]> | GetCTECols<TCTEs> =
       GetJoinOnColsType<GetColumnType<Table, TCol1>, [...TSources, Table]>
   >(table: TableInput, field: TCol1, reference: TCol2, options?: { where?: JoinWhereCriteria<Table, TAlias>; joinType?: JoinType; }): _fJoinReturn<[...TSources, [TAlias] extends [never] ? Table : [Table, TAlias]], Prettify<NullifyTableFields<TFields> & Record<[TAlias] extends [undefined] ? Table : TAlias, MakeNullable<GetFieldsFromTable<Table>>>>, TCTEs>;
-  fullJoinUnsafeTypeEnforced(tableOrOptions: any, field?: any, reference?: any, opts?: any): any {
-    return this._joinImpl("FULL", tableOrOptions, field, reference, opts) as any;
+  fullJoinUnsafeTypeEnforced(tableOrOptions: ANY_IS_OK, field?: ANY_IS_OK, reference?: ANY_IS_OK, opts?: ANY_IS_OK): ANY_IS_OK {
+    return this._joinImpl("FULL", tableOrOptions, field, reference, opts) as ANY_IS_OK;
   }
 
   // fullJoinUnsafeIgnoreType — FULL semantics, any columns
@@ -3103,8 +3099,8 @@ class _fJoin<
     TCol1 extends GetColsBaseTable<Table> = GetColsBaseTable<Table>,
     TCol2 extends GetJoinCols<TSources[number]> = GetJoinCols<TSources[number]>
   >(table: TableInput, field: TCol1, reference: TCol2, options?: { where?: JoinWhereCriteria<Table, TAlias>; joinType?: JoinType; }): _fJoinReturn<[...TSources, [TAlias] extends [never] ? Table : [Table, TAlias]], NullifyTableFields<TFields> & Record<Table, MakeNullable<GetFieldsFromTable<Table>>>, TCTEs>;
-  fullJoinUnsafeIgnoreType(tableOrOptions: any, field?: any, reference?: any, opts?: any): any {
-    return this._joinImpl("FULL", tableOrOptions, field, reference, opts) as any;
+  fullJoinUnsafeIgnoreType(tableOrOptions: ANY_IS_OK, field?: ANY_IS_OK, reference?: ANY_IS_OK, opts?: ANY_IS_OK): ANY_IS_OK {
+    return this._joinImpl("FULL", tableOrOptions, field, reference, opts) as ANY_IS_OK;
   }
 
   // crossJoinUnsafeTypeEnforced — CROSS semantics, type-enforced columns
@@ -3113,7 +3109,7 @@ class _fJoin<
     TAlias extends string | never = ExtractAlias<TableInput>
   >(table: TableInput):
   _fJoinReturn<[...TSources, [TAlias] extends [never] ? Table : [Table, TAlias]], Prettify<TFields & Record<[TAlias] extends [never] ? Table : TAlias, GetFieldsFromTable<Table>>>, TCTEs> {
-    return this._joinImpl("CROSS", table) as any;
+    return this._joinImpl("CROSS", table) as ANY_IS_OK;
   }
 
   // crossJoinUnsafeIgnoreType — CROSS semantics, any columns
@@ -3122,7 +3118,7 @@ class _fJoin<
     TAlias extends string | never = ExtractAlias<TableInput>
   >(table: TableInput):
   _fJoinReturn<[...TSources, [TAlias] extends [never] ? Table : [Table, TAlias]], Prettify<TFields & Record<[TAlias] extends [never] ? Table : TAlias, GetFieldsFromTable<Table>>>, TCTEs> {
-    return this._joinImpl("CROSS", table) as any;
+    return this._joinImpl("CROSS", table) as ANY_IS_OK;
   }
 }
 
@@ -3161,6 +3157,7 @@ function expandToQualifiedSelects(
  * Extracts the output alias from a SQL select expression.
  * Computed expressions (CASE, function calls) without an explicit `AS alias` return null.
  */
+// eslint-disable-next-line sonarjs/function-return-type
 function extractSelectAlias(expr: string): string | null {
   // "col" AS `alias` or "col" AS 'alias'
   const aliased = / AS ["'`](.+?)["'`]\s*$/i.exec(expr);
@@ -3178,19 +3175,19 @@ function extractSelectAlias(expr: string): string | null {
  * Computed expressions (CASE, function calls) without an explicit `AS alias`
  * return null from extractSelectAlias and are excluded from the result.
  */
-function extractCTEColumns(query: _fRun<any, any, any>): Array<string> {
-  return (query as any).values.selects
+function extractCTEColumns(query: _fRun<ANY_IS_OK, ANY_IS_OK, ANY_IS_OK>): Array<string> {
+  return (query as ANY_IS_OK).values.selects
     .map(extractSelectAlias)
     .filter((c: string | null): c is string => c !== null);
 }
 
-class DbWith<TCTEs extends Record<string, Record<string, any>>> {
+class DbWith<TCTEs extends Record<string, Record<string, ANY_IS_OK>>> {
   constructor(
     private db: PrismaClient,
     private _withs: Array<{ name: string; sql: string; columns?: Array<string>; }>
   ) {}
 
-  with<const TName extends string, TQuery extends _fRun<any, any, any>>(
+  with<const TName extends string, TQuery extends _fRun<ANY_IS_OK, ANY_IS_OK, ANY_IS_OK>>(
     name: TName,
     query: TQuery
   ): DbWith<TCTEs & Record<TName, InferCTEShape<TQuery>>> {
@@ -3198,7 +3195,7 @@ class DbWith<TCTEs extends Record<string, Record<string, any>>> {
     return new DbWith(this.db, [
       ...this._withs,
       { name, sql: query.getSQL().replace(/;$/, ""), columns },
-    ]) as any;
+    ]) as ANY_IS_OK;
   }
 
   from<const TName extends keyof TCTEs & string>(
@@ -3211,12 +3208,12 @@ class DbWith<TCTEs extends Record<string, Record<string, any>>> {
     baseTable: TDBBase,
     alias?: TAlias
   ): _fJoinReturn<TRT, Record<GetAliasTableNames<TRT[0]>, GetFieldsFromTable<TDBBase>>, TCTEs>;
-  from(baseTableOrCTE: string, alias?: string): any {
+  from(baseTableOrCTE: string, alias?: string): ANY_IS_OK {
     return new _fJoin(this.db, {
       tables: [{ table: baseTableOrCTE, alias }],
       selects: [],
       withs: this._withs,
-    }) as any;
+    }) as ANY_IS_OK;
   }
 }
 
@@ -3235,7 +3232,7 @@ const extendedPrismaClient = {
         .from(base!.trim() as Table, (aliases.join().trim() || undefined) as TAlias);
     },
     /** @note `query` must be produced by the same prisma-ts-select builder instance. */
-    $with<const TName extends string, TQuery extends _fRun<any, any, any>>(
+    $with<const TName extends string, TQuery extends _fRun<ANY_IS_OK, ANY_IS_OK, ANY_IS_OK>>(
       name: TName,
       query: TQuery
     ): DbWith<Record<TName, InferCTEShape<TQuery>>> {

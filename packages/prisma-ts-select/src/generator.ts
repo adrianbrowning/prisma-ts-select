@@ -31,6 +31,7 @@ generatorHandler({
       prettyName: GENERATOR_NAME,
     };
   },
+  // eslint-disable-next-line sonarjs/cognitive-complexity
   onGenerate: async (options: GeneratorOptions) => {
     const provider = options.datasources[0]?.provider;
     const output = options.generator.output?.value;
@@ -41,7 +42,7 @@ generatorHandler({
     const packageName = (options.generator.config.packageName as string | undefined) ?? generatePackageName(outputPath);
 
     fs.mkdirSync(outputPath, { recursive: true });
-
+     
     console.log(`${GENERATOR_NAME}: Generating to ${outputPath}`);
 
     const validDS = options
@@ -67,6 +68,7 @@ generatorHandler({
     };
     type OutType = Record<string, InnerOutType>;
 
+    // eslint-disable-next-line sonarjs/cognitive-complexity
     const models = options.dmmf.datamodel.models.reduce<OutType>((acc, model) => {
       const modelObj = acc[model.name] = acc[model.name] ?? ({
         fields: {},
@@ -76,7 +78,7 @@ generatorHandler({
       for (const field of model.fields) {
         if (field.kind !== "object") {
           if (field.isId) modelToId[model.name] = [ field.name, field.type ];
-          modelObj.fields = modelObj.fields ?? {};
+          // fields already initialized above
           modelObj.fields[field.name] = (!field.isRequired ? "?" : "") + field.type;
         }
         else {
@@ -91,8 +93,8 @@ generatorHandler({
               fieldObj[relationFromField] = fieldObj[relationFromField] || [];
               fieldObj[relationFromField].push(relationToField);
 
-              const accModel = acc[field.type] = acc[field.type] ?? ({} as InnerOutType);
-              const accModelRelations = accModel.relations = accModel.relations ?? {};
+              const accModel = acc[field.type] ??= ({ fields: {}, relations: {} });
+              const accModelRelations = accModel.relations;
               const accModelRelationToModel = accModelRelations[model.name] = accModelRelations[model.name] ?? {};
               const relationFromFieldList = accModelRelationToModel[relationToField] = accModelRelationToModel[relationToField] ?? [];
               relationFromFieldList.push(relationFromField);
@@ -106,9 +108,11 @@ generatorHandler({
 
             // Populate M2MMap: both directions
             const src = model.name, tgt = field.type;
-            (m2mMap[src] ??= {})[tgt] ??= new Set();
+            if (!m2mMap[src]) m2mMap[src] = {};
+            if (!m2mMap[src][tgt]) m2mMap[src][tgt] = new Set();
             m2mMap[src][tgt].add(joinTableName);
-            (m2mMap[tgt] ??= {})[src] ??= new Set();
+            if (!m2mMap[tgt]) m2mMap[tgt] = {};
+            if (!m2mMap[tgt][src]) m2mMap[tgt][src] = new Set();
             m2mMap[tgt][src].add(joinTableName);
 
             const joinTableModel = acc[joinTableName] = acc[joinTableName] ?? ({
@@ -119,7 +123,7 @@ generatorHandler({
               relations: {},
             });
 
-            const abJoin = [ field.type, model.name ].toSorted().indexOf(model.name) === 0 ? "A" : "B";
+            const abJoin = model.name < field.type ? "A" : "B";
 
             const [ idName, idType ] = getModelId(model.name);
 
@@ -182,8 +186,9 @@ export { ${provider}Dialect as dialect, ${provider}Dialect, ${defaultCtxFns} as 
 
     // Generate versioned v6/v7 dialect files (all providers)
     for (const ver of [ "v6", "v7" ] as const) {
+      const verSuffix = ver === "v6" ? "V6" : "V7";
       const ctxName = hasVersions
-        ? `${provider}${ver === "v6" ? "V6" : "V7"}ContextFns`
+        ? `${provider}${verSuffix}ContextFns`
         : `${provider}ContextFns`;
       const srcFile = hasVersions ? `${provider}-${ver}` : provider;
       const js = `export { ${provider}Dialect as dialect, ${ctxName} as dialectContextFns } from './${srcFile}.js';\n`;
@@ -247,7 +252,8 @@ export { ${provider}Dialect as dialect, ${provider}Dialect, ${ctxName} as dialec
     };
 
     const supportedMethods = (provider ? SUPPORTED_JOIN_METHODS[provider] : undefined) ?? ALL_JOIN_METHODS;
-    const omittedMethods = ALL_JOIN_METHODS.filter(m => !supportedMethods.includes(m));
+    const supportedSet = new Set(supportedMethods);
+    const omittedMethods = ALL_JOIN_METHODS.filter(m => !supportedSet.has(m));
 
     // Copy extend.d.ts and inject DB model (ESM-only)
     const extendDts = fs.readFileSync(path.join(srcDir, "extend.d.ts"), { encoding: "utf-8" });
@@ -294,7 +300,7 @@ export { ${provider}Dialect as dialect, ${provider}Dialect, ${ctxName} as dialec
       },
       sideEffects: false,
     };
-    await writeFileSafely(path.join(outputPath, "package.json"), JSON.stringify(pkg, null, 2));
+    writeFileSafely(path.join(outputPath, "package.json"), JSON.stringify(pkg, null, 2));
 
     // Copy chunk .d.ts files (e.g. sql-expr-HASH.d.ts) that extend.d.ts imports
     for (const file of fs.readdirSync(srcDir)) {
@@ -337,7 +343,7 @@ function generatePackageName(outputPath: string): string {
 }
 
 function generateReadonlyDeclaration(db: DBType) {
-  const traverse = (obj: {} | null, level = 0): string => {
+  const traverse = (obj: object | null, level = 0): string => {
     const indent = "\t".repeat(level);
     const lines: Array<string> = [];
 

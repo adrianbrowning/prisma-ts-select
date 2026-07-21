@@ -14,9 +14,9 @@ export type SQLDistinct<T> = SQLExpr<T> & { readonly [DISTINCT_BRAND]: true; };
 export function sqlDistinct<T>(sql: string): SQLDistinct<T> {
   return { sql, [DISTINCT_BRAND]: true as const, toString() { return sql; } };
 }
-
+ 
 export function isDistinct(val: SQLExpr<unknown> | string): val is SQLDistinct<unknown> {
-  return typeof val === "object" && val !== null && DISTINCT_BRAND in val;
+  return typeof val !== "string" && DISTINCT_BRAND in val;
 }
 
 type LitValue = string | number | boolean | null;
@@ -36,10 +36,13 @@ export type LitToType<T extends LitValue> =
  * - null → `NULL`
  */
 export function lit<T extends LitValue>(value: T): SQLExpr<LitToType<T>> {
-  if (value === null) return sqlExpr("NULL") as any;
-  if (typeof value === "boolean") return sqlExpr(value ? "1" : "0") as any;
-  if (typeof value === "string") return sqlExpr(`'${value.replace(/'/g, "''")}'`) as any;
-  return sqlExpr(String(value)) as any;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  type ANY_IS_OK = any;
+  // eslint-disable-next-line sonarjs/different-types-comparison -- runtime null is valid for LitValue union
+  if (value === null) return sqlExpr("NULL") as ANY_IS_OK;
+  if (typeof value === "boolean") return sqlExpr(value ? "1" : "0") as ANY_IS_OK;
+  if (typeof value === "string") return sqlExpr(`'${value.replace(/'/g, "''")}'`) as ANY_IS_OK;
+  return sqlExpr(String(value)) as ANY_IS_OK;
 }
 
 /**

@@ -8,7 +8,7 @@ import { generateM2MMapDeclaration } from "../src/utils/m2m-map.ts";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-describe("Generator package.json output", () => {
+void describe("Generator package.json output", () => {
   function readPkgJson(pkg: string) {
     return JSON.parse(
       fs.readFileSync(
@@ -18,17 +18,17 @@ describe("Generator package.json output", () => {
     );
   }
 
-  test("exists", () => {
+  void test("exists", () => {
     const p = path.join(__dirname, "../../usage-sqlite-v7/generated/prisma-ts-select/package.json");
     assert.ok(fs.existsSync(p));
   });
 
-  test("name format", () => {
+  void test("name format", () => {
     const pkg = readPkgJson("usage-sqlite-v7");
     assert.match(pkg.name, /^prisma-ts-select-[a-f0-9]{8}$/);
   });
 
-  test("name stable", () => {
+  void test("name stable", () => {
     const outputPath = path.resolve(path.join(__dirname, "../../usage-sqlite-v7/generated/prisma-ts-select"));
     const expected = "prisma-ts-select-" + createHash("sha256").update(outputPath)
       .digest("hex")
@@ -36,24 +36,24 @@ describe("Generator package.json output", () => {
     assert.strictEqual(readPkgJson("usage-sqlite-v7").name, expected);
   });
 
-  test("version", () => {
+  void test("version", () => {
     assert.strictEqual(readPkgJson("usage-sqlite-v7").version, "0.0.0");
   });
 
-  test("type", () => {
+  void test("type", () => {
     assert.strictEqual(readPkgJson("usage-sqlite-v7").type, "module");
   });
 
-  test("sideEffects", () => {
+  void test("sideEffects", () => {
     assert.strictEqual(readPkgJson("usage-sqlite-v7").sideEffects, false);
   });
 
-  test("exports keys", () => {
+  void test("exports keys", () => {
     const { exports } = readPkgJson("usage-sqlite-v7");
     assert.deepEqual(Object.keys(exports), [ ".", "./db", "./extend-v6", "./extend-v7", "./dialects", "./dialects/*" ]);
   });
 
-  test("exports shape", () => {
+  void test("exports shape", () => {
     const { exports } = readPkgJson("usage-sqlite-v7");
     for (const entry of Object.values(exports)) {
       assert.strictEqual(typeof entry.types, "string");
@@ -61,12 +61,12 @@ describe("Generator package.json output", () => {
     }
   });
 
-  test("packageName override", () => {
+  void test("packageName override", () => {
     assert.strictEqual(readPkgJson("usage-sqlite-v6").name, "test-pkg-override");
   });
 });
 
-describe("Generator dialect replacement", () => {
+void describe("Generator dialect replacement", () => {
   function readDialectsIndex(pkg: string) {
     return fs.readFileSync(
       path.join(__dirname, `../../${pkg}/generated/prisma-ts-select/dialects/index.js`),
@@ -74,25 +74,25 @@ describe("Generator dialect replacement", () => {
     );
   }
 
-  test("should export postgresqlDialect for PostgreSQL", () => {
+  void test("should export postgresqlDialect for PostgreSQL", () => {
     const content = readDialectsIndex("usage-pg-v7");
     assert.strictEqual(content.includes("sqliteDialect"), false, "PG dialects/index.js should not export sqliteDialect");
     assert.strictEqual(content.includes("postgresqlDialect"), true, "PG dialects/index.js should export postgresqlDialect");
   });
 
-  test("should export mysqlDialect for MySQL", () => {
+  void test("should export mysqlDialect for MySQL", () => {
     const content = readDialectsIndex("usage-mysql-v7");
     assert.strictEqual(content.includes("sqliteDialect"), false, "MySQL dialects/index.js should not export sqliteDialect");
     assert.strictEqual(content.includes("mysqlDialect"), true, "MySQL dialects/index.js should export mysqlDialect");
   });
 
-  test("should export sqliteDialect for SQLite", () => {
+  void test("should export sqliteDialect for SQLite", () => {
     const content = readDialectsIndex("usage-sqlite-v7");
     assert.strictEqual(content.includes("sqliteDialect"), true, "SQLite dialects/index.js should export sqliteDialect");
   });
 });
 
-describe("Generator M2MMap output", () => {
+void describe("Generator M2MMap output", () => {
   function readExtendDts(pkg: string) {
     return fs.readFileSync(
       path.join(__dirname, `../../${pkg}/generated/prisma-ts-select/extend.d.ts`),
@@ -103,12 +103,12 @@ describe("Generator M2MMap output", () => {
   // Use sqlite-v7 (no versioned models) as canonical test target
   const PKG = "usage-sqlite-v7";
 
-  test("M2MMap type is present in generated extend.d.ts", () => {
+  void test("M2MMap type is present in generated extend.d.ts", () => {
     const dts = readExtendDts(PKG);
     assert.ok(dts.includes("type M2MMap"), "extend.d.ts must contain 'type M2MMap'");
   });
 
-  test("M2MBug_Post maps to M2MBug_CatA (single junction)", () => {
+  void test("M2MBug_Post maps to M2MBug_CatA (single junction)", () => {
     const dts = readExtendDts(PKG);
     assert.ok(
       dts.includes("\"M2MBug_CatA\": \"_M2MBug_CatAToM2MBug_Post\""),
@@ -116,7 +116,7 @@ describe("Generator M2MMap output", () => {
     );
   });
 
-  test("M2MBug_Post maps to M2MBug_CatB (second junction, different target)", () => {
+  void test("M2MBug_Post maps to M2MBug_CatB (second junction, different target)", () => {
     const dts = readExtendDts(PKG);
     assert.ok(
       dts.includes("\"M2MBug_CatB\": \"_M2MBug_CatBToM2MBug_Post\""),
@@ -124,7 +124,7 @@ describe("Generator M2MMap output", () => {
     );
   });
 
-  test("reciprocal: M2MBug_CatA maps back to M2MBug_Post", () => {
+  void test("reciprocal: M2MBug_CatA maps back to M2MBug_Post", () => {
     const dts = readExtendDts(PKG);
     // Find the M2MBug_CatA *source* block (starts with `"M2MBug_CatA": {`)
     const m2mMapIdx = dts.indexOf("type M2MMap");
@@ -139,7 +139,7 @@ describe("Generator M2MMap output", () => {
     );
   });
 
-  test("ambiguous M2M: MMM_Post → MMM_Category is a union of junction tables", () => {
+  void test("ambiguous M2M: MMM_Post → MMM_Category is a union of junction tables", () => {
     const dts = readExtendDts(PKG);
     // Both _M2M_NC_M1 and _M2M_NC_M2 must appear as a union for MMM_Category
     assert.ok(
@@ -148,7 +148,7 @@ describe("Generator M2MMap output", () => {
     );
   });
 
-  test("simple M2M: M2M_Post → M2M_Category", () => {
+  void test("simple M2M: M2M_Post → M2M_Category", () => {
     const dts = readExtendDts(PKG);
     assert.ok(
       dts.includes("\"M2M_Category\": \"_M2M_CategoryToM2M_Post\""),
@@ -157,12 +157,12 @@ describe("Generator M2MMap output", () => {
   });
 });
 
-describe("generateM2MMapDeclaration unit tests", () => {
-  test("empty map produces type M2MMap = {}", () => {
+void describe("generateM2MMapDeclaration unit tests", () => {
+  void test("empty map produces type M2MMap = {}", () => {
     assert.strictEqual(generateM2MMapDeclaration({}), "type M2MMap = {};");
   });
 
-  test("single source+target produces correct literal", () => {
+  void test("single source+target produces correct literal", () => {
     const result = generateM2MMapDeclaration({ Post: { CatA: new Set([ "_CatAToPost" ]) } });
     assert.strictEqual(
       result,
@@ -170,7 +170,7 @@ describe("generateM2MMapDeclaration unit tests", () => {
     );
   });
 
-  test("multiple junctions produce union literal", () => {
+  void test("multiple junctions produce union literal", () => {
     const result = generateM2MMapDeclaration({ Post: { Cat: new Set([ "_M1", "_M2" ]) } });
     assert.ok(
       result.includes("\"_M1\" | \"_M2\"") || result.includes("\"_M2\" | \"_M1\""),

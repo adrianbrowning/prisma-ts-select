@@ -1,23 +1,19 @@
 // @ts-check
+ 
 import childProcess from "node:child_process";
-
-import { promisify } from "node:util";
-
 import fs, { existsSync, writeFileSync } from "node:fs";
 import { createRequire } from "node:module";
-
 import path from "node:path";
+import { fileURLToPath } from "node:url";
+import { promisify } from "node:util";
 
 const mkdir = promisify(fs.mkdir);
 const stat = promisify(fs.stat);
-
-import { fileURLToPath } from "node:url";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 function debug(message, ...optionalParams) {
-  console.log(message, ...optionalParams);
   if (process.env.DEBUG && process.env.DEBUG === "prisma:postinstall") {
     console.log(message, ...optionalParams);
   }
@@ -50,7 +46,7 @@ function findPackageRoot(startPath, limit = 10) {
           return pkgPath.replace("package.json", "");
         }
       }
-      catch {}
+      catch { /* package.json may be malformed — skip */ }
     }
     currentPath = path.join(currentPath, "../");
   }
@@ -64,12 +60,6 @@ async function main() {
   const NM_DIR = pathName.substring(0, pathName.lastIndexOf(NM)+NM.length)+path.sep;
   console.log("node_modules", NM_DIR);
 
-  // process.exit(0);
-  //
-  // if (process.env.INIT_CWD) {
-  //     process.chdir(process.env.INIT_CWD) // necessary, because npm chooses __dirname as process.cwd()
-  //     // in the postinstall hook
-  // }
   const ptsPath = await ensureDotPrismaExists(NM_DIR);
   if (!ptsPath) throw new Error("Something went wrong installing prisma-ts-select");
 
@@ -88,7 +78,6 @@ async function main() {
   if (!existsSync(indexDTS)) {
     writeFileSync(packageJson, ``);
   }
-  const indexJS = path.join(ptsPath, "index.js");
 
   const localPath = getLocalPackagePath();
 
@@ -102,24 +91,6 @@ async function main() {
     init_cwd: process.env.INIT_CWD,
     PRISMA_GENERATE_IN_POSTINSTALL: process.env.PRISMA_GENERATE_IN_POSTINSTALL,
   });
-  // try {
-  //     if (localPath) {
-  //         await run('node', [
-  //             localPath,
-  //             'generate',
-  //             '--postinstall',
-  //             doubleQuote(getPostInstallTrigger()),
-  //         ])
-  //         return
-  //     }
-  //
-  // } catch (e) {
-  //     // if exit code = 1 do not print
-  //     if (e && e !== 1) {
-  //         console.error(e)
-  //     }
-  //     debug(e)
-  // }
 }
 
 function getLocalPackagePath() {
@@ -130,24 +101,10 @@ function getLocalPackagePath() {
       return require.resolve("prisma-ts-select");
     }
   }
-  catch (e) {}
+  catch { /* package not resolvable — expected during first install */ }
 
   return null;
 }
-
-// if (!process.env.PRISMA_SKIP_POSTINSTALL_GENERATE) {
-//     main()
-//         .catch((e) => {
-//             if (e.stderr) {
-//                 if (e.stderr.includes(`Can't find schema.prisma`)) return ;
-//                     console.error(e.stderr)
-//                 }
-//             process.exit(0)
-//         });
-//         // .finally(() => {
-//         //     debug(`postinstall trigger: ${getPostInstallTrigger()}`)
-//         // })
-// }
 
 function run(cmd, params, cwd = process.cwd()) {
   const child = childProcess.spawn(cmd, params, {
@@ -164,11 +121,11 @@ function run(cmd, params, cwd = process.cwd()) {
         resolve();
       }
       else {
-        reject(code);
+        reject(new Error(`Process exited with code ${code}`));
       }
     });
-    child.on("error", () => {
-      reject();
+    child.on("error", err => {
+      reject(err);
     });
   });
 }
@@ -222,7 +179,7 @@ async function makeDir(input) {
           throw new Error("The path is not a directory");
         }
       }
-      catch (_) {
+      catch {
         throw error;
       }
 
@@ -241,30 +198,6 @@ async function makeDir(input) {
  * This get's passed in to Generate, which then automatically get's propagated to telemetry.
  */
 function getPostInstallTrigger() {
-  /*
-    npm_config_argv` is not officially documented so here are our research notes
-
-    `npm_config_argv` is available to the postinstall script when the containing package has been installed by npm into some project.
-
-    An example of its value:
-
-    ```
-    npm_config_argv: '{"remain":["../test"],"cooked":["add","../test"],"original":["add","../test"]}',
-    ```
-
-    We are interesting in the data contained in the "original" field.
-
-    Trivia/Note: `npm_config_argv` is not available when running e.g. `npm install` on the containing package itself (e.g. when working on it)
-
-    Yarn mimics this data and environment variable. Here is an example following `yarn add` for the same package:
-
-    ```
-    npm_config_argv: '{"remain":[],"cooked":["add"],"original":["add","../test"]}'
-    ```
-
-    Other package managers like `pnpm` have not been tested.
-    */
-
   const maybe_npm_config_argv_string = process.env.npm_config_argv;
 
   if (maybe_npm_config_argv_string === undefined) {
@@ -328,12 +261,8 @@ function getPackageManagerName() {
 function parsePackageManagerName(userAgent) {
   let packageManager = null;
 
-  // example: 'yarn/1.22.4 npm/? node/v13.11.0 darwin x64'
-  // References:
-  // - https://pnpm.js.org/en/3.6/only-allow-pnpm
-  // - https://github.com/cameronhunter/npm-config-user-agent-parser
   if (userAgent) {
-    const matchResult = userAgent.match(/^([^\/]+)\/.+/);
+    const matchResult = /^([^/]+)\/.+/.exec(userAgent);
     if (matchResult) {
       packageManager = matchResult[1].trim();
     }
@@ -348,13 +277,6 @@ const UNABLE_TO_FIND_POSTINSTALL_TRIGGER__ENVAR_MISSING = "UNABLE_TO_FIND_POSTIN
 const UNABLE_TO_FIND_POSTINSTALL_TRIGGER_JSON_PARSE_ERROR = "UNABLE_TO_FIND_POSTINSTALL_TRIGGER_JSON_PARSE_ERROR";
 // prettier-ignore
 const UNABLE_TO_FIND_POSTINSTALL_TRIGGER_JSON_SCHEMA_ERROR = "UNABLE_TO_FIND_POSTINSTALL_TRIGGER_JSON_SCHEMA_ERROR";
-
-// expose for testing
-
-// exports.UNABLE_TO_FIND_POSTINSTALL_TRIGGER__ENVAR_MISSING = UNABLE_TO_FIND_POSTINSTALL_TRIGGER__ENVAR_MISSING
-// exports.UNABLE_TO_FIND_POSTINSTALL_TRIGGER_JSON_PARSE_ERROR = UNABLE_TO_FIND_POSTINSTALL_TRIGGER_JSON_PARSE_ERROR
-// exports.UNABLE_TO_FIND_POSTINSTALL_TRIGGER_JSON_SCHEMA_ERROR = UNABLE_TO_FIND_POSTINSTALL_TRIGGER_JSON_SCHEMA_ERROR
-// exports.getPostInstallTrigger = getPostInstallTrigger
 
 main()
   .then(_ => console.log(`COMPLETE`))
