@@ -43,7 +43,8 @@
       "es5-ext",
       "esbuild",
       "prisma",
-      "puppeteer"
+      "puppeteer",
+      "unrs-resolver"
     ]
   },
   "version": "0.0.1-rc.1",
