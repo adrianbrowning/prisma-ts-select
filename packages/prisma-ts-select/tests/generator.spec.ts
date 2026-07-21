@@ -9,7 +9,8 @@ import { generateM2MMapDeclaration } from "../src/utils/m2m-map.ts";
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 void describe("Generator package.json output", () => {
-  function readPkgJson(pkg: string) {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  function readPkgJson(pkg: string): any {
     return JSON.parse(
       fs.readFileSync(
         path.join(__dirname, `../../${pkg}/generated/prisma-ts-select/package.json`),
@@ -54,8 +55,9 @@ void describe("Generator package.json output", () => {
   });
 
   void test("exports shape", () => {
-    const { exports } = readPkgJson("usage-sqlite-v7") as { exports: Record<string, { types: string; import: string; }>; };
-    for (const entry of Object.values(exports)) {
+    const { exports } = readPkgJson("usage-sqlite-v7");
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion -- TS6 JSON.parse returns unknown
+    for (const entry of Object.values(exports) as Array<Record<string, string>>) {
       assert.strictEqual(typeof entry.types, "string");
       assert.strictEqual(typeof entry.import, "string");
     }
