@@ -52,9 +52,11 @@ runs:
       shell: bash
       run: pnpm install --frozen-lockfile
 
-    - name: Build generator
+    - name: Build generator and relink bins
       shell: bash
-      run: pnpm --filter prisma-ts-select build
+      run: |
+        pnpm --filter prisma-ts-select build
+        pnpm install --frozen-lockfile
 
     - name: Run Gen
       shell: bash
