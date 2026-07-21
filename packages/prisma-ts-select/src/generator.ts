@@ -302,6 +302,9 @@ export { ${provider}Dialect as dialect, ${provider}Dialect, ${ctxName} as dialec
     };
     writeFileSafely(path.join(outputPath, "package.json"), JSON.stringify(pkg, null, 2));
 
+    // Copy sql-expr.js — dialect .js files import from ../sql-expr.js at runtime
+    fs.copyFileSync(path.join(srcDir, "sql-expr.js"), path.join(outputPath, "sql-expr.js"));
+
     // Copy chunk .d.ts files (e.g. sql-expr-HASH.d.ts) that extend.d.ts imports
     for (const file of fs.readdirSync(srcDir)) {
       if (file !== "extend.d.ts" && file !== "extend.js" && file !== "db.d.ts" && file !== "db.js" && file.endsWith(".d.ts")) {

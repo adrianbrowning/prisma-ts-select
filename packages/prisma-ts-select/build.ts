@@ -1,18 +1,18 @@
-import { build } from "esbuild";
 import { execSync } from "node:child_process";
 import { chmodSync } from "node:fs";
+import { build } from "esbuild";
 
 // Generator + CLI — CJS (Prisma deps are CJS-only)
 const importMetaShim = `const __import_meta_url = require("url").pathToFileURL(__filename).href;`;
 await build({
-  entryPoints: ["src/bin.ts", "src/generator.ts"],
+  entryPoints: [ "src/bin.ts", "src/generator.ts" ],
   outdir: "dist",
   format: "cjs",
   outExtension: { ".js": ".cjs" },
   bundle: true,
   platform: "node",
   target: "node20",
-  external: ["@prisma/*", "ts-pattern"],
+  external: [ "@prisma/*", "ts-pattern" ],
   define: { "import.meta.url": "__import_meta_url" },
   banner: { js: importMetaShim },
 });
@@ -22,6 +22,7 @@ chmodSync("dist/bin.cjs", 0o755);
 await build({
   entryPoints: [
     "src/extend.ts",
+    "src/sql-expr.ts",
     "src/db.ts",
     "src/dialects/types.ts",
     "src/dialects/shared.ts",
@@ -41,12 +42,12 @@ await build({
   platform: "node",
   target: "node18",
   treeShaking: true,
-  external: ["@prisma/*"],
+  external: [ "@prisma/*" ],
   plugins: [{
     name: "externalize-siblings",
     setup(b) {
       // Keep relative imports external so the generator can swap them at generate-time
-      b.onResolve({ filter: /^\./ }, (args) => {
+      b.onResolve({ filter: /^\./ }, args => {
         if (args.importer === "") return; // entry point itself
         return { path: args.path.replace(/\.ts$/, ".js"), external: true };
       });
@@ -55,5 +56,7 @@ await build({
 });
 
 // Type declarations
+// eslint-disable-next-line sonarjs/no-os-command-from-path
 execSync("tsc -p tsconfig.generator.json", { stdio: "inherit" });
+// eslint-disable-next-line sonarjs/no-os-command-from-path
 execSync("tsc -p tsconfig.extend.json", { stdio: "inherit" });
