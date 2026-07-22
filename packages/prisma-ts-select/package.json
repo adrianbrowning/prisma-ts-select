@@ -48,7 +48,7 @@
     "lint:e18e": "pnpm dlx @e18e/cli analyze"
   },
   "dependencies": {
-    "@prisma/generator-helper": "^6.19.3",
+    "@prisma/generator-helper": "^7.9.0",
     "@prisma/internals": "^6.19.3",
     "ts-pattern": "^5.9.0"
   },
