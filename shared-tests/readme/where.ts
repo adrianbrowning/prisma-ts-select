@@ -268,6 +268,60 @@ prisma.$from("User")
     assert.equal(sql, expectedSQL);
   });
 
+  test("$col - type-safe column reference equality", () => {
+    const sql =
+// #region col-equality
+prisma.$from("User")
+      .join("Post", "authorId", "User.id")
+      .where({ "User.id": { $col: "Post.authorId" } })
+      .select("User.id")
+      // #endregion col-equality
+.getSQL();
+
+    const expectedSQL =
+      // #region col-equality-sql
+      "SELECT User.id AS `User.id` FROM User JOIN Post ON Post.authorId = User.id WHERE User.id = Post.authorId;";
+      // #endregion col-equality-sql
+
+    assert.equal(sql, expectedSQL);
+  });
+
+  test("$col - with comparison operator", () => {
+    const sql =
+// #region col-op
+prisma.$from("User")
+      .join("Post", "authorId", "User.id")
+      .where({ "User.id": { op: ">", value: { $col: "Post.authorId" } } })
+      .select("User.id")
+      // #endregion col-op
+.getSQL();
+
+    const expectedSQL =
+      // #region col-op-sql
+      "SELECT User.id AS `User.id` FROM User JOIN Post ON Post.authorId = User.id WHERE User.id > Post.authorId;";
+      // #endregion col-op-sql
+
+    assert.equal(sql, expectedSQL);
+  });
+
+  test("$col - IN with mixed values", () => {
+    const sql =
+// #region col-in
+prisma.$from("User")
+      .join("Post", "authorId", "User.id")
+      .where({ "User.id": { op: "IN", values: [1, { $col: "Post.authorId" }, 3] } })
+      .select("User.id")
+      // #endregion col-in
+.getSQL();
+
+    const expectedSQL =
+      // #region col-in-sql
+      "SELECT User.id AS `User.id` FROM User JOIN Post ON Post.authorId = User.id WHERE User.id IN (1, Post.authorId, 3);";
+      // #endregion col-in-sql
+
+    assert.equal(sql, expectedSQL);
+  });
+
   test("$colRaw - column reference equality", () => {
     const sql =
 // #region colraw-equality
@@ -318,6 +372,78 @@ prisma.$from("User")
       // #region colraw-in-sql
       "SELECT User.id AS `User.id` FROM User JOIN Post ON Post.authorId = User.id WHERE User.id IN (1, Post.authorId, 3);";
       // #endregion colraw-in-sql
+
+    assert.equal(sql, expectedSQL);
+  });
+
+  test("$col - in join.where", () => {
+    const sql =
+// #region col-join-where
+prisma.$from("User")
+      .join("Post", "authorId", "User.id", { where: { "Post.authorId": { $col: "User.id" } } })
+      .select("User.id")
+      // #endregion col-join-where
+.getSQL();
+
+    const expectedSQL =
+      // #region col-join-where-sql
+      "SELECT User.id AS `User.id` FROM User JOIN Post ON Post.authorId = User.id AND Post.authorId = User.id;";
+      // #endregion col-join-where-sql
+
+    assert.equal(sql, expectedSQL);
+  });
+
+  test("$col - in having()", () => {
+    const sql =
+// #region col-having
+prisma.$from("User")
+      .join("Post", "authorId", "User.id")
+      .groupBy(["User.id"])
+      .having(({ count }) => [[count("Post.id"), { op: ">", value: { $col: "User.id" } }]])
+      .select("User.id")
+      // #endregion col-having
+.getSQL();
+
+    const expectedSQL =
+      // #region col-having-sql
+      "SELECT User.id AS `User.id` FROM User JOIN Post ON Post.authorId = User.id GROUP BY User.id HAVING COUNT(Post.id) > User.id;";
+      // #endregion col-having-sql
+
+    assert.equal(sql, expectedSQL);
+  });
+
+  test("$colRaw - in join.where", () => {
+    const sql =
+// #region colraw-join-where
+prisma.$from("User")
+      .join("Post", "authorId", "User.id", { where: { "Post.authorId": { $colRaw: "User.id" } } })
+      .select("User.id")
+      // #endregion colraw-join-where
+.getSQL();
+
+    const expectedSQL =
+      // #region colraw-join-where-sql
+      "SELECT User.id AS `User.id` FROM User JOIN Post ON Post.authorId = User.id AND Post.authorId = User.id;";
+      // #endregion colraw-join-where-sql
+
+    assert.equal(sql, expectedSQL);
+  });
+
+  test("$colRaw - in having()", () => {
+    const sql =
+// #region colraw-having
+prisma.$from("User")
+      .join("Post", "authorId", "User.id")
+      .groupBy(["User.id"])
+      .having(({ count }) => [[count("Post.id"), { op: ">", value: { $colRaw: "User.id" } }]])
+      .select("User.id")
+      // #endregion colraw-having
+.getSQL();
+
+    const expectedSQL =
+      // #region colraw-having-sql
+      "SELECT User.id AS `User.id` FROM User JOIN Post ON Post.authorId = User.id GROUP BY User.id HAVING COUNT(Post.id) > User.id;";
+      // #endregion colraw-having-sql
 
     assert.equal(sql, expectedSQL);
   });

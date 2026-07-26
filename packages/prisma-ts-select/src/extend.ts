@@ -417,6 +417,10 @@ function isColRef(v: unknown): v is { $colRaw: string; } {
   return typeof v === "object" && v !== null && "$colRaw" in v;
 }
 
+function isTypedColRef(v: unknown): v is { $col: string; } {
+  return typeof v === "object" && v !== null && "$col" in v;
+}
+
 function resolveColRef(v: { $colRaw: string; }): string {
   const ref = v.$colRaw;
   if (!ref.includes(".")) {
@@ -425,8 +429,17 @@ function resolveColRef(v: { $colRaw: string; }): string {
   return dialect.quoteQualifiedColumn(ref);
 }
 
+function resolveTypedColRef(v: { $col: string; }): string {
+  const ref = v.$col;
+  if (!ref.includes(".")) {
+    throw new Error(`$col value "${ref}" must be in "alias.field" format (must contain a dot)`);
+  }
+  return dialect.quoteQualifiedColumn(ref);
+}
+
 function sqlVal(v: unknown): string {
   if (isColRef(v)) return resolveColRef(v);
+  if (isTypedColRef(v)) return resolveTypedColRef(v);
   if (typeof v === "string") return `'${esc(v)}'`;
   if (v instanceof Date) return `'${v.toISOString()}'`;
   if (v === null) return "NULL";
@@ -448,6 +461,7 @@ function applyOpCondition(quotedField: string, opObj: { op: string; value?: unkn
     case "LIKE":
     case "NOT LIKE":
       if (isColRef(opObj.value)) return `${quotedField} ${opObj.op} ${resolveColRef(opObj.value)}`;
+      if (isTypedColRef(opObj.value)) return `${quotedField} ${opObj.op} ${resolveTypedColRef(opObj.value)}`;
       return `${quotedField} ${opObj.op} '${esc(opObj.value as string)}'`;
     case "IS NULL":
     case "IS NOT NULL":
@@ -467,6 +481,9 @@ function applyOpCondition(quotedField: string, opObj: { op: string; value?: unkn
 function applyCondition(quotedField: string, value: unknown): string {
   if (isColRef(value)) {
     return `${quotedField} = ${resolveColRef(value)}`;
+  }
+  if (isTypedColRef(value)) {
+    return `${quotedField} = ${resolveTypedColRef(value)}`;
   }
 
   if (typeof value === "object" && value !== null && !Array.isArray(value) && "op" in value) {
@@ -1223,9 +1240,9 @@ class _fHaving<TSources extends TArrSources, TFields extends TFieldsType> extend
 
   // See #107: restrict to groupBy columns only
   having<const TCriteria extends WhereCriteria<TSources, TFields>>(criteria: TCriteria): _fHaving<TSources, TFields>;
-  having(fn: (ctx: SelectFnContext<TSources, TFields>) => Array<ExprCondPair<TSources>>): _fHaving<TSources, TFields>;
+  having(fn: (ctx: SelectFnContext<TSources, TFields>) => Array<ExprCondPair<TSources, TFields>>): _fHaving<TSources, TFields>;
   having(
-    criteriaOrFn: WhereCriteria<TSources, TFields> | ((ctx: SelectFnContext<TSources, TFields>) => Array<ExprCondPair<TSources>>)
+    criteriaOrFn: WhereCriteria<TSources, TFields> | ((ctx: SelectFnContext<TSources, TFields>) => Array<ExprCondPair<TSources, TFields>>)
   ): _fHaving<TSources, TFields> {
     const existing = this.values.having ?? [];
     if (typeof criteriaOrFn === "function") {
@@ -1311,38 +1328,41 @@ type COND_NUMERIC_OP = ">" | ">=" | "<" | "<=" | "!=" | "=";
 /** Sentinel: references another table's column as a raw SQL column ref. */
 export type ColRawRef<TSources extends TArrSources = TArrSources> = { $colRaw: GetOtherColumns<TSources>; };
 
-/** Wraps a literal value type T to also accept a column reference. */
-type ValueOrCol<T, TSources extends TArrSources = TArrSources> = T | ColRawRef<TSources>;
+/** Type-safe column reference — only accepts columns whose type matches T. */
+export type ColRef<TSources extends TArrSources, TFields extends TFieldsType, T> = { $col: GetColumnsOfType<TSources, TFields, T>; };
+
+/** Wraps a literal value type T to also accept a column reference (raw or type-safe). */
+type ValueOrCol<T, TSources extends TArrSources = TArrSources, TFields extends TFieldsType = TFieldsType> = T | ColRawRef<TSources> | ColRef<TSources, TFields, T>;
 
 /** Numeric condition value — accepts number | bigint for cross-dialect compatibility (count returns bigint in SQLite, number in PG). */
-type NumericCondValue<TSources extends TArrSources = TArrSources> =
-    | ValueOrCol<number | bigint, TSources>
-    | { op: COND_NUMERIC_OP; value: ValueOrCol<number | bigint, TSources>; }
-    | { op: "IN" | "NOT IN"; values: Array<ValueOrCol<number | bigint, TSources>>; }
-    | { op: "BETWEEN"; values: [low: ValueOrCol<number | bigint, TSources>, high: ValueOrCol<number | bigint, TSources>]; };
+type NumericCondValue<TSources extends TArrSources = TArrSources, TFields extends TFieldsType = TFieldsType> =
+    | ValueOrCol<number | bigint, TSources, TFields>
+    | { op: COND_NUMERIC_OP; value: ValueOrCol<number | bigint, TSources, TFields>; }
+    | { op: "IN" | "NOT IN"; values: Array<ValueOrCol<number | bigint, TSources, TFields>>; }
+    | { op: "BETWEEN"; values: [low: ValueOrCol<number | bigint, TSources, TFields>, high: ValueOrCol<number | bigint, TSources, TFields>]; };
 
-type StringCondValue<TSources extends TArrSources = TArrSources> =
-    | ValueOrCol<string, TSources>
-    | { op: "LIKE" | "NOT LIKE"; value: ValueOrCol<string, TSources>; }
-    | { op: "!="; value: ValueOrCol<string, TSources>; }
-    | { op: "IN" | "NOT IN"; values: Array<ValueOrCol<string, TSources>>; };
+type StringCondValue<TSources extends TArrSources = TArrSources, TFields extends TFieldsType = TFieldsType> =
+    | ValueOrCol<string, TSources, TFields>
+    | { op: "LIKE" | "NOT LIKE"; value: ValueOrCol<string, TSources, TFields>; }
+    | { op: "!="; value: ValueOrCol<string, TSources, TFields>; }
+    | { op: "IN" | "NOT IN"; values: Array<ValueOrCol<string, TSources, TFields>>; };
 
-type DateCondValue<TSources extends TArrSources = TArrSources> =
-    | ValueOrCol<Date, TSources>
-    | { op: COND_NUMERIC_OP; value: ValueOrCol<Date, TSources>; }
-    | { op: "BETWEEN"; values: [ValueOrCol<Date, TSources>, ValueOrCol<Date, TSources>]; }
-    | { op: "IN" | "NOT IN"; values: Array<ValueOrCol<Date, TSources>>; };
+type DateCondValue<TSources extends TArrSources = TArrSources, TFields extends TFieldsType = TFieldsType> =
+    | ValueOrCol<Date, TSources, TFields>
+    | { op: COND_NUMERIC_OP; value: ValueOrCol<Date, TSources, TFields>; }
+    | { op: "BETWEEN"; values: [ValueOrCol<Date, TSources, TFields>, ValueOrCol<Date, TSources, TFields>]; }
+    | { op: "IN" | "NOT IN"; values: Array<ValueOrCol<Date, TSources, TFields>>; };
 
-type BoolExprCondValue<TSources extends TArrSources = TArrSources> = ValueOrCol<boolean, TSources> | { op: "!="; value: ValueOrCol<boolean, TSources>; };
+type BoolExprCondValue<TSources extends TArrSources = TArrSources, TFields extends TFieldsType = TFieldsType> = ValueOrCol<boolean, TSources, TFields> | { op: "!="; value: ValueOrCol<boolean, TSources, TFields>; };
 
 /** Discriminated pair: [SQLExpr<T>, condition for T]. Used in where(fn) and having(fn) overloads. */
-type ExprCondPair<TSources extends TArrSources = TArrSources> =
-    | [SQLExpr<number | null>, NumericCondValue<TSources>]
-    | [SQLExpr<bigint | null>, NumericCondValue<TSources>]
-    | [SQLExpr<Decimal | null>, NumericCondValue<TSources>]
-    | [SQLExpr<string | null>, StringCondValue<TSources>]
-    | [SQLExpr<Date | null>, DateCondValue<TSources>]
-    | [SQLExpr<boolean | null>, BoolExprCondValue<TSources>];
+type ExprCondPair<TSources extends TArrSources = TArrSources, TFields extends TFieldsType = TFieldsType> =
+    | [SQLExpr<number | null>, NumericCondValue<TSources, TFields>]
+    | [SQLExpr<bigint | null>, NumericCondValue<TSources, TFields>]
+    | [SQLExpr<Decimal | null>, NumericCondValue<TSources, TFields>]
+    | [SQLExpr<string | null>, StringCondValue<TSources, TFields>]
+    | [SQLExpr<Date | null>, DateCondValue<TSources, TFields>]
+    | [SQLExpr<boolean | null>, BoolExprCondValue<TSources, TFields>];
 
 /**
  * Defines all valid SQL condition patterns for numeric types (number, bigint).
@@ -1357,13 +1377,13 @@ type ExprCondPair<TSources extends TArrSources = TArrSources> =
  * // Or: { "User.age": { op: 'BETWEEN', values: [18, 65] } }
  * // Or: { "User.age": { op: '>=', value: 18 } }
  */
-type COND_NUMERIC<key extends PropertyKey, keyType, TSources extends TArrSources = TArrSources> =
-    | OptionalRecord<key, ValueOrCol<keyType, TSources>>
-    | OptionalRecord<key, NonEmptyArray<ValueOrCol<keyType, TSources>>>
-    | OptionalRecord<key, { op: "IN" | "NOT IN"; values: Array<ValueOrCol<keyType, TSources>>; }>
-    | OptionalRecord<key, { op: "BETWEEN"; values: [ValueOrCol<keyType, TSources>, ValueOrCol<keyType, TSources>]; }>
-    | OptionalRecord<key, { op: COND_NUMERIC_OP; value: ValueOrCol<keyType, TSources>; }>
-    | OptionalRecord<key, NonEmptyArray<{ op: COND_NUMERIC_OP; value: ValueOrCol<keyType, TSources>; }>>;
+type COND_NUMERIC<key extends PropertyKey, keyType, TSources extends TArrSources = TArrSources, TFields extends TFieldsType = TFieldsType> =
+    | OptionalRecord<key, ValueOrCol<keyType, TSources, TFields>>
+    | OptionalRecord<key, NonEmptyArray<ValueOrCol<keyType, TSources, TFields>>>
+    | OptionalRecord<key, { op: "IN" | "NOT IN"; values: Array<ValueOrCol<keyType, TSources, TFields>>; }>
+    | OptionalRecord<key, { op: "BETWEEN"; values: [ValueOrCol<keyType, TSources, TFields>, ValueOrCol<keyType, TSources, TFields>]; }>
+    | OptionalRecord<key, { op: COND_NUMERIC_OP; value: ValueOrCol<keyType, TSources, TFields>; }>
+    | OptionalRecord<key, NonEmptyArray<{ op: COND_NUMERIC_OP; value: ValueOrCol<keyType, TSources, TFields>; }>>;
 
 /**
  * Defines all valid SQL condition patterns for string types.
@@ -1377,13 +1397,13 @@ type COND_NUMERIC<key extends PropertyKey, keyType, TSources extends TArrSources
  * // Or: { "User.email": { op: 'LIKE', value: '%@example.com' } }
  * // Or: { "User.email": { op: 'IN', values: ['a@test.com', 'b@test.com'] } }
  */
-type COND_STRING<key extends PropertyKey, TSources extends TArrSources = TArrSources> =
-    | OptionalRecord<key, ValueOrCol<string, TSources>>
-    | OptionalRecord<key, NonEmptyArray<ValueOrCol<string, TSources>>>
-    | OptionalRecord<key, { op: "IN" | "NOT IN"; values: Array<ValueOrCol<string, TSources>>; }>
-    | OptionalRecord<key, { op: "LIKE" | "NOT LIKE"; value: ValueOrCol<string, TSources>; }>
-    | OptionalRecord<key, { op: "!="; value: ValueOrCol<string, TSources>; }>
-    | OptionalRecord<key, NonEmptyArray<{ op: "LIKE" | "NOT LIKE" | "!=" | "="; value: ValueOrCol<string, TSources>; }>>;
+type COND_STRING<key extends PropertyKey, TSources extends TArrSources = TArrSources, TFields extends TFieldsType = TFieldsType> =
+    | OptionalRecord<key, ValueOrCol<string, TSources, TFields>>
+    | OptionalRecord<key, NonEmptyArray<ValueOrCol<string, TSources, TFields>>>
+    | OptionalRecord<key, { op: "IN" | "NOT IN"; values: Array<ValueOrCol<string, TSources, TFields>>; }>
+    | OptionalRecord<key, { op: "LIKE" | "NOT LIKE"; value: ValueOrCol<string, TSources, TFields>; }>
+    | OptionalRecord<key, { op: "!="; value: ValueOrCol<string, TSources, TFields>; }>
+    | OptionalRecord<key, NonEmptyArray<{ op: "LIKE" | "NOT LIKE" | "!=" | "="; value: ValueOrCol<string, TSources, TFields>; }>>;
 
 /**
  * Defines all valid SQL condition patterns for DateTime/Date types.
@@ -1398,13 +1418,13 @@ type COND_STRING<key extends PropertyKey, TSources extends TArrSources = TArrSou
  * // Or: { "Post.createdAt": { op: 'BETWEEN', values: [startDate, endDate] } }
  * // Or: { "Post.createdAt": { op: '>=', value: new Date('2024-01-01') } }
  */
-type COND_DATETIME<key extends PropertyKey, keyType, TSources extends TArrSources = TArrSources> =
-    | OptionalRecord<key, ValueOrCol<keyType, TSources>>
-    | OptionalRecord<key, NonEmptyArray<ValueOrCol<keyType, TSources>>>
-    | OptionalRecord<key, { op: "IN" | "NOT IN"; values: Array<ValueOrCol<keyType, TSources>>; }>
-    | OptionalRecord<key, { op: "BETWEEN"; values: [ValueOrCol<keyType, TSources>, ValueOrCol<keyType, TSources>]; }>
-    | OptionalRecord<key, { op: COND_NUMERIC_OP; value: ValueOrCol<keyType, TSources>; }>
-    | OptionalRecord<key, NonEmptyArray<{ op: COND_NUMERIC_OP; value: ValueOrCol<keyType, TSources>; }>>;
+type COND_DATETIME<key extends PropertyKey, keyType, TSources extends TArrSources = TArrSources, TFields extends TFieldsType = TFieldsType> =
+    | OptionalRecord<key, ValueOrCol<keyType, TSources, TFields>>
+    | OptionalRecord<key, NonEmptyArray<ValueOrCol<keyType, TSources, TFields>>>
+    | OptionalRecord<key, { op: "IN" | "NOT IN"; values: Array<ValueOrCol<keyType, TSources, TFields>>; }>
+    | OptionalRecord<key, { op: "BETWEEN"; values: [ValueOrCol<keyType, TSources, TFields>, ValueOrCol<keyType, TSources, TFields>]; }>
+    | OptionalRecord<key, { op: COND_NUMERIC_OP; value: ValueOrCol<keyType, TSources, TFields>; }>
+    | OptionalRecord<key, NonEmptyArray<{ op: COND_NUMERIC_OP; value: ValueOrCol<keyType, TSources, TFields>; }>>;
 
 /**
  * Defines all valid SQL condition patterns for boolean types.
@@ -1418,9 +1438,9 @@ type COND_DATETIME<key extends PropertyKey, keyType, TSources extends TArrSource
  * // Allows: { "User.isActive": true }
  * // Or: { "User.isActive": { op: '!=', value: false } }
  */
-type COND_BOOLEAN<key extends PropertyKey, keyType, TSources extends TArrSources = TArrSources> =
-    | OptionalRecord<key, ValueOrCol<keyType, TSources>>
-    | OptionalRecord<key, { op: "!="; value: ValueOrCol<keyType, TSources>; }>;
+type COND_BOOLEAN<key extends PropertyKey, keyType, TSources extends TArrSources = TArrSources, TFields extends TFieldsType = TFieldsType> =
+    | OptionalRecord<key, ValueOrCol<keyType, TSources, TFields>>
+    | OptionalRecord<key, { op: "!="; value: ValueOrCol<keyType, TSources, TFields>; }>;
 
 /**
  * Defines SQL NULL checking conditions (IS NULL / IS NOT NULL).
@@ -1455,26 +1475,28 @@ type COND_NULL<key extends PropertyKey, keyType> = keyType extends null ? Option
  * // { "User.name": "Alice" } | { "User.name": { op: 'LIKE', value: 'A%' } }
  * // { "User.email": { op: 'IS NULL' } }
  */
-type SQLCondition<T, TSources extends TArrSources = TArrSources> = Prettify<{
+type SQLCondition<T, TSources extends TArrSources = TArrSources, TFields extends TFieldsType = TFieldsType> = Prettify<{
   [K in keyof T]?:
-    (Exclude<T[K], null> extends number ? COND_NUMERIC<K, Exclude<T[K], null>, TSources> :
-      Exclude<T[K], null> extends bigint ? COND_NUMERIC<K, Exclude<T[K], null>, TSources> :
-        Exclude<T[K], null> extends string ? COND_STRING<K, TSources> :
-          Exclude<T[K], null> extends boolean ? COND_BOOLEAN<K, Exclude<T[K], null>, TSources> :
-            Exclude<T[K], null> extends Date ? COND_DATETIME<K, Exclude<T[K], null>, TSources> :
+    (Exclude<T[K], null> extends number ? COND_NUMERIC<K, Exclude<T[K], null>, TSources, TFields> :
+      Exclude<T[K], null> extends bigint ? COND_NUMERIC<K, Exclude<T[K], null>, TSources, TFields> :
+        Exclude<T[K], null> extends string ? COND_STRING<K, TSources, TFields> :
+          Exclude<T[K], null> extends boolean ? COND_BOOLEAN<K, Exclude<T[K], null>, TSources, TFields> :
+            Exclude<T[K], null> extends Date ? COND_DATETIME<K, Exclude<T[K], null>, TSources, TFields> :
               "Unsupported Data Type") | COND_NULL<K, T[K]>
 }[keyof T]>;
 
 type ColRawRefAny = { $colRaw: string; };
+type ColRefAny = { $col: string; };
+type AnyColRef = ColRawRefAny | ColRefAny;
 type BasicOpTypes =
-    | OptionalRecord<PropertyKey, SUPPORTED_TYPES | ColRawRefAny>
-    | OptionalRecord<PropertyKey, NonEmptyArray<SUPPORTED_TYPES | ColRawRefAny>>
-    | OptionalRecord<PropertyKey, { op: "IN" | "NOT IN"; values: Array<SUPPORTED_TYPES | ColRawRefAny>; }>
-    | OptionalRecord<PropertyKey, { op: "BETWEEN"; values: [SUPPORTED_TYPES | ColRawRefAny, SUPPORTED_TYPES | ColRawRefAny]; }>
-    | OptionalRecord<PropertyKey, { op: "LIKE" | "NOT LIKE"; value: string | ColRawRefAny; }>
+    | OptionalRecord<PropertyKey, SUPPORTED_TYPES | AnyColRef>
+    | OptionalRecord<PropertyKey, NonEmptyArray<SUPPORTED_TYPES | AnyColRef>>
+    | OptionalRecord<PropertyKey, { op: "IN" | "NOT IN"; values: Array<SUPPORTED_TYPES | AnyColRef>; }>
+    | OptionalRecord<PropertyKey, { op: "BETWEEN"; values: [SUPPORTED_TYPES | AnyColRef, SUPPORTED_TYPES | AnyColRef]; }>
+    | OptionalRecord<PropertyKey, { op: "LIKE" | "NOT LIKE"; value: string | AnyColRef; }>
     | OptionalRecord<PropertyKey, { op: "IS NULL" | "IS NOT NULL"; }>
-    | OptionalRecord<PropertyKey, { op: COND_NUMERIC_OP; value: SUPPORTED_TYPES | ColRawRefAny; }>
-    | OptionalRecord<PropertyKey, NonEmptyArray<{ op: COND_NUMERIC_OP | "LIKE" | "NOT LIKE"; value: SUPPORTED_TYPES | ColRawRefAny; }>>;
+    | OptionalRecord<PropertyKey, { op: COND_NUMERIC_OP; value: SUPPORTED_TYPES | AnyColRef; }>
+    | OptionalRecord<PropertyKey, NonEmptyArray<{ op: COND_NUMERIC_OP | "LIKE" | "NOT LIKE"; value: SUPPORTED_TYPES | AnyColRef; }>>;
 
 /**
  * Transforms a table's fields into a record where keys are prefixed with the table name ("Table.field").
@@ -1493,11 +1515,11 @@ type TableFieldType<Table extends string, Fields extends Record<string, ANY_IS_O
 
 type LogicalOperator = "$AND" | "$OR" | "$NOT" | "$NOR";
 
-type WhereCriteriaSingle<TFields extends Record<string, unknown>, TSources extends TArrSources = TArrSources> = WhereCriteria_Fields_Single<TFields, TSources> & {
-  [k in LogicalOperator]?: [WhereCriteria_Fields_Single<TFields, TSources>, ...Array<WhereCriteria_Fields_Single<TFields, TSources>>];
+type WhereCriteriaSingle<TFields extends Record<string, unknown>, TSources extends TArrSources = TArrSources, TAllFields extends TFieldsType = TFieldsType> = WhereCriteria_Fields_Single<TFields, TSources, TAllFields> & {
+  [k in LogicalOperator]?: [WhereCriteria_Fields_Single<TFields, TSources, TAllFields>, ...Array<WhereCriteria_Fields_Single<TFields, TSources, TAllFields>>];
 };
 
-type WhereCriteria_Fields_Single<TFields extends Record<string, unknown>, TSources extends TArrSources = TArrSources> = OptionalObject<(TFields)> | OptionalObject< SQLCondition<TFields, TSources>>;
+type WhereCriteria_Fields_Single<TFields extends Record<string, unknown>, TSources extends TArrSources = TArrSources, TAllFields extends TFieldsType = TFieldsType> = OptionalObject<(TFields)> | OptionalObject< SQLCondition<TFields, TSources, TAllFields>>;
 
 type WhereCriteriaMulti<T extends TArrSources, TFields extends TFieldsType, F = WhereCriteria_Fields<T, TFields>> = F & {
   [k in LogicalOperator]?: [WhereCriteriaMulti<T, TFields, F>, ...Array<WhereCriteriaMulti<T, TFields, F>>];
@@ -1506,7 +1528,7 @@ type WhereCriteriaMulti<T extends TArrSources, TFields extends TFieldsType, F = 
 type WhereCriteria<T extends TArrSources, TFields extends TFieldsType> = T["length"] extends 1
   ? T[0] extends TVirtualTableSource
     ? WhereCriteriaMulti<T, TFields>
-    : WhereCriteriaSingle<TFields[GetAliasTableNames<T[0]>], T>
+    : WhereCriteriaSingle<TFields[GetAliasTableNames<T[0]>], T, TFields>
   : WhereCriteriaMulti<T, TFields>;
 
 /** Criteria type scoped to a single joined table. Keys are "Table.field" (or "Alias.field"). $colRaw can reference any column from TAllSources. */
@@ -1532,17 +1554,17 @@ type WhereCriteria_Fields<T extends Array<TTableSources>, TFields extends TField
   T extends readonly [infer HEAD, ...infer Rest]
     ? HEAD extends string
       ? Rest extends Array<TTableSources>
-        ? WhereCriteria_Fields<Rest, TFields, OptionalObject<acc & (TableFieldType<HEAD, TFields[HEAD]> | SQLCondition<TableFieldType<HEAD, TFields[HEAD]>, TSources>)>, TSources>
-        : WhereCriteria_Fields<[], TFields, OptionalObject<acc & (TableFieldType<HEAD, TFields[HEAD]> | SQLCondition<TableFieldType<HEAD, TFields[HEAD]>, TSources>)>, TSources>
+        ? WhereCriteria_Fields<Rest, TFields, OptionalObject<acc & (TableFieldType<HEAD, TFields[HEAD]> | SQLCondition<TableFieldType<HEAD, TFields[HEAD]>, TSources, TFields>)>, TSources>
+        : WhereCriteria_Fields<[], TFields, OptionalObject<acc & (TableFieldType<HEAD, TFields[HEAD]> | SQLCondition<TableFieldType<HEAD, TFields[HEAD]>, TSources, TFields>)>, TSources>
       : HEAD extends readonly ["__cte__", infer CTE_NAME extends string]
       // CTE source — use CTE_NAME as key into TFields
         ? Rest extends Array<TTableSources>
-          ? WhereCriteria_Fields<Rest, TFields, OptionalObject<acc & (TableFieldType<CTE_NAME, TFields[CTE_NAME]> | SQLCondition<TableFieldType<CTE_NAME, TFields[CTE_NAME]>, TSources>)>, TSources>
-          : WhereCriteria_Fields<[], TFields, OptionalObject<acc & (TableFieldType<CTE_NAME, TFields[CTE_NAME]> | SQLCondition<TableFieldType<CTE_NAME, TFields[CTE_NAME]>, TSources>)>, TSources>
+          ? WhereCriteria_Fields<Rest, TFields, OptionalObject<acc & (TableFieldType<CTE_NAME, TFields[CTE_NAME]> | SQLCondition<TableFieldType<CTE_NAME, TFields[CTE_NAME]>, TSources, TFields>)>, TSources>
+          : WhereCriteria_Fields<[], TFields, OptionalObject<acc & (TableFieldType<CTE_NAME, TFields[CTE_NAME]> | SQLCondition<TableFieldType<CTE_NAME, TFields[CTE_NAME]>, TSources, TFields>)>, TSources>
         : HEAD extends [infer R_NAME extends string, infer A_NAME extends string]
           ? Rest extends Array<TTableSources>
-            ? WhereCriteria_Fields<Rest, TFields, OptionalObject<acc & (TableFieldType<A_NAME, TFields[R_NAME]> | SQLCondition<TableFieldType<A_NAME, TFields[R_NAME]>, TSources>)>, TSources>
-            : WhereCriteria_Fields<[], TFields, OptionalObject<acc & (TableFieldType<A_NAME, TFields[R_NAME]> | SQLCondition<TableFieldType<A_NAME, TFields[R_NAME]>, TSources>)>, TSources>
+            ? WhereCriteria_Fields<Rest, TFields, OptionalObject<acc & (TableFieldType<A_NAME, TFields[R_NAME]> | SQLCondition<TableFieldType<A_NAME, TFields[R_NAME]>, TSources, TFields>)>, TSources>
+            : WhereCriteria_Fields<[], TFields, OptionalObject<acc & (TableFieldType<A_NAME, TFields[R_NAME]> | SQLCondition<TableFieldType<A_NAME, TFields[R_NAME]>, TSources, TFields>)>, TSources>
           : never
     : acc;
 
@@ -1641,10 +1663,10 @@ class _fWhere<TSources extends TArrSources, TFields extends TFieldsType> extends
     });
   }
 
-  where(fn: (ctx: SelectFnContext<TSources, TFields>) => Array<ExprCondPair<TSources>>): _fGroupBy<TSources, TFields>;
+  where(fn: (ctx: SelectFnContext<TSources, TFields>) => Array<ExprCondPair<TSources, TFields>>): _fGroupBy<TSources, TFields>;
   where<const TCriteria extends WhereCriteria<TSources, TFields>>(criteria: TCriteria): _fGroupBy<TSources, TFields>;
   where(
-    criteriaOrFn: WhereCriteria<TSources, TFields> | ((ctx: SelectFnContext<TSources, TFields>) => Array<ExprCondPair<TSources>>)
+    criteriaOrFn: WhereCriteria<TSources, TFields> | ((ctx: SelectFnContext<TSources, TFields>) => Array<ExprCondPair<TSources, TFields>>)
   ): _fGroupBy<TSources, TFields> {
     if (typeof criteriaOrFn === "function") {
       const ctx = buildContext<TSources, TFields>(dialect);
