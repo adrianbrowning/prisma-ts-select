@@ -83,6 +83,7 @@
           + [$OR](#or)
           + [$NOT](#not)
           + [$NOR](#nor)
+          + [`$colRaw` — Column References](#colraw--column-references)
       - [`.whereNotNull`](#wherenotnull)
         * [Example](#example-4)
         * [SQL](#sql-10)
@@ -1050,6 +1051,7 @@ type WhereClause = {
 | $NOR         | Will wrap statement in a `NOT (/*...*/)` and join any items with a `OR`  | <pre>.where({ <br /> $NOR:[<br />  {"User.age": 20 },<br />  {<br />    "User.age": {op: "!=", value:60},<br />    "User.name": "Bob",<br />   },<br />]})</pre> | `(NOT (User.age = 20 OR (User.age != 60 AND User.name = "Bob")))` |
 | `Array (scalar)` | Non-empty array of values → SQL `IN` | `.where({ "User.name": ["Alice", "Bob"] })` | `User.name IN ('Alice', 'Bob')` |
 | `Array (op-objects)` | Non-empty array of op-objects → `OR` chain | `.where({ "User.name": [{ op: "LIKE", value: "A%" }, { op: "LIKE", value: "B%" }] })` | `(User.name LIKE 'A%' OR User.name LIKE 'B%')` |
+| `$colRaw` | Reference another column instead of a literal value | `.where({ "User.id": { $colRaw: "Post.authorId" } })` | `User.id = Post.authorId` |
 
 
 ###### Columns
@@ -1135,6 +1137,57 @@ prisma.$from("User")
           { op: "LIKE", value: "B%" },
         ],
       });
+```
+
+###### `$colRaw` — Column References
+
+Use `{ $colRaw: "Table.column" }` to compare against another column instead of a literal value. Works in equality, comparison operators, and `IN`/`NOT IN`/`BETWEEN`.
+
+The value must be in `"Alias.field"` format (must contain a dot). Column names are type-checked against joined tables.
+
+**Equality:**
+```typescript file=../usage-sqlite-v7/tests/readme/where.ts region=colraw-equality
+prisma.$from("User")
+      .join("Post", "authorId", "User.id")
+      .where({ "User.id": { $colRaw: "Post.authorId" } })
+      .select("User.id")
+```
+
+```sql file=../usage-sqlite-v7/tests/readme/where.ts region=colraw-equality-sql
+SELECT User.id AS `User.id` 
+FROM User 
+JOIN Post ON Post.authorId = User.id 
+WHERE User.id = Post.authorId;
+```
+
+**With operator:**
+```typescript file=../usage-sqlite-v7/tests/readme/where.ts region=colraw-op
+prisma.$from("User")
+      .join("Post", "authorId", "User.id")
+      .where({ "User.id": { op: ">", value: { $colRaw: "Post.authorId" } } })
+      .select("User.id")
+```
+
+```sql file=../usage-sqlite-v7/tests/readme/where.ts region=colraw-op-sql
+SELECT User.id AS `User.id` 
+FROM User 
+JOIN Post ON Post.authorId = User.id 
+WHERE User.id > Post.authorId;
+```
+
+**IN with mixed literals and column refs:**
+```typescript file=../usage-sqlite-v7/tests/readme/where.ts region=colraw-in
+prisma.$from("User")
+      .join("Post", "authorId", "User.id")
+      .where({ "User.id": { op: "IN", values: [1, { $colRaw: "Post.authorId" }, 3] } })
+      .select("User.id")
+```
+
+```sql file=../usage-sqlite-v7/tests/readme/where.ts region=colraw-in-sql
+SELECT User.id AS `User.id` 
+FROM User 
+JOIN Post ON Post.authorId = User.id 
+WHERE User.id IN (1, Post.authorId, 3);
 ```
 
 #### `.whereNotNull`

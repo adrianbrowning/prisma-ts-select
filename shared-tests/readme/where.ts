@@ -267,4 +267,58 @@ prisma.$from("User")
 
     assert.equal(sql, expectedSQL);
   });
+
+  test("$colRaw - column reference equality", () => {
+    const sql =
+// #region colraw-equality
+prisma.$from("User")
+      .join("Post", "authorId", "User.id")
+      .where({ "User.id": { $colRaw: "Post.authorId" } })
+      .select("User.id")
+      // #endregion colraw-equality
+.getSQL();
+
+    const expectedSQL =
+      // #region colraw-equality-sql
+      "SELECT User.id AS `User.id` FROM User JOIN Post ON Post.authorId = User.id WHERE User.id = Post.authorId;";
+      // #endregion colraw-equality-sql
+
+    assert.equal(sql, expectedSQL);
+  });
+
+  test("$colRaw - with comparison operator", () => {
+    const sql =
+// #region colraw-op
+prisma.$from("User")
+      .join("Post", "authorId", "User.id")
+      .where({ "User.id": { op: ">", value: { $colRaw: "Post.authorId" } } })
+      .select("User.id")
+      // #endregion colraw-op
+.getSQL();
+
+    const expectedSQL =
+      // #region colraw-op-sql
+      "SELECT User.id AS `User.id` FROM User JOIN Post ON Post.authorId = User.id WHERE User.id > Post.authorId;";
+      // #endregion colraw-op-sql
+
+    assert.equal(sql, expectedSQL);
+  });
+
+  test("$colRaw - IN with mixed values", () => {
+    const sql =
+// #region colraw-in
+prisma.$from("User")
+      .join("Post", "authorId", "User.id")
+      .where({ "User.id": { op: "IN", values: [1, { $colRaw: "Post.authorId" }, 3] } })
+      .select("User.id")
+      // #endregion colraw-in
+.getSQL();
+
+    const expectedSQL =
+      // #region colraw-in-sql
+      "SELECT User.id AS `User.id` FROM User JOIN Post ON Post.authorId = User.id WHERE User.id IN (1, Post.authorId, 3);";
+      // #endregion colraw-in-sql
+
+    assert.equal(sql, expectedSQL);
+  });
 });
