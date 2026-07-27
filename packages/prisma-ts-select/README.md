@@ -1638,6 +1638,78 @@ JOIN Post ON Post.authorId = User.id;
 > [!NOTE]
 > When using column aliases, you can reference the alias in `ORDER BY` clauses. The returned type will use the alias names instead of the original column names.
 
+#### Example - Scalar Subquery
+
+Pass a single-column query builder directly to `.select()` as a scalar subquery. The builder must select exactly one column (multi-column builders are rejected at the type level).
+
+```typescript file=../usage-sqlite-v7/tests/readme/select-scalar-subquery.ts region=scalar-subquery
+prisma.$from("User")
+      .select("name")
+      .select(
+        prisma.$from("Post")
+              .where({ authorId: 1 })
+              .select(({ countAll }) => countAll(), "cnt"),
+        "postCount"
+      )
+```
+
+##### SQL
+
+```sql file=../usage-sqlite-v7/tests/readme/select-scalar-subquery.ts region=scalar-subquery-sql
+SELECT name, (
+SELECT COUNT(*) AS `cnt` 
+FROM Post 
+WHERE authorId = 1) AS `postCount` 
+FROM User;
+```
+
+#### Example - Scalar Subquery with Filter
+
+```typescript file=../usage-sqlite-v7/tests/readme/select-scalar-subquery.ts region=scalar-subquery-where
+prisma.$from("User")
+      .select("name")
+      .select(
+        prisma.$from("Post")
+              .where({ published: true })
+              .select(({ countAll }) => countAll(), "cnt"),
+        "publishedCount"
+      )
+```
+
+##### SQL
+
+```sql file=../usage-sqlite-v7/tests/readme/select-scalar-subquery.ts region=scalar-subquery-where-sql
+SELECT name, (
+SELECT COUNT(*) AS `cnt` 
+FROM Post 
+WHERE published = true) AS `publishedCount` 
+FROM User;
+```
+
+#### Example - Scalar Subquery in `coalesce()`
+
+Subquery builders also work as arguments to select functions like `coalesce()`:
+
+```typescript file=../usage-sqlite-v7/tests/readme/select-scalar-subquery.ts region=scalar-subquery-coalesce
+prisma.$from("User")
+      .select(({ coalesce }) => coalesce(
+        prisma.$from("Post")
+              .where({ authorId: 1 })
+              .select("title"),
+        "User.name"
+      ), "label")
+```
+
+##### SQL
+
+```sql file=../usage-sqlite-v7/tests/readme/select-scalar-subquery.ts region=scalar-subquery-coalesce-sql
+SELECT COALESCE((
+SELECT title 
+FROM Post 
+WHERE authorId = 1), User.name) AS `label` 
+FROM User;
+```
+
 ### Having
 
 `.having` accepts two overloads — a criteria object (same syntax as [`.where`](#where)) or a fn callback for SQL expressions and aggregate functions.
