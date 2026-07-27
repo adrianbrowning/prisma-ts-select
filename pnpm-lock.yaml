@@ -45,29 +45,6 @@ importers:
         specifier: ^6.0.3
         version: 6.0.3
 
-  packages/bug-test:
-    dependencies:
-      '@gcm/prisma-ts-select':
-        specifier: workspace:prisma-ts-select@*
-        version: link:../prisma-ts-select
-    devDependencies:
-      '@prisma/client':
-        specifier: 6.19.2
-        version: 6.19.2(prisma@6.19.2(typescript@5.9.3))(typescript@5.9.3)
-      '@types/node':
-        specifier: ^24.0.0
-        version: 24.12.4
-      prisma:
-        specifier: 6.19.2
-        version: 6.19.2(typescript@5.9.3)
-      typescript:
-        specifier: ^5.9.3
-        version: 5.9.3
-
-  packages/bug-test/generated/prisma: {}
-
-  packages/bug-test/generated/prisma-ts-select: {}
-
   packages/prisma-ts-select:
     dependencies:
       '@prisma/generator-helper':
@@ -140,10 +117,6 @@ importers:
         specifier: ^5.9.3
         version: 5.9.3
 
-  packages/usage-mysql-v6/generated/prisma: {}
-
-  packages/usage-mysql-v6/generated/prisma-ts-select: {}
-
   packages/usage-mysql-v7:
     dependencies:
       '@gcm/prisma-ts-select':
@@ -166,8 +139,6 @@ importers:
         specifier: ^5.9.3
         version: 5.9.3
 
-  packages/usage-mysql-v7/generated/prisma-ts-select: {}
-
   packages/usage-pg-v6:
     dependencies:
       '@gcm/prisma-ts-select':
@@ -186,10 +157,6 @@ importers:
       typescript:
         specifier: ^5.9.3
         version: 5.9.3
-
-  packages/usage-pg-v6/generated/prisma: {}
-
-  packages/usage-pg-v6/generated/prisma-ts-select: {}
 
   packages/usage-pg-v7:
     dependencies:
@@ -213,8 +180,6 @@ importers:
         specifier: ^5.9.3
         version: 5.9.3
 
-  packages/usage-pg-v7/generated/prisma-ts-select: {}
-
   packages/usage-sqlite-v6:
     dependencies:
       '@gcm/prisma-ts-select':
@@ -233,10 +198,6 @@ importers:
       typescript:
         specifier: ^5.9.3
         version: 5.9.3
-
-  packages/usage-sqlite-v6/generated/prisma: {}
-
-  packages/usage-sqlite-v6/generated/prisma-ts-select: {}
 
   packages/usage-sqlite-v7:
     dependencies:
@@ -259,8 +220,6 @@ importers:
       typescript:
         specifier: ^5.9.3
         version: 5.9.3
-
-  packages/usage-sqlite-v7/generated/prisma-ts-select: {}
 
 packages:
 
