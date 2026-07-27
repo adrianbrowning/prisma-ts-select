@@ -13,13 +13,21 @@ import { dialect, dialectContextFns } from "./dialects/index.ts";
 import { esc } from "./dialects/shared.ts";
 import type { Dialect } from "./dialects/types.ts";
 import { lit as _lit, sqlExpr, resolveArg } from "./sql-expr.ts";
-import type { SQLExpr, LitToType } from "./sql-expr.ts";
+import type { SQLExpr, LitToType, _type } from "./sql-expr.ts";
 
 // Placeholder replaced by generator with actual M2M relationship map
 type BLANK_OBJECT = {};
 
 type M2MMap = {};
 const SAFE_IDENT_RE = /^\w+$/;
+
+// Exactly-one-key record → its value type; empty → unknown; multi-key → unknown
+// Uses IsUnion to distinguish single literal key from a union of keys
+type IsUnionKey<T, _T = T> = _T extends _T ? ([T] extends [_T] ? false : true) : never;
+type ScalarExprType<TSelectRT> =
+  keyof TSelectRT extends never ? unknown
+    : IsUnionKey<keyof TSelectRT> extends true ? unknown
+      : TSelectRT[keyof TSelectRT];
 
 type TDB = typeof DB;
 
@@ -659,7 +667,17 @@ class _fRun<TSources extends TArrSources, TFields extends TFieldsType, TSelectRT
   getResultType() {
     return {} as Array<TSelectRT>;
   }
-   
+
+  declare readonly [_type]?: ScalarExprType<TSelectRT>;
+
+  get sql(): string {
+    return `(${this.getSQL().replace(/;$/, "")})`;
+  }
+
+  toString(): string {
+    return this.sql;
+  }
+
   getSQL(formatted: boolean = false) {
 
     const withClause = this.values.withs?.length
@@ -1017,6 +1035,8 @@ class _fSelect<TSources extends TArrSources, TFields extends TFieldsType, TSelec
   select<T>(fn: (ctx: SelectFnContext<TSources, TFields>) => SQLExpr<T>): _fSelect<TSources, TFields, Prettify<TSelectRT & Record<string, T>>>;
   // Fn overload — with alias → key is the literal alias
   select<T, A extends string>(fn: (ctx: SelectFnContext<TSources, TFields>) => SQLExpr<T>, alias: A): _fSelect<TSources, TFields, Prettify<TSelectRT & Record<A, T>>>;
+  // Builder-as-scalar-subquery overload — with alias (single-select only)
+  select<TSubRT extends {}, A extends string>(subquery: IsUnionKey<keyof TSubRT> extends true ? never : _fRun<ANY_IS_OK, ANY_IS_OK, TSubRT>, alias: A): _fSelect<TSources, TFields, Prettify<TSelectRT & Record<A, ScalarExprType<TSubRT>>>>;
   // String column — no alias
   select<const TSelect extends ValidSelect<TSources, TFields>>(select: TSelect): _fSelect<TSources, TFields, Prettify<TSelectRT & MergeItems<TSelect, TSources, TFields, CountKeys<TSources> extends 1 ? false : true>>>;
   // String column — with alias
@@ -1024,9 +1044,20 @@ class _fSelect<TSources extends TArrSources, TFields extends TFieldsType, TSelec
   // Implementation (not visible to callers)
   // eslint-disable-next-line sonarjs/cognitive-complexity
   select(
-    select: ((ctx: SelectFnContext<TSources, TFields>) => SQLExpr<ANY_IS_OK>) | ValidSelect<TSources, TFields>,
+    select: ((ctx: SelectFnContext<TSources, TFields>) => SQLExpr<ANY_IS_OK>) | ValidSelect<TSources, TFields> | _fRun<ANY_IS_OK, ANY_IS_OK, ANY_IS_OK>,
     alias?: string
   ): _fSelect<TSources, TFields, ANY_IS_OK> {
+    // Builder-as-scalar-subquery: detect _fRun instance
+    if (select instanceof _fRun) {
+      const sqlStr = alias !== undefined
+        ? `${select.sql} AS ${dialect.quote(alias, true)}`
+        : select.sql;
+      return new _fSelect(this.db, {
+        ...this.values,
+        selects: [ ...this.values.selects, sqlStr ],
+      }) as ANY_IS_OK;
+    }
+
     // Function overload: first arg is a callback
     if (typeof select === "function") {
       const ctx = buildContext<TSources, TFields>(dialect);
