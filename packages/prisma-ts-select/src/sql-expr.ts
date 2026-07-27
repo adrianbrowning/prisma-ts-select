@@ -1,4 +1,4 @@
-declare const _type: unique symbol;
+export declare const _type: unique symbol;
 
 /** Opaque wrapper carrying a SQL fragment + phantom TS type `T`. */
 export type SQLExpr<T> = { readonly sql: string; readonly [_type]?: T; toString: () => string; };
