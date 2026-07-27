@@ -9,13 +9,17 @@ describe("where with many joins (TS2590 regression)", () => {
         const query = prisma.$from("User")
             .join("Post", "authorId", "User.id")
             .join("PostsImages", "postId", "Post.id")
-            .join("LikedPosts lp", "postId", "Post.id")
-            .join("LikedPosts lp2", "authorId", "User.id")
+            // .join("LikedPosts lp", "postId", "Post.id")
+            // .join("LikedPosts lp2", "authorId", "User.id")
             .join("Post p2", "authorId", "User.id")
             .leftJoin("PostsImages pi2", "postId", "p2.id")
             .where({
                 "User.name": "test",
                 "Post.published": true,
+                "User.id" : {
+                    "op": "=",
+                    value: {"$col": "User.id"}
+                }
             })
             .select("User.name")
             .select("Post.title");

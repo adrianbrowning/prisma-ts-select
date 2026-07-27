@@ -1421,7 +1421,7 @@ type WhereCriteria_Fields_Single<TFields extends Record<string, unknown>, TSourc
   [K in keyof TFields]?: CondValueForField<TFields[K], TSources, TAllFields>;
 };
 
-type WhereCriteriaMulti<T extends TArrSources, TFields extends TFieldsType, F = WhereCriteria_Fields<T, TFields>> = F & {
+type WhereCriteriaMulti<T extends TArrSources, TFields extends TFieldsType, F = Prettify<WhereCriteria_Fields<T, TFields>>> = F & {
   [k in LogicalOperator]?: [WhereCriteriaMulti<T, TFields, F>, ...Array<WhereCriteriaMulti<T, TFields, F>>];
 };
 
@@ -1562,8 +1562,8 @@ class _fWhere<TSources extends TArrSources, TFields extends TFieldsType> extends
     });
   }
 
-  where(fn: (ctx: SelectFnContext<TSources, TFields>) => Array<ExprCondPair<TSources, TFields>>): _fGroupBy<TSources, TFields>;
   where<const TCriteria extends WhereCriteria<TSources, TFields>>(criteria: TCriteria): _fGroupBy<TSources, TFields>;
+  where(fn: (ctx: SelectFnContext<TSources, TFields>) => Array<ExprCondPair<TSources, TFields>>): _fGroupBy<TSources, TFields>;
   where(
     criteriaOrFn: WhereCriteria<TSources, TFields> | ((ctx: SelectFnContext<TSources, TFields>) => Array<ExprCondPair<TSources, TFields>>)
   ): _fGroupBy<TSources, TFields> {
