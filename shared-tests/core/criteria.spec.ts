@@ -228,8 +228,8 @@ describe("where array shorthand", () => {
         });
 
         it("type: IN op in array is error", () => {
+            //@ts-expect-error IN uses 'values', not valid in op-array
             prisma.$from("User").where({
-                //@ts-expect-error IN uses 'values', not valid in op-array
                 "name": [{ op: "IN", values: ["a"] }]
             });
         });

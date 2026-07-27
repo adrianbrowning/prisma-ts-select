@@ -1340,18 +1340,6 @@ OFFSET -
  */
 type OptionalRecord<K extends PropertyKey, V> = { [key in K]?: V; };
 
-/**
- * Transforms all properties of a record type to optional properties.
- * Used to make field conditions optional in WHERE clauses.
- *
- * @template K - A record type with property keys and their corresponding value types
- *
- * @example
- * OptionalObject<{ id: number; name: string }>
- * // Result: { id?: number; name?: string; }
- */
-type OptionalObject<K extends Record<PropertyKey, unknown>> = { [key in keyof K]?: K[key]; };
-
 type NonEmptyArray<T> = [T, ...Array<T>];
 
 type COND_NUMERIC_OP = ">" | ">=" | "<" | "<=" | "!=" | "=";
@@ -1395,126 +1383,20 @@ type ExprCondPair<TSources extends TArrSources = TArrSources, TFields extends TF
     | [SQLExpr<Date | null>, DateCondValue<TSources, TFields>]
     | [SQLExpr<boolean | null>, BoolExprCondValue<TSources, TFields>];
 
-/**
- * Defines all valid SQL condition patterns for numeric types (number, bigint).
- * Supports equality, IN/NOT IN, BETWEEN, and comparison operators (>, >=, <, <=, !=).
- *
- * @template key - The property key for the field being queried
- * @template keyType - The numeric type (number or bigint)
- *
- * @example
- * COND_NUMERIC<"User.age", number>
- * // Allows: { "User.age": 25 }
- * // Or: { "User.age": { op: 'BETWEEN', values: [18, 65] } }
- * // Or: { "User.age": { op: '>=', value: 18 } }
- */
-type COND_NUMERIC<key extends PropertyKey, keyType, TSources extends TArrSources = TArrSources, TFields extends TFieldsType = TFieldsType> =
-    | OptionalRecord<key, ValueOrCol<keyType, TSources, TFields>>
-    | OptionalRecord<key, NonEmptyArray<ValueOrCol<keyType, TSources, TFields>>>
-    | OptionalRecord<key, { op: "IN" | "NOT IN"; values: Array<ValueOrCol<keyType, TSources, TFields>>; }>
-    | OptionalRecord<key, { op: "BETWEEN"; values: [ValueOrCol<keyType, TSources, TFields>, ValueOrCol<keyType, TSources, TFields>]; }>
-    | OptionalRecord<key, { op: COND_NUMERIC_OP; value: ValueOrCol<keyType, TSources, TFields>; }>
-    | OptionalRecord<key, NonEmptyArray<{ op: COND_NUMERIC_OP; value: ValueOrCol<keyType, TSources, TFields>; }>>;
+/** Per-field condition value: all accepted shapes for a single field in .where(). */
+type CondValueForField<T, TSources extends TArrSources, TFields extends TFieldsType> =
+  | (Exclude<T, null> extends number ? NumericCondValue<TSources, TFields> | NonEmptyArray<ValueOrCol<number | bigint, TSources, TFields>> | NonEmptyArray<{ op: COND_NUMERIC_OP; value: ValueOrCol<number | bigint, TSources, TFields>; }> :
+    Exclude<T, null> extends bigint ? NumericCondValue<TSources, TFields> | NonEmptyArray<ValueOrCol<number | bigint, TSources, TFields>> | NonEmptyArray<{ op: COND_NUMERIC_OP; value: ValueOrCol<number | bigint, TSources, TFields>; }> :
+      Exclude<T, null> extends string ? StringCondValue<TSources, TFields> | NonEmptyArray<ValueOrCol<string, TSources, TFields>> | NonEmptyArray<{ op: "LIKE" | "NOT LIKE" | "!=" | "="; value: ValueOrCol<string, TSources, TFields>; }> :
+        Exclude<T, null> extends boolean ? BoolExprCondValue<TSources, TFields> :
+          Exclude<T, null> extends Date ? DateCondValue<TSources, TFields> | NonEmptyArray<ValueOrCol<Date, TSources, TFields>> | NonEmptyArray<{ op: COND_NUMERIC_OP; value: ValueOrCol<Date, TSources, TFields>; }> :
+            never)
+  | (null extends T ? { op: "IS NULL" | "IS NOT NULL"; } : never);
 
-/**
- * Defines all valid SQL condition patterns for string types.
- * Supports equality, IN/NOT IN, LIKE/NOT LIKE pattern matching, and inequality.
- *
- * @template key - The property key for the field being queried
- *
- * @example
- * COND_STRING<"User.email">
- * // Allows: { "User.email": "user@example.com" }
- * // Or: { "User.email": { op: 'LIKE', value: '%@example.com' } }
- * // Or: { "User.email": { op: 'IN', values: ['a@test.com', 'b@test.com'] } }
- */
-type COND_STRING<key extends PropertyKey, TSources extends TArrSources = TArrSources, TFields extends TFieldsType = TFieldsType> =
-    | OptionalRecord<key, ValueOrCol<string, TSources, TFields>>
-    | OptionalRecord<key, NonEmptyArray<ValueOrCol<string, TSources, TFields>>>
-    | OptionalRecord<key, { op: "IN" | "NOT IN"; values: Array<ValueOrCol<string, TSources, TFields>>; }>
-    | OptionalRecord<key, { op: "LIKE" | "NOT LIKE"; value: ValueOrCol<string, TSources, TFields>; }>
-    | OptionalRecord<key, { op: "!="; value: ValueOrCol<string, TSources, TFields>; }>
-    | OptionalRecord<key, NonEmptyArray<{ op: "LIKE" | "NOT LIKE" | "!=" | "="; value: ValueOrCol<string, TSources, TFields>; }>>;
-
-/**
- * Defines all valid SQL condition patterns for DateTime/Date types.
- * Supports equality, IN/NOT IN, BETWEEN for date ranges, and comparison operators.
- *
- * @template key - The property key for the field being queried
- * @template keyType - The Date type
- *
- * @example
- * COND_DATETIME<"Post.createdAt", Date>
- * // Allows: { "Post.createdAt": new Date('2024-01-01') }
- * // Or: { "Post.createdAt": { op: 'BETWEEN', values: [startDate, endDate] } }
- * // Or: { "Post.createdAt": { op: '>=', value: new Date('2024-01-01') } }
- */
-type COND_DATETIME<key extends PropertyKey, keyType, TSources extends TArrSources = TArrSources, TFields extends TFieldsType = TFieldsType> =
-    | OptionalRecord<key, ValueOrCol<keyType, TSources, TFields>>
-    | OptionalRecord<key, NonEmptyArray<ValueOrCol<keyType, TSources, TFields>>>
-    | OptionalRecord<key, { op: "IN" | "NOT IN"; values: Array<ValueOrCol<keyType, TSources, TFields>>; }>
-    | OptionalRecord<key, { op: "BETWEEN"; values: [ValueOrCol<keyType, TSources, TFields>, ValueOrCol<keyType, TSources, TFields>]; }>
-    | OptionalRecord<key, { op: COND_NUMERIC_OP; value: ValueOrCol<keyType, TSources, TFields>; }>
-    | OptionalRecord<key, NonEmptyArray<{ op: COND_NUMERIC_OP; value: ValueOrCol<keyType, TSources, TFields>; }>>;
-
-/**
- * Defines all valid SQL condition patterns for boolean types.
- * Supports only equality and inequality checks (booleans cannot use range operations).
- *
- * @template key - The property key for the field being queried
- * @template keyType - The boolean type
- *
- * @example
- * COND_BOOLEAN<"User.isActive", boolean>
- * // Allows: { "User.isActive": true }
- * // Or: { "User.isActive": { op: '!=', value: false } }
- */
-type COND_BOOLEAN<key extends PropertyKey, keyType, TSources extends TArrSources = TArrSources, TFields extends TFieldsType = TFieldsType> =
-    | OptionalRecord<key, ValueOrCol<keyType, TSources, TFields>>
-    | OptionalRecord<key, { op: "!="; value: ValueOrCol<keyType, TSources, TFields>; }>;
-
-/**
- * Defines SQL NULL checking conditions (IS NULL / IS NOT NULL).
- * Only allows these operators when the field type includes null in its union.
- *
- * @template key - The property key for the field being queried
- * @template keyType - The field type (must include null to use this condition)
- *
- * @example
- * COND_NULL<"User.middleName", string | null>
- * // Allows: { "User.middleName": { op: 'IS NULL' } }
- * // Or: { "User.middleName": { op: 'IS NOT NULL' } }
- *
- * COND_NULL<"User.email", string>
- * // Result: never (cannot use NULL checks on non-nullable fields)
- */
-type COND_NULL<key extends PropertyKey, keyType> = keyType extends null ? OptionalRecord<key, {
-  op: "IS NULL" | "IS NOT NULL";
-}> : never;
-
-/**
- * Maps each field in a record type to its appropriate SQL condition type based on the field's TypeScript type.
- * This is the main conditional type that routes to COND_NUMERIC, COND_STRING, COND_DATETIME, COND_BOOLEAN, or COND_NULL.
- * Used to generate type-safe WHERE clause conditions.
- *
- * @template T - A record type mapping field names to their TypeScript types
- *
- * @example
- * SQLCondition<{ "User.id": number; "User.name": string; "User.email": string | null }>
- * // Allows conditions like:
- * // { "User.id": 1 } | { "User.id": { op: '>', value: 100 } }
- * // { "User.name": "Alice" } | { "User.name": { op: 'LIKE', value: 'A%' } }
- * // { "User.email": { op: 'IS NULL' } }
- */
-type SQLCondition<T, TSources extends TArrSources = TArrSources, TFields extends TFieldsType = TFieldsType> = Prettify<{
-  [K in keyof T]?:
-    (Exclude<T[K], null> extends number ? COND_NUMERIC<K, Exclude<T[K], null>, TSources, TFields> :
-      Exclude<T[K], null> extends bigint ? COND_NUMERIC<K, Exclude<T[K], null>, TSources, TFields> :
-        Exclude<T[K], null> extends string ? COND_STRING<K, TSources, TFields> :
-          Exclude<T[K], null> extends boolean ? COND_BOOLEAN<K, Exclude<T[K], null>, TSources, TFields> :
-            Exclude<T[K], null> extends Date ? COND_DATETIME<K, Exclude<T[K], null>, TSources, TFields> :
-              "Unsupported Data Type") | COND_NULL<K, T[K]>
-}[keyof T]>;
+/** Single mapped type per table — keys are "Table.field", values are CondValueForField. O(N) not O(2^N). */
+type WhereFieldsForTable<Table extends string, Fields extends Record<string, ANY_IS_OK>, TSources extends TArrSources, TFields extends TFieldsType> = {
+  [f in keyof Fields as CombineToString<f, Table>]?: CondValueForField<Fields[f], TSources, TFields>;
+};
 
 type ColRawRefAny = { $colRaw: string; };
 type ColRefAny = { $col: string; };
@@ -1529,28 +1411,15 @@ type BasicOpTypes =
     | OptionalRecord<PropertyKey, { op: COND_NUMERIC_OP; value: SUPPORTED_TYPES | AnyColRef; }>
     | OptionalRecord<PropertyKey, NonEmptyArray<{ op: COND_NUMERIC_OP | "LIKE" | "NOT LIKE"; value: SUPPORTED_TYPES | AnyColRef; }>>;
 
-/**
- * Transforms a table's fields into a record where keys are prefixed with the table name ("Table.field").
- * This creates fully-qualified column references needed for joins and multi-table queries.
- *
- * @template Table - The table name (string)
- * @template Fields - A record mapping field names to their TypeScript types
- *
- * @example
- * TableFieldType<"User", { id: number; email: string }>
- * // Result: { "User.id": number; "User.email": string }
- */
-type TableFieldType<Table extends string, Fields extends Record<string, ANY_IS_OK>> = {
-  [f in keyof Fields as CombineToString<f, Table>]: Fields[f];
-};
-
 type LogicalOperator = "$AND" | "$OR" | "$NOT" | "$NOR";
 
 type WhereCriteriaSingle<TFields extends Record<string, unknown>, TSources extends TArrSources = TArrSources, TAllFields extends TFieldsType = TFieldsType> = WhereCriteria_Fields_Single<TFields, TSources, TAllFields> & {
   [k in LogicalOperator]?: [WhereCriteria_Fields_Single<TFields, TSources, TAllFields>, ...Array<WhereCriteria_Fields_Single<TFields, TSources, TAllFields>>];
 };
 
-type WhereCriteria_Fields_Single<TFields extends Record<string, unknown>, TSources extends TArrSources = TArrSources, TAllFields extends TFieldsType = TFieldsType> = OptionalObject<(TFields)> | OptionalObject< SQLCondition<TFields, TSources, TAllFields>>;
+type WhereCriteria_Fields_Single<TFields extends Record<string, unknown>, TSources extends TArrSources = TArrSources, TAllFields extends TFieldsType = TFieldsType> = {
+  [K in keyof TFields]?: CondValueForField<TFields[K], TSources, TAllFields>;
+};
 
 type WhereCriteriaMulti<T extends TArrSources, TFields extends TFieldsType, F = WhereCriteria_Fields<T, TFields>> = F & {
   [k in LogicalOperator]?: [WhereCriteriaMulti<T, TFields, F>, ...Array<WhereCriteriaMulti<T, TFields, F>>];
@@ -1585,17 +1454,16 @@ type WhereCriteria_Fields<T extends Array<TTableSources>, TFields extends TField
   T extends readonly [infer HEAD, ...infer Rest]
     ? HEAD extends string
       ? Rest extends Array<TTableSources>
-        ? WhereCriteria_Fields<Rest, TFields, OptionalObject<acc & (TableFieldType<HEAD, TFields[HEAD]> | SQLCondition<TableFieldType<HEAD, TFields[HEAD]>, TSources, TFields>)>, TSources>
-        : WhereCriteria_Fields<[], TFields, OptionalObject<acc & (TableFieldType<HEAD, TFields[HEAD]> | SQLCondition<TableFieldType<HEAD, TFields[HEAD]>, TSources, TFields>)>, TSources>
+        ? WhereCriteria_Fields<Rest, TFields, acc & WhereFieldsForTable<HEAD, TFields[HEAD], TSources, TFields>, TSources>
+        : WhereCriteria_Fields<[], TFields, acc & WhereFieldsForTable<HEAD, TFields[HEAD], TSources, TFields>, TSources>
       : HEAD extends readonly ["__cte__", infer CTE_NAME extends string]
-      // CTE source — use CTE_NAME as key into TFields
         ? Rest extends Array<TTableSources>
-          ? WhereCriteria_Fields<Rest, TFields, OptionalObject<acc & (TableFieldType<CTE_NAME, TFields[CTE_NAME]> | SQLCondition<TableFieldType<CTE_NAME, TFields[CTE_NAME]>, TSources, TFields>)>, TSources>
-          : WhereCriteria_Fields<[], TFields, OptionalObject<acc & (TableFieldType<CTE_NAME, TFields[CTE_NAME]> | SQLCondition<TableFieldType<CTE_NAME, TFields[CTE_NAME]>, TSources, TFields>)>, TSources>
+          ? WhereCriteria_Fields<Rest, TFields, acc & WhereFieldsForTable<CTE_NAME, TFields[CTE_NAME], TSources, TFields>, TSources>
+          : WhereCriteria_Fields<[], TFields, acc & WhereFieldsForTable<CTE_NAME, TFields[CTE_NAME], TSources, TFields>, TSources>
         : HEAD extends [infer R_NAME extends string, infer A_NAME extends string]
           ? Rest extends Array<TTableSources>
-            ? WhereCriteria_Fields<Rest, TFields, OptionalObject<acc & (TableFieldType<A_NAME, TFields[R_NAME]> | SQLCondition<TableFieldType<A_NAME, TFields[R_NAME]>, TSources, TFields>)>, TSources>
-            : WhereCriteria_Fields<[], TFields, OptionalObject<acc & (TableFieldType<A_NAME, TFields[R_NAME]> | SQLCondition<TableFieldType<A_NAME, TFields[R_NAME]>, TSources, TFields>)>, TSources>
+            ? WhereCriteria_Fields<Rest, TFields, acc & WhereFieldsForTable<A_NAME, TFields[R_NAME], TSources, TFields>, TSources>
+            : WhereCriteria_Fields<[], TFields, acc & WhereFieldsForTable<A_NAME, TFields[R_NAME], TSources, TFields>, TSources>
           : never
     : acc;
 
