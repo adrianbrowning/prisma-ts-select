@@ -83,6 +83,8 @@
           + [$OR](#or)
           + [$NOT](#not)
           + [$NOR](#nor)
+          + [`$col` — Type-safe Column References](#col--type-safe-column-references)
+          + [`$colRaw` — Column References](#colraw--column-references)
       - [`.whereNotNull`](#wherenotnull)
         * [Example](#example-4)
         * [SQL](#sql-10)
@@ -1050,6 +1052,8 @@ type WhereClause = {
 | $NOR         | Will wrap statement in a `NOT (/*...*/)` and join any items with a `OR`  | <pre>.where({ <br /> $NOR:[<br />  {"User.age": 20 },<br />  {<br />    "User.age": {op: "!=", value:60},<br />    "User.name": "Bob",<br />   },<br />]})</pre> | `(NOT (User.age = 20 OR (User.age != 60 AND User.name = "Bob")))` |
 | `Array (scalar)` | Non-empty array of values → SQL `IN` | `.where({ "User.name": ["Alice", "Bob"] })` | `User.name IN ('Alice', 'Bob')` |
 | `Array (op-objects)` | Non-empty array of op-objects → `OR` chain | `.where({ "User.name": [{ op: "LIKE", value: "A%" }, { op: "LIKE", value: "B%" }] })` | `(User.name LIKE 'A%' OR User.name LIKE 'B%')` |
+| `$col` | Type-safe column reference (enforces type match) | `.where({ "User.id": { $col: "Post.authorId" } })` | `User.id = Post.authorId` |
+| `$colRaw` | Column reference without type matching | `.where({ "User.id": { $colRaw: "Post.authorId" } })` | `User.id = Post.authorId` |
 
 
 ###### Columns
@@ -1135,6 +1139,170 @@ prisma.$from("User")
           { op: "LIKE", value: "B%" },
         ],
       });
+```
+
+###### `$col` — Type-safe Column References
+
+Use `{ $col: "Table.column" }` to compare against another column instead of a literal value. Unlike `$colRaw`, `$col` enforces that the referenced column has a compatible type — comparing a `number` field only allows referencing other `number` columns.
+
+**Equality:**
+```typescript file=../usage-sqlite-v7/tests/readme/where.ts region=col-equality
+prisma.$from("User")
+      .join("Post", "authorId", "User.id")
+      .where({ "User.id": { $col: "Post.authorId" } })
+      .select("User.id")
+```
+
+```sql file=../usage-sqlite-v7/tests/readme/where.ts region=col-equality-sql
+SELECT User.id AS `User.id` 
+FROM User 
+JOIN Post ON Post.authorId = User.id 
+WHERE User.id = Post.authorId;
+```
+
+**With operator:**
+```typescript file=../usage-sqlite-v7/tests/readme/where.ts region=col-op
+prisma.$from("User")
+      .join("Post", "authorId", "User.id")
+      .where({ "User.id": { op: ">", value: { $col: "Post.authorId" } } })
+      .select("User.id")
+```
+
+```sql file=../usage-sqlite-v7/tests/readme/where.ts region=col-op-sql
+SELECT User.id AS `User.id` 
+FROM User 
+JOIN Post ON Post.authorId = User.id 
+WHERE User.id > Post.authorId;
+```
+
+**IN with mixed literals and column refs:**
+```typescript file=../usage-sqlite-v7/tests/readme/where.ts region=col-in
+prisma.$from("User")
+      .join("Post", "authorId", "User.id")
+      .where({ "User.id": { op: "IN", values: [1, { $col: "Post.authorId" }, 3] } })
+      .select("User.id")
+```
+
+```sql file=../usage-sqlite-v7/tests/readme/where.ts region=col-in-sql
+SELECT User.id AS `User.id` 
+FROM User 
+JOIN Post ON Post.authorId = User.id 
+WHERE User.id IN (1, Post.authorId, 3);
+```
+
+**In join.where (ON clause):**
+```typescript file=../usage-sqlite-v7/tests/readme/where.ts region=col-join-where
+prisma.$from("User")
+      .join("Post", "authorId", "User.id", { where: { "Post.authorId": { $col: "User.id" } } })
+      .select("User.id")
+```
+
+```sql file=../usage-sqlite-v7/tests/readme/where.ts region=col-join-where-sql
+SELECT User.id AS `User.id` 
+FROM User 
+JOIN Post ON Post.authorId = User.id AND Post.authorId = User.id;
+```
+
+**In having():**
+```typescript file=../usage-sqlite-v7/tests/readme/where.ts region=col-having
+prisma.$from("User")
+      .join("Post", "authorId", "User.id")
+      .groupBy(["User.id"])
+      .having(({ count }) => [[count("Post.id"), { op: ">", value: { $col: "User.id" } }]])
+      .select("User.id")
+```
+
+```sql file=../usage-sqlite-v7/tests/readme/where.ts region=col-having-sql
+SELECT User.id AS `User.id` 
+FROM User 
+JOIN Post ON Post.authorId = User.id 
+GROUP BY User.id HAVING COUNT(Post.id) > User.id;
+```
+
+**Type error example** — referencing a `string` column where `number` is expected:
+```typescript
+// ❌ Compile-time error: "Post.title" is string, but "User.id" is number
+.where({ "User.id": { $col: "Post.title" } })
+```
+
+###### `$colRaw` — Column References
+
+Use `{ $colRaw: "Table.column" }` to compare against another column without type matching. Validates that the column exists in joined tables but does not enforce type compatibility. Use `$col` (above) when type safety is desired.
+
+The value must be in `"Alias.field"` format (must contain a dot). Column names are type-checked against joined tables.
+
+**Equality:**
+```typescript file=../usage-sqlite-v7/tests/readme/where.ts region=colraw-equality
+prisma.$from("User")
+      .join("Post", "authorId", "User.id")
+      .where({ "User.id": { $colRaw: "Post.authorId" } })
+      .select("User.id")
+```
+
+```sql file=../usage-sqlite-v7/tests/readme/where.ts region=colraw-equality-sql
+SELECT User.id AS `User.id` 
+FROM User 
+JOIN Post ON Post.authorId = User.id 
+WHERE User.id = Post.authorId;
+```
+
+**With operator:**
+```typescript file=../usage-sqlite-v7/tests/readme/where.ts region=colraw-op
+prisma.$from("User")
+      .join("Post", "authorId", "User.id")
+      .where({ "User.id": { op: ">", value: { $colRaw: "Post.authorId" } } })
+      .select("User.id")
+```
+
+```sql file=../usage-sqlite-v7/tests/readme/where.ts region=colraw-op-sql
+SELECT User.id AS `User.id` 
+FROM User 
+JOIN Post ON Post.authorId = User.id 
+WHERE User.id > Post.authorId;
+```
+
+**IN with mixed literals and column refs:**
+```typescript file=../usage-sqlite-v7/tests/readme/where.ts region=colraw-in
+prisma.$from("User")
+      .join("Post", "authorId", "User.id")
+      .where({ "User.id": { op: "IN", values: [1, { $colRaw: "Post.authorId" }, 3] } })
+      .select("User.id")
+```
+
+```sql file=../usage-sqlite-v7/tests/readme/where.ts region=colraw-in-sql
+SELECT User.id AS `User.id` 
+FROM User 
+JOIN Post ON Post.authorId = User.id 
+WHERE User.id IN (1, Post.authorId, 3);
+```
+
+**In join.where (ON clause):**
+```typescript file=../usage-sqlite-v7/tests/readme/where.ts region=colraw-join-where
+prisma.$from("User")
+      .join("Post", "authorId", "User.id", { where: { "Post.authorId": { $colRaw: "User.id" } } })
+      .select("User.id")
+```
+
+```sql file=../usage-sqlite-v7/tests/readme/where.ts region=colraw-join-where-sql
+SELECT User.id AS `User.id` 
+FROM User 
+JOIN Post ON Post.authorId = User.id AND Post.authorId = User.id;
+```
+
+**In having():**
+```typescript file=../usage-sqlite-v7/tests/readme/where.ts region=colraw-having
+prisma.$from("User")
+      .join("Post", "authorId", "User.id")
+      .groupBy(["User.id"])
+      .having(({ count }) => [[count("Post.id"), { op: ">", value: { $colRaw: "User.id" } }]])
+      .select("User.id")
+```
+
+```sql file=../usage-sqlite-v7/tests/readme/where.ts region=colraw-having-sql
+SELECT User.id AS `User.id` 
+FROM User 
+JOIN Post ON Post.authorId = User.id 
+GROUP BY User.id HAVING COUNT(Post.id) > User.id;
 ```
 
 #### `.whereNotNull`
