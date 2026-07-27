@@ -1,6 +1,7 @@
 {
   "type": "module",
   "devDependencies": {
+    "@changesets/cli": "^2.31.1",
     "@commitlint/cli": "21.2.1",
     "@commitlint/config-conventional": "21.2.0",
     "@gingacodemonkey/config": "^0.0.38",
@@ -14,6 +15,10 @@
     "typescript": "^6.0.3"
   },
   "scripts": {
+    "changeset": "changeset",
+    "changeset:status": "changeset status --since=origin/main",
+    "version-packages": "changeset version && pnpm install --lockfile-only",
+    "release": "pnpm --filter prisma-ts-select build && pnpm --filter prisma-ts-select test && changeset publish --provenance",
     "run-tests": "node packages/run-tests-tui/src/index.ts",
     "test:v6": "./run-tests-v6.sh",
     "test:v7": "./run-tests-v7.sh",

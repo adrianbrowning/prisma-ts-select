@@ -1,0 +1,40 @@
+name: Changeset Check
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, labeled, unlabeled]
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  changeset:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Require changeset or exemption
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          LABELS: ${{ toJSON(github.event.pull_request.labels.*.name) }}
+        run: |
+          set -euo pipefail
+
+          if [[ "${{ github.head_ref }}" == "changeset-release/main" ]]; then
+            exit 0
+          fi
+
+          if jq -e 'index("no-changeset") != null' <<< "$LABELS" >/dev/null; then
+            exit 0
+          fi
+
+          if git diff --name-only "$BASE_SHA" "$HEAD_SHA" | grep -Eq '^\.changeset/[^/]+\.md$'; then
+            exit 0
+          fi
+
+          echo "::error::Add a changeset with 'pnpm changeset', or apply the no-changeset label."
+          exit 1
