@@ -1710,6 +1710,56 @@ WHERE authorId = 1), User.name) AS `label`
 FROM User;
 ```
 
+#### Example - Correlated Subquery via `from()`
+
+Use `from()` inside a `.select()` callback to build a correlated subquery that references columns from the outer query via `$col`:
+
+```typescript file=../usage-sqlite-v7/tests/readme/select-scalar-subquery.ts region=correlated-subquery-from
+prisma.$from("User")
+      .select("name")
+      .select(({ from }) =>
+        from("Post")
+          .where({ "Post.authorId": { $col: "User.id" } })
+          .select(({ countAll }) => countAll(), "cnt"),
+        "postCount"
+      )
+```
+
+##### SQL
+
+```sql file=../usage-sqlite-v7/tests/readme/select-scalar-subquery.ts region=correlated-subquery-from-sql
+SELECT name, (
+SELECT COUNT(*) AS `cnt` 
+FROM Post 
+WHERE Post.authorId = User.id) AS `postCount` 
+FROM User;
+```
+
+#### Example - Correlated Subquery with Table Alias
+
+`from()` accepts an inline alias (e.g. `"Post p"`) just like `$from()`:
+
+```typescript file=../usage-sqlite-v7/tests/readme/select-scalar-subquery.ts region=correlated-subquery-alias
+prisma.$from("User")
+      .select("name")
+      .select(({ from }) =>
+        from("Post p")
+          .where({ "p.authorId": { $col: "User.id" } })
+          .select("title"),
+        "latestTitle"
+      )
+```
+
+##### SQL
+
+```sql file=../usage-sqlite-v7/tests/readme/select-scalar-subquery.ts region=correlated-subquery-alias-sql
+SELECT name, (
+SELECT title 
+FROM Post AS `p` 
+WHERE p.authorId = User.id) AS `latestTitle` 
+FROM User;
+```
+
 ### Having
 
 `.having` accepts two overloads — a criteria object (same syntax as [`.where`](#where)) or a fn callback for SQL expressions and aggregate functions.
