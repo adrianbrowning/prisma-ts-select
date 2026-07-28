@@ -600,3 +600,30 @@ describe("join nullability types", () => {
         typeCheck({} as Expect<Equal<TitleType, string>>);
     });
 });
+
+// Issue #125: compound ON conditions via $col in join where
+describe("compound ON conditions via $col in join where (#125)", () => {
+
+    test("leftJoin with $col cross-table reference in where", () => {
+        const sql = prisma.$from("User")
+            .innerJoin("Post", "authorId", "User.id")
+            .leftJoin("PostsImages", "postId", "Post.id", { where: { "PostsImages.id": { $col: "User.id" } } })
+            .getSQL();
+        expectSQL(sql, `FROM ${dialect.quote("User")} INNER JOIN ${dialect.quote("Post")} ON ${dialect.quoteQualifiedColumn("Post.authorId")} = ${dialect.quoteQualifiedColumn("User.id")} LEFT JOIN ${dialect.quote("PostsImages")} ON ${dialect.quoteQualifiedColumn("PostsImages.postId")} = ${dialect.quoteQualifiedColumn("Post.id")} AND ${dialect.quoteQualifiedColumn("PostsImages.id")} = ${dialect.quoteQualifiedColumn("User.id")};`);
+    });
+
+    test("leftJoin with alias + $col cross-table reference", () => {
+        const sql = prisma.$from("User")
+            .innerJoin("Post", "authorId", "User.id")
+            .leftJoinUnsafeTypeEnforced("PostsImages pi", "postId", "Post.id", { where: { "pi.id": { $col: "User.id" } } })
+            .getSQL();
+        expectSQL(sql, `FROM ${dialect.quote("User")} INNER JOIN ${dialect.quote("Post")} ON ${dialect.quoteQualifiedColumn("Post.authorId")} = ${dialect.quoteQualifiedColumn("User.id")} LEFT JOIN ${dialect.quote("PostsImages")} AS ${dialect.quote("pi", true)} ON ${dialect.quoteQualifiedColumn("pi.postId")} = ${dialect.quoteQualifiedColumn("Post.id")} AND ${dialect.quoteQualifiedColumn("pi.id")} = ${dialect.quoteQualifiedColumn("User.id")};`);
+    });
+
+    test("type check - $col accepts in-scope table columns", () => {
+        // Should compile: User.id is in scope
+        prisma.$from("User")
+            .innerJoin("Post", "authorId", "User.id")
+            .leftJoin("PostsImages", "postId", "Post.id", { where: { "PostsImages.id": { $col: "User.id" } } });
+    });
+});

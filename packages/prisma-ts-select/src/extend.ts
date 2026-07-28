@@ -1031,6 +1031,8 @@ type GetOtherColumns<Tables extends TArrSources> =
     | GetJoinCols<Tables[number]>;
 
 class _fSelect<TSources extends TArrSources, TFields extends TFieldsType, TSelectRT extends {} = BLANK_OBJECT> extends _fOrderBy<TSources, TFields, TSelectRT> {
+  // Fn overload returning builder (correlated subquery via from()) — with alias (single-select only)
+  select<TSubRT extends {}, A extends string>(fn: (ctx: SelectFnContext<TSources, TFields>) => IsUnionKey<keyof TSubRT> extends true ? never : _fRun<ANY_IS_OK, ANY_IS_OK, TSubRT>, alias: A): _fSelect<TSources, TFields, Prettify<TSelectRT & Record<A, ScalarExprType<TSubRT>>>>;
   // Fn overload — no alias → key is widened to `string`
   select<T>(fn: (ctx: SelectFnContext<TSources, TFields>) => SQLExpr<T>): _fSelect<TSources, TFields, Prettify<TSelectRT & Record<string, T>>>;
   // Fn overload — with alias → key is the literal alias
@@ -1060,7 +1062,7 @@ class _fSelect<TSources extends TArrSources, TFields extends TFieldsType, TSelec
 
     // Function overload: first arg is a callback
     if (typeof select === "function") {
-      const ctx = buildContext<TSources, TFields>(dialect);
+      const ctx = buildContext<TSources, TFields>(dialect, this.db);
       const expr = (select as (ctx: SelectFnContext<TSources, TFields>) => SQLExpr<ANY_IS_OK>)(ctx);
       const aliasArg = alias;
       const sqlStr = aliasArg !== undefined
@@ -1277,7 +1279,7 @@ class _fHaving<TSources extends TArrSources, TFields extends TFieldsType> extend
   ): _fHaving<TSources, TFields> {
     const existing = this.values.having ?? [];
     if (typeof criteriaOrFn === "function") {
-      const ctx = buildContext<TSources, TFields>(dialect);
+      const ctx = buildContext<TSources, TFields>(dialect, this.db);
       const sql = processExprPairs(criteriaOrFn(ctx));
       return new _fHaving<TSources, TFields>(this.db, { ...this.values, having: [ ...existing, sql ] });
     }
@@ -1304,7 +1306,7 @@ class _fGroupBy<TSources extends TArrSources, TFields extends TFieldsType> exten
   ): _fSelectDistinct<TSources, TFields> {
     const existing = this.values.having ?? [];
     if (typeof criteriaOrFn === "function") {
-      const ctx = buildContext<TSources, TFields>(dialect);
+      const ctx = buildContext<TSources, TFields>(dialect, this.db);
       const sql = processExprPairs(criteriaOrFn(ctx));
       return new _fSelectDistinct<TSources, TFields>(this.db, { ...this.values, having: [ ...existing, sql ] });
     }
@@ -1435,7 +1437,7 @@ type WhereCriteria<T extends TArrSources, TFields extends TFieldsType> = T["leng
 type JoinWhereCriteria<Table extends string, TAlias extends string | never, TAllSources extends TArrSources = TArrSources> =
   [TAlias] extends [never]
     ? WhereCriteriaMulti<[Table], Record<Table, GetFieldsFromTable<Table>>, WhereCriteria_Fields<[Table], Record<Table, GetFieldsFromTable<Table>>, BLANK_OBJECT, TAllSources>>
-    : WhereCriteriaMulti<[[Table, TAlias]], Record<Table, GetFieldsFromTable<Table>>, WhereCriteria_Fields<[[Table, TAlias]], Record<Table, GetFieldsFromTable<Table>>, BLANK_OBJECT, TAllSources>>;
+    : WhereCriteriaMulti<[[Table, TAlias]], Record<TAlias, GetFieldsFromTable<Table>>, WhereCriteria_Fields<[[Table, TAlias]], Record<TAlias, GetFieldsFromTable<Table>>, BLANK_OBJECT, TAllSources>>;
 
 /**
  * Recursively builds the field condition types for all tables in the query.
@@ -1460,10 +1462,10 @@ type WhereCriteria_Fields<T extends Array<TTableSources>, TFields extends TField
         ? Rest extends Array<TTableSources>
           ? WhereCriteria_Fields<Rest, TFields, acc & WhereFieldsForTable<CTE_NAME, TFields[CTE_NAME], TSources, TFields>, TSources>
           : WhereCriteria_Fields<[], TFields, acc & WhereFieldsForTable<CTE_NAME, TFields[CTE_NAME], TSources, TFields>, TSources>
-        : HEAD extends [infer R_NAME extends string, infer A_NAME extends string]
+        : HEAD extends [infer _R_NAME extends string, infer A_NAME extends string]
           ? Rest extends Array<TTableSources>
-            ? WhereCriteria_Fields<Rest, TFields, acc & WhereFieldsForTable<A_NAME, TFields[R_NAME], TSources, TFields>, TSources>
-            : WhereCriteria_Fields<[], TFields, acc & WhereFieldsForTable<A_NAME, TFields[R_NAME], TSources, TFields>, TSources>
+            ? WhereCriteria_Fields<Rest, TFields, acc & WhereFieldsForTable<A_NAME, TFields[A_NAME], TSources, TFields>, TSources>
+            : WhereCriteria_Fields<[], TFields, acc & WhereFieldsForTable<A_NAME, TFields[A_NAME], TSources, TFields>, TSources>
           : never
     : acc;
 
@@ -1568,7 +1570,7 @@ class _fWhere<TSources extends TArrSources, TFields extends TFieldsType> extends
     criteriaOrFn: WhereCriteria<TSources, TFields> | ((ctx: SelectFnContext<TSources, TFields>) => Array<ExprCondPair<TSources, TFields>>)
   ): _fGroupBy<TSources, TFields> {
     if (typeof criteriaOrFn === "function") {
-      const ctx = buildContext<TSources, TFields>(dialect);
+      const ctx = buildContext<TSources, TFields>(dialect, this.db);
       const sql = processExprPairs(criteriaOrFn(ctx));
       return new _fGroupBy<TSources, TFields>(this.db, {
         ...this.values,
@@ -2285,6 +2287,16 @@ type BaseSelectFnContext<_TSources extends TArrSources, _TFields extends TFields
   trim: (col: GetColumnsOfType<_TSources, _TFields, string> | SQLExpr<string>) => SQLExpr<string>;
   ltrim: (col: GetColumnsOfType<_TSources, _TFields, string> | SQLExpr<string>) => SQLExpr<string>;
   rtrim: (col: GetColumnsOfType<_TSources, _TFields, string> | SQLExpr<string>) => SQLExpr<string>;
+  // ── Correlated subquery ──────────────────────────────────────────────────
+  from: <const T extends TTables | `${TTables} ${string}`,
+    TDBBase extends TTables = ExtractTableName<T>,
+    TAlias extends string | never = ExtractAlias<T>,
+    TNewSource extends TArrSources[number] = [TAlias] extends [never] ? TDBBase : [TDBBase, TAlias]
+  >(table: T) => _fJoinReturn<
+    [TNewSource, ..._TSources],
+    Record<GetAliasTableNames<TNewSource>, GetFieldsFromTable<TDBBase>> & _TFields,
+    {}
+  >;
   // ── Control flow ─────────────────────────────────────────────────────────
   cond: (criteria: WhereCriteria<_TSources, _TFields>) => SQLExpr<boolean>;
   coalesce: <T>(...args: [GetColumnsOfType<_TSources, _TFields, T> | SQLExpr<T>, ...Array<GetColumnsOfType<_TSources, _TFields, T> | SQLExpr<T>>]) => SQLExpr<NonNullable<T>>;
@@ -2300,11 +2312,16 @@ export type SelectFnContext<_TSources extends TArrSources, _TFields extends TFie
   BaseSelectFnContext<_TSources, _TFields>;
 
 function buildContext<TSources extends TArrSources, TFields extends TFieldsType>(
-  d: Dialect
+  d: Dialect,
+  db: PrismaClient
 ): SelectFnContext<TSources, TFields> {
   const quoteFn = (col: string) => d.quoteQualifiedColumn(col);
 
   return {
+    from: (table: string) => {
+      const parts = table.split(" ");
+      return new _fJoin(db, { tables: [{ table: parts[0]!, alias: parts[1]?.trim() || undefined }], selects: [] }) as ANY_IS_OK;
+    },
     lit: _lit,
     min:           col => sqlExpr(`MIN(${resolveArg(col, quoteFn)})`),
     max:           col => sqlExpr(`MAX(${resolveArg(col, quoteFn)})`),
