@@ -3,6 +3,7 @@ packages:
   - 'packages/**'
   # exclude packages that are inside test directories
   - '!**/test/**'
+  - '!**/generated/**'
 
 # Allow build scripts for these packages (pnpm 10+ security feature)
 onlyBuiltDependencies:
