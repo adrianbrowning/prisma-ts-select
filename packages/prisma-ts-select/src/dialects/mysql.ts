@@ -95,6 +95,7 @@ export const mysqlContextFns = <TColEntries extends [string, unknown] = never, T
     return sqlExpr(`LEAST(${args.map(a => resolveArg(a, quoteFn)).join(", ")})`);
   },
   // DateTime fns (MySQL-only)
+  date:    (col: FilterCols<TColEntries, Date> | SQLExpr<Date | null>): SQLExpr<Date> => sqlExpr(`DATE(${resolveArg(col, quoteFn)})`),
   dateAdd: (col: FilterCols<TColEntries, Date> | SQLExpr<Date>, n: number, unit: IntervalUnit): SQLExpr<Date> => {
     if (!Number.isFinite(n)) throw new Error(`dateAdd: n must be a finite number, got ${n}`);
     return sqlExpr(`DATE_ADD(${resolveArg(col, quoteFn)}, INTERVAL ${n} ${unit})`);
