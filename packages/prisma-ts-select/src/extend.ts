@@ -2870,12 +2870,17 @@ class _fJoin<
     return this._joinImpl("FULL", tableOrOptions, field, reference, opts);
   }
 
+  // crossJoin: CTE overload
+  crossJoin<const TName extends keyof TCTEs & string>(
+    cteName: TName
+  ): _fJoinReturn<[...TSources, readonly ["__cte__", TName]], Prettify<TFields & Record<TName, TCTEs[TName]>>, TCTEs>;
   // crossJoin: no ON clause — table only (with optional inline alias)
   crossJoin<const TableInput extends `${AvailableJoins<TSources>}` | `${AvailableJoins<TSources>} ${string}`,
     Table extends AvailableJoins<TSources> = ExtractTableName<TableInput> & AvailableJoins<TSources>,
     TAlias extends string | never = ExtractAlias<TableInput>
   >(table: TableInput):
-  _fJoinReturn<[...TSources, [TAlias] extends [never] ? Table : [Table, TAlias]], Prettify<TFields & Record<[TAlias] extends [never] ? Table : TAlias, GetFieldsFromTable<Table>>>, TCTEs> {
+  _fJoinReturn<[...TSources, [TAlias] extends [never] ? Table : [Table, TAlias]], Prettify<TFields & Record<[TAlias] extends [never] ? Table : TAlias, GetFieldsFromTable<Table>>>, TCTEs>;
+  crossJoin(table: string): ANY_IS_OK {
     return this._joinImpl("CROSS", table) as ANY_IS_OK;
   }
 
@@ -3069,21 +3074,31 @@ class _fJoin<
     return this._joinImpl("FULL", tableOrOptions, field, reference, opts) as ANY_IS_OK;
   }
 
+  // crossJoinUnsafeTypeEnforced: CTE overload
+  crossJoinUnsafeTypeEnforced<const TName extends keyof TCTEs & string>(
+    cteName: TName
+  ): _fJoinReturn<[...TSources, readonly ["__cte__", TName]], Prettify<TFields & Record<TName, TCTEs[TName]>>, TCTEs>;
   // crossJoinUnsafeTypeEnforced — CROSS semantics, type-enforced columns
   crossJoinUnsafeTypeEnforced<const TableInput extends TTables | `${TTables} ${string}`,
     Table extends TTables = ExtractTableName<TableInput>,
     TAlias extends string | never = ExtractAlias<TableInput>
   >(table: TableInput):
-  _fJoinReturn<[...TSources, [TAlias] extends [never] ? Table : [Table, TAlias]], Prettify<TFields & Record<[TAlias] extends [never] ? Table : TAlias, GetFieldsFromTable<Table>>>, TCTEs> {
+  _fJoinReturn<[...TSources, [TAlias] extends [never] ? Table : [Table, TAlias]], Prettify<TFields & Record<[TAlias] extends [never] ? Table : TAlias, GetFieldsFromTable<Table>>>, TCTEs>;
+  crossJoinUnsafeTypeEnforced(table: string): ANY_IS_OK {
     return this._joinImpl("CROSS", table) as ANY_IS_OK;
   }
 
+  // crossJoinUnsafeIgnoreType: CTE overload
+  crossJoinUnsafeIgnoreType<const TName extends keyof TCTEs & string>(
+    cteName: TName
+  ): _fJoinReturn<[...TSources, readonly ["__cte__", TName]], Prettify<TFields & Record<TName, TCTEs[TName]>>, TCTEs>;
   // crossJoinUnsafeIgnoreType — CROSS semantics, any columns
   crossJoinUnsafeIgnoreType<const TableInput extends TTables | `${TTables} ${string}`,
     Table extends TTables = ExtractTableName<TableInput>,
     TAlias extends string | never = ExtractAlias<TableInput>
   >(table: TableInput):
-  _fJoinReturn<[...TSources, [TAlias] extends [never] ? Table : [Table, TAlias]], Prettify<TFields & Record<[TAlias] extends [never] ? Table : TAlias, GetFieldsFromTable<Table>>>, TCTEs> {
+  _fJoinReturn<[...TSources, [TAlias] extends [never] ? Table : [Table, TAlias]], Prettify<TFields & Record<[TAlias] extends [never] ? Table : TAlias, GetFieldsFromTable<Table>>>, TCTEs>;
+  crossJoinUnsafeIgnoreType(table: string): ANY_IS_OK {
     return this._joinImpl("CROSS", table) as ANY_IS_OK;
   }
 }
