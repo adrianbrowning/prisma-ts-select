@@ -1265,25 +1265,40 @@ LIMIT - the returned data is limited to row count.
 OFFSET -
 */
 
-class _fHaving<TSources extends TArrSources, TFields extends TFieldsType> extends _fSelect<TSources, TFields> {
+type ColName<T extends string> = T extends `${string}.${infer C}` ? C : T;
+
+type IsHavingKey<K extends string, TGroupBy extends string> =
+  TGroupBy extends TGroupBy
+    ? K extends TGroupBy ? true
+      : K extends ColName<TGroupBy> ? true
+        : ColName<K> extends TGroupBy ? true
+          : never
+    : never;
+
+type HavingCriteria<TSources extends TArrSources, TFields extends TFieldsType, TGroupBy extends string, WC = WhereCriteria<TSources, TFields>> = {
+  [K in keyof WC & string as true extends IsHavingKey<K, TGroupBy> ? K : never]?: WC[K];
+} & {
+  [k in LogicalOperator]?: [HavingCriteria<TSources, TFields, TGroupBy, WC>, ...Array<HavingCriteria<TSources, TFields, TGroupBy, WC>>];
+};
+
+class _fHaving<TSources extends TArrSources, TFields extends TFieldsType, TGroupBy extends string = string> extends _fSelect<TSources, TFields> {
   // Keep selectDistinct() available after groupBy(), but not selectAll()
   selectDistinct() {
     return new _fSelect<TSources, TFields>(this.db, { ...this.values, selectDistinct: true });
   }
 
-  // See #107: restrict to groupBy columns only
-  having<const TCriteria extends WhereCriteria<TSources, TFields>>(criteria: TCriteria): _fHaving<TSources, TFields>;
-  having(fn: (ctx: SelectFnContext<TSources, TFields>) => Array<ExprCondPair<TSources, TFields>>): _fHaving<TSources, TFields>;
+  having<const TCriteria extends HavingCriteria<TSources, TFields, TGroupBy>>(criteria: TCriteria): _fHaving<TSources, TFields, TGroupBy>;
+  having(fn: (ctx: SelectFnContext<TSources, TFields>) => Array<ExprCondPair<TSources, TFields>>): _fHaving<TSources, TFields, TGroupBy>;
   having(
-    criteriaOrFn: WhereCriteria<TSources, TFields> | ((ctx: SelectFnContext<TSources, TFields>) => Array<ExprCondPair<TSources, TFields>>)
-  ): _fHaving<TSources, TFields> {
+    criteriaOrFn: HavingCriteria<TSources, TFields, TGroupBy> | ((ctx: SelectFnContext<TSources, TFields>) => Array<ExprCondPair<TSources, TFields>>)
+  ): _fHaving<TSources, TFields, TGroupBy> {
     const existing = this.values.having ?? [];
     if (typeof criteriaOrFn === "function") {
       const ctx = buildContext<TSources, TFields>(dialect, this.db);
       const sql = processExprPairs(criteriaOrFn(ctx));
-      return new _fHaving<TSources, TFields>(this.db, { ...this.values, having: [ ...existing, sql ] });
+      return new _fHaving<TSources, TFields, TGroupBy>(this.db, { ...this.values, having: [ ...existing, sql ] });
     }
-    return new _fHaving<TSources, TFields>(this.db, { ...this.values, having: [ ...existing, criteriaOrFn ] });
+    return new _fHaving<TSources, TFields, TGroupBy>(this.db, { ...this.values, having: [ ...existing, criteriaOrFn ] });
   }
 }
 
@@ -1315,7 +1330,7 @@ class _fGroupBy<TSources extends TArrSources, TFields extends TFieldsType> exten
 
   // See #108: restrict to columns from joined tables only
   groupBy<TSelect extends GetOtherColumns<TSources> | GetCTEColumns<TSources, TFields>>(groupBy: Array<TSelect>) {
-    return new _fHaving<TSources, TFields>(this.db, { ...this.values, groupBy: groupBy });
+    return new _fHaving<TSources, TFields, TSelect>(this.db, { ...this.values, groupBy: groupBy });
   }
 }
 
