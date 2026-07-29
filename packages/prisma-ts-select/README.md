@@ -2132,6 +2132,7 @@ GROUP BY User.name;
 | `ifNull(col, fallback)` | `IFNULL(col, fallback)` | `NonNullable<T>` |
 | `greatest(...args)` | `GREATEST(a, b, ...)` | `T \| null` |
 | `least(...args)` | `LEAST(a, b, ...)` | `T \| null` |
+| `date(col)` | `DATE(col)` | `Date` |
 | `dateAdd(col, n, unit)` | `DATE_ADD(col, INTERVAL n unit)` | `Date` |
 | `dateSub(col, n, unit)` | `DATE_SUB(col, INTERVAL n unit)` | `Date` |
 | `dateFormat(col, fmt)` | `DATE_FORMAT(col, 'fmt')` | `string` |

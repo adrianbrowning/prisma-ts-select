@@ -306,6 +306,50 @@ describe("MySQL datetime dialect fns", () => {
         });
     });
 
+    describe("date(col)", () => {
+        function createQuery() {
+            return prisma.$from("Post").select(({ date }) => date("Post.createdAt"), "d");
+        }
+
+        it("should match SQL with column ref", () => {
+            expectSQL(createQuery().getSQL(),
+                `SELECT DATE(${dialect.quoteQualifiedColumn("Post.createdAt")}) AS ${dialect.quote("d", true)} FROM ${dialect.quote("Post")};`);
+        });
+
+        it("should match SQL with chained expression", () => {
+            const sql = prisma.$from("Post")
+                .select(({ date, dateSub, now }) => date(dateSub(now(), 1, "DAY")), "d")
+                .getSQL();
+            expectSQL(sql,
+                `SELECT DATE(DATE_SUB(NOW(), INTERVAL 1 DAY)) AS ${dialect.quote("d", true)} FROM ${dialect.quote("Post")};`);
+        });
+
+        it("type: Date", async () => {
+            const result = await createQuery().run();
+            typeCheck({} as Expect<Equal<typeof result, Array<{ d: Date }>>>);
+        });
+
+        it("should return valid dates", async () => {
+            const result = await createQuery().run();
+            assert.ok(result.length > 0);
+            for (const row of result) {
+                assert.ok(row.d instanceof Date);
+            }
+        });
+    });
+
+    describe("date() type safety", () => {
+        it("rejects string col", () => {
+            // @ts-expect-error title is string, not DateTime
+            prisma.$from("Post").select(({ date }) => date("Post.title"), "d");
+        });
+
+        it("rejects number SQLExpr", () => {
+            // @ts-expect-error lit(42) is SQLExpr<number>, not SQLExpr<Date>
+            prisma.$from("Post").select(({ date, lit }) => date(lit(42)), "d");
+        });
+    });
+
     describe("dateAdd/dateSub NaN/Infinity guards", () => {
         it("dateAdd throws on NaN", () => {
             assert.throws(
