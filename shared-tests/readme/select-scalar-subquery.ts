@@ -70,4 +70,48 @@ prisma.$from("User")
     expectSQL(sql, expectedSQL);
   });
 
+  test("correlated subquery via from() in select callback", () => {
+    const sql =
+// #region correlated-subquery-from
+prisma.$from("User")
+      .select("name")
+      .select(({ from }) =>
+        from("Post")
+          .where({ "Post.authorId": { $col: "User.id" } })
+          .select(({ countAll }) => countAll(), "cnt"),
+        "postCount"
+      )
+      // #endregion correlated-subquery-from
+.getSQL();
+
+    const expectedSQL =
+      // #region correlated-subquery-from-sql
+      "SELECT name, (SELECT COUNT(*) AS `cnt` FROM Post WHERE Post.authorId = User.id) AS `postCount` FROM User;";
+      // #endregion correlated-subquery-from-sql
+
+    expectSQL(sql, expectedSQL);
+  });
+
+  test("correlated subquery with alias", () => {
+    const sql =
+// #region correlated-subquery-alias
+prisma.$from("User")
+      .select("name")
+      .select(({ from }) =>
+        from("Post p")
+          .where({ "p.authorId": { $col: "User.id" } })
+          .select("title"),
+        "latestTitle"
+      )
+      // #endregion correlated-subquery-alias
+.getSQL();
+
+    const expectedSQL =
+      // #region correlated-subquery-alias-sql
+      "SELECT name, (SELECT title FROM Post AS `p` WHERE p.authorId = User.id) AS `latestTitle` FROM User;";
+      // #endregion correlated-subquery-alias-sql
+
+    expectSQL(sql, expectedSQL);
+  });
+
 });

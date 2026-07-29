@@ -82,4 +82,54 @@ describe("scalar subquery — builder as SQLExpr", () => {
             prisma.$from("User").select(sub, "x");
         });
     });
+
+    describe("correlated subquery via from() in select callback", () => {
+        function createQuery() {
+            return prisma.$from("User")
+                .select("name")
+                .select(({ from }) =>
+                    from("Post")
+                        .where({ "Post.authorId": { $col: "User.id" } })
+                        .select(({ countAll }) => countAll(), "cnt"),
+                    "postCount"
+                );
+        }
+
+        it("should emit correlated subquery referencing parent table", () => {
+            const q = dialect.quote;
+            const qc = dialect.quoteQualifiedColumn;
+            expectSQL(createQuery().getSQL(),
+                `SELECT ${q("name", false)}, (SELECT COUNT(*) AS ${q("cnt", true)} FROM ${q("Post")} WHERE ${qc("Post.authorId")} = ${qc("User.id")}) AS ${q("postCount", true)} FROM ${q("User")};`);
+        });
+
+        it("type: correct", () => {
+            const result = createQuery();
+            typeCheck({} as Expect<Equal<Awaited<ReturnType<typeof result.run>>, Array<{ name: string | null; postCount: bigint }>>>);
+        });
+
+        it("from() with alias", () => {
+            const result = prisma.$from("User")
+                .select(({ from }) =>
+                    from("Post p")
+                        .where({ "p.authorId": { $col: "User.id" } })
+                        .select("title"),
+                    "firstPost"
+                );
+            const q = dialect.quote;
+            const qc = dialect.quoteQualifiedColumn;
+            expectSQL(result.getSQL(),
+                `SELECT (SELECT ${q("title", false)} FROM ${q("Post")} AS ${q("p", true)} WHERE ${qc("p.authorId")} = ${qc("User.id")}) AS ${q("firstPost", true)} FROM ${q("User")};`);
+        });
+
+        it("type error: $col referencing non-existent table", () => {
+            prisma.$from("User")
+                .select(({ from }) =>
+                    from("Post")
+                        // @ts-expect-error NonExistent is not a valid table
+                        .where({ "Post.authorId": { $col: "NonExistent.id" } })
+                        .select("title"),
+                    "x"
+                );
+        });
+    });
 });
