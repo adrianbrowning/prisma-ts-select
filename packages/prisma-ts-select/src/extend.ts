@@ -240,6 +240,25 @@ type ValidSelect<Tables extends TArrSources, TFields extends TFieldsType = BLANK
     | GetTableStar<Tables>
     | GetCTEColumns<Tables, TFields>;
 
+// ponytail: progressive autocomplete — narrows suggestions as user types "Table." in IDE
+type FieldsOfSource<Tables extends TArrSources, TFields extends TFieldsType, T extends string> =
+  [Extract<Tables[number], readonly ["__cte__", T]>] extends [never]
+    ? [Extract<Tables[number], T>] extends [never]
+      ? [Extract<Tables[number], [string, T]>] extends [never]
+        ? never
+        : GetColsBaseTable<Extract<Tables[number], [string, T]>>
+      : GetColsBaseTable<Extract<Tables[number], T>>
+    : T extends keyof TFields ? string & keyof TFields[T] : never;
+
+type ValidateSelect<Tables extends TArrSources, TFields extends TFieldsType, Path extends string> =
+  Path extends ValidSelect<Tables, TFields>
+    ? Path
+    : Path extends `${infer Table}.${string}`
+      ? [FieldsOfSource<Tables, TFields, Table>] extends [never]
+        ? ValidSelect<Tables, TFields>
+        : `${Table}.${"*" | FieldsOfSource<Tables, TFields, Table>}`
+      : ValidSelect<Tables, TFields>;
+
 /**
  * Generates "Table.*" patterns for all tables in the query.
  * Handles both simple table names and table aliases.
@@ -1040,13 +1059,13 @@ class _fSelect<TSources extends TArrSources, TFields extends TFieldsType, TSelec
   // Builder-as-scalar-subquery overload — with alias (single-select only)
   select<TSubRT extends {}, A extends string>(subquery: IsUnionKey<keyof TSubRT> extends true ? never : _fRun<ANY_IS_OK, ANY_IS_OK, TSubRT>, alias: A): _fSelect<TSources, TFields, Prettify<TSelectRT & Record<A, ScalarExprType<TSubRT>>>>;
   // String column — no alias
-  select<const TSelect extends ValidSelect<TSources, TFields>>(select: TSelect): _fSelect<TSources, TFields, Prettify<TSelectRT & MergeItems<TSelect, TSources, TFields, CountKeys<TSources> extends 1 ? false : true>>>;
+  select<const TSelect extends string>(select: TSelect extends ValidateSelect<TSources, TFields, TSelect> ? TSelect : ValidateSelect<TSources, TFields, TSelect>): _fSelect<TSources, TFields, Prettify<TSelectRT & MergeItems<TSelect & string, TSources, TFields, CountKeys<TSources> extends 1 ? false : true>>>;
   // String column — with alias
-  select<const TSelect extends ValidSelect<TSources, TFields>, TAlias extends string>(select: TSelect, alias: TAlias): _fSelect<TSources, TFields, Prettify<TSelectRT & Record<TAlias, ExtractColumnType<TSelect, TSources, TFields>>>>;
+  select<const TSelect extends string, TAlias extends string>(select: TSelect extends ValidateSelect<TSources, TFields, TSelect> ? TSelect : ValidateSelect<TSources, TFields, TSelect>, alias: TAlias): _fSelect<TSources, TFields, Prettify<TSelectRT & Record<TAlias, ExtractColumnType<TSelect & string, TSources, TFields>>>>;
   // Implementation (not visible to callers)
   // eslint-disable-next-line sonarjs/cognitive-complexity
   select(
-    select: ((ctx: SelectFnContext<TSources, TFields>) => SQLExpr<ANY_IS_OK>) | ValidSelect<TSources, TFields> | _fRun<ANY_IS_OK, ANY_IS_OK, ANY_IS_OK>,
+    select: ((ctx: SelectFnContext<TSources, TFields>) => SQLExpr<ANY_IS_OK>) | string | _fRun<ANY_IS_OK, ANY_IS_OK, ANY_IS_OK>,
     alias?: string
   ): _fSelect<TSources, TFields, ANY_IS_OK> {
     // Builder-as-scalar-subquery: detect _fRun instance
