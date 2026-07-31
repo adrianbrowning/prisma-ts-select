@@ -56,8 +56,9 @@ void describe("Generator package.json output", () => {
 
   void test("exports shape", () => {
     const { exports } = readPkgJson("usage-sqlite-v7");
-     
-    for (const entry of Object.values(exports)) {
+
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion
+    for (const entry of Object.values(exports) as Array<Record<string, string>>) {
       assert.strictEqual(typeof entry.types, "string");
       assert.strictEqual(typeof entry.import, "string");
     }
