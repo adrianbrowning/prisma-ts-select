@@ -1,18 +1,18 @@
-import { describe, test } from "node:test";
 import assert from "node:assert/strict";
+import { describe, test } from "node:test";
 
-import { prisma } from '#client';
+import { prisma } from "#client";
 
 describe("README Example: where clauses", () => {
   test("where columns - should be chainable", () => {
     const query =
-// #region columns
-prisma.$from("User")
-      .joinUnsafeIgnoreType("Post", "id", "User.name")
-      .where({
-        "User.age": 20,
-        "User.name": {op: "LIKE", value: "Stuart%"},
-      });
+    // #region columns
+      prisma.$from("User")
+        .joinUnsafeIgnoreType("Post", "id", "User.name")
+        .where({
+          "User.age": 20,
+          "User.name": { op: "LIKE", value: "Stuart%" },
+        });
     // #endregion columns
 
     const expectedSQL =
@@ -25,15 +25,15 @@ prisma.$from("User")
 
   test("where $AND - should be chainable", () => {
     const query =
-// #region and
-prisma.$from("User")
-      .joinUnsafeIgnoreType("Post", "id", "User.name")
-      .where({
-        $AND: [
-          {"User.age": {op: ">", value: 20}},
-          {"User.age": {op: "<", value: 60}},
-        ]
-      });
+    // #region and
+      prisma.$from("User")
+        .joinUnsafeIgnoreType("Post", "id", "User.name")
+        .where({
+          $AND: [
+            { "User.age": { op: ">", value: 20 } },
+            { "User.age": { op: "<", value: 60 } },
+          ],
+        });
     // #endregion and
 
     const expectedSQL =
@@ -46,15 +46,15 @@ prisma.$from("User")
 
   test("where $OR - should be chainable", () => {
     const query =
-// #region or
-prisma.$from("User")
-      .joinUnsafeIgnoreType("Post", "id", "User.name")
-      .where({
-        $OR: [
-          {"User.name": {op: "LIKE", value: "a%"}},
-          {"User.name": {op: "LIKE", value: "d%"}},
-        ]
-      });
+    // #region or
+      prisma.$from("User")
+        .joinUnsafeIgnoreType("Post", "id", "User.name")
+        .where({
+          $OR: [
+            { "User.name": { op: "LIKE", value: "a%" } },
+            { "User.name": { op: "LIKE", value: "d%" } },
+          ],
+        });
     // #endregion or
 
     const expectedSQL =
@@ -67,18 +67,18 @@ prisma.$from("User")
 
   test("where $NOT - should be chainable", () => {
     const query =
-// #region not
-prisma.$from("User")
-      .joinUnsafeIgnoreType("Post", "id", "User.name")
-      .where({
-        $NOT: [
-          {"User.age": 20},
-          {
-            "User.age": {op: "=", value: 60},
-            "User.name": "Bob",
-          },
-        ]
-      });
+    // #region not
+      prisma.$from("User")
+        .joinUnsafeIgnoreType("Post", "id", "User.name")
+        .where({
+          $NOT: [
+            { "User.age": 20 },
+            {
+              "User.age": { op: "=", value: 60 },
+              "User.name": "Bob",
+            },
+          ],
+        });
     // #endregion not
 
     const expectedSQL =
@@ -91,18 +91,18 @@ prisma.$from("User")
 
   test("where $NOR - should be chainable", () => {
     const query =
-// #region nor
-prisma.$from("User")
-      .joinUnsafeIgnoreType("Post", "id", "User.name")
-      .where({
-        $NOR: [
-          {"User.age": 20},
-          {
-            "User.age": {op: "!=", value: 60},
-            "User.name": "Bob",
-          },
-        ]
-      });
+    // #region nor
+      prisma.$from("User")
+        .joinUnsafeIgnoreType("Post", "id", "User.name")
+        .where({
+          $NOR: [
+            { "User.age": 20 },
+            {
+              "User.age": { op: "!=", value: 60 },
+              "User.name": "Bob",
+            },
+          ],
+        });
     // #endregion nor
 
     const expectedSQL =
@@ -115,12 +115,12 @@ prisma.$from("User")
 
   test("where array (scalar → IN)", () => {
     const query =
-// #region array-scalar
-prisma.$from("User")
-      .joinUnsafeIgnoreType("Post", "id", "User.name")
-      .where({
-        "User.name": ["Alice", "Bob"],
-      });
+    // #region array-scalar
+      prisma.$from("User")
+        .joinUnsafeIgnoreType("Post", "id", "User.name")
+        .where({
+          "User.name": [ "Alice", "Bob" ],
+        });
     // #endregion array-scalar
 
     const expectedSQL =
@@ -133,15 +133,15 @@ prisma.$from("User")
 
   test("where array (op-objects → OR)", () => {
     const query =
-// #region array-op
-prisma.$from("User")
-      .joinUnsafeIgnoreType("Post", "id", "User.name")
-      .where({
-        "User.name": [
-          { op: "LIKE", value: "A%" },
-          { op: "LIKE", value: "B%" },
-        ],
-      });
+    // #region array-op
+      prisma.$from("User")
+        .joinUnsafeIgnoreType("Post", "id", "User.name")
+        .where({
+          "User.name": [
+            { op: "LIKE", value: "A%" },
+            { op: "LIKE", value: "B%" },
+          ],
+        });
     // #endregion array-op
 
     const expectedSQL =
@@ -154,12 +154,12 @@ prisma.$from("User")
 
   test("whereNotNull - should generate correct SQL", () => {
     const sql =
-// #region not-null
-prisma.$from("User")
-      .join("Post", "authorId", "User.id")
-      .whereNotNull("User.name")
+    // #region not-null
+      prisma.$from("User")
+        .join("Post", "authorId", "User.id")
+        .whereNotNull("User.name")
       // #endregion not-null
-.getSQL();
+        .getSQL();
 
     const expectedSQL =
       // #region not-null-sql
@@ -171,10 +171,10 @@ prisma.$from("User")
 
   test("whereNotNull - should be chainable", () => {
     const query =
-// #region not-null
-prisma.$from("User")
-      .join("Post", "authorId", "User.id")
-      .whereNotNull("User.name");
+    // #region not-null
+      prisma.$from("User")
+        .join("Post", "authorId", "User.id")
+        .whereNotNull("User.name");
     // #endregion not-null
 
     const expectedSQL =
@@ -187,12 +187,12 @@ prisma.$from("User")
 
   test("whereIsNull - should generate correct SQL", () => {
     const sql =
-// #region is-null
-prisma.$from("User")
-      .join("Post", "authorId", "User.id")
-      .whereIsNull("Post.content")
+    // #region is-null
+      prisma.$from("User")
+        .join("Post", "authorId", "User.id")
+        .whereIsNull("Post.content")
       // #endregion is-null
-.getSQL();
+        .getSQL();
 
     const expectedSQL =
       // #region is-null-sql
@@ -204,10 +204,10 @@ prisma.$from("User")
 
   test("whereIsNull - should be chainable", () => {
     const query =
-// #region is-null
-prisma.$from("User")
-      .join("Post", "authorId", "User.id")
-      .whereIsNull("Post.content");
+    // #region is-null
+      prisma.$from("User")
+        .join("Post", "authorId", "User.id")
+        .whereIsNull("Post.content");
     // #endregion is-null
 
     const expectedSQL =
@@ -220,12 +220,12 @@ prisma.$from("User")
 
   test("whereRaw - should generate correct SQL", () => {
     const sql =
-// #region raw-1
-prisma.$from("User")
-      .join("Post", "authorId", "User.id")
-      .whereRaw("this is a raw where statement")
+    // #region raw-1
+      prisma.$from("User")
+        .join("Post", "authorId", "User.id")
+        .whereRaw("this is a raw where statement")
       // #endregion raw
-.getSQL();
+        .getSQL();
 
     const expectedSQL =
       // #region raw-sql
@@ -237,10 +237,10 @@ prisma.$from("User")
 
   test("whereRaw - should be chainable", () => {
     const query =
-// #region raw
-prisma.$from("User")
-      .join("Post", "authorId", "User.id")
-      .whereRaw("this is a raw where statement");
+    // #region raw
+      prisma.$from("User")
+        .join("Post", "authorId", "User.id")
+        .whereRaw("this is a raw where statement");
     // #endregion raw
 
     const expectedSQL =
@@ -253,12 +253,12 @@ prisma.$from("User")
 
   test("where with fn expr (upper LIKE)", () => {
     const sql =
-// #region fn-upper-like
-prisma.$from("User")
-      .where(({ upper }) => [[upper('name'), { op: 'LIKE', value: 'John%' }]])
-      .select("name")
+    // #region fn-upper-like
+      prisma.$from("User")
+        .where(({ upper }) => [[ upper("name"), { op: "LIKE", value: "John%" }]])
+        .select("name")
       // #endregion fn-upper-like
-.getSQL();
+        .getSQL();
 
     const expectedSQL =
       // #region fn-upper-like-sql
@@ -270,13 +270,13 @@ prisma.$from("User")
 
   test("$col - type-safe column reference equality", () => {
     const sql =
-// #region col-equality
-prisma.$from("User")
-      .join("Post", "authorId", "User.id")
-      .where({ "User.id": { $col: "Post.authorId" } })
-      .select("User.id")
+    // #region col-equality
+      prisma.$from("User")
+        .join("Post", "authorId", "User.id")
+        .where({ "User.id": { $col: "Post.authorId" } })
+        .select("User.id")
       // #endregion col-equality
-.getSQL();
+        .getSQL();
 
     const expectedSQL =
       // #region col-equality-sql
@@ -288,13 +288,13 @@ prisma.$from("User")
 
   test("$col - with comparison operator", () => {
     const sql =
-// #region col-op
-prisma.$from("User")
-      .join("Post", "authorId", "User.id")
-      .where({ "User.id": { op: ">", value: { $col: "Post.authorId" } } })
-      .select("User.id")
+    // #region col-op
+      prisma.$from("User")
+        .join("Post", "authorId", "User.id")
+        .where({ "User.id": { op: ">", value: { $col: "Post.authorId" } } })
+        .select("User.id")
       // #endregion col-op
-.getSQL();
+        .getSQL();
 
     const expectedSQL =
       // #region col-op-sql
@@ -306,13 +306,13 @@ prisma.$from("User")
 
   test("$col - IN with mixed values", () => {
     const sql =
-// #region col-in
-prisma.$from("User")
-      .join("Post", "authorId", "User.id")
-      .where({ "User.id": { op: "IN", values: [1, { $col: "Post.authorId" }, 3] } })
-      .select("User.id")
+    // #region col-in
+      prisma.$from("User")
+        .join("Post", "authorId", "User.id")
+        .where({ "User.id": { op: "IN", values: [ 1, { $col: "Post.authorId" }, 3 ] } })
+        .select("User.id")
       // #endregion col-in
-.getSQL();
+        .getSQL();
 
     const expectedSQL =
       // #region col-in-sql
@@ -324,13 +324,13 @@ prisma.$from("User")
 
   test("$colRaw - column reference equality", () => {
     const sql =
-// #region colraw-equality
-prisma.$from("User")
-      .join("Post", "authorId", "User.id")
-      .where({ "User.id": { $colRaw: "Post.authorId" } })
-      .select("User.id")
+    // #region colraw-equality
+      prisma.$from("User")
+        .join("Post", "authorId", "User.id")
+        .where({ "User.id": { $colRaw: "Post.authorId" } })
+        .select("User.id")
       // #endregion colraw-equality
-.getSQL();
+        .getSQL();
 
     const expectedSQL =
       // #region colraw-equality-sql
@@ -342,13 +342,13 @@ prisma.$from("User")
 
   test("$colRaw - with comparison operator", () => {
     const sql =
-// #region colraw-op
-prisma.$from("User")
-      .join("Post", "authorId", "User.id")
-      .where({ "User.id": { op: ">", value: { $colRaw: "Post.authorId" } } })
-      .select("User.id")
+    // #region colraw-op
+      prisma.$from("User")
+        .join("Post", "authorId", "User.id")
+        .where({ "User.id": { op: ">", value: { $colRaw: "Post.authorId" } } })
+        .select("User.id")
       // #endregion colraw-op
-.getSQL();
+        .getSQL();
 
     const expectedSQL =
       // #region colraw-op-sql
@@ -360,13 +360,13 @@ prisma.$from("User")
 
   test("$colRaw - IN with mixed values", () => {
     const sql =
-// #region colraw-in
-prisma.$from("User")
-      .join("Post", "authorId", "User.id")
-      .where({ "User.id": { op: "IN", values: [1, { $colRaw: "Post.authorId" }, 3] } })
-      .select("User.id")
+    // #region colraw-in
+      prisma.$from("User")
+        .join("Post", "authorId", "User.id")
+        .where({ "User.id": { op: "IN", values: [ 1, { $colRaw: "Post.authorId" }, 3 ] } })
+        .select("User.id")
       // #endregion colraw-in
-.getSQL();
+        .getSQL();
 
     const expectedSQL =
       // #region colraw-in-sql
@@ -378,12 +378,12 @@ prisma.$from("User")
 
   test("$col - in join.where", () => {
     const sql =
-// #region col-join-where
-prisma.$from("User")
-      .join("Post", "authorId", "User.id", { where: { "Post.authorId": { $col: "User.id" } } })
-      .select("User.id")
+    // #region col-join-where
+      prisma.$from("User")
+        .join("Post", "authorId", "User.id", { where: { "Post.authorId": { $col: "User.id" } } })
+        .select("User.id")
       // #endregion col-join-where
-.getSQL();
+        .getSQL();
 
     const expectedSQL =
       // #region col-join-where-sql
@@ -395,14 +395,14 @@ prisma.$from("User")
 
   test("$col - in having()", () => {
     const sql =
-// #region col-having
-prisma.$from("User")
-      .join("Post", "authorId", "User.id")
-      .groupBy(["User.id"])
-      .having(({ count }) => [[count("Post.id"), { op: ">", value: { $col: "User.id" } }]])
-      .select("User.id")
+    // #region col-having
+      prisma.$from("User")
+        .join("Post", "authorId", "User.id")
+        .groupBy([ "User.id" ])
+        .having(({ count }) => [[ count("Post.id"), { op: ">", value: { $col: "User.id" } }]])
+        .select("User.id")
       // #endregion col-having
-.getSQL();
+        .getSQL();
 
     const expectedSQL =
       // #region col-having-sql
@@ -414,12 +414,12 @@ prisma.$from("User")
 
   test("$colRaw - in join.where", () => {
     const sql =
-// #region colraw-join-where
-prisma.$from("User")
-      .join("Post", "authorId", "User.id", { where: { "Post.authorId": { $colRaw: "User.id" } } })
-      .select("User.id")
+    // #region colraw-join-where
+      prisma.$from("User")
+        .join("Post", "authorId", "User.id", { where: { "Post.authorId": { $colRaw: "User.id" } } })
+        .select("User.id")
       // #endregion colraw-join-where
-.getSQL();
+        .getSQL();
 
     const expectedSQL =
       // #region colraw-join-where-sql
@@ -431,14 +431,14 @@ prisma.$from("User")
 
   test("$colRaw - in having()", () => {
     const sql =
-// #region colraw-having
-prisma.$from("User")
-      .join("Post", "authorId", "User.id")
-      .groupBy(["User.id"])
-      .having(({ count }) => [[count("Post.id"), { op: ">", value: { $colRaw: "User.id" } }]])
-      .select("User.id")
+    // #region colraw-having
+      prisma.$from("User")
+        .join("Post", "authorId", "User.id")
+        .groupBy([ "User.id" ])
+        .having(({ count }) => [[ count("Post.id"), { op: ">", value: { $colRaw: "User.id" } }]])
+        .select("User.id")
       // #endregion colraw-having
-.getSQL();
+        .getSQL();
 
     const expectedSQL =
       // #region colraw-having-sql

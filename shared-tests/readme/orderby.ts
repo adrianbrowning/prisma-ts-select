@@ -1,17 +1,15 @@
-import { describe, test } from "node:test";
 import assert from "node:assert/strict";
+import { describe, test } from "node:test";
 
-
-
-import { prisma } from '#client';
+import { prisma } from "#client";
 
 describe("README Example: orderBy", () => {
   test("orderBy - should generate correct SQL", () => {
     const $sql =
-// #region basic
-prisma.$from("User")
-      .join("Post", "authorId", "User.id")
-      .orderBy(["name", "Post.content DESC"]);
+    // #region basic
+      prisma.$from("User")
+        .join("Post", "authorId", "User.id")
+        .orderBy([ "name", "Post.content DESC" ]);
       // #endregion basic
     const sql = $sql.getSQL();
 
@@ -25,10 +23,10 @@ prisma.$from("User")
 
   test("orderBy - should be chainable", () => {
     const query =
-// #region basic-chain
-prisma.$from("User")
-      .join("Post", "authorId", "User.id")
-      .orderBy(["name", "Post.content DESC"]);
+    // #region basic-chain
+      prisma.$from("User")
+        .join("Post", "authorId", "User.id")
+        .orderBy([ "name", "Post.content DESC" ]);
     // #endregion basic
 
     const expectedSQL =

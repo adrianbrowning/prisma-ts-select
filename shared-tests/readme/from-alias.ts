@@ -1,10 +1,8 @@
-import { describe, test } from "node:test";
 import assert from "node:assert/strict";
+import { describe, test } from "node:test";
 
+import { prisma } from "#client";
 import { expectSQL } from "../test-utils.ts";
-
-
-import { prisma } from '#client';
 
 describe("README Example: .$from with table alias", () => {
   // Note: This example in README uses non-existent syntax

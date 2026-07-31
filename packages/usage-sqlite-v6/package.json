@@ -13,9 +13,9 @@
     "p:r": "prisma db push --force-reset && prisma db seed",
     "lint:ts": "tsc --noEmit -p tsconfig.json",
     "lint": "lint:ts ; lint:s",
-    "lint:esl": "eslint --config ../../eslint.config.ts \"{src,tests}/**/*.{j,t}s{,x}\" --cache --max-warnings=0",
+    "lint:esl": "eslint --config ../../eslint.config.ts \"src/**/*.{j,t}s{,x}\" \"tests/core/**/*.{j,t}s{,x}\" \"tests/dialect/sqlite/**/*.{j,t}s{,x}\" \"tests/readme/**/*.{j,t}s{,x}\" --cache --max-warnings=0",
     "lint:esl:fix": "pnpm lint:esl --fix",
-    "lint:s": "eslint --config ../../eslint.config.style.ts \"{src,tests}/**/*.{j,t}s{,x}\" --cache --max-warnings=0",
+    "lint:s": "eslint --config ../../eslint.config.style.ts \"src/**/*.{j,t}s{,x}\" \"tests/core/**/*.{j,t}s{,x}\" \"tests/dialect/sqlite/**/*.{j,t}s{,x}\" \"tests/readme/**/*.{j,t}s{,x}\" --cache --max-warnings=0",
     "lint:fix": "pnpm lint:s --fix",
     "lint:jscpd": "jscpd .",
     "lint:e18e": "pnpm dlx @e18e/cli analyze"

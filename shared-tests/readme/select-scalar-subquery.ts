@@ -1,23 +1,23 @@
 import { describe, test } from "node:test";
 
+import { prisma } from "#client";
 import { expectSQL } from "../test-utils.ts";
-import { prisma } from '#client';
 
 describe("README Example: scalar subquery in select", () => {
 
   test("builder as scalar subquery", () => {
     const sql =
-// #region scalar-subquery
-prisma.$from("User")
-      .select("name")
-      .select(
-        prisma.$from("Post")
-              .where({ authorId: 1 })
-              .select(({ countAll }) => countAll(), "cnt"),
-        "postCount"
-      )
+    // #region scalar-subquery
+      prisma.$from("User")
+        .select("name")
+        .select(
+          prisma.$from("Post")
+            .where({ authorId: 1 })
+            .select(({ countAll }) => countAll(), "cnt"),
+          "postCount"
+        )
       // #endregion scalar-subquery
-.getSQL();
+        .getSQL();
 
     const expectedSQL =
       // #region scalar-subquery-sql
@@ -29,17 +29,17 @@ prisma.$from("User")
 
   test("scalar subquery with where condition", () => {
     const sql =
-// #region scalar-subquery-where
-prisma.$from("User")
-      .select("name")
-      .select(
-        prisma.$from("Post")
-              .where({ published: true })
-              .select(({ countAll }) => countAll(), "cnt"),
-        "publishedCount"
-      )
+    // #region scalar-subquery-where
+      prisma.$from("User")
+        .select("name")
+        .select(
+          prisma.$from("Post")
+            .where({ published: true })
+            .select(({ countAll }) => countAll(), "cnt"),
+          "publishedCount"
+        )
       // #endregion scalar-subquery-where
-.getSQL();
+        .getSQL();
 
     const expectedSQL =
       // #region scalar-subquery-where-sql
@@ -51,16 +51,16 @@ prisma.$from("User")
 
   test("subquery in coalesce", () => {
     const sql =
-// #region scalar-subquery-coalesce
-prisma.$from("User")
-      .select(({ coalesce }) => coalesce(
-        prisma.$from("Post")
-              .where({ authorId: 1 })
-              .select("title"),
-        "User.name"
-      ), "label")
+    // #region scalar-subquery-coalesce
+      prisma.$from("User")
+        .select(({ coalesce }) => coalesce(
+          prisma.$from("Post")
+            .where({ authorId: 1 })
+            .select("title"),
+          "User.name"
+        ), "label")
       // #endregion scalar-subquery-coalesce
-.getSQL();
+        .getSQL();
 
     const expectedSQL =
       // #region scalar-subquery-coalesce-sql
@@ -72,17 +72,17 @@ prisma.$from("User")
 
   test("correlated subquery via from() in select callback", () => {
     const sql =
-// #region correlated-subquery-from
-prisma.$from("User")
-      .select("name")
-      .select(({ from }) =>
-        from("Post")
-          .where({ "Post.authorId": { $col: "User.id" } })
-          .select(({ countAll }) => countAll(), "cnt"),
+    // #region correlated-subquery-from
+      prisma.$from("User")
+        .select("name")
+        .select(({ from }) =>
+          from("Post")
+            .where({ "Post.authorId": { $col: "User.id" } })
+            .select(({ countAll }) => countAll(), "cnt"),
         "postCount"
-      )
+        )
       // #endregion correlated-subquery-from
-.getSQL();
+        .getSQL();
 
     const expectedSQL =
       // #region correlated-subquery-from-sql
@@ -94,17 +94,17 @@ prisma.$from("User")
 
   test("correlated subquery with alias", () => {
     const sql =
-// #region correlated-subquery-alias
-prisma.$from("User")
-      .select("name")
-      .select(({ from }) =>
-        from("Post p")
-          .where({ "p.authorId": { $col: "User.id" } })
-          .select("title"),
+    // #region correlated-subquery-alias
+      prisma.$from("User")
+        .select("name")
+        .select(({ from }) =>
+          from("Post p")
+            .where({ "p.authorId": { $col: "User.id" } })
+            .select("title"),
         "latestTitle"
-      )
+        )
       // #endregion correlated-subquery-alias
-.getSQL();
+        .getSQL();
 
     const expectedSQL =
       // #region correlated-subquery-alias-sql

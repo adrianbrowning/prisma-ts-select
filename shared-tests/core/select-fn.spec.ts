@@ -1,294 +1,296 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
+import { prisma } from "#client";
+import { dialect } from "#dialect";
+import { expectSQL } from "../test-utils.ts";
 import type { Equal, Expect } from "../utils.ts";
 import { typeCheck } from "../utils.ts";
-import { expectSQL } from "../test-utils.ts";
-import { prisma } from '#client';
-import { dialect } from '#dialect';
 
 describe("select() fn context", () => {
 
-    describe("lit() — string with alias", () => {
-        function createQuery() {
-            return prisma.$from("User").select(({lit}) => lit("hello"), "greeting");
-        }
+  describe("lit() — string with alias", () => {
+    function createQuery() {
+      return prisma.$from("User").select(({ lit }) => lit("hello"), "greeting");
+    }
 
-        it("should match SQL", () => {
-            const sql = createQuery().getSQL();
-            expectSQL(sql, `SELECT 'hello' AS ${dialect.quote("greeting", true)} FROM ${dialect.quote("User")};`);
-        });
-
-        it("type: key is literal alias, value is string", async () => {
-            const result = await prisma.$from("User").select(({lit}) => lit("hello"), "greeting").run();
-            typeCheck({} as Expect<Equal<typeof result, Array<{ greeting: string }>>>);
-        });
+    it("should match SQL", () => {
+      const sql = createQuery().getSQL();
+      expectSQL(sql, `SELECT 'hello' AS ${dialect.quote("greeting", true)} FROM ${dialect.quote("User")};`);
     });
 
-    describe("lit() — number with alias", () => {
-        function createQuery() {
-            return prisma.$from("User").select(({lit}) => lit(42), "answer");
-        }
+    it("type: key is literal alias, value is string", async () => {
+      const _result = await prisma.$from("User").select(({ lit }) => lit("hello"), "greeting")
+        .run();
+      typeCheck({} as Expect<Equal<typeof _result, Array<{ greeting: string; }>>>);
+    });
+  });
 
-        it("should match SQL", () => {
-            const sql = createQuery().getSQL();
-            expectSQL(sql, `SELECT 42 AS ${dialect.quote("answer", true)} FROM ${dialect.quote("User")};`);
-        });
+  describe("lit() — number with alias", () => {
+    function createQuery() {
+      return prisma.$from("User").select(({ lit }) => lit(42), "answer");
+    }
 
-        it("type: key is literal alias, value is number", async () => {
-            const result = await createQuery().run();
-            typeCheck({} as Expect<Equal<typeof result, Array<{ answer: number }>>>);
-        });
+    it("should match SQL", () => {
+      const sql = createQuery().getSQL();
+      expectSQL(sql, `SELECT 42 AS ${dialect.quote("answer", true)} FROM ${dialect.quote("User")};`);
     });
 
-    describe("lit() — null with alias", () => {
-        function createQuery() {
-            return prisma.$from("User").select(({lit}) => lit(null), "empty");
-        }
+    it("type: key is literal alias, value is number", async () => {
+      const _result = await createQuery().run();
+      typeCheck({} as Expect<Equal<typeof _result, Array<{ answer: number; }>>>);
+    });
+  });
 
-        it("should match SQL", () => {
-            const sql = createQuery().getSQL();
-            expectSQL(sql, `SELECT NULL AS ${dialect.quote("empty", true)} FROM ${dialect.quote("User")};`);
-        });
+  describe("lit() — null with alias", () => {
+    function createQuery() {
+      return prisma.$from("User").select(({ lit }) => lit(null), "empty");
+    }
+
+    it("should match SQL", () => {
+      const sql = createQuery().getSQL();
+      expectSQL(sql, `SELECT NULL AS ${dialect.quote("empty", true)} FROM ${dialect.quote("User")};`);
+    });
+  });
+
+  describe("lit() — no alias", () => {
+    function createQuery() {
+      return prisma.$from("User").select(({ lit }) => lit("x"));
+    }
+
+    it("should match SQL", () => {
+      const sql = createQuery().getSQL();
+      expectSQL(sql, `SELECT 'x' FROM ${dialect.quote("User")};`);
     });
 
-    describe("lit() — no alias", () => {
-        function createQuery() {
-            return prisma.$from("User").select(({lit}) => lit("x"));
-        }
+    it("type: key is string (widened)", async () => {
+      const _result = await createQuery().run();
+      typeCheck({} as Expect<Equal<typeof _result, Array<Record<string, string>>>>);
+    });
+  });
 
-        it("should match SQL", () => {
-            const sql = createQuery().getSQL();
-            expectSQL(sql, `SELECT 'x' FROM ${dialect.quote("User")};`);
-        });
+  describe("mixed: regular select + fn select", () => {
+    function createQuery() {
+      return prisma.$from("User").select("name")
+        .select(({ lit }) => lit(1), "n");
+    }
 
-        it("type: key is string (widened)", async () => {
-            const result = await createQuery().run();
-            typeCheck({} as Expect<Equal<typeof result, Array<Record<string, string>>>>);
-        });
+    it("should match SQL", () => {
+      const sql = createQuery().getSQL();
+      expectSQL(sql, `SELECT ${dialect.quote("name")}, 1 AS ${dialect.quote("n", true)} FROM ${dialect.quote("User")};`);
+    });
+  });
+
+  describe("lit() — boolean true (dialect-aware)", () => {
+    function createQuery() {
+      return prisma.$from("User").select(({ lit }) => lit(true), "flag");
+    }
+
+    it("should match SQL with 1", () => {
+      const sql = createQuery().getSQL();
+      expectSQL(sql, `SELECT 1 AS ${dialect.quote("flag", true)} FROM ${dialect.quote("User")};`);
+    });
+  });
+
+  describe("lit() — boolean false (dialect-aware)", () => {
+    function createQuery() {
+      return prisma.$from("User").select(({ lit }) => lit(false), "flag");
+    }
+
+    it("should match SQL with 0", () => {
+      const sql = createQuery().getSQL();
+      expectSQL(sql, `SELECT 0 AS ${dialect.quote("flag", true)} FROM ${dialect.quote("User")};`);
+    });
+  });
+
+  describe("lit() — string escaping", () => {
+    function createQuery() {
+      return prisma.$from("User").select(({ lit }) => lit("it's"), "s");
+    }
+
+    it("should escape single quotes", () => {
+      const sql = createQuery().getSQL();
+      expectSQL(sql, `SELECT 'it''s' AS ${dialect.quote("s", true)} FROM ${dialect.quote("User")};`);
+    });
+  });
+
+  // ── Aggregate functions ──────────────────────────────────────────────
+
+  describe("countAll()", () => {
+    function createQuery() {
+      return prisma.$from("User").select(({ countAll }) => countAll(), "total");
+    }
+
+    it("should match SQL", () => {
+      expectSQL(createQuery().getSQL(),
+        `SELECT COUNT(*) AS ${dialect.quote("total", true)} FROM ${dialect.quote("User")};`);
     });
 
-    describe("mixed: regular select + fn select", () => {
-        function createQuery() {
-            return prisma.$from("User").select("name").select(({lit}) => lit(1), "n");
-        }
+    it("should run and return correct count", async () => {
+      const _result = await createQuery().run();
+      assert.equal(_result[0]!.total, 3n);
+    });
+  });
 
-        it("should match SQL", () => {
-            const sql = createQuery().getSQL();
-            expectSQL(sql, `SELECT ${dialect.quote("name")}, 1 AS ${dialect.quote("n", true)} FROM ${dialect.quote("User")};`);
-        });
+  describe("count(*)", () => {
+    function createQuery() {
+      return prisma.$from("User").select(({ count }) => count("*"), "total");
+    }
+
+    it("should match SQL", () => {
+      expectSQL(createQuery().getSQL(),
+        `SELECT COUNT(*) AS ${dialect.quote("total", true)} FROM ${dialect.quote("User")};`);
     });
 
-    describe("lit() — boolean true (dialect-aware)", () => {
-        function createQuery() {
-            return prisma.$from("User").select(({lit}) => lit(true), "flag");
-        }
+    it("should run and return correct count", async () => {
+      const _result = await createQuery().run();
+      assert.equal(_result[0]!.total, 3n);
+    });
+  });
 
-        it("should match SQL with 1", () => {
-            const sql = createQuery().getSQL();
-            expectSQL(sql, `SELECT 1 AS ${dialect.quote("flag", true)} FROM ${dialect.quote("User")};`);
-        });
+  describe("count(col)", () => {
+    function createQuery() {
+      return prisma.$from("User").select(({ count }) => count("User.id"), "cnt");
+    }
+
+    it("should match SQL", () => {
+      expectSQL(createQuery().getSQL(),
+        `SELECT COUNT(${dialect.quoteQualifiedColumn("User.id")}) AS ${dialect.quote("cnt", true)} FROM ${dialect.quote("User")};`);
     });
 
-    describe("lit() — boolean false (dialect-aware)", () => {
-        function createQuery() {
-            return prisma.$from("User").select(({lit}) => lit(false), "flag");
-        }
+    it("should run and return count", async () => {
+      const _result = await createQuery().run();
+      assert.equal(_result[0]!.cnt, 3n);
+    });
+  });
 
-        it("should match SQL with 0", () => {
-            const sql = createQuery().getSQL();
-            expectSQL(sql, `SELECT 0 AS ${dialect.quote("flag", true)} FROM ${dialect.quote("User")};`);
-        });
+  describe("countDistinct(col)", () => {
+    function createQuery() {
+      return prisma.$from("User").select(({ countDistinct }) => countDistinct("User.id"), "cnt");
+    }
+
+    it("should match SQL", () => {
+      expectSQL(createQuery().getSQL(),
+        `SELECT COUNT(DISTINCT ${dialect.quoteQualifiedColumn("User.id")}) AS ${dialect.quote("cnt", true)} FROM ${dialect.quote("User")};`);
     });
 
-    describe("lit() — string escaping", () => {
-        function createQuery() {
-            return prisma.$from("User").select(({lit}) => lit("it's"), "s");
-        }
+    it("should run and return count", async () => {
+      const _result = await createQuery().run();
+      assert.deepEqual(_result.map(r => ({ cnt: r.cnt })), [{ cnt: 3n }]);
+    });
+  });
 
-        it("should escape single quotes", () => {
-            const sql = createQuery().getSQL();
-            expectSQL(sql, `SELECT 'it''s' AS ${dialect.quote("s", true)} FROM ${dialect.quote("User")};`);
-        });
+  describe("sum(col)", () => {
+    function createQuery() {
+      return prisma.$from("User").select(({ sum }) => sum("User.age"), "total");
+    }
+
+    it("should match SQL", () => {
+      expectSQL(createQuery().getSQL(),
+        `SELECT SUM(${dialect.quoteQualifiedColumn("User.age")}) AS ${dialect.quote("total", true)} FROM ${dialect.quote("User")};`);
     });
 
-    // ── Aggregate functions ──────────────────────────────────────────────
+    it("should run (runtime value tested per-dialect)", async () => {
+      const _result = await createQuery().run();
+      assert.ok(_result.length > 0, "Expected at least one row");
+    });
+  });
 
-    describe("countAll()", () => {
-        function createQuery() {
-            return prisma.$from("User").select(({countAll}) => countAll(), "total");
-        }
+  describe("avg(col)", () => {
+    function createQuery() {
+      return prisma.$from("User").select(({ avg }) => avg("User.age"), "average");
+    }
 
-        it("should match SQL", () => {
-            expectSQL(createQuery().getSQL(),
-                `SELECT COUNT(*) AS ${dialect.quote("total", true)} FROM ${dialect.quote("User")};`);
-        });
-
-        it("should run and return correct count", async () => {
-            const result = await createQuery().run();
-            assert.equal(result[0]!.total, 3n);
-        });
+    it("should match SQL", () => {
+      expectSQL(createQuery().getSQL(),
+        `SELECT AVG(${dialect.quoteQualifiedColumn("User.age")}) AS ${dialect.quote("average", true)} FROM ${dialect.quote("User")};`);
     });
 
-    describe("count(*)", () => {
-        function createQuery() {
-            return prisma.$from("User").select(({count}) => count("*"), "total");
-        }
+    it("should run and return avg", async () => {
+      const _result = await createQuery().run();
+      const row = _result[0];
+      assert.ok(row, "Expected a row");
+      const avg = Number(row.average);
+      assert.ok(avg > 27 && avg < 28, `Expected ~27.5, got ${row.average}, ${row.average.toFixed(2)}`);
+    });
+  });
 
-        it("should match SQL", () => {
-            expectSQL(createQuery().getSQL(),
-                `SELECT COUNT(*) AS ${dialect.quote("total", true)} FROM ${dialect.quote("User")};`);
-        });
+  describe("min(col) — numeric column", () => {
+    function createQuery() {
+      return prisma.$from("User").select(({ min }) => min("User.age"), "youngest");
+    }
 
-        it("should run and return correct count", async () => {
-            const result = await createQuery().run();
-            assert.equal(result[0]!.total, 3n);
-        });
+    it("should match SQL", () => {
+      expectSQL(createQuery().getSQL(),
+        `SELECT MIN(${dialect.quoteQualifiedColumn("User.age")}) AS ${dialect.quote("youngest", true)} FROM ${dialect.quote("User")};`);
+    });
+  });
+
+  describe("min(col) — string column", () => {
+    function createQuery() {
+      return prisma.$from("User").select(({ min }) => min("User.name"), "first_name");
+    }
+
+    it("type: string | null", async () => {
+      const _result = await createQuery().run();
+      typeCheck({} as Expect<Equal<typeof _result, Array<{ first_name: string | null; }>>>);
+    });
+  });
+
+  describe("max(col) — numeric column", () => {
+    function createQuery() {
+      return prisma.$from("User").select(({ max }) => max("User.age"), "oldest");
+    }
+
+    it("should match SQL", () => {
+      expectSQL(createQuery().getSQL(),
+        `SELECT MAX(${dialect.quoteQualifiedColumn("User.age")}) AS ${dialect.quote("oldest", true)} FROM ${dialect.quote("User")};`);
+    });
+  });
+
+  describe("column type safety", () => {
+    it("year() rejects string col", () => {
+      // @ts-expect-error title is string, not DateTime
+      prisma.$from("Post").select(({ year }) => year("title"), "y");
     });
 
-    describe("count(col)", () => {
-        function createQuery() {
-            return prisma.$from("User").select(({count}) => count("User.id"), "cnt");
-        }
-
-        it("should match SQL", () => {
-            expectSQL(createQuery().getSQL(),
-                `SELECT COUNT(${dialect.quoteQualifiedColumn("User.id")}) AS ${dialect.quote("cnt", true)} FROM ${dialect.quote("User")};`);
-        });
-
-        it("should run and return count", async () => {
-            const result = await createQuery().run();
-            assert.equal(result[0]!.cnt, 3n);
-        });
+    it("year() rejects number col", () => {
+      // @ts-expect-error User.age is number, not DateTime
+      prisma.$from("User").select(({ year }) => year("User.age"), "y");
     });
 
-    describe("countDistinct(col)", () => {
-        function createQuery() {
-            return prisma.$from("User").select(({countDistinct}) => countDistinct("User.id"), "cnt");
-        }
-
-        it("should match SQL", () => {
-            expectSQL(createQuery().getSQL(),
-                `SELECT COUNT(DISTINCT ${dialect.quoteQualifiedColumn("User.id")}) AS ${dialect.quote("cnt", true)} FROM ${dialect.quote("User")};`);
-        });
-
-        it("should run and return count", async () => {
-            const result = await createQuery().run();
-            assert.deepEqual(result.map(r => ({ cnt: r.cnt })), [{ cnt: 3n }]);
-        });
+    it("year() rejects SQLExpr<string> from lit", () => {
+      // @ts-expect-error lit("hello") is SQLExpr<string>, not SQLExpr<Date>
+      prisma.$from("Post").select(({ year, lit }) => year(lit("hello")), "y");
     });
 
-    describe("sum(col)", () => {
-        function createQuery() {
-            return prisma.$from("User").select(({sum}) => sum("User.age"), "total");
-        }
-
-        it("should match SQL", () => {
-            expectSQL(createQuery().getSQL(),
-                `SELECT SUM(${dialect.quoteQualifiedColumn("User.age")}) AS ${dialect.quote("total", true)} FROM ${dialect.quote("User")};`);
-        });
-
-        it("should run (runtime value tested per-dialect)", async () => {
-            const result = await createQuery().run();
-            assert.ok(result.length > 0, "Expected at least one row");
-        });
+    it("year() rejects SQLExpr<number> from lit", () => {
+      // @ts-expect-error lit(42) is SQLExpr<number>, not SQLExpr<Date>
+      prisma.$from("Post").select(({ year, lit }) => year(lit(42)), "y");
     });
 
-    describe("avg(col)", () => {
-        function createQuery() {
-            return prisma.$from("User").select(({avg}) => avg("User.age"), "average");
-        }
-
-        it("should match SQL", () => {
-            expectSQL(createQuery().getSQL(),
-                `SELECT AVG(${dialect.quoteQualifiedColumn("User.age")}) AS ${dialect.quote("average", true)} FROM ${dialect.quote("User")};`);
-        });
-
-        it("should run and return avg", async () => {
-            const result = await createQuery().run();
-            const row = result[0];
-            assert.ok(row, "Expected a row");
-            const avg = Number(row.average);
-            assert.ok(avg > 27 && avg < 28, `Expected ~27.5, got ${row.average}, ${row.average.toFixed(2)}`);
-        });
+    it("month() rejects string col", () => {
+      // @ts-expect-error title is string, not DateTime
+      prisma.$from("Post").select(({ month }) => month("title"), "m");
     });
 
-    describe("min(col) — numeric column", () => {
-        function createQuery() {
-            return prisma.$from("User").select(({min}) => min("User.age"), "youngest");
-        }
-
-        it("should match SQL", () => {
-            expectSQL(createQuery().getSQL(),
-                `SELECT MIN(${dialect.quoteQualifiedColumn("User.age")}) AS ${dialect.quote("youngest", true)} FROM ${dialect.quote("User")};`);
-        });
+    it("day() rejects number col", () => {
+      // @ts-expect-error User.age is number, not DateTime
+      prisma.$from("User").select(({ day }) => day("User.age"), "d");
     });
 
-    describe("min(col) — string column", () => {
-        function createQuery() {
-            return prisma.$from("User").select(({min}) => min("User.name"), "first_name");
-        }
-
-        it("type: string | null", async () => {
-            const result = await createQuery().run();
-            typeCheck({} as Expect<Equal<typeof result, Array<{ first_name: string | null }>>>);
-        });
+    it("hour() rejects string lit", () => {
+      // @ts-expect-error lit("x") is SQLExpr<string>, not SQLExpr<Date>
+      prisma.$from("Post").select(({ hour, lit }) => hour(lit("x")), "h");
     });
 
-    describe("max(col) — numeric column", () => {
-        function createQuery() {
-            return prisma.$from("User").select(({max}) => max("User.age"), "oldest");
-        }
-
-        it("should match SQL", () => {
-            expectSQL(createQuery().getSQL(),
-                `SELECT MAX(${dialect.quoteQualifiedColumn("User.age")}) AS ${dialect.quote("oldest", true)} FROM ${dialect.quote("User")};`);
-        });
+    it("accepts DateTime col in year()", () => {
+      prisma.$from("Post").select(({ year }) => year("createdAt"), "y");
+      prisma.$from("Post").select(({ year }) => year("Post.createdAt"), "y");
     });
 
-    describe("column type safety", () => {
-        it("year() rejects string col", () => {
-            // @ts-expect-error title is string, not DateTime
-            prisma.$from("Post").select(({ year }) => year("title"), "y");
-        });
-
-        it("year() rejects number col", () => {
-            // @ts-expect-error User.age is number, not DateTime
-            prisma.$from("User").select(({ year }) => year("User.age"), "y");
-        });
-
-        it("year() rejects SQLExpr<string> from lit", () => {
-            // @ts-expect-error lit("hello") is SQLExpr<string>, not SQLExpr<Date>
-            prisma.$from("Post").select(({ year, lit }) => year(lit("hello")), "y");
-        });
-
-        it("year() rejects SQLExpr<number> from lit", () => {
-            // @ts-expect-error lit(42) is SQLExpr<number>, not SQLExpr<Date>
-            prisma.$from("Post").select(({ year, lit }) => year(lit(42)), "y");
-        });
-
-        it("month() rejects string col", () => {
-            // @ts-expect-error title is string, not DateTime
-            prisma.$from("Post").select(({ month }) => month("title"), "m");
-        });
-
-        it("day() rejects number col", () => {
-            // @ts-expect-error User.age is number, not DateTime
-            prisma.$from("User").select(({ day }) => day("User.age"), "d");
-        });
-
-        it("hour() rejects string lit", () => {
-            // @ts-expect-error lit("x") is SQLExpr<string>, not SQLExpr<Date>
-            prisma.$from("Post").select(({ hour, lit }) => hour(lit("x")), "h");
-        });
-
-        it("accepts DateTime col in year()", () => {
-            prisma.$from("Post").select(({ year }) => year("createdAt"), "y");
-            prisma.$from("Post").select(({ year }) => year("Post.createdAt"), "y");
-        });
-
-        it("accepts now() in year()", () => {
-            prisma.$from("Post").select(({ year, now }) => year(now()), "y");
-        });
+    it("accepts now() in year()", () => {
+      prisma.$from("Post").select(({ year, now }) => year(now()), "y");
     });
+  });
 
 });

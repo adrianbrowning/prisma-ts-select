@@ -1,16 +1,14 @@
-import { describe, test } from "node:test";
 import assert from "node:assert/strict";
+import { describe, test } from "node:test";
 
+import { prisma } from "#client";
 import { expectSQL } from "../test-utils.ts";
-
-
-import { prisma } from '#client';
 
 describe("README Example: .$from inline alias syntax", () => {
   test("should create query with inline alias", () => {
-        const query =
-// #region example-$from
-prisma.$from("User u");
+    const query =
+    // #region example-$from
+      prisma.$from("User u");
     // #endregion
 
     // Verify query can be chained
@@ -23,12 +21,12 @@ prisma.$from("User u");
   });
 
   test("should generate correct SQL with inline alias", () => {
-        const sql =
-// #region example
-prisma.$from("User u")
-      .select("*")
+    const sql =
+    // #region example
+      prisma.$from("User u")
+        .select("*")
       // #endregion
-.getSQL();
+        .getSQL();
 
     const expectedSQL =
       // #region inline-alias-select-sql

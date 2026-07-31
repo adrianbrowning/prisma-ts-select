@@ -1,16 +1,16 @@
-import { describe, test } from "node:test";
 import assert from "node:assert/strict";
+import { describe, test } from "node:test";
 
-import { prisma } from '#client';
+import { prisma } from "#client";
 
 describe("README Example: .crossJoin", () => {
   test("crossJoin - SQL", () => {
     const sql =
-// #region example
-prisma.$from("User")
-      .crossJoin("Post")
+    // #region example
+      prisma.$from("User")
+        .crossJoin("Post")
       // #endregion example
-      .getSQL();
+        .getSQL();
 
     const expectedSQL =
       // #region sql
@@ -22,11 +22,11 @@ prisma.$from("User")
 
   test("crossJoinUnsafeTypeEnforced - SQL", () => {
     const sql =
-// #region type-enforced
-prisma.$from("User")
-      .crossJoinUnsafeTypeEnforced("Post")
+    // #region type-enforced
+      prisma.$from("User")
+        .crossJoinUnsafeTypeEnforced("Post")
       // #endregion type-enforced
-      .getSQL();
+        .getSQL();
 
     const expectedSQL =
       // #region type-enforced-sql
@@ -38,11 +38,11 @@ prisma.$from("User")
 
   test("crossJoinUnsafeIgnoreType - SQL", () => {
     const sql =
-// #region ignore-type
-prisma.$from("User")
-      .crossJoinUnsafeIgnoreType("Post")
+    // #region ignore-type
+      prisma.$from("User")
+        .crossJoinUnsafeIgnoreType("Post")
       // #endregion ignore-type
-      .getSQL();
+        .getSQL();
 
     const expectedSQL =
       // #region ignore-type-sql

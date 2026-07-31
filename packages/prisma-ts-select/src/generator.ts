@@ -265,9 +265,21 @@ export { ${provider}Dialect as dialect, ${provider}Dialect, ${ctxName} as dialec
       ? `type _fJoinReturn<TSources extends TArrSources, TFields extends TFieldsType, TCTEs extends Record<string, Record<string, any>> = {}> = Omit<_fJoin<TSources, TFields, TCTEs>, ${omittedMethods.map(m => `"${m}"`).join(" | ")}>;`
       : `type _fJoinReturn<TSources extends TArrSources, TFields extends TFieldsType, TCTEs extends Record<string, Record<string, any>> = {}> = _fJoin<TSources, TFields, TCTEs>;`;
 
+    // Pre-compute nav objects per table for progressive IDE autocomplete
+    const tableNames = Object.keys(models);
+    const validateSelectMapEntries = tableNames.map(table => {
+      const fields = Object.keys(models[table]!.fields);
+      const leafObj = [ `"*": {}`, ...fields.map(f => `"${f}":{}`),
+        `"${table}": { "*": {}; ${fields.map(f => `"${f}":{}`).join("; ")} }`,
+      ].join("; ");
+      return `  "${table}": { ${leafObj} };`;
+    }).join("\n");
+    const validateSelectMapDecl = `type ValidateSelectMap = {\n${validateSelectMapEntries}\n};`;
+
     const replacedExtendDts = extendDts
       .replace("declare const DB: DBType;", `import type { DB } from './db.js';`)
       .replace("type M2MMap = {};", generateM2MMapDeclaration(m2mMap))
+      .replace("type ValidateSelectMap = {};", validateSelectMapDecl)
       .replace(
         PLACEHOLDER,
         `type SelectFnContext<_TSources extends TArrSources, _TFields extends TFieldsType> = Omit<BaseSelectFnContext<_TSources, _TFields>, keyof DialectFns<ColEntries<_TSources, _TFields>, WhereCriteria<_TSources, _TFields>>> & DialectFns<ColEntries<_TSources, _TFields>, WhereCriteria<_TSources, _TFields>>;`

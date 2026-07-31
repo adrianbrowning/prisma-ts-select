@@ -30,15 +30,16 @@
     "mysql-v7": "pnpm --filter usage-mysql-v7 gen; pnpm --filter usage-mysql-v7 test",
     "pg-v6": "pnpm --filter usage-pg-v6 gen; pnpm --filter usage-pg-v6 test",
     "pg-v7": "pnpm --filter usage-pg-v7 gen; pnpm --filter usage-pg-v7 test",
-    "lint:ts": "pnpm -r lint:ts",
-    "lint:esl": "pnpm -r lint:esl",
-    "lint:esl:fix": "pnpm -r lint:esl:fix",
-    "lint:s": "pnpm -r lint:s",
-    "lint:fix": "pnpm -r lint:fix",
+    "lint:ts": "pnpm -r --no-bail lint:ts",
+    "lint:esl": "pnpm -r --no-bail lint:esl",
+    "lint:esl:fix": "pnpm -r --no-bail lint:esl:fix",
+    "lint:s": "pnpm -r --no-bail lint:s",
+    "lint:fix": "pnpm -r --no-bail lint:fix",
     "lint:knip": "knip",
-    "lint:jscpd": "pnpm -r lint:jscpd",
+    "lint:jscpd": "pnpm -r --no-bail lint:jscpd",
     "lint": "pnpm lint:ts && pnpm lint:s",
-    "lint:e18e": "pnpm dlx @e18e/cli analyze"
+    "lint:e18e": "pnpm dlx @e18e/cli analyze",
+    "test:full" : "pnpm --filter prisma-ts-select test && pnpm run-tests --reset-db"
   },
   "pnpm": {
     "onlyBuiltDependencies": [

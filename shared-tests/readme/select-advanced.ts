@@ -1,20 +1,18 @@
-import { describe, test } from "node:test";
 import assert from "node:assert/strict";
+import { describe, test } from "node:test";
 
+import { prisma } from "#client";
 import { expectSQL } from "../test-utils.ts";
-
-
-import { prisma } from '#client';
 
 describe("README Example: select advanced", () => {
   test("selectDistinct - should generate correct SQL", () => {
     const sql =
-// #region distinct-1
-prisma.$from("User")
-      .selectDistinct()
-      .select("name")
+    // #region distinct-1
+      prisma.$from("User")
+        .selectDistinct()
+        .select("name")
       // #endregion distinct
-.getSQL();
+        .getSQL();
 
     const expectedSQL =
       // #region distinct-sql
@@ -26,10 +24,10 @@ prisma.$from("User")
 
   test("selectDistinct - should be chainable", () => {
     const query =
-// #region distinct
-prisma.$from("User")
-      .selectDistinct()
-      .select("User.name");
+    // #region distinct
+      prisma.$from("User")
+        .selectDistinct()
+        .select("User.name");
     // #endregion distinct
 
     assert.equal(query.getSQL(), "SELECT DISTINCT name FROM User;");
@@ -37,11 +35,11 @@ prisma.$from("User")
 
   test("selectAll single table - should generate correct SQL", () => {
     const $from =
-// #region all-single
-prisma.$from("User")
-      .selectAll();
+    // #region all-single
+      prisma.$from("User")
+        .selectAll();
       // #endregion all-single
-const sql = $from.getSQL();
+    const sql = $from.getSQL();
 
     const expectedSQL =
       // #region all-single-sql
@@ -56,41 +54,39 @@ const sql = $from.getSQL();
     const result = await prisma.$from("User")
       .selectAll()
       // #endregion all-single
-.run();
+      .run();
 
-
-
-      assert.deepEqual(result,  [
-             {
-               email: 'johndoe@example.com',
-               id: 1,
-               name: 'John Doe',
-                 age: 25
-         },
-         {
-           email: 'smith@example.com',
-               id: 2,
-               name: 'John Smith',
-             age: 30
-         },
-         {
-          email: 'alice@example.com',
-               id: 3,
-               name: null,
-             age:null
-         }
-       ]);
+    assert.deepEqual(result, [
+      {
+        email: "johndoe@example.com",
+        id: 1,
+        name: "John Doe",
+        age: 25,
+      },
+      {
+        email: "smith@example.com",
+        id: 2,
+        name: "John Smith",
+        age: 30,
+      },
+      {
+        email: "alice@example.com",
+        id: 3,
+        name: null,
+        age:null,
+      },
+    ]);
 
   });
 
   test("selectAll join table - should generate correct SQL", () => {
     const $sql =
-// #region all-join
-prisma.$from("User")
-      .join("Post", "authorId", "User.id")
-      .selectAll();
+    // #region all-join
+      prisma.$from("User")
+        .join("Post", "authorId", "User.id")
+        .selectAll();
       // #endregion all-join
-const sql = $sql.getSQL();
+    const sql = $sql.getSQL();
 
     const expectedSQL =
       // #region all-join-sql
@@ -106,18 +102,18 @@ const sql = $sql.getSQL();
       .join("Post", "authorId", "User.id")
       .selectAll()
       // #endregion all-join
-.run();
+      .run();
 
     assert.ok(Array.isArray(result));
   });
 
   test("select Table.* single - should generate correct SQL", () => {
     const $sql =
-// #region table-star-single
-prisma.$from("User")
-      .select("User.*");
+    // #region table-star-single
+      prisma.$from("User")
+        .select("User.*");
       // #endregion table-star-single
-      const sql = $sql.getSQL();
+    const sql = $sql.getSQL();
 
     const expectedSQL =
       // #region table-star-single-sql
@@ -132,39 +128,39 @@ prisma.$from("User")
     const result = await prisma.$from("User")
       .select("User.*")
       // #endregion table-star-single
-.run();
+      .run();
 
-    assert.deepEqual(result,  [
-           {
-               age: 25,
-             email: 'johndoe@example.com',
-               id: 1,
-               name: 'John Doe'
-         },
-         {
-             age: 30,
-           email: 'smith@example.com',
-               id: 2,
-               name: 'John Smith'
-         },
-         {
-             age: null,
-           email: 'alice@example.com',
-               id: 3,
-               name: null
-         }
-       ]);
+    assert.deepEqual(result, [
+      {
+        age: 25,
+        email: "johndoe@example.com",
+        id: 1,
+        name: "John Doe",
+      },
+      {
+        age: 30,
+        email: "smith@example.com",
+        id: 2,
+        name: "John Smith",
+      },
+      {
+        age: null,
+        email: "alice@example.com",
+        id: 3,
+        name: null,
+      },
+    ]);
   });
 
   test("select Table.* with join - should generate correct SQL", () => {
     const $sql =
-// #region table-star-join
-prisma.$from("User")
-      .join("Post", "authorId", "User.id")
-      .select("User.*")
-      .select("Post.*");
+    // #region table-star-join
+      prisma.$from("User")
+        .join("Post", "authorId", "User.id")
+        .select("User.*")
+        .select("Post.*");
       // #endregion table-star-join
-      const sql = $sql.getSQL();
+    const sql = $sql.getSQL();
 
     const expectedSQL =
       // #region table-star-join-sql
@@ -181,63 +177,63 @@ prisma.$from("User")
       .select("User.*")
       .select("Post.*")
       // #endregion table-star-join
-.run();
+      .run();
 
     assert.deepEqual(result, [
-        {
-          'Post.authorId': 1,
-            'Post.content': 'Something',
-            'Post.id': 1,
-            'Post.lastModifiedById': 1,
-            'Post.metadata': { name: 'Blog Post 1', tags: ['prisma', 'ts'] },
-            'Post.published': false,
-            'Post.createdAt': new Date("2020-01-15T10:30:00.000Z"),
-            'Post.title': 'Blog 1',
-            'User.email': 'johndoe@example.com',
-            'User.id': 1,
-            'User.name': 'John Doe',
-            "User.age": 25
+      {
+        "Post.authorId": 1,
+        "Post.content": "Something",
+        "Post.id": 1,
+        "Post.lastModifiedById": 1,
+        "Post.metadata": { name: "Blog Post 1", tags: [ "prisma", "ts" ] },
+        "Post.published": false,
+        "Post.createdAt": new Date("2020-01-15T10:30:00.000Z"),
+        "Post.title": "Blog 1",
+        "User.email": "johndoe@example.com",
+        "User.id": 1,
+        "User.name": "John Doe",
+        "User.age": 25,
       },
       {
-        'Post.authorId': 1,
-            'Post.content': 'sql',
-            'Post.id': 2,
-            'Post.lastModifiedById': 1,
-            'Post.metadata': null,
-            'Post.published': false,
-          'Post.createdAt': new Date("2020-06-20T14:45:00.000Z"),
-            'Post.title': 'blog 2',
-            'User.email': 'johndoe@example.com',
-            'User.id': 1,
-            'User.name': 'John Doe',
-          "User.age": 25
+        "Post.authorId": 1,
+        "Post.content": "sql",
+        "Post.id": 2,
+        "Post.lastModifiedById": 1,
+        "Post.metadata": null,
+        "Post.published": false,
+        "Post.createdAt": new Date("2020-06-20T14:45:00.000Z"),
+        "Post.title": "blog 2",
+        "User.email": "johndoe@example.com",
+        "User.id": 1,
+        "User.name": "John Doe",
+        "User.age": 25,
       },
       {
-        'Post.authorId': 2,
-            'Post.content': null,
-            'Post.id': 3,
-            'Post.lastModifiedById': 2,
-            'Post.metadata': null,
-            'Post.published': false,
-           'Post.createdAt': new Date("2021-12-25T08:00:00.000Z"),
-            'Post.title': 'blog 3',
-            'User.email': 'smith@example.com',
-            'User.id': 2,
-            'User.name': 'John Smith',
-          "User.age": 30
-      }
+        "Post.authorId": 2,
+        "Post.content": null,
+        "Post.id": 3,
+        "Post.lastModifiedById": 2,
+        "Post.metadata": null,
+        "Post.published": false,
+        "Post.createdAt": new Date("2021-12-25T08:00:00.000Z"),
+        "Post.title": "blog 3",
+        "User.email": "smith@example.com",
+        "User.id": 2,
+        "User.name": "John Smith",
+        "User.age": 30,
+      },
     ]);
   });
 
   test("select join  chained - should generate correct SQL", () => {
     const $sql =
-// #region join-chained
-prisma.$from("User")
-      .join("Post", "authorId", "User.id")
-      .select("name")
-      .select("Post.title");
+    // #region join-chained
+      prisma.$from("User")
+        .join("Post", "authorId", "User.id")
+        .select("name")
+        .select("Post.title");
       // #endregion join-chained
-      const sql = $sql.getSQL();
+    const sql = $sql.getSQL();
 
     const expectedSQL =
       // #region join-chained-sql
@@ -254,33 +250,33 @@ prisma.$from("User")
       .select("name")
       .select("Post.title")
       // #endregion join-chained
-.run();
+      .run();
 
-    assert.deepEqual(result,    [
-           {
-             name: 'John Doe',
-               title: 'Blog 1'
-         },
-         {
-           name: 'John Doe',
-               title: 'blog 2'
-         },
-         {
-           name: 'John Smith',
-               title: 'blog 3'
-         }
-       ]);
+    assert.deepEqual(result, [
+      {
+        name: "John Doe",
+        title: "Blog 1",
+      },
+      {
+        name: "John Doe",
+        title: "blog 2",
+      },
+      {
+        name: "John Smith",
+        title: "blog 3",
+      },
+    ]);
   });
 
   test("select aliases with joins - should generate correct SQL", () => {
     const $sql =
-// #region aliases-joins
-prisma.$from("User")
-      .join("Post", "authorId", "User.id")
-      .select("User.name", "authorName")
-      .select("Post.title", "postTitle");
+    // #region aliases-joins
+      prisma.$from("User")
+        .join("Post", "authorId", "User.id")
+        .select("User.name", "authorName")
+        .select("Post.title", "postTitle");
       // #endregion aliases-joins
-      const sql = $sql.getSQL();
+    const sql = $sql.getSQL();
 
     const expectedSQL =
       // #region aliases-joins-sql
@@ -297,21 +293,21 @@ prisma.$from("User")
       .select("User.name", "authorName")
       .select("Post.title", "postTitle")
       // #endregion aliases-joins
-.run();
+      .run();
 
     assert.deepEqual(result, [
-          {
-            authorName: 'John Doe',
-            postTitle: 'Blog 1'
+      {
+        authorName: "John Doe",
+        postTitle: "Blog 1",
       },
       {
-        authorName: 'John Doe',
-            postTitle: 'blog 2'
+        authorName: "John Doe",
+        postTitle: "blog 2",
       },
       {
-        authorName: 'John Smith',
-            postTitle: 'blog 3'
-      }
+        authorName: "John Smith",
+        postTitle: "blog 3",
+      },
     ]);
   });
 });
