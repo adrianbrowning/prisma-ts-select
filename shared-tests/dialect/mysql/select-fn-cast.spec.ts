@@ -82,10 +82,10 @@ describe("MySQL cast() fn", () => {
     it("throws on invalid cast type", () => {
       assert.throws(
         () => prisma.$from("Post")
-            .select(({ cast }) => cast("Post.id",
-              //@ts-expect-error testing the as TEXT
-                    "INJECTED;DROP TABLE--" as unknown as "TEXT")
-                , "x"),
+          .select(({ cast }) => cast("Post.id",
+            //@ts-expect-error testing the as TEXT
+            "INJECTED;DROP TABLE--" as unknown as "TEXT")
+          , "x"),
         /invalid cast type/i
       );
     });

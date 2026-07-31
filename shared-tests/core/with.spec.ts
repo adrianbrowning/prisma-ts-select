@@ -533,10 +533,10 @@ describe("$with (CTE)", () => {
     const withCtx = prisma.$with("pp", fakeQuery);
 
     const joined = withCtx.from("User")
-        //@ts-expect-error trying to break
-        .join("pp" as unknown,
-            "id" as unknown,
-            "User.id" as unknown);
+    //@ts-expect-error trying to break
+      .join("pp" as unknown,
+        "id" as unknown,
+        "User.id" as unknown);
     assert.throws(() => joined.select("*"), /Cannot expand \* for CTE "pp"/);
   });
 
