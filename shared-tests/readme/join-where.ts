@@ -1,16 +1,16 @@
-import { describe, test } from "node:test";
 import assert from "node:assert/strict";
+import { describe, test } from "node:test";
 
-import { prisma } from '#client';
+import { prisma } from "#client";
 
 describe("README Example: join with where", () => {
   test("simple condition", () => {
     const sql =
-// #region join-where-example
-prisma.$from("User")
-      .join("Post", "authorId", "User.id", { where: { "Post.published": true } })
-    // #endregion join-where-example
-    .getSQL();
+    // #region join-where-example
+      prisma.$from("User")
+        .join("Post", "authorId", "User.id", { where: { "Post.published": true } })
+      // #endregion join-where-example
+        .getSQL();
 
     assert.equal(sql,
       // #region join-where-sql
@@ -21,18 +21,18 @@ prisma.$from("User")
 
   test("logical ops ($AND)", () => {
     const sql =
-// #region join-where-ops-example
-prisma.$from("User")
-      .join("Post", "authorId", "User.id", {
-        where: {
-          $AND: [
-            { "Post.published": true },
-            { "Post.id": { op: ">", value: 0 } }
-          ]
-        }
-      })
-    // #endregion join-where-ops-example
-    .getSQL();
+    // #region join-where-ops-example
+      prisma.$from("User")
+        .join("Post", "authorId", "User.id", {
+          where: {
+            $AND: [
+              { "Post.published": true },
+              { "Post.id": { op: ">", value: 0 } },
+            ],
+          },
+        })
+      // #endregion join-where-ops-example
+        .getSQL();
 
     assert.equal(sql,
       // #region join-where-ops-sql

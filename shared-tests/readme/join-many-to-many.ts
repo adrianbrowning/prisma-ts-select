@@ -1,16 +1,16 @@
-import { describe, test } from "node:test";
 import assert from "node:assert/strict";
+import { describe, test } from "node:test";
 
-import { prisma } from '#client';
+import { prisma } from "#client";
 
 describe("README Example: .manyToManyJoin", () => {
   test("basic M2M join generates correct SQL", () => {
     const $m2m =
-// #region m2m-basic
-prisma.$from("M2M_Post")
-      .manyToManyJoin("M2M_Post", "M2M_Category");
+    // #region m2m-basic
+      prisma.$from("M2M_Post")
+        .manyToManyJoin("M2M_Post", "M2M_Category");
       // #endregion m2m-basic
-     const sql = $m2m.getSQL();
+    const sql = $m2m.getSQL();
 
     const expectedSQL =
       // #region m2m-basic-sql
@@ -22,11 +22,11 @@ prisma.$from("M2M_Post")
 
   test("M2M join with target alias generates correct SQL", () => {
     const $m2m =
-// #region m2m-alias
-prisma.$from("M2M_Post")
-      .manyToManyJoin("M2M_Post", "M2M_Category mc");
+    // #region m2m-alias
+      prisma.$from("M2M_Post")
+        .manyToManyJoin("M2M_Post", "M2M_Category mc");
       // #endregion m2m-alias
-     const sql = $m2m.getSQL();
+    const sql = $m2m.getSQL();
 
     const expectedSQL =
       // #region m2m-alias-sql
@@ -38,11 +38,11 @@ prisma.$from("M2M_Post")
 
   test("M2M join with refName selects correct junction table", () => {
     const $m2m =
-// #region m2m-refname
-prisma.$from("MMM_Post")
-      .manyToManyJoin("MMM_Post", "MMM_Category", { refName: "M2M_NC_M1" });
+    // #region m2m-refname
+      prisma.$from("MMM_Post")
+        .manyToManyJoin("MMM_Post", "MMM_Category", { refName: "M2M_NC_M1" });
       // #endregion m2m-refname
-     const sql = $m2m .getSQL();
+    const sql = $m2m .getSQL();
 
     const expectedSQL =
       // #region m2m-refname-sql
@@ -54,11 +54,11 @@ prisma.$from("MMM_Post")
 
   test("M2M join with aliased source resolves correct source entry", () => {
     const $m2m =
-// #region m2m-source
-prisma.$from("M2M_Post mp")
-      .manyToManyJoin("mp", "M2M_Category mc");
+    // #region m2m-source
+      prisma.$from("M2M_Post mp")
+        .manyToManyJoin("mp", "M2M_Category mc");
       // #endregion m2m-source
-      const sql = $m2m.getSQL();
+    const sql = $m2m.getSQL();
 
     const expectedSQL =
       // #region m2m-source-sql

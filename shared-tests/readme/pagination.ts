@@ -1,17 +1,15 @@
-import { describe, test } from "node:test";
 import assert from "node:assert/strict";
+import { describe, test } from "node:test";
 
-
-
-import { prisma } from '#client';
+import { prisma } from "#client";
 
 describe("README Example: pagination", () => {
   test("limit - should generate correct SQL", () => {
     const $sql =
-// #region limit
-prisma.$from("User")
-      .join("Post", "authorId", "User.id")
-      .limit(1);
+    // #region limit
+      prisma.$from("User")
+        .join("Post", "authorId", "User.id")
+        .limit(1);
       // #endregion limit
     const sql = $sql.getSQL();
 
@@ -25,10 +23,10 @@ prisma.$from("User")
 
   test("limit - should be chainable", () => {
     const query =
-// #region limit-chain
-prisma.$from("User")
-      .join("Post", "authorId", "User.id")
-      .limit(1);
+    // #region limit-chain
+      prisma.$from("User")
+        .join("Post", "authorId", "User.id")
+        .limit(1);
     // #endregion limit
 
     const expectedSQL =
@@ -41,11 +39,11 @@ prisma.$from("User")
 
   test("offset - should generate correct SQL", () => {
     const $sql =
-// #region offset
-prisma.$from("User")
-      .join("Post", "authorId", "User.id")
-      .limit(1)
-      .offset(1);
+    // #region offset
+      prisma.$from("User")
+        .join("Post", "authorId", "User.id")
+        .limit(1)
+        .offset(1);
       // #endregion offset
     const sql = $sql.getSQL();
 
@@ -65,7 +63,7 @@ prisma.$from("User")
       .limit(1)
       .offset(1)
       // #endregion offset
-.run();
+      .run();
 
     assert.ok(Array.isArray(result));
   });

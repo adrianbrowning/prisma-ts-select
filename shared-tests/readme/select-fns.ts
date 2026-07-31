@@ -1,9 +1,9 @@
-import { describe, test } from "node:test";
 import assert from "node:assert/strict";
+import { describe, test } from "node:test";
 
+import { prisma } from "#client";
+import { dialect } from "#dialect";
 import { expectSQL } from "../test-utils.ts";
-import { prisma } from '#client';
-import { dialect } from '#dialect';
 
 describe("README Example: select functions", () => {
 
@@ -11,9 +11,9 @@ describe("README Example: select functions", () => {
 
   test("lit() — string literal", () => {
     const $sql =
-// #region lit-string
-prisma.$from("User")
-      .select(({ lit }) => lit("hello"), "greeting");
+    // #region lit-string
+      prisma.$from("User")
+        .select(({ lit }) => lit("hello"), "greeting");
       // #endregion lit-string
     const sql = $sql.getSQL();
 
@@ -27,9 +27,9 @@ prisma.$from("User")
 
   test("lit() — number literal", () => {
     const $sql =
-// #region lit-number
-prisma.$from("User")
-      .select(({ lit }) => lit(42), "answer");
+    // #region lit-number
+      prisma.$from("User")
+        .select(({ lit }) => lit(42), "answer");
       // #endregion lit-number
     const sql = $sql.getSQL();
 
@@ -38,9 +38,9 @@ prisma.$from("User")
 
   test("lit() — null literal", () => {
     const $sql =
-// #region lit-null
-prisma.$from("User")
-      .select(({ lit }) => lit(null), "empty");
+    // #region lit-null
+      prisma.$from("User")
+        .select(({ lit }) => lit(null), "empty");
       // #endregion lit-null
     const sql = $sql.getSQL();
 
@@ -51,9 +51,9 @@ prisma.$from("User")
 
   test("countAll()", () => {
     const $sql =
-// #region count-all
-prisma.$from("User")
-      .select(({ countAll }) => countAll(), "total");
+    // #region count-all
+      prisma.$from("User")
+        .select(({ countAll }) => countAll(), "total");
       // #endregion count-all
     const sql = $sql.getSQL();
 
@@ -69,9 +69,9 @@ prisma.$from("User")
 
   test("count(col)", () => {
     const $sql =
-// #region count-col
-prisma.$from("User")
-      .select(({ count }) => count("User.id"), "cnt");
+    // #region count-col
+      prisma.$from("User")
+        .select(({ count }) => count("User.id"), "cnt");
       // #endregion count-col
     const sql = $sql.getSQL();
 
@@ -82,9 +82,9 @@ prisma.$from("User")
 
   test("countDistinct(col)", () => {
     const $sql =
-// #region count-distinct
-prisma.$from("User")
-      .select(({ countDistinct }) => countDistinct("User.id"), "cnt");
+    // #region count-distinct
+      prisma.$from("User")
+        .select(({ countDistinct }) => countDistinct("User.id"), "cnt");
       // #endregion count-distinct
     const sql = $sql.getSQL();
 
@@ -95,9 +95,9 @@ prisma.$from("User")
 
   test("sum(col)", () => {
     const $sql =
-// #region sum
-prisma.$from("User")
-      .select(({ sum }) => sum("User.age"), "total");
+    // #region sum
+      prisma.$from("User")
+        .select(({ sum }) => sum("User.age"), "total");
       // #endregion sum
     const sql = $sql.getSQL();
 
@@ -108,9 +108,9 @@ prisma.$from("User")
 
   test("avg(col)", () => {
     const $sql =
-// #region avg
-prisma.$from("User")
-      .select(({ avg }) => avg("User.age"), "average");
+    // #region avg
+      prisma.$from("User")
+        .select(({ avg }) => avg("User.age"), "average");
       // #endregion avg
     const sql = $sql.getSQL();
 
@@ -121,9 +121,9 @@ prisma.$from("User")
 
   test("min(col)", () => {
     const $sql =
-// #region min
-prisma.$from("User")
-      .select(({ min }) => min("User.age"), "youngest");
+    // #region min
+      prisma.$from("User")
+        .select(({ min }) => min("User.age"), "youngest");
       // #endregion min
     const sql = $sql.getSQL();
 
@@ -134,9 +134,9 @@ prisma.$from("User")
 
   test("max(col)", () => {
     const $sql =
-// #region max
-prisma.$from("User")
-      .select(({ max }) => max("User.age"), "oldest");
+    // #region max
+      prisma.$from("User")
+        .select(({ max }) => max("User.age"), "oldest");
       // #endregion max
     const sql = $sql.getSQL();
 
@@ -147,11 +147,11 @@ prisma.$from("User")
 
   test("upper(col)", () => {
     const $sql =
-// #region upper
-prisma.$from("User")
-      .select(({ upper }) => upper("User.name"), "uname");
+    // #region upper
+      prisma.$from("User")
+        .select(({ upper }) => upper("User.name"), "uname");
       // #endregion upper
-const sql = $sql.getSQL();
+    const sql = $sql.getSQL();
 
     expectSQL(sql, `SELECT UPPER(User.name) AS \`uname\` FROM User;`);
   });
@@ -160,11 +160,11 @@ const sql = $sql.getSQL();
 
   test("lower(col)", () => {
     const $sql =
-// #region lower
-prisma.$from("User")
-      .select(({ lower }) => lower("User.name"), "lname");
+    // #region lower
+      prisma.$from("User")
+        .select(({ lower }) => lower("User.name"), "lname");
       // #endregion lower
-const sql = $sql.getSQL();
+    const sql = $sql.getSQL();
 
     expectSQL(sql, `SELECT LOWER(User.name) AS \`lname\` FROM User;`);
   });
@@ -173,11 +173,11 @@ const sql = $sql.getSQL();
 
   test("length(col)", () => {
     const $sql =
-// #region length
-prisma.$from("User")
-      .select(({ length }) => length("User.email"), "elen");
+    // #region length
+      prisma.$from("User")
+        .select(({ length }) => length("User.email"), "elen");
       // #endregion length
-const sql = $sql.getSQL();
+    const sql = $sql.getSQL();
 
     expectSQL(sql, `SELECT LENGTH(User.email) AS \`elen\` FROM User;`);
   });
@@ -186,11 +186,11 @@ const sql = $sql.getSQL();
 
   test("trim(col)", () => {
     const $sql =
-// #region trim
-prisma.$from("User")
-      .select(({ trim }) => trim("User.email"), "email");
+    // #region trim
+      prisma.$from("User")
+        .select(({ trim }) => trim("User.email"), "email");
       // #endregion trim
-const sql = $sql.getSQL();
+    const sql = $sql.getSQL();
 
     expectSQL(sql, `SELECT TRIM(User.email) AS \`email\` FROM User;`);
   });
@@ -199,11 +199,11 @@ const sql = $sql.getSQL();
 
   test("replace(col, from, to)", () => {
     const $sql =
-// #region replace
-prisma.$from("User")
-      .select(({ replace }) => replace("User.email", "@example.com", ""), "handle");
+    // #region replace
+      prisma.$from("User")
+        .select(({ replace }) => replace("User.email", "@example.com", ""), "handle");
       // #endregion replace
-const sql = $sql.getSQL();
+    const sql = $sql.getSQL();
 
     expectSQL(sql, `SELECT REPLACE(User.email, '@example.com', '') AS \`handle\` FROM User;`);
   });
@@ -212,12 +212,12 @@ const sql = $sql.getSQL();
 
   test("countAll + groupBy", () => {
     const $sql =
-// #region count-groupby
-prisma.$from("User")
-      .join("Post", "authorId", "User.id")
-      .groupBy(["User.name"])
-      .select("User.name")
-      .select(({ countAll }) => countAll(), "postCount");
+    // #region count-groupby
+      prisma.$from("User")
+        .join("Post", "authorId", "User.id")
+        .groupBy([ "User.name" ])
+        .select("User.name")
+        .select(({ countAll }) => countAll(), "postCount");
       // #endregion count-groupby
     const sql = $sql.getSQL();
 

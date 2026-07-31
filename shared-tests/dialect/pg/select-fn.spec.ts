@@ -1,338 +1,346 @@
-import assert from "node:assert/strict"
-import { describe, it } from "node:test"
-import type { Equal, Expect } from "../../utils.ts"
-import { typeCheck } from "../../utils.ts"
-import { expectSQL } from "../../test-utils.ts"
-import { prisma } from '#client'
-import { dialect } from '#dialect'
+import assert from "node:assert/strict";
+import { describe, it } from "node:test";
+import { prisma } from "#client";
+import { dialect } from "#dialect";
+import { expectSQL } from "../../test-utils.ts";
+import type { Equal, Expect } from "../../utils.ts";
+import { typeCheck } from "../../utils.ts";
 
 describe("PostgreSQL dialect fns", () => {
-    describe("stringAgg(col, sep)", () => {
-        function createQuery() {
-            return prisma.$from("User")
-                .select(({ stringAgg }) => stringAgg("User.name", ", "), "names");
-        }
+  describe("stringAgg(col, sep)", () => {
+    function createQuery() {
+      return prisma.$from("User")
+        .select(({ stringAgg }) => stringAgg("User.name", ", "), "names");
+    }
 
-        it("should match SQL", () => {
-            expectSQL(createQuery().getSQL(),
-                `SELECT STRING_AGG("User"."name", ', ') AS ${dialect.quote("names", true)} FROM ${dialect.quote("User")};`);
-        });
+    it("should match SQL", () => {
+      expectSQL(createQuery().getSQL(),
+        `SELECT STRING_AGG("User"."name", ', ') AS ${dialect.quote("names", true)} FROM ${dialect.quote("User")};`);
+    });
+  });
+
+  describe("arrayAgg(col)", () => {
+    function createQuery() {
+      return prisma.$from("User")
+        .select(({ arrayAgg }) => arrayAgg("User.name"), "names");
+    }
+
+    it("should match SQL", () => {
+      expectSQL(createQuery().getSQL(),
+        `SELECT ARRAY_AGG("User"."name") AS ${dialect.quote("names", true)} FROM ${dialect.quote("User")};`);
+    });
+  });
+
+  describe("stddevPop(col)", () => {
+    function createQuery() {
+      return prisma.$from("User")
+        .select(({ stddevPop }) => stddevPop("User.age"), "sd");
+    }
+
+    it("should match SQL", () => {
+      expectSQL(createQuery().getSQL(),
+        `SELECT STDDEV_POP("User"."age") AS ${dialect.quote("sd", true)} FROM ${dialect.quote("User")};`);
+    });
+  });
+
+  describe("stddevSamp(col)", () => {
+    function createQuery() {
+      return prisma.$from("User")
+        .select(({ stddevSamp }) => stddevSamp("User.age"), "sd");
+    }
+
+    it("should match SQL", () => {
+      expectSQL(createQuery().getSQL(),
+        `SELECT STDDEV_SAMP("User"."age") AS ${dialect.quote("sd", true)} FROM ${dialect.quote("User")};`);
+    });
+  });
+
+  describe("varPop(col)", () => {
+    function createQuery() {
+      return prisma.$from("User")
+        .select(({ varPop }) => varPop("User.age"), "v");
+    }
+
+    it("should match SQL", () => {
+      expectSQL(createQuery().getSQL(),
+        `SELECT VAR_POP("User"."age") AS ${dialect.quote("v", true)} FROM ${dialect.quote("User")};`);
+    });
+  });
+
+  describe("varSamp(col)", () => {
+    function createQuery() {
+      return prisma.$from("User")
+        .select(({ varSamp }) => varSamp("User.age"), "v");
+    }
+
+    it("should match SQL", () => {
+      expectSQL(createQuery().getSQL(),
+        `SELECT VAR_SAMP("User"."age") AS ${dialect.quote("v", true)} FROM ${dialect.quote("User")};`);
+    });
+  });
+
+  describe("boolAnd(col)", () => {
+    function createQuery() {
+      return prisma.$from("Post")
+        .select(({ boolAnd }) => boolAnd("Post.published"), "allPublished");
+    }
+
+    it("should match SQL", () => {
+      expectSQL(createQuery().getSQL(),
+        `SELECT BOOL_AND("Post"."published") AS ${dialect.quote("allPublished", true)} FROM ${dialect.quote("Post")};`);
+    });
+  });
+
+  describe("boolOr(col)", () => {
+    function createQuery() {
+      return prisma.$from("Post")
+        .select(({ boolOr }) => boolOr("Post.published"), "anyPublished");
+    }
+
+    it("should match SQL", () => {
+      expectSQL(createQuery().getSQL(),
+        `SELECT BOOL_OR("Post"."published") AS ${dialect.quote("anyPublished", true)} FROM ${dialect.quote("Post")};`);
+    });
+  });
+
+  describe("jsonAgg(col)", () => {
+    function createQuery() {
+      return prisma.$from("User")
+        .select(({ jsonAgg }) => jsonAgg("User.name"), "names");
+    }
+
+    it("should match SQL", () => {
+      expectSQL(createQuery().getSQL(),
+        `SELECT JSON_AGG("User"."name") AS ${dialect.quote("names", true)} FROM ${dialect.quote("User")};`);
+    });
+  });
+
+  describe("bitAnd(col)", () => {
+    function createQuery() {
+      return prisma.$from("User")
+        .select(({ bitAnd }) => bitAnd("User.age"), "bits");
+    }
+
+    it("should match SQL", () => {
+      expectSQL(createQuery().getSQL(),
+        `SELECT BIT_AND("User"."age") AS ${dialect.quote("bits", true)} FROM ${dialect.quote("User")};`);
+    });
+  });
+
+  describe("bitOr(col)", () => {
+    function createQuery() {
+      return prisma.$from("User")
+        .select(({ bitOr }) => bitOr("User.age"), "bits");
+    }
+
+    it("should match SQL", () => {
+      expectSQL(createQuery().getSQL(),
+        `SELECT BIT_OR("User"."age") AS ${dialect.quote("bits", true)} FROM ${dialect.quote("User")};`);
+    });
+  });
+
+  describe("jsonObjectAgg(key, val)", () => {
+    function createQuery() {
+      return prisma.$from("User")
+        .select(({ jsonObjectAgg }) => jsonObjectAgg("User.id", "User.name"), "obj");
+    }
+
+    it("should match SQL", () => {
+      expectSQL(createQuery().getSQL(),
+        `SELECT JSON_OBJECT_AGG("User"."id", "User"."name") AS ${dialect.quote("obj", true)} FROM ${dialect.quote("User")};`);
+    });
+  });
+
+  // count return types differ by Prisma version — see dialect/pg-v6/ and dialect/pg-v7/
+
+  describe("countAll() — runtime", () => {
+    it("returns a row", async () => {
+      const result = await prisma.$from("User").select(({ countAll }) => countAll(), "n")
+        .run();
+      assert.ok(result.length > 0);
+    });
+  });
+
+  describe("count(col) — runtime", () => {
+    it("returns a row", async () => {
+      const result = await prisma.$from("User").select(({ count }) => count("User.id"), "n")
+        .run();
+      assert.ok(result.length > 0);
+    });
+  });
+
+  describe("countDistinct(col) — runtime", () => {
+    it("returns a row", async () => {
+      const result = await prisma.$from("User").select(({ countDistinct }) => countDistinct("User.id"), "n")
+        .run();
+      assert.ok(result.length > 0);
+    });
+  });
+
+  describe("length(col) — type", () => {
+    it("type: number", async () => {
+      const result = await prisma.$from("User").select(({ length }) => length("User.email"), "l")
+        .run();
+      typeCheck({} as Expect<Equal<typeof result, Array<{ l: number; }>>>);
+      const lengths = result.map(r => r.l).sort((a, b) => a - b);
+      assert.deepEqual(lengths, [ 17, 17, 19 ]);
+    });
+  });
+
+  describe("sum(col) — type", () => {
+    it("type: number", async () => {
+      const _result = await prisma.$from("User").select(({ sum }) => sum("User.age"), "total")
+        .run();
+      typeCheck({} as Expect<Equal<typeof _result, Array<{ total: number; }>>>);
+    });
+  });
+
+  describe("avg(col) — type", () => {
+    it("type: number", async () => {
+      const _result = await prisma.$from("User").select(({ avg }) => avg("User.age"), "average")
+        .run();
+      typeCheck({} as Expect<Equal<typeof _result, Array<{ average: number; }>>>);
+    });
+  });
+
+  describe("column type safety — numeric fns", () => {
+    it("avg() rejects string col", () => {
+      // @ts-expect-error title is string, not number
+      prisma.$from("Post").select(({ avg }) => avg("title"), "a");
     });
 
-    describe("arrayAgg(col)", () => {
-        function createQuery() {
-            return prisma.$from("User")
-                .select(({ arrayAgg }) => arrayAgg("User.name"), "names");
-        }
-
-        it("should match SQL", () => {
-            expectSQL(createQuery().getSQL(),
-                `SELECT ARRAY_AGG("User"."name") AS ${dialect.quote("names", true)} FROM ${dialect.quote("User")};`);
-        });
+    it("avg() rejects DateTime col", () => {
+      // @ts-expect-error createdAt is DateTime, not number
+      prisma.$from("Post").select(({ avg }) => avg("Post.createdAt"), "a");
     });
 
-    describe("stddevPop(col)", () => {
-        function createQuery() {
-            return prisma.$from("User")
-                .select(({ stddevPop }) => stddevPop("User.age"), "sd");
-        }
-
-        it("should match SQL", () => {
-            expectSQL(createQuery().getSQL(),
-                `SELECT STDDEV_POP("User"."age") AS ${dialect.quote("sd", true)} FROM ${dialect.quote("User")};`);
-        });
+    it("avg() rejects SQLExpr<string> from lit", () => {
+      // @ts-expect-error lit("x") is SQLExpr<string>, not SQLExpr<number>
+      prisma.$from("User").select(({ avg, lit }) => avg(lit("x")), "a");
     });
 
-    describe("stddevSamp(col)", () => {
-        function createQuery() {
-            return prisma.$from("User")
-                .select(({ stddevSamp }) => stddevSamp("User.age"), "sd");
-        }
-
-        it("should match SQL", () => {
-            expectSQL(createQuery().getSQL(),
-                `SELECT STDDEV_SAMP("User"."age") AS ${dialect.quote("sd", true)} FROM ${dialect.quote("User")};`);
-        });
+    it("sum() rejects string col", () => {
+      // @ts-expect-error title is string, not number
+      prisma.$from("Post").select(({ sum }) => sum("title"), "s");
     });
 
-    describe("varPop(col)", () => {
-        function createQuery() {
-            return prisma.$from("User")
-                .select(({ varPop }) => varPop("User.age"), "v");
-        }
-
-        it("should match SQL", () => {
-            expectSQL(createQuery().getSQL(),
-                `SELECT VAR_POP("User"."age") AS ${dialect.quote("v", true)} FROM ${dialect.quote("User")};`);
-        });
+    it("accepts number col in avg()", () => {
+      prisma.$from("User").select(({ avg }) => avg("User.age"), "a");
     });
 
-    describe("varSamp(col)", () => {
-        function createQuery() {
-            return prisma.$from("User")
-                .select(({ varSamp }) => varSamp("User.age"), "v");
-        }
-
-        it("should match SQL", () => {
-            expectSQL(createQuery().getSQL(),
-                `SELECT VAR_SAMP("User"."age") AS ${dialect.quote("v", true)} FROM ${dialect.quote("User")};`);
-        });
+    it("stddevPop() rejects string col", () => {
+      // @ts-expect-error title is string, not number
+      prisma.$from("Post").select(({ stddevPop }) => stddevPop("title"), "sd");
     });
 
-    describe("boolAnd(col)", () => {
-        function createQuery() {
-            return prisma.$from("Post")
-                .select(({ boolAnd }) => boolAnd("Post.published"), "allPublished");
-        }
-
-        it("should match SQL", () => {
-            expectSQL(createQuery().getSQL(),
-                `SELECT BOOL_AND("Post"."published") AS ${dialect.quote("allPublished", true)} FROM ${dialect.quote("Post")};`);
-        });
+    it("varPop() rejects string col", () => {
+      // @ts-expect-error title is string, not number
+      prisma.$from("Post").select(({ varPop }) => varPop("title"), "v");
     });
 
-    describe("boolOr(col)", () => {
-        function createQuery() {
-            return prisma.$from("Post")
-                .select(({ boolOr }) => boolOr("Post.published"), "anyPublished");
-        }
-
-        it("should match SQL", () => {
-            expectSQL(createQuery().getSQL(),
-                `SELECT BOOL_OR("Post"."published") AS ${dialect.quote("anyPublished", true)} FROM ${dialect.quote("Post")};`);
-        });
+    it("bitAnd() rejects string col", () => {
+      // @ts-expect-error title is string, not number
+      prisma.$from("Post").select(({ bitAnd }) => bitAnd("title"), "b");
     });
 
-    describe("jsonAgg(col)", () => {
-        function createQuery() {
-            return prisma.$from("User")
-                .select(({ jsonAgg }) => jsonAgg("User.name"), "names");
-        }
-
-        it("should match SQL", () => {
-            expectSQL(createQuery().getSQL(),
-                `SELECT JSON_AGG("User"."name") AS ${dialect.quote("names", true)} FROM ${dialect.quote("User")};`);
-        });
+    it("bitOr() rejects string col", () => {
+      // @ts-expect-error title is string, not number
+      prisma.$from("Post").select(({ bitOr }) => bitOr("title"), "b");
     });
 
-    describe("bitAnd(col)", () => {
-        function createQuery() {
-            return prisma.$from("User")
-                .select(({ bitAnd }) => bitAnd("User.age"), "bits");
-        }
+    it("accepts number col in bitAnd()", () => {
+      prisma.$from("User").select(({ bitAnd }) => bitAnd("User.age"), "b");
+    });
+  });
 
-        it("should match SQL", () => {
-            expectSQL(createQuery().getSQL(),
-                `SELECT BIT_AND("User"."age") AS ${dialect.quote("bits", true)} FROM ${dialect.quote("User")};`);
-        });
+  describe("column type safety — PG boolean aggregate fns", () => {
+    it("boolAnd() rejects number col", () => {
+      // @ts-expect-error User.age is number, not boolean
+      prisma.$from("User").select(({ boolAnd }) => boolAnd("User.age"), "b");
     });
 
-    describe("bitOr(col)", () => {
-        function createQuery() {
-            return prisma.$from("User")
-                .select(({ bitOr }) => bitOr("User.age"), "bits");
-        }
-
-        it("should match SQL", () => {
-            expectSQL(createQuery().getSQL(),
-                `SELECT BIT_OR("User"."age") AS ${dialect.quote("bits", true)} FROM ${dialect.quote("User")};`);
-        });
+    it("boolAnd() rejects string col", () => {
+      // @ts-expect-error title is string, not boolean
+      prisma.$from("Post").select(({ boolAnd }) => boolAnd("title"), "b");
     });
 
-    describe("jsonObjectAgg(key, val)", () => {
-        function createQuery() {
-            return prisma.$from("User")
-                .select(({ jsonObjectAgg }) => jsonObjectAgg("User.id", "User.name"), "obj");
-        }
-
-        it("should match SQL", () => {
-            expectSQL(createQuery().getSQL(),
-                `SELECT JSON_OBJECT_AGG("User"."id", "User"."name") AS ${dialect.quote("obj", true)} FROM ${dialect.quote("User")};`);
-        });
+    it("boolOr() rejects number col", () => {
+      // @ts-expect-error User.age is number, not boolean
+      prisma.$from("User").select(({ boolOr }) => boolOr("User.age"), "b");
     });
 
-    // count return types differ by Prisma version — see dialect/pg-v6/ and dialect/pg-v7/
-
-    describe("countAll() — runtime", () => {
-        it("returns a row", async () => {
-            const result = await prisma.$from("User").select(({ countAll }) => countAll(), "n").run();
-            assert.ok(result.length > 0);
-        });
+    it("accepts boolean col in boolAnd()", () => {
+      prisma.$from("Post").select(({ boolAnd }) => boolAnd("published"), "b");
     });
 
-    describe("count(col) — runtime", () => {
-        it("returns a row", async () => {
-            const result = await prisma.$from("User").select(({ count }) => count("User.id"), "n").run();
-            assert.ok(result.length > 0);
-        });
+    it("accepts boolean col in boolOr()", () => {
+      prisma.$from("Post").select(({ boolOr }) => boolOr("published"), "b");
+    });
+  });
+
+  describe("column type safety — PG datetime fns", () => {
+    it("extract() rejects string col", () => {
+      // @ts-expect-error title is string, not DateTime
+      prisma.$from("Post").select(({ extract }) => extract("YEAR", "title"), "e");
     });
 
-    describe("countDistinct(col) — runtime", () => {
-        it("returns a row", async () => {
-            const result = await prisma.$from("User").select(({ countDistinct }) => countDistinct("User.id"), "n").run();
-            assert.ok(result.length > 0);
-        });
+    it("dateTrunc() rejects number col", () => {
+      // @ts-expect-error User.age is number, not DateTime
+      prisma.$from("User").select(({ dateTrunc }) => dateTrunc("month", "User.age"), "dt");
     });
 
-    describe("length(col) — type", () => {
-        it("type: number", async () => {
-            const result = await prisma.$from("User").select(({ length }) => length("User.email"), "l").run();
-            typeCheck({} as Expect<Equal<typeof result, Array<{ l: number }>>>);
-            const lengths = result.map(r => r.l).sort((a, b) => a - b);
-            assert.deepEqual(lengths, [17, 17, 19]);
-        });
+    it("age() rejects string lit", () => {
+      // @ts-expect-error lit("x") is SQLExpr<string>, not SQLExpr<Date>
+      prisma.$from("Post").select(({ age, lit }) => age(lit("x")), "a");
     });
 
-    describe("sum(col) — type", () => {
-        it("type: number", async () => {
-            const result = await prisma.$from("User").select(({ sum }) => sum("User.age"), "total").run();
-            typeCheck({} as Expect<Equal<typeof result, Array<{ total: number }>>>);
-        });
+    it("toDate() rejects DateTime col — expects string col", () => {
+      // @ts-expect-error createdAt is DateTime; toDate expects a string (text) column
+      prisma.$from("Post").select(({ toDate }) => toDate("Post.createdAt", "YYYY-MM-DD"), "d");
     });
 
-    describe("avg(col) — type", () => {
-        it("type: number", async () => {
-            const result = await prisma.$from("User").select(({ avg }) => avg("User.age"), "average").run();
-            typeCheck({} as Expect<Equal<typeof result, Array<{ average: number }>>>);
-        });
+    it("toDate() rejects number lit", () => {
+      // @ts-expect-error lit(42) is SQLExpr<number>, not SQLExpr<string>
+      prisma.$from("Post").select(({ toDate, lit }) => toDate(lit(42), "YYYY"), "d");
     });
 
-    describe("column type safety — numeric fns", () => {
-        it("avg() rejects string col", () => {
-            // @ts-expect-error title is string, not number
-            prisma.$from("Post").select(({ avg }) => avg("title"), "a");
-        });
+    it("toDate() accepts string col", () => {
+      prisma.$from("Post").select(({ toDate }) => toDate("Post.title", "YYYY"), "d");
+    });
+  });
 
-        it("avg() rejects DateTime col", () => {
-            // @ts-expect-error createdAt is DateTime, not number
-            prisma.$from("Post").select(({ avg }) => avg("Post.createdAt"), "a");
-        });
+  describe("min(col) — numeric column", () => {
+    it("type: number | null", async () => {
+      const result = await prisma.$from("User").select(({ min }) => min("User.age"), "youngest")
+        .run();
+      typeCheck({} as Expect<Equal<typeof result, Array<{ youngest: number | null; }>>>);
+      assert.equal(result[0]!.youngest, 25);
+    });
+  });
 
-        it("avg() rejects SQLExpr<string> from lit", () => {
-            // @ts-expect-error lit("x") is SQLExpr<string>, not SQLExpr<number>
-            prisma.$from("User").select(({ avg, lit }) => avg(lit("x")), "a");
-        });
+  describe("max(col) — numeric column", () => {
+    it("type: number | null", async () => {
+      const result = await prisma.$from("User").select(({ max }) => max("User.age"), "oldest")
+        .run();
+      typeCheck({} as Expect<Equal<typeof result, Array<{ oldest: number | null; }>>>);
+      assert.equal(result[0]!.oldest, 30);
+    });
+  });
 
-        it("sum() rejects string col", () => {
-            // @ts-expect-error title is string, not number
-            prisma.$from("Post").select(({ sum }) => sum("title"), "s");
-        });
-
-        it("accepts number col in avg()", () => {
-            prisma.$from("User").select(({ avg }) => avg("User.age"), "a");
-        });
-
-        it("stddevPop() rejects string col", () => {
-            // @ts-expect-error title is string, not number
-            prisma.$from("Post").select(({ stddevPop }) => stddevPop("title"), "sd");
-        });
-
-        it("varPop() rejects string col", () => {
-            // @ts-expect-error title is string, not number
-            prisma.$from("Post").select(({ varPop }) => varPop("title"), "v");
-        });
-
-        it("bitAnd() rejects string col", () => {
-            // @ts-expect-error title is string, not number
-            prisma.$from("Post").select(({ bitAnd }) => bitAnd("title"), "b");
-        });
-
-        it("bitOr() rejects string col", () => {
-            // @ts-expect-error title is string, not number
-            prisma.$from("Post").select(({ bitOr }) => bitOr("title"), "b");
-        });
-
-        it("accepts number col in bitAnd()", () => {
-            prisma.$from("User").select(({ bitAnd }) => bitAnd("User.age"), "b");
-        });
+  describe("column type safety — PG string fns", () => {
+    it("initcap() rejects DateTime col", () => {
+      // @ts-expect-error createdAt is DateTime, not string
+      prisma.$from("Post").select(({ initcap }) => initcap("Post.createdAt"), "i");
     });
 
-    describe("column type safety — PG boolean aggregate fns", () => {
-        it("boolAnd() rejects number col", () => {
-            // @ts-expect-error User.age is number, not boolean
-            prisma.$from("User").select(({ boolAnd }) => boolAnd("User.age"), "b");
-        });
-
-        it("boolAnd() rejects string col", () => {
-            // @ts-expect-error title is string, not boolean
-            prisma.$from("Post").select(({ boolAnd }) => boolAnd("title"), "b");
-        });
-
-        it("boolOr() rejects number col", () => {
-            // @ts-expect-error User.age is number, not boolean
-            prisma.$from("User").select(({ boolOr }) => boolOr("User.age"), "b");
-        });
-
-        it("accepts boolean col in boolAnd()", () => {
-            prisma.$from("Post").select(({ boolAnd }) => boolAnd("published"), "b");
-        });
-
-        it("accepts boolean col in boolOr()", () => {
-            prisma.$from("Post").select(({ boolOr }) => boolOr("published"), "b");
-        });
+    it("md5() rejects number col", () => {
+      // @ts-expect-error User.age is number, not string
+      prisma.$from("User").select(({ md5 }) => md5("User.age"), "m");
     });
 
-    describe("column type safety — PG datetime fns", () => {
-        it("extract() rejects string col", () => {
-            // @ts-expect-error title is string, not DateTime
-            prisma.$from("Post").select(({ extract }) => extract('YEAR', "title"), "e");
-        });
-
-        it("dateTrunc() rejects number col", () => {
-            // @ts-expect-error User.age is number, not DateTime
-            prisma.$from("User").select(({ dateTrunc }) => dateTrunc('month', "User.age"), "dt");
-        });
-
-        it("age() rejects string lit", () => {
-            // @ts-expect-error lit("x") is SQLExpr<string>, not SQLExpr<Date>
-            prisma.$from("Post").select(({ age, lit }) => age(lit("x")), "a");
-        });
-
-        it("toDate() rejects DateTime col — expects string col", () => {
-            // @ts-expect-error createdAt is DateTime; toDate expects a string (text) column
-            prisma.$from("Post").select(({ toDate }) => toDate("Post.createdAt", 'YYYY-MM-DD'), "d");
-        });
-
-        it("toDate() rejects number lit", () => {
-            // @ts-expect-error lit(42) is SQLExpr<number>, not SQLExpr<string>
-            prisma.$from("Post").select(({ toDate, lit }) => toDate(lit(42), 'YYYY'), "d");
-        });
-
-        it("toDate() accepts string col", () => {
-            prisma.$from("Post").select(({ toDate }) => toDate("Post.title", 'YYYY'), "d");
-        });
+    it("splitPart() rejects SQLExpr<number> from lit", () => {
+      // @ts-expect-error lit(42) is SQLExpr<number>, not SQLExpr<string>
+      prisma.$from("Post").select(({ splitPart, lit }) => splitPart(lit(42), "-", 1), "sp");
     });
-
-    describe("min(col) — numeric column", () => {
-        it("type: number | null", async () => {
-            const result = await prisma.$from("User").select(({ min }) => min("User.age"), "youngest").run();
-            typeCheck({} as Expect<Equal<typeof result, Array<{ youngest: number | null }>>>);
-            assert.equal(result[0]!.youngest, 25);
-        });
-    });
-
-    describe("max(col) — numeric column", () => {
-        it("type: number | null", async () => {
-            const result = await prisma.$from("User").select(({ max }) => max("User.age"), "oldest").run();
-            typeCheck({} as Expect<Equal<typeof result, Array<{ oldest: number | null }>>>);
-            assert.equal(result[0]!.oldest, 30);
-        });
-    });
-
-    describe("column type safety — PG string fns", () => {
-        it("initcap() rejects DateTime col", () => {
-            // @ts-expect-error createdAt is DateTime, not string
-            prisma.$from("Post").select(({ initcap }) => initcap("Post.createdAt"), "i");
-        });
-
-        it("md5() rejects number col", () => {
-            // @ts-expect-error User.age is number, not string
-            prisma.$from("User").select(({ md5 }) => md5("User.age"), "m");
-        });
-
-        it("splitPart() rejects SQLExpr<number> from lit", () => {
-            // @ts-expect-error lit(42) is SQLExpr<number>, not SQLExpr<string>
-            prisma.$from("Post").select(({ splitPart, lit }) => splitPart(lit(42), '-', 1), "sp");
-        });
-    });
+  });
 });

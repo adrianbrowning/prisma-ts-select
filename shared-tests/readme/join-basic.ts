@@ -1,17 +1,15 @@
-import { describe, test } from "node:test";
 import assert from "node:assert/strict";
+import { describe, test } from "node:test";
 
+import { prisma } from "#client";
 import { expectSQL } from "../test-utils.ts";
-
-
-import { prisma } from '#client';
 
 describe("README Example: .join basic", () => {
   test("should create type-safe join", () => {
     const query =
-// #region example
-prisma.$from("User")
-      .join("Post", "authorId", "User.id");
+    // #region example
+      prisma.$from("User")
+        .join("Post", "authorId", "User.id");
     // #endregion
 
     // Verify query can be chained

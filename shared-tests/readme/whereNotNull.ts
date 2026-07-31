@@ -1,18 +1,18 @@
-import { describe, test } from "node:test";
 import assert from "node:assert/strict";
+import { describe, test } from "node:test";
 
-import { prisma } from '#client';
+import { prisma } from "#client";
 
 describe("README Example: whereNotNull / whereIsNull", () => {
 
   test("whereNotNull — SQL", () => {
     const sql =
-// #region whereNotNull
-prisma.$from("User")
-      .join("Post", "authorId", "User.id")
-      .whereNotNull("User.name")
+    // #region whereNotNull
+      prisma.$from("User")
+        .join("Post", "authorId", "User.id")
+        .whereNotNull("User.name")
       // #endregion whereNotNull
-.getSQL();
+        .getSQL();
 
     const expectedSQL =
       // #region whereNotNull-sql
@@ -24,12 +24,12 @@ prisma.$from("User")
 
   test("whereIsNull — SQL", () => {
     const sql =
-// #region whereIsNull
-prisma.$from("User")
-      .join("Post", "authorId", "User.id")
-      .whereIsNull("Post.content")
+    // #region whereIsNull
+      prisma.$from("User")
+        .join("Post", "authorId", "User.id")
+        .whereIsNull("Post.content")
       // #endregion whereIsNull
-.getSQL();
+        .getSQL();
 
     const expectedSQL =
       // #region whereIsNull-sql
@@ -48,6 +48,7 @@ prisma.$from("User")
       // #endregion whereNotNull-chain
       .run();
 
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition, sonarjs/different-types-comparison
     assert.ok(result.every(r => r.name !== null && r.age !== null));
   });
 

@@ -1,16 +1,14 @@
-import { describe, test } from "node:test";
 import assert from "node:assert/strict";
+import { describe, test } from "node:test";
 
+import { prisma } from "#client";
 import { expectSQL } from "../test-utils.ts";
-
-
-import { prisma } from '#client';
 
 describe("README Example: .$from basic", () => {
   test("should create basic from query", () => {
-            const query =
-// #region example-$from
-prisma.$from("User");
+    const query =
+    // #region example-$from
+      prisma.$from("User");
     // #endregion
 
     // Verify query can be chained
@@ -24,11 +22,11 @@ prisma.$from("User");
 
   test("should generate correct SQL", () => {
     const sql =
-// #region example
-prisma.$from("User")
-      .select("*")
+    // #region example
+      prisma.$from("User")
+        .select("*")
       // #endregion
-.getSQL();
+        .getSQL();
 
     const expectedSQL =
       // #region example-sql

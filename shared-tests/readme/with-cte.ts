@@ -1,22 +1,24 @@
-import { describe, test } from "node:test";
 import assert from "node:assert/strict";
+import { describe, test } from "node:test";
+import { prisma } from "#client";
 import { expectSQL } from "../test-utils.ts";
-import { prisma } from '#client';
 
 describe("README Example: $with (CTE)", () => {
 
   test("CTE as joined table - SQL", () => {
-// #region join
-const posts = prisma.$from("Post").select("id").select("authorId").select("title");
+    // #region join
+    const posts = prisma.$from("Post").select("id")
+      .select("authorId")
+      .select("title");
 
-// #endregion
-    const sql =
-// #region join
-prisma.$with("pp", posts)
-      .from("User")
-      .join("pp", "authorId", "User.id")
     // #endregion
-    .getSQL();
+    const sql =
+    // #region join
+      prisma.$with("pp", posts)
+        .from("User")
+        .join("pp", "authorId", "User.id")
+      // #endregion
+        .getSQL();
 
     assert.equal(sql,
       // #region join-sql
@@ -26,18 +28,19 @@ prisma.$with("pp", posts)
   });
 
   test("CTE as base table - SQL", () => {
-// #region cte-base
-const posts = prisma.$from("Post").select("id").select("title");
+    // #region cte-base
+    const posts = prisma.$from("Post").select("id")
+      .select("title");
 
-// #endregion
+    // #endregion
     const sql =
-// #region cte-base
-prisma.$with("pp", posts)
-      .from("pp")
-      .select("pp.id")
-      .select("pp.title")
-    // #endregion cte-base
-    .getSQL();
+    // #region cte-base
+      prisma.$with("pp", posts)
+        .from("pp")
+        .select("pp.id")
+        .select("pp.title")
+      // #endregion cte-base
+        .getSQL();
 
     expectSQL(sql,
       // #region cte-base-sql
@@ -47,19 +50,22 @@ prisma.$with("pp", posts)
   });
 
   test("multiple CTEs - SQL", () => {
-// #region multi-cte
-const posts = prisma.$from("Post").select("id").select("authorId").select("title");
-const users = prisma.$from("User").select("id").select("name");
+    // #region multi-cte
+    const posts = prisma.$from("Post").select("id")
+      .select("authorId")
+      .select("title");
+    const users = prisma.$from("User").select("id")
+      .select("name");
 
-//#endregion
+    //#endregion
     const sql =
-// #region multi-cte
-prisma.$with("pp", posts)
-      .with("uu", users)
-      .from("User")
-      .join("pp", "authorId", "User.id")
-    // #endregion multi-cte
-    .getSQL();
+    // #region multi-cte
+      prisma.$with("pp", posts)
+        .with("uu", users)
+        .from("User")
+        .join("pp", "authorId", "User.id")
+      // #endregion multi-cte
+        .getSQL();
 
     assert.equal(sql,
       // #region multi-cte-sql

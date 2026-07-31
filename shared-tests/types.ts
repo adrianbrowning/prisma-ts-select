@@ -7,18 +7,18 @@
 // Single Table Row Types (Unqualified Columns)
 // ============================================================================
 
-import type {Prettify} from "./utils.js";
-import type {JSONValue} from "../generated/prisma-ts-select/extend.js";
+import type { JSONValue } from "../generated/prisma-ts-select/extend.js";
+import type { Prettify } from "./utils.js";
 
 /**
  * User table row with unqualified column names.
  * Used when selecting from a single User table without joins.
  */
 export type UserRow = {
-    id: number;
-    email: string;
-    name: string | null;
-    age: number | null;
+  id: number;
+  email: string;
+  name: string | null;
+  age: number | null;
 };
 
 /**
@@ -26,41 +26,41 @@ export type UserRow = {
  * Used when selecting from a single Post table without joins.
  */
 export type PostRow = {
-    id: number;
-    title: string;
-    content: string | null;
-    published: boolean;
-    createdAt: Date;
-    authorId: number;
-    lastModifiedById: number;
-    metadata: JSONValue | null;
+  id: number;
+  title: string;
+  content: string | null;
+  published: boolean;
+  createdAt: Date;
+  authorId: number;
+  lastModifiedById: number;
+  metadata: JSONValue | null;
 };
 
 /**
  * PostsImages table row with unqualified column names.
  */
 export type PostsImagesRow = {
-    id: number;
-    url: string;
-    postId: number;
+  id: number;
+  url: string;
+  postId: number;
 };
 
 /**
  * LikedPosts table row with unqualified column names.
  */
 export type LikedPostsRow = {
-    id: number;
-    postId: number;
-    authorId: number;
+  id: number;
+  postId: number;
+  authorId: number;
 };
 
 /**
  * Employee table row with unqualified column names.
  */
 export type EmployeeRow = {
-    id: number;
-    name: string;
-    managerId: number | null;
+  id: number;
+  name: string;
+  managerId: number | null;
 };
 
 // ============================================================================
@@ -72,7 +72,7 @@ export type EmployeeRow = {
  * Used in multi-table joins where column names need table prefixes.
  */
 export type UserRowQualified<T extends string = "User"> = {
-    [K in keyof UserRow as `${T}.${K}`]: UserRow[K]
+  [K in keyof UserRow as `${T}.${K}`]: UserRow[K]
 };
 
 /**
@@ -80,34 +80,34 @@ export type UserRowQualified<T extends string = "User"> = {
  * Used in multi-table joins where column names need table prefixes.
  */
 export type PostRowQualified<T extends string = "Post"> = {
-    [K in keyof PostRow as `${T}.${K}`]: PostRow[K]
+  [K in keyof PostRow as `${T}.${K}`]: PostRow[K]
 };
 
 /**
  * PostsImages table row with qualified column names.
  */
 export type PostsImagesRowQualified = {
-    "PostsImages.id": number;
-    "PostsImages.url": string;
-    "PostsImages.postId": number;
+  "PostsImages.id": number;
+  "PostsImages.url": string;
+  "PostsImages.postId": number;
 };
 
 /**
  * LikedPosts table row with qualified column names.
  */
 export type LikedPostsRowQualified = {
-    "LikedPosts.id": number;
-    "LikedPosts.postId": number;
-    "LikedPosts.authorId": number;
+  "LikedPosts.id": number;
+  "LikedPosts.postId": number;
+  "LikedPosts.authorId": number;
 };
 
 /**
  * Employee table row with qualified column names.
  */
 export type EmployeeRowQualified = {
-    "Employee.id": number;
-    "Employee.name": string;
-    "Employee.managerId": number | null;
+  "Employee.id": number;
+  "Employee.name": string;
+  "Employee.managerId": number | null;
 };
 
 // ============================================================================
@@ -119,7 +119,6 @@ export type EmployeeRowQualified = {
  * Used when joining User and Post tables with selectAll().
  */
 export type UserPostQualifiedJoinRow<U extends string = "User", P extends string = "Post"> = Prettify<UserRowQualified<U> & PostRowQualified<P>>;
-
 
 export type UserPostJoinRow = Prettify<UserRow & PostRow>;
 

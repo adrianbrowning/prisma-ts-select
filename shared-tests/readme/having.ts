@@ -1,24 +1,22 @@
-import { describe, test } from "node:test";
 import assert from "node:assert/strict";
+import { describe, test } from "node:test";
 
-
-
-import { prisma } from '#client';
+import { prisma } from "#client";
 
 describe("README Example: having", () => {
   test("having with groupBy - should generate correct SQL", () => {
     const $sql =
-// #region with-groupby
-prisma.$from("User")
-      .join("Post", "authorId", "User.id")
-      .groupBy(["name", "Post.content"])
-      .having({
-        "User.name": {
-          "op": "LIKE",
-          "value": "bob%"
-        }
-      })
-      .select("email");
+    // #region with-groupby
+      prisma.$from("User")
+        .join("Post", "authorId", "User.id")
+        .groupBy([ "name", "Post.content" ])
+        .having({
+          "User.name": {
+            "op": "LIKE",
+            "value": "bob%",
+          },
+        })
+        .select("email");
       // #endregion with-groupby
     const sql = $sql.getSQL();
 
@@ -32,16 +30,16 @@ prisma.$from("User")
 
   test("having with groupBy - should be chainable", () => {
     const query =
-// #region with-groupby-chain
-prisma.$from("User")
-      .join("Post", "authorId", "User.id")
-      .groupBy(["name", "Post.content"])
-      .having({
-        "User.name": {
-          "op": "LIKE",
-          "value": "bob%"
-        }
-      });
+    // #region with-groupby-chain
+      prisma.$from("User")
+        .join("Post", "authorId", "User.id")
+        .groupBy([ "name", "Post.content" ])
+        .having({
+          "User.name": {
+            "op": "LIKE",
+            "value": "bob%",
+          },
+        });
     // #endregion with-groupby
 
     assert.equal(query.getSQL(), "FROM User JOIN Post ON Post.authorId = User.id GROUP BY name, Post.content HAVING User.name LIKE 'bob%';");
@@ -49,16 +47,16 @@ prisma.$from("User")
 
   test("having without groupBy - should generate correct SQL", () => {
     const $sql =
-// #region without-groupby
-prisma.$from("User")
-      .join("Post", "authorId", "User.id")
-      .having({
-        "User.name": {
-          "op": "LIKE",
-          "value": "stuart%"
-        }
-      })
-      .select("email");
+    // #region without-groupby
+      prisma.$from("User")
+        .join("Post", "authorId", "User.id")
+        .having({
+          "User.name": {
+            "op": "LIKE",
+            "value": "stuart%",
+          },
+        })
+        .select("email");
       // #endregion without-groupby
     const sql = $sql.getSQL();
 
@@ -72,15 +70,15 @@ prisma.$from("User")
 
   test("having without groupBy - should be chainable", () => {
     const query =
-// #region without-groupby-run
-prisma.$from("User")
-      .join("Post", "authorId", "User.id")
-      .having({
-        "User.name": {
-          "op": "LIKE",
-          "value": "stuart%"
-        }
-      });
+    // #region without-groupby-run
+      prisma.$from("User")
+        .join("Post", "authorId", "User.id")
+        .having({
+          "User.name": {
+            "op": "LIKE",
+            "value": "stuart%",
+          },
+        });
     // #endregion without-groupby
 
     assert.equal(query.getSQL(), "FROM User JOIN Post ON Post.authorId = User.id HAVING User.name LIKE 'stuart%';");
@@ -88,14 +86,14 @@ prisma.$from("User")
 
   test("having with aggregate fn (tuple syntax) - countAll", () => {
     const sql =
-// #region agg-fn-tuple-countall
-prisma.$from("User")
-      .join("Post", "authorId", "User.id")
-      .groupBy(["User.name"])
-      .having(({ countAll }) => [[countAll(), { op: '>', value: 1 }]])
-      .select("User.name")
+    // #region agg-fn-tuple-countall
+      prisma.$from("User")
+        .join("Post", "authorId", "User.id")
+        .groupBy([ "User.name" ])
+        .having(({ countAll }) => [[ countAll(), { op: ">", value: 1 }]])
+        .select("User.name")
       // #endregion agg-fn-tuple-countall
-.getSQL();
+        .getSQL();
 
     const expectedSQL =
       // #region agg-fn-tuple-countall-sql
@@ -107,14 +105,14 @@ prisma.$from("User")
 
   test("having with aggregate fn (tuple syntax) - count col", () => {
     const sql =
-// #region agg-fn-tuple-count
-prisma.$from("User")
-      .join("Post", "authorId", "User.id")
-      .groupBy(["User.name"])
-      .having(({ count }) => [[count('User.id'), { op: '>=', value: 2n }]])
-      .select("User.name")
+    // #region agg-fn-tuple-count
+      prisma.$from("User")
+        .join("Post", "authorId", "User.id")
+        .groupBy([ "User.name" ])
+        .having(({ count }) => [[ count("User.id"), { op: ">=", value: 2n }]])
+        .select("User.name")
       // #endregion agg-fn-tuple-count
-.getSQL();
+        .getSQL();
 
     const expectedSQL =
       // #region agg-fn-tuple-count-sql
@@ -126,14 +124,14 @@ prisma.$from("User")
 
   test("having with string expr fn (upper LIKE)", () => {
     const sql =
-// #region agg-fn-string-upper
-prisma.$from("User")
-      .join("Post", "authorId", "User.id")
-      .groupBy(["User.name"])
-      .having(({ upper }) => [[upper('User.name'), { op: 'LIKE', value: 'John%' }]])
-      .select("User.name")
+    // #region agg-fn-string-upper
+      prisma.$from("User")
+        .join("Post", "authorId", "User.id")
+        .groupBy([ "User.name" ])
+        .having(({ upper }) => [[ upper("User.name"), { op: "LIKE", value: "John%" }]])
+        .select("User.name")
       // #endregion agg-fn-string-upper
-.getSQL();
+        .getSQL();
 
     const expectedSQL =
       // #region agg-fn-string-upper-sql

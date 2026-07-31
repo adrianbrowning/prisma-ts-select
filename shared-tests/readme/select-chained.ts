@@ -1,18 +1,16 @@
-import { describe, test } from "node:test";
 import assert from "node:assert/strict";
+import { describe, test } from "node:test";
 
+import { prisma } from "#client";
 import { expectSQL } from "../test-utils.ts";
-
-
-import { prisma } from '#client';
 
 describe("README Example: select chained", () => {
   test("should generate correct SQL", () => {
     const $sql =
-// #region example
-prisma.$from("User")
-      .select("name")
-      .select("email");
+    // #region example
+      prisma.$from("User")
+        .select("name")
+        .select("email");
       // #endregion
     const sql = $sql.getSQL();
 
@@ -30,21 +28,21 @@ prisma.$from("User")
       .select("name")
       .select("email")
       // #endregion
-.run();
+      .run();
 
     assert.deepEqual(result, [
-        {
-          email: 'johndoe@example.com',
-            name: 'John Doe'
+      {
+        email: "johndoe@example.com",
+        name: "John Doe",
       },
       {
-        email: 'smith@example.com',
-            name: 'John Smith'
+        email: "smith@example.com",
+        name: "John Smith",
       },
       {
-        email: 'alice@example.com',
-            name: null
-      }
+        email: "alice@example.com",
+        name: null,
+      },
     ]);
 
   });

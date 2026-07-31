@@ -222,55 +222,79 @@ type Whitespace = "\n" | " ";
 //@ts-expect-error will implement in another issue
 type _Trim<T> = T extends `${Whitespace}${infer U}` ? _Trim<U> : T extends `${infer U}${Whitespace}` ? _Trim<U> : T;
 
-/**
- * Valid column selection patterns for SELECT clause.
- * Combines wildcard selection, individual columns, and table-specific wildcards.
- *
- * @template Tables - Array of table sources (table names or [table, alias] tuples)
- * @returns Union of valid selection patterns: "*" | column names | "Table.*" patterns
- *
- * @example
- * // For tables ["User", "Post"]
- * ValidSelect<["User", "Post"]>
- * // Returns: "*" | "id" | "name" | "Post.id" | "Post.title" | "User.*" | "Post.*"
- */
-type ValidSelect<Tables extends TArrSources, TFields extends TFieldsType = BLANK_OBJECT> =
-    | "*"
-    | GetOtherColumns<Tables>
-    | GetTableStar<Tables>
-    | GetCTEColumns<Tables, TFields>;
+// ponytail: nav-object progressive autocomplete — IDE shows only current-level suggestions
+type _keyOf<o> = { [k in keyof o]: k extends string ? k : never }[keyof o];
+type _getKey<o, k> = k extends keyof o ? o[k] : never;
+type _isLeaf<T> = [keyof T] extends [never] ? true : false;
 
-/**
- * Generates "Table.*" patterns for all tables in the query.
- * Handles both simple table names and table aliases.
- *
- * @template Tables - Array of table sources (table names or [table, alias] tuples)
- * @returns Union of "Table.*" or "alias.*" patterns for all tables
- *
- * @example
- * // For tables ["User", ["Post", "p"]]
- * GetTableStar<["User", ["Post", "p"]]>
- * // Returns: "User.*" | "p.*"
- */
-type GetTableStar<Tables extends TArrSources> = Tables extends [infer T extends TTableSources, ...Array<TTableSources>]
-  ? T extends TVirtualTableSource ? GetTableStarJoined<Tables[number]>
-    : T extends string ? `${T}.*` | GetTableStarJoined<Tables[number]>
-      : `${T[1]}.*` | GetTableStarJoined<Tables[number]>
-  : never;
+type _getSuggestions<o, prefix extends string = ""> =
+  { [k in _keyOf<o>]: _isLeaf<_getKey<o, k>> extends true ? `${prefix}${k}` : `${prefix}${k}.` }[_keyOf<o>];
 
-/**
- * Converts a single table source to its "Table.*" pattern.
- * Extracts the alias name if table source is a tuple, otherwise uses the table name.
- *
- * @template T - Table source (table name string or [table, alias] tuple)
- * @returns "Table.*" pattern using table name or alias
- *
- * @example
- * GetTableStarJoined<"User"> // Returns: "User.*"
- * GetTableStarJoined<["Post", "p"]> // Returns: "p.*"
- */
-type GetTableStarJoined<T extends TTableSources> = T extends TVirtualTableSource ? never
-  : T extends string ? `${T}.*` : `${T[1]}.*`;
+type _validatePath<o, path extends string, prefix extends string = ""> =
+  path extends `${infer head}.${infer tail}`
+    ? head extends _keyOf<o>
+      ? _validatePath<_getKey<o, head>, tail, `${prefix}${head}.`>
+      : _getSuggestions<o, prefix>
+    : path extends ""
+      ? _getSuggestions<o, prefix>
+      : path extends _keyOf<o>
+        ? _isLeaf<_getKey<o, path>> extends true
+          ? `${prefix}${path}`
+          : _getSuggestions<_getKey<o, path>, `${prefix}${path}.`>
+        : _getSuggestions<o, prefix>;
+
+// ponytail: placeholder — generator replaces with pre-computed nav objects per table
+type ValidateSelectMap = {};
+
+type _GetTableStar<Tables extends Array<TTableSources>> =
+  Tables extends [infer T extends TTableSources, ...infer Rest extends Array<TTableSources>]
+    ? (T extends TVirtualTableSource ? never
+      : T extends [string, infer A extends string] ? `${A}.*`
+        : T extends string ? `${T}.*` : never) | _GetTableStar<Rest>
+    : never;
+
+// ponytail: table/alias names with trailing dot for progressive nav
+type _GetTableDot<Tables extends Array<TTableSources>> =
+  Tables extends [infer T extends TTableSources, ...infer Rest extends Array<TTableSources>]
+    ? (T extends TVirtualTableSource ? never
+      : T extends [string, infer A extends string] ? `${A}.`
+        : T extends string ? `${T}.` : never) | _GetTableDot<Rest>
+    : never;
+
+type _FieldsOfSource<Tables extends TArrSources, TFields extends TFieldsType, T extends string> =
+  [Extract<Tables[number], readonly ["__cte__", T]>] extends [never]
+    ? [Extract<Tables[number], T>] extends [never]
+      ? [Extract<Tables[number], [string, T]>] extends [never]
+        ? never
+        : GetColsBaseTable<Extract<Tables[number], [string, T]>>
+      : GetColsBaseTable<Extract<Tables[number], T>>
+    : T extends keyof TFields ? string & keyof TFields[T] : never;
+
+// ponytail: multi-table progressive — top-level shows table dots + unambiguous cols
+type _ValidSelect<Tables extends TArrSources> =
+  "*" | GetOtherColumns<Tables> | _GetTableStar<Tables>;
+
+type _MultiTopLevel<Tables extends TArrSources> =
+  "*" | _GetTableDot<Tables> | Exclude<GetColumnsFromTables<Tables>, GetDuplicateColumnsPairwise<Tables>>;
+
+type _ValidateMultiTable<Tables extends TArrSources, TFields extends TFieldsType, Path extends string> =
+  Path extends _ValidSelect<Tables>
+    ? Path
+    : Path extends `${infer Table}.${infer Rest}`
+      ? [_FieldsOfSource<Tables, TFields, Table>] extends [never]
+        ? _MultiTopLevel<Tables>
+        : Rest extends ("*" | _FieldsOfSource<Tables, TFields, Table>)
+          ? `${Table}.${Rest}`
+          : `${Table}.${"*" | _FieldsOfSource<Tables, TFields, Table>}`
+      : _MultiTopLevel<Tables>;
+
+type ValidateSelect<Tables extends TArrSources, TFields extends TFieldsType, Path extends string> =
+  | (Tables extends [infer T extends string]
+    ? T extends keyof ValidateSelectMap
+      ? _validatePath<ValidateSelectMap[T], Path>
+      : _ValidateMultiTable<Tables, TFields, Path>
+    : _ValidateMultiTable<Tables, TFields, Path>)
+  | GetCTEColumns<Tables, TFields>;
 
 /**
  * Extracts the TypeScript type of a column for use in aliased selections.
@@ -1031,6 +1055,10 @@ type GetOtherColumns<Tables extends TArrSources> =
     | GetJoinCols<Tables[number]>;
 
 class _fSelect<TSources extends TArrSources, TFields extends TFieldsType, TSelectRT extends {} = BLANK_OBJECT> extends _fOrderBy<TSources, TFields, TSelectRT> {
+  // String column — no alias (FIRST for IDE autocomplete)
+  select<const TSelect extends string>(select: TSelect extends ValidateSelect<TSources, TFields, TSelect> ? TSelect : ValidateSelect<TSources, TFields, TSelect>): _fSelect<TSources, TFields, Prettify<TSelectRT & MergeItems<TSelect & string, TSources, TFields, CountKeys<TSources> extends 1 ? false : true>>>;
+  // String column — with alias
+  select<const TSelect extends string, TAlias extends string>(select: TSelect extends ValidateSelect<TSources, TFields, TSelect> ? TSelect : ValidateSelect<TSources, TFields, TSelect>, alias: TAlias): _fSelect<TSources, TFields, Prettify<TSelectRT & Record<TAlias, ExtractColumnType<TSelect & string, TSources, TFields>>>>;
   // Fn overload returning builder (correlated subquery via from()) — with alias (single-select only)
   select<TSubRT extends {}, A extends string>(fn: (ctx: SelectFnContext<TSources, TFields>) => IsUnionKey<keyof TSubRT> extends true ? never : _fRun<ANY_IS_OK, ANY_IS_OK, TSubRT>, alias: A): _fSelect<TSources, TFields, Prettify<TSelectRT & Record<A, ScalarExprType<TSubRT>>>>;
   // Fn overload — no alias → key is widened to `string`
@@ -1039,14 +1067,10 @@ class _fSelect<TSources extends TArrSources, TFields extends TFieldsType, TSelec
   select<T, A extends string>(fn: (ctx: SelectFnContext<TSources, TFields>) => SQLExpr<T>, alias: A): _fSelect<TSources, TFields, Prettify<TSelectRT & Record<A, T>>>;
   // Builder-as-scalar-subquery overload — with alias (single-select only)
   select<TSubRT extends {}, A extends string>(subquery: IsUnionKey<keyof TSubRT> extends true ? never : _fRun<ANY_IS_OK, ANY_IS_OK, TSubRT>, alias: A): _fSelect<TSources, TFields, Prettify<TSelectRT & Record<A, ScalarExprType<TSubRT>>>>;
-  // String column — no alias
-  select<const TSelect extends ValidSelect<TSources, TFields>>(select: TSelect): _fSelect<TSources, TFields, Prettify<TSelectRT & MergeItems<TSelect, TSources, TFields, CountKeys<TSources> extends 1 ? false : true>>>;
-  // String column — with alias
-  select<const TSelect extends ValidSelect<TSources, TFields>, TAlias extends string>(select: TSelect, alias: TAlias): _fSelect<TSources, TFields, Prettify<TSelectRT & Record<TAlias, ExtractColumnType<TSelect, TSources, TFields>>>>;
   // Implementation (not visible to callers)
   // eslint-disable-next-line sonarjs/cognitive-complexity
   select(
-    select: ((ctx: SelectFnContext<TSources, TFields>) => SQLExpr<ANY_IS_OK>) | ValidSelect<TSources, TFields> | _fRun<ANY_IS_OK, ANY_IS_OK, ANY_IS_OK>,
+    select: ((ctx: SelectFnContext<TSources, TFields>) => SQLExpr<ANY_IS_OK>) | string | _fRun<ANY_IS_OK, ANY_IS_OK, ANY_IS_OK>,
     alias?: string
   ): _fSelect<TSources, TFields, ANY_IS_OK> {
     // Builder-as-scalar-subquery: detect _fRun instance

@@ -1,17 +1,15 @@
-import { describe, test } from "node:test";
 import assert from "node:assert/strict";
+import { describe, test } from "node:test";
 
+import { prisma } from "#client";
 import { expectSQL } from "../test-utils.ts";
-
-
-import { prisma } from '#client';
 
 describe("README Example: select *", () => {
   test("should generate correct SQL", () => {
     const $sql =
-// #region example
-prisma.$from("User")
-      .select("*");
+    // #region example
+      prisma.$from("User")
+        .select("*");
       // #endregion
     const sql = $sql.getSQL();
 
@@ -28,27 +26,27 @@ prisma.$from("User")
     const result = await prisma.$from("User")
       .select("*")
       // #endregion
-.run();
+      .run();
 
-    assert.deepEqual(result,  [
-        {
-          email: 'johndoe@example.com',
-            id: 1,
-            name: 'John Doe',
-            age: 25
+    assert.deepEqual(result, [
+      {
+        email: "johndoe@example.com",
+        id: 1,
+        name: "John Doe",
+        age: 25,
       },
       {
-        email: 'smith@example.com',
-            id: 2,
-            name: 'John Smith',
-          age: 30
+        email: "smith@example.com",
+        id: 2,
+        name: "John Smith",
+        age: 30,
       },
       {
-        email: 'alice@example.com',
-            id: 3,
-            name: null,
-          age: null
-      }
+        email: "alice@example.com",
+        id: 3,
+        name: null,
+        age: null,
+      },
     ]);
 
   });

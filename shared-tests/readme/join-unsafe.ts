@@ -1,16 +1,16 @@
-import { describe, test } from "node:test";
 import assert from "node:assert/strict";
+import { describe, test } from "node:test";
 
-import { prisma } from '#client';
+import { prisma } from "#client";
 
 describe("README Example: unsafe joins", () => {
   test("joinUnsafeTypeEnforced - should generate correct SQL", () => {
     const sql =
-// #region type-enforced-1
-prisma.$from("User")
-      .joinUnsafeTypeEnforced("Post", "title", "User.name")
+    // #region type-enforced-1
+      prisma.$from("User")
+        .joinUnsafeTypeEnforced("Post", "title", "User.name")
       // #endregion type-enforced
-.getSQL();
+        .getSQL();
 
     const expectedSQL =
       // #region type-enforced-sql-1
@@ -22,9 +22,9 @@ prisma.$from("User")
 
   test("joinUnsafeTypeEnforced - should be chainable", () => {
     const query =
-// #region type-enforced
-prisma.$from("User")
-      .joinUnsafeTypeEnforced("Post", "title", "User.name");
+    // #region type-enforced
+      prisma.$from("User")
+        .joinUnsafeTypeEnforced("Post", "title", "User.name");
     // #endregion type-enforced
 
     const expectedSQL =
@@ -37,11 +37,11 @@ prisma.$from("User")
 
   test("joinUnsafeIgnoreType - should generate correct SQL", () => {
     const sql =
-// #region ignore-type-1
-prisma.$from("User")
-      .joinUnsafeIgnoreType("Post", "id", "User.name")
+    // #region ignore-type-1
+      prisma.$from("User")
+        .joinUnsafeIgnoreType("Post", "id", "User.name")
       // #endregion ignore-type
-.getSQL();
+        .getSQL();
 
     const expectedSQL =
       // #region ignore-type-sql
@@ -53,9 +53,9 @@ prisma.$from("User")
 
   test("joinUnsafeIgnoreType - should be chainable", () => {
     const query =
-// #region ignore-type
-prisma.$from("User")
-      .joinUnsafeIgnoreType("Post", "id", "User.name");
+    // #region ignore-type
+      prisma.$from("User")
+        .joinUnsafeIgnoreType("Post", "id", "User.name");
     // #endregion ignore-type
 
     const expectedSQL =
