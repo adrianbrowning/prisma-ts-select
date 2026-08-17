@@ -52,3 +52,11 @@ jobs:
 
       - name: Run tests
         run: pnpm --filter usage-sqlite-v7 test
+
+  test-status:
+    needs: [changes, test]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - if: needs.test.result == 'failure' || needs.test.result == 'cancelled'
+        run: exit 1

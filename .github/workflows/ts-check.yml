@@ -88,3 +88,11 @@ jobs:
       - name: Fail if TS check failed
         if: steps.ts-check.outputs.exit_code != '0'
         run: exit 1
+
+  tscheck-status:
+    needs: [changes, tscheck]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - if: needs.tscheck.result == 'failure' || needs.tscheck.result == 'cancelled'
+        run: exit 1

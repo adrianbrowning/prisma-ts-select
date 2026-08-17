@@ -39,3 +39,11 @@ jobs:
 
       - name: Test
         run: pnpm --filter prisma-ts-select test
+
+  test-status:
+    needs: [changes, test-runner]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - if: needs.test-runner.result == 'failure' || needs.test-runner.result == 'cancelled'
+        run: exit 1
