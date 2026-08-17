@@ -6,7 +6,26 @@ on:
     branches: ["*"]
 
 jobs:
+  changes:
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: read
+    outputs:
+      should_run: ${{ steps.filter.outputs.src }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            src:
+              - 'packages/prisma-ts-select/**'
+              - 'packages/usage-mysql-v6/**'
+              - 'shared-tests/**'
+
   test:
+    needs: changes
+    if: needs.changes.outputs.should_run == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     strategy:
@@ -60,3 +79,11 @@ jobs:
 
       - name: Run tests
         run: pnpm --filter usage-mysql-v6 test
+
+  test-status:
+    needs: [changes, test]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - if: needs.test.result == 'failure' || needs.test.result == 'cancelled'
+        run: exit 1
