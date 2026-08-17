@@ -11,7 +11,7 @@ pnpm -r gen
 ## Testing
 
 ```bash
-./run-tests.sh [--version 6|7] [--db sqlite|mysql|pg] [--skip-build] [--reset-db]
+pnpm --filter prisma-ts-select test && pnpm run-tests [--version 6|7] [--db sqlite|mysql|pg] [--skip-build] [--reset-db] [--test <glob>]
 ```
 
 ## Release Intent

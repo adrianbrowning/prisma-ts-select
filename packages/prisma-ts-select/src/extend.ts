@@ -1803,9 +1803,7 @@ type Relations<Table extends TTableSources> = Extract<DATABASE, { table: GetReal
  */
 type AvailableJoins<Tables extends Array<TTableSources>, acc extends TTableSources = never> =
   Tables extends [infer T extends TTableSources, ...infer Rest extends Array<TTableSources>]
-    ? AvailableJoins<Rest,
-            //@ts-expect-error See #109
-            acc | keyof Relations<T>>
+    ? AvailableJoins<Rest, acc | (T extends TVirtualTableSource ? TTables : Extract<keyof Relations<T>, TTableSources>)>
     : acc;
 
 // type MapAliasToTable<
