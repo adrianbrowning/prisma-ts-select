@@ -7,7 +7,24 @@ on:
     types: [ opened, synchronize, reopened ]
 
 jobs:
+  changes:
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: read
+    outputs:
+      should_run: ${{ steps.filter.outputs.src }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            src:
+              - 'packages/prisma-ts-select/**'
+
   test-runner:
+    needs: changes
+    if: needs.changes.outputs.should_run == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     permissions:
