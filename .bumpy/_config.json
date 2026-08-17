@@ -1,0 +1,9 @@
+{
+  "baseBranch": "main",
+  "access": "public",
+  "changelog": "github",
+  "include": ["prisma-ts-select"],
+  "publish": {
+    "provenance": true
+  }
+}
