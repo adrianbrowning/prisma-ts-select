@@ -5,5 +5,12 @@
   "include": ["prisma-ts-select"],
   "publish": {
     "provenance": true
+  },
+  "channels": {
+    "next": {
+      "branch": "bumpy/version-packages",
+      "preid": "rc",
+      "tag": "next"
+    }
   }
 }
