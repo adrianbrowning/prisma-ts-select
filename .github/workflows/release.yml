@@ -3,43 +3,75 @@ name: Release
 on:
   push:
     branches: [main]
-  workflow_dispatch:  
+  workflow_dispatch:
 
 concurrency:
   group: release-main
   cancel-in-progress: false
 
-permissions:
-  contents: write
-  pull-requests: write
-  id-token: write
-
 jobs:
-  release:
+  plan:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      mode: ${{ steps.plan.outputs.mode }}
     steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
+      - uses: actions/checkout@v7
 
-      - uses: pnpm/action-setup@v4
-
-      - uses: actions/setup-node@v4
+      - uses: ./.github/actions/setup-base
         with:
-          node-version-file: package.json
-          cache: pnpm
+          checkout-fetch-depth: '0'
+
+      - id: plan
+        run: pnpm exec bumpy ci plan
+        env:
+          GH_TOKEN: ${{ github.token }}
+
+  version:
+    needs: plan
+    if: needs.plan.outputs.mode == 'version'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: ./.github/actions/setup-base
+        with:
+          checkout-fetch-depth: '0'
+
+      - run: pnpm exec bumpy ci release --expect-mode version
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BUMPY_GH_TOKEN: ${{ secrets.BUMPY_GH_TOKEN }}
+
+  publish:
+    needs: plan
+    if: needs.plan.outputs.mode == 'publish'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      id-token: write
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: ./.github/actions/setup
+        with:
+          checkout-fetch-depth: '0'
+
+      - name: Test
+        run: pnpm --filter prisma-ts-select test
+
+      - name: Configure npm registry
+        uses: actions/setup-node@v4
+        with:
           registry-url: https://registry.npmjs.org
 
-      - run: pnpm install --frozen-lockfile
-
-      - id: changesets
-        uses: changesets/action@v1
-        with:
-          version: pnpm version-packages
-          publish: pnpm release
-          title: "chore: version packages"
-          commit: "chore: version packages"
-          createGithubReleases: true
+      - run: pnpm exec bumpy ci release --expect-mode publish
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ github.token }}
+          BUMPY_GH_TOKEN: ${{ secrets.BUMPY_GH_TOKEN }}
           NPM_CONFIG_PROVENANCE: true
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
