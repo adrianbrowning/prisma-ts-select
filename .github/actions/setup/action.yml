@@ -1,5 +1,5 @@
 name: Setup
-description: Checkout, install pnpm + Node.js, cache pnpm store, install dependencies
+description: Checkout, install pnpm + Node.js, cache pnpm store, install dependencies, build generator, run gen
 
 inputs:
   node-version:
@@ -15,42 +15,11 @@ inputs:
 runs:
   using: composite
   steps:
-    - name: Check if commit is made by bot
-      if: github.actor == 'github-actions[bot]'
-      shell: bash
-      run: echo "Commit made by bot. Exiting workflow." && exit 0
-
-    - name: Checkout repository
-      uses: actions/checkout@v7
-      with:
-        token: ${{ github.token }}
-        fetch-depth: ${{ inputs.checkout-fetch-depth }}
-        ref: ${{ inputs.checkout-ref }}
-
-    - name: Setup pnpm
-      uses: pnpm/action-setup@v4
-
-    - name: Setup Node.js ${{ inputs.node-version }}
-      uses: actions/setup-node@v4
+    - uses: ./.github/actions/setup-base
       with:
         node-version: ${{ inputs.node-version }}
-
-    - name: Get pnpm store path
-      id: pnpm-store
-      shell: bash
-      run: echo "path=$(pnpm store path)" >> $GITHUB_OUTPUT
-
-    - name: Cache pnpm store
-      uses: actions/cache@v4
-      with:
-        path: ${{ steps.pnpm-store.outputs.path }}
-        key: ${{ runner.os }}-pnpm-${{ hashFiles('**/pnpm-lock.yaml') }}
-        restore-keys: |
-          ${{ runner.os }}-pnpm-
-
-    - name: Install dependencies
-      shell: bash
-      run: pnpm install --frozen-lockfile
+        checkout-ref: ${{ inputs.checkout-ref }}
+        checkout-fetch-depth: ${{ inputs.checkout-fetch-depth }}
 
     - name: Build generator and relink bins
       shell: bash
