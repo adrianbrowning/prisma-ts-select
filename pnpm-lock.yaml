@@ -45,25 +45,6 @@ importers:
         specifier: ^6.0.3
         version: 6.0.3
 
-  packages/bug-test:
-    dependencies:
-      '@gcm/prisma-ts-select':
-        specifier: workspace:prisma-ts-select@*
-        version: link:../prisma-ts-select
-    devDependencies:
-      '@prisma/client':
-        specifier: 6.19.2
-        version: 6.19.2(prisma@6.19.2(typescript@5.9.3))(typescript@5.9.3)
-      '@types/node':
-        specifier: ^24.0.0
-        version: 24.13.3
-      prisma:
-        specifier: 6.19.2
-        version: 6.19.2(typescript@5.9.3)
-      typescript:
-        specifier: ^5.9.3
-        version: 5.9.3
-
   packages/prisma-ts-select:
     dependencies:
       '@prisma/generator-helper':
