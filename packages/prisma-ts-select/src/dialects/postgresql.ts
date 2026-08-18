@@ -173,7 +173,7 @@ export const postgresqlDialect: Dialect = {
   },
   quoteOrderByClause: clause => {
     const parts = clause.trim().split(/\s+/);
-    const colRef = parts[0] ?? "";
+    const colRef = parts[0]!;
     const suffix = parts.slice(1).join(" "); // DESC/ASC
     // Inline quoting logic to avoid circular reference during construction
     const quoted = colRef.includes(".")
