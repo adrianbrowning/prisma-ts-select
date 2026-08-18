@@ -30,7 +30,7 @@ jobs:
     timeout-minutes: 15
     strategy:
       matrix:
-        node: [22.x, 24.x]
+        node: [22.x, 24.x, 26.x]
     steps:
       - uses: actions/checkout@v7
 
@@ -51,7 +51,12 @@ jobs:
         run: pnpm --filter usage-sqlite-v7 lint:ts
 
       - name: Run tests
+        if: matrix.node != '26.x'
         run: pnpm --filter usage-sqlite-v7 test
+
+      - name: Run tests with coverage
+        if: matrix.node == '26.x'
+        run: pnpm --filter usage-sqlite-v7 test:coverage:ci
 
   test-status:
     needs: [changes, test]

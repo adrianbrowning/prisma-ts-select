@@ -30,7 +30,7 @@ jobs:
     timeout-minutes: 15
     strategy:
       matrix:
-        node: [22.x, 24.x]
+        node: [22.x, 24.x, 26.x]
 
     services:
       postgres:
@@ -78,7 +78,12 @@ jobs:
         run: pnpm --filter usage-pg-v7 lint:ts
 
       - name: Run tests
+        if: matrix.node != '26.x'
         run: pnpm --filter usage-pg-v7 test
+
+      - name: Run tests with coverage
+        if: matrix.node == '26.x'
+        run: pnpm --filter usage-pg-v7 test:coverage:ci
 
   test-status:
     needs: [changes, test]
