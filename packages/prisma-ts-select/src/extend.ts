@@ -1,7 +1,7 @@
 /* eslint-disable sonarjs/class-name, @typescript-eslint/no-empty-object-type */
 import { Prisma } from "@prisma/client/extension";
 import type { Decimal } from "@prisma/client/runtime/client";
-import { match, P } from "ts-pattern";
+import { match, P } from "./ts-pattern-re-export.ts";
 
 // Type stub for PrismaClient to avoid DTS build issues when @prisma/client isn't generated
 // The actual PrismaClient type from @prisma/client will be used at runtime via getExtensionContext

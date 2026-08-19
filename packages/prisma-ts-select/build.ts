@@ -22,6 +22,7 @@ chmodSync("dist/bin.cjs", 0o755);
 await build({
   entryPoints: [
     "src/extend.ts",
+    "src/ts-pattern-re-export.ts",
     "src/sql-expr.ts",
     "src/db.ts",
     "src/dialects/types.ts",
