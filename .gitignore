@@ -24,3 +24,4 @@ sorted-seeking-hoare.md
 /packages/*bug*/
 /packages/*/.eslintcache
 /.eslintcache
+**/lcov.info
