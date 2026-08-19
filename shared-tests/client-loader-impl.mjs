@@ -36,5 +36,13 @@ export async function resolve(specifier, context, nextResolve) {
     };
   }
 
+  if (specifier.startsWith('#prisma-ts-select/')) {
+    const rest = specifier.slice('#prisma-ts-select/'.length);
+    return {
+      url: `file://${process.cwd()}/generated/prisma-ts-select/${rest}`,
+      shortCircuit: true
+    };
+  }
+
   return nextResolve(specifier, context);
 }

@@ -161,6 +161,34 @@ async function runBuild(dispatch: Dispatch): Promise<boolean> {
   return true;
 }
 
+async function runTests(
+  config: RunConfig,
+  pkg: string,
+  env: Record<string, string>,
+  onLine: (line: string) => void,
+  setStep: (step: PanelState["step"], status: PanelState["status"]) => void,
+  fail: (step: PanelState["step"], code: number) => void
+): Promise<number | null> {
+  if (config.testPattern) {
+    setStep("test", "running");
+    return runStep(
+      [ "node",
+        "--import", "../../shared-tests/client-resolver.mjs",
+        "--import", "../../shared-tests/test-setup.mjs",
+        "--test", config.testPattern ],
+      { env, cwd: `packages/${pkg}` },
+      onLine
+    );
+  }
+  setStep("lint", "running");
+  const lintCode = await runStep([ "pnpm", "--filter", pkg, "lint:ts" ], { env }, onLine);
+  if (lintCode !== 0) { fail("lint", lintCode); return null; }
+
+  setStep("test", "running");
+  const testScript = config.coverage ? "test:coverage" : "test";
+  return runStep([ "pnpm", "--filter", pkg, testScript ], { env }, onLine);
+}
+
 async function runPackage(
   config: RunConfig,
   panel: PanelState,
@@ -207,30 +235,10 @@ async function runPackage(
     return;
   }
 
-  if (config.testPattern) {
-    setStep("test", "running");
-    const testCode = await runStep(
-      [ "node",
-        "--import", "../../shared-tests/client-resolver.mjs",
-        "--import", "../../shared-tests/test-setup.mjs",
-        "--test", config.testPattern ],
-      { env, cwd: `packages/${pkg}` },
-      onLine
-    );
-    setStep("test", testCode === 0 ? "done" : "failed");
-    dispatch({ type: "SET_PANEL", idx, updates: { exitCode: testCode } });
-  }
-  else {
-    setStep("lint", "running");
-    const lintCode = await runStep([ "pnpm", "--filter", pkg, "lint:ts" ], { env }, onLine);
-    if (lintCode !== 0) { fail("lint", lintCode); return; }
-
-    setStep("test", "running");
-    const testScript = config.coverage ? "test:coverage" : "test";
-    const testCode = await runStep([ "pnpm", "--filter", pkg, testScript ], { env }, onLine);
-    setStep("test", testCode === 0 ? "done" : "failed");
-    dispatch({ type: "SET_PANEL", idx, updates: { exitCode: testCode } });
-  }
+  const testCode = await runTests(config, pkg, env, onLine, setStep, fail);
+  if (testCode === null) return;
+  setStep("test", testCode === 0 ? "done" : "failed");
+  dispatch({ type: "SET_PANEL", idx, updates: { exitCode: testCode } });
 
   logStream.end();
 }
