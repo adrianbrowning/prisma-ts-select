@@ -39,17 +39,24 @@ Examples:
     process.stderr.write(`Error: --version must be 6 or 7, got "${opts["version"]}"\n`);
     process.exit(1);
   }
-  if (opts["db"] != null && opts["db"] !== "sqlite" && opts["db"] !== "mysql" && opts["db"] !== "pg") {
-    process.stderr.write(`Error: --db must be sqlite, mysql, or pg, got "${opts["db"]}"\n`);
-    process.exit(1);
+  const validDbs = ["sqlite", "mysql", "pg"] as const;
+  type DB = (typeof validDbs)[number];
+  if (opts["db"] != null) {
+    const parts = (opts["db"] as string).split(",");
+    for (const p of parts) {
+      if (!validDbs.includes(p as DB)) {
+        process.stderr.write(`Error: --db must be comma-separated list of sqlite, mysql, pg — got "${p}"\n`);
+        process.exit(1);
+      }
+    }
   }
 
   const versions: Array<"6" | "7"> = opts["version"] != null
     ? [ opts["version"] as "6" | "7" ]
     : [ "6", "7" ];
 
-  const dbs: Array<"sqlite" | "mysql" | "pg"> = opts["db"] != null
-    ? [ opts["db"] as "sqlite" | "mysql" | "pg" ]
+  const dbs: Array<DB> = opts["db"] != null
+    ? (opts["db"] as string).split(",") as Array<DB>
     : [ "sqlite", "mysql", "pg" ];
 
   return {
