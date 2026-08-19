@@ -25,32 +25,38 @@
     "packages/usage-sqlite-v6": {
       "entry": ["tests/**/*.{ts,mjs}", "prisma/seed.ts"],
       "project": ["src/**/*.ts", "tests/**/*.{ts,mjs}", "prisma/**/*.ts"],
-      "ignore": ["generated/**"]
+      "ignore": ["generated/**"],
+      "ignoreUnresolved" : ["#prisma-ts-select/dialects/postgresql.js"]
     },
     "packages/usage-sqlite-v7": {
       "entry": ["tests/**/*.{ts,mjs}", "prisma/seed.ts"],
       "project": ["src/**/*.ts", "tests/**/*.{ts,mjs}", "prisma/**/*.ts"],
-      "ignore": ["generated/**"]
+      "ignore": ["generated/**"],
+      "ignoreUnresolved" : ["#prisma-ts-select/dialects/postgresql.js"]
     },
     "packages/usage-mysql-v6": {
       "entry": ["tests/**/*.{ts,mjs}", "prisma/seed.ts"],
       "project": ["src/**/*.ts", "tests/**/*.{ts,mjs}", "prisma/**/*.ts"],
-      "ignore": ["generated/**"]
+      "ignore": ["generated/**"],
+      "ignoreUnresolved" : ["#prisma-ts-select/dialects/postgresql.js"]
     },
     "packages/usage-mysql-v7": {
       "entry": ["tests/**/*.{ts,mjs}", "prisma/seed.ts"],
       "project": ["src/**/*.ts", "tests/**/*.{ts,mjs}", "prisma/**/*.ts"],
-      "ignore": ["generated/**"]
+      "ignore": ["generated/**"],
+      "ignoreUnresolved" : ["#prisma-ts-select/dialects/postgresql.js"]
     },
     "packages/usage-pg-v6": {
       "entry": ["tests/**/*.{ts,mjs}", "prisma/seed.ts"],
       "project": ["src/**/*.ts", "tests/**/*.{ts,mjs}", "prisma/**/*.ts"],
-      "ignore": ["generated/**"]
+      "ignore": ["generated/**"],
+      "ignoreUnresolved" : ["#prisma-ts-select/dialects/postgresql.js"]
     },
     "packages/usage-pg-v7": {
       "entry": ["tests/**/*.{ts,mjs}", "prisma/seed.ts"],
       "project": ["src/**/*.ts", "tests/**/*.{ts,mjs}", "prisma/**/*.ts"],
-      "ignore": ["generated/**"]
+      "ignore": ["generated/**"],
+      "ignoreUnresolved" : ["#prisma-ts-select/dialects/postgresql.js"]
     },
     "packages/bug-test": {
       "entry": ["src/**/*.ts", "prisma/seed.ts"],
