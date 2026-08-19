@@ -317,6 +317,9 @@ export { ${provider}Dialect as dialect, ${provider}Dialect, ${ctxName} as dialec
     // Copy sql-expr.js — dialect .js files import from ../sql-expr.js at runtime
     fs.copyFileSync(path.join(srcDir, "sql-expr.js"), path.join(outputPath, "sql-expr.js"));
 
+    // Copy ts-pattern-re-export.js — extend.js imports ts-pattern from this file
+    fs.copyFileSync(path.join(srcDir, "ts-pattern-re-export.js"), path.join(outputPath, "ts-pattern-re-export.js"));
+
     // Copy chunk .d.ts files (e.g. sql-expr-HASH.d.ts) that extend.d.ts imports
     for (const file of fs.readdirSync(srcDir)) {
       if (file !== "extend.d.ts" && file !== "extend.js" && file !== "db.d.ts" && file !== "db.js" && file.endsWith(".d.ts")) {

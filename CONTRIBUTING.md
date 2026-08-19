@@ -10,6 +10,18 @@ pnpm -r gen
 
 ## Testing
 
+### Writing Tests
+Testing the SQL query output, we should use the pattern
+```ts
+expectSQL(
+  query.getSQL(),
+  `SELECT ${dialect.quoteQualifiedColumn("User.name")} AS ${dialect.quote("username", true)} FROM ${dialect.quote("User")};`
+);
+```
+
+
+### Running Tests
+
 ```bash
 pnpm --filter prisma-ts-select test && pnpm run-tests [--version 6|7] [--db sqlite|mysql|pg] [--skip-build] [--reset-db] [--test <glob>]
 ```

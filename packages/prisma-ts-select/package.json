@@ -33,7 +33,7 @@
     "p:migrate": "pnpm exec prisma migrate dev",
     "p:update": "pnpm add -D prisma@latest && pnpm add @prisma/client@latest",
     "test": "node --test tests/**/*.spec.ts",
-    "test:coverage": "node --experimental-test-coverage --test-coverage-include='src/**/*.ts' --test-coverage-exclude='src/bin.ts' --test-coverage-exclude='src/**/*.d.ts' --test-coverage-exclude='src/extend.ts' --test-coverage-exclude='src/generator.ts' --test-coverage-include-all --test-coverage-lines=100 --test-coverage-branches=100 --test-coverage-functions=100 --test tests/**/*.spec.ts",
+    "test:coverage": "node --experimental-test-coverage --test-coverage-include='src/**/*.ts' --test-coverage-exclude='src/ts-pattern-re-export.ts' --test-coverage-exclude='src/bin.ts' --test-coverage-exclude='src/**/*.d.ts' --test-coverage-exclude='src/extend.ts' --test-coverage-exclude='src/generator.ts' --test-coverage-include-all --test-coverage-lines=100 --test-coverage-branches=100 --test-coverage-functions=100 --test tests/**/*.spec.ts",
     "test:coverage:ci": "pnpm test:coverage --test-reporter=spec --test-reporter-destination=stdout --test-reporter=lcov --test-reporter-destination=lcov.info ",
     "2postinstall": "node src/scripts/postinstall.js",
     "doc": "pnpm exec markdown-toc -i README.md",
