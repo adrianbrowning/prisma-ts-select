@@ -40,7 +40,7 @@
     "lint": "pnpm lint:ts && pnpm lint:s",
     "lint:e18e": "pnpm dlx @e18e/cli analyze",
     "test:coverage": "pnpm -r run test:coverage",
-    "test:full": "pnpm --filter prisma-ts-select test && pnpm run-tests --reset-db"
+    "test:full": "pnpm --filter prisma-ts-select test && pnpm test:all"
   },
   "pnpm": {
     "onlyBuiltDependencies": [
