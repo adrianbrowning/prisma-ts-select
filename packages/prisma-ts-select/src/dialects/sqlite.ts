@@ -177,7 +177,7 @@ export const sqliteDialect: Dialect = {
   },
   quoteOrderByClause: clause => {
     const parts = clause.trim().split(/\s+/);
-    const colRef = parts[0] ?? "";
+    const colRef = parts[0]!;
     const suffix = parts.slice(1).join(" ");
     const quoted = colRef.includes(".") ? (() => {
       const [ table, col ] = colRef.split(".", 2);
