@@ -37,8 +37,14 @@ jobs:
       - name: Build
         run: pnpm --filter prisma-ts-select build
 
-      - name: Test
-        run: pnpm --filter prisma-ts-select test
+      - name: Test with coverage
+        run: pnpm --filter prisma-ts-select test:coverage:ci
+
+      - name: Upload coverage
+        uses: actions/upload-artifact@v4
+        with:
+          name: lcov-coverage
+          path: packages/prisma-ts-select/lcov.info
 
   test-status:
     needs: [changes, test-runner]

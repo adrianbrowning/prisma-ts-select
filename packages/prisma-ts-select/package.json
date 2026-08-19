@@ -34,6 +34,7 @@
     "p:update": "pnpm add -D prisma@latest && pnpm add @prisma/client@latest",
     "test": "node --test tests/**/*.spec.ts",
     "test:coverage": "node --experimental-test-coverage --test-coverage-include='src/**/*.ts' --test-coverage-exclude='tests/**' --test tests/**/*.spec.ts",
+    "test:coverage:ci": "node --experimental-test-coverage --test-reporter=spec --test-reporter-destination=stdout --test-reporter=lcov --test-reporter-destination=lcov.info --test-coverage-include='src/**/*.ts' --test-coverage-exclude='tests/**' --test tests/**/*.spec.ts",
     "2postinstall": "node src/scripts/postinstall.js",
     "doc": "pnpm exec markdown-toc -i README.md",
     "mdcode-ts": "pnpm exec mdcode",
