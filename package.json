@@ -18,7 +18,7 @@
     "bump": "bumpy add",
     "bump:status": "bumpy status",
     "release": "pnpm --filter prisma-ts-select build && pnpm install --frozen-lockfile && pnpm -r gen && pnpm --filter prisma-ts-select test && bumpy publish",
-    "run-tests": "node packages/run-tests-tui/src/index.ts",
+    "run-tests": "node packages/run-tests-tui/src/index.ts --coverage --reset-db",
     "test:v6": "./run-tests-v6.sh",
     "test:v7": "./run-tests-v7.sh",
     "test:isolated": "./run-tests-isolated.sh",

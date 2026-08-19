@@ -13,6 +13,7 @@
     "@types/react": "^18.2.0"
   },
   "scripts": {
+    "start": "node ./src/index.ts",
     "lint:ts": "tsc --noEmit -p tsconfig.json",
     "lint": "lint:ts ; lint:s",
     "lint:esl": "eslint --config ../../eslint.config.ts \"src/**/*.{j,t}s{,x}\" --cache --max-warnings=0",

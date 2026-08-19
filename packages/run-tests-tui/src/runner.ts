@@ -226,7 +226,8 @@ async function runPackage(
     if (lintCode !== 0) { fail("lint", lintCode); return; }
 
     setStep("test", "running");
-    const testCode = await runStep([ "pnpm", "--filter", pkg, "test" ], { env }, onLine);
+    const testScript = config.coverage ? "test:coverage" : "test";
+    const testCode = await runStep([ "pnpm", "--filter", pkg, testScript ], { env }, onLine);
     setStep("test", testCode === 0 ? "done" : "failed");
     dispatch({ type: "SET_PANEL", idx, updates: { exitCode: testCode } });
   }

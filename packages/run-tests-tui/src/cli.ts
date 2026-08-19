@@ -3,6 +3,8 @@ import { Command } from "commander";
 export type RunConfig = {
   versions: Array<"6" | "7">;
   dbs: Array<"sqlite" | "mysql" | "pg">;
+  ci: boolean;
+  coverage: boolean;
   skipBuild: boolean;
   resetDb: boolean;
   seedOnly: boolean;
@@ -19,6 +21,8 @@ export function parseArgs(argv: Array<string> = process.argv): RunConfig {
     .option("--reset-db", "Run p:r before tests (reset + seed)", false)
     .option("--seed-only", "Spin up DBs + seed, then exit", false)
     .option("--test <glob>", "Run specific test file/glob (skips lint:ts)")
+    .option("--ci", "Headless mode: JSON results to stdout, no TUI", false)
+    .option("--coverage", "Run with coverage", false)
     .addHelpText("after", `
 Examples:
   run-tests --db sqlite --skip-build
@@ -51,7 +55,9 @@ Examples:
   return {
     versions,
     dbs,
+    ci: opts["ci"] as boolean,
     skipBuild: opts["skipBuild"] as boolean,
+    coverage: opts["coverage"] as boolean,
     resetDb: opts["resetDb"] as boolean,
     seedOnly: opts["seedOnly"] as boolean,
     testPattern: (opts["test"] as string | undefined) ?? null,
