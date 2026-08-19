@@ -1,7 +1,7 @@
 import type { RunConfig } from "./cli.ts";
+import { makeTimestamp, orchestrate } from "./runner.ts";
 import type { Action } from "./state.ts";
 import { makeInitialState } from "./state.ts";
-import { makeTimestamp, orchestrate } from "./runner.ts";
 
 type Result = {
   pkg: string;
@@ -21,7 +21,7 @@ export async function runCi(config: RunConfig): Promise<void> {
   const results: Array<Result> = [];
 
   let resolveDone: () => void;
-  const donePromise = new Promise<void>(r => { resolveDone = r; });
+  const donePromise = new Promise<void>(resolve => { resolveDone = resolve; });
 
   const dispatch = (action: Action): void => {
     if (action.type === "SET_PANEL") {

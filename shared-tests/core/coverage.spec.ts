@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { dialect } from "#dialect";
 import { prisma } from "#client";
+import { dialect } from "#dialect";
 import { expectSQL } from "../test-utils.ts";
 
 describe("coverage: extend.js gaps", () => {
@@ -67,7 +67,9 @@ describe("coverage: extend.js gaps", () => {
   describe("where with single condition (no parens wrapping)", () => {
     it("single field condition produces no extra parens", () => {
       expectSQL(
-        prisma.$from("User").where({ id: 1 }).select("id").getSQL(),
+        prisma.$from("User").where({ id: 1 })
+          .select("id")
+          .getSQL(),
         `SELECT ${dialect.quote("id")} FROM ${dialect.quote("User")} WHERE ${dialect.quote("id")} = 1;`
       );
     });
@@ -90,7 +92,9 @@ describe("coverage: extend.js gaps", () => {
     it("CTE wraps subquery in WITH clause", () => {
       const cte = prisma.$from("User").select("id");
       expectSQL(
-        prisma.$with("u", cte).from("u").select("*").getSQL(),
+        prisma.$with("u", cte).from("u")
+          .select("*")
+          .getSQL(),
         `WITH ${dialect.quote("u")} AS (SELECT ${dialect.quote("id")} FROM ${dialect.quote("User")}) SELECT * FROM ${dialect.quote("u")};`
       );
     });
@@ -101,7 +105,7 @@ describe("coverage: extend.js gaps", () => {
       expectSQL(
         prisma.$from("User")
           .join("Post", "authorId", "User.id")
-          .groupBy(["User.id"])
+          .groupBy([ "User.id" ])
           .having(({ count }) => [[ count("Post.id"), { op: ">", value: 1 }]])
           .select("User.id")
           .getSQL(),
@@ -126,14 +130,18 @@ describe("coverage: extend.js gaps", () => {
   describe("where with op condition (applyOpCondition)", () => {
     it("op > produces comparison", () => {
       expectSQL(
-        prisma.$from("User").where({ id: { op: ">", value: 5 } }).select("id").getSQL(),
+        prisma.$from("User").where({ id: { op: ">", value: 5 } })
+          .select("id")
+          .getSQL(),
         `SELECT ${dialect.quote("id")} FROM ${dialect.quote("User")} WHERE ${dialect.quote("id")} > 5;`
       );
     });
 
     it("op != produces comparison", () => {
       expectSQL(
-        prisma.$from("User").where({ id: { op: "!=", value: 0 } }).select("id").getSQL(),
+        prisma.$from("User").where({ id: { op: "!=", value: 0 } })
+          .select("id")
+          .getSQL(),
         `SELECT ${dialect.quote("id")} FROM ${dialect.quote("User")} WHERE ${dialect.quote("id")} != 0;`
       );
     });
@@ -143,7 +151,9 @@ describe("coverage: extend.js gaps", () => {
     it("plain column used as CTE column name", () => {
       const cte = prisma.$from("User").select("id");
       expectSQL(
-        prisma.$with("u", cte).from("u").select("*").getSQL(),
+        prisma.$with("u", cte).from("u")
+          .select("*")
+          .getSQL(),
         `WITH ${dialect.quote("u")} AS (SELECT ${dialect.quote("id")} FROM ${dialect.quote("User")}) SELECT * FROM ${dialect.quote("u")};`
       );
     });
@@ -211,7 +221,9 @@ describe("coverage: extend.js gaps", () => {
     it("CTE with unrecognizable expression omits column list", () => {
       const cte = prisma.$from("User")
         .select(({ concat }) => concat("email", "name"));
-      const sql = prisma.$with("x", cte).from("x").select("*").getSQL();
+      const sql = prisma.$with("x", cte).from("x")
+        .select("*")
+        .getSQL();
       // Key assertion: no column list between CTE name and AS — extractSelectAlias returned null
       assert.match(sql, new RegExp(`${dialect.quote("x")}\\s+AS\\s+\\(`));
       assert.ok(sql.includes("SELECT * FROM"));

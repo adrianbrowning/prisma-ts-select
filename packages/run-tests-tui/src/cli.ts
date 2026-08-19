@@ -39,7 +39,7 @@ Examples:
     process.stderr.write(`Error: --version must be 6 or 7, got "${opts["version"]}"\n`);
     process.exit(1);
   }
-  const validDbs = ["sqlite", "mysql", "pg"] as const;
+  const validDbs = [ "sqlite", "mysql", "pg" ] as const;
   type DB = (typeof validDbs)[number];
   if (opts["db"] != null) {
     const parts = (opts["db"] as string).split(",");
