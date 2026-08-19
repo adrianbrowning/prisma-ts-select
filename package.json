@@ -38,6 +38,7 @@
     "lint:jscpd": "pnpm -r --no-bail lint:jscpd",
     "lint": "pnpm lint:ts && pnpm lint:s",
     "lint:e18e": "pnpm dlx @e18e/cli analyze",
+    "test:coverage": "pnpm -r run test:coverage",
     "test:full": "pnpm --filter prisma-ts-select test && pnpm run-tests --reset-db"
   },
   "pnpm": {
