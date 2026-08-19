@@ -96,7 +96,7 @@ describe("coverage: extend.js gaps", () => {
     });
   });
 
-  describe("having(fn) on _fGroupBy (via groupBy)", () => {
+  describe("having(fn) on _fHaving (via groupBy)", () => {
     it("fn form produces HAVING clause", () => {
       expectSQL(
         prisma.$from("User")
@@ -106,6 +106,19 @@ describe("coverage: extend.js gaps", () => {
           .select("User.id")
           .getSQL(),
         `SELECT ${dialect.quoteQualifiedColumn("User.id")} AS ${dialect.quote("User.id", true)} FROM ${dialect.quote("User")} JOIN ${dialect.quote("Post")} ON ${dialect.quoteQualifiedColumn("Post.authorId")} = ${dialect.quoteQualifiedColumn("User.id")} GROUP BY ${dialect.quoteQualifiedColumn("User.id")} HAVING COUNT(${dialect.quoteQualifiedColumn("Post.id")}) > 1;`
+      );
+    });
+  });
+
+  describe("having(fn) on _fGroupBy (without groupBy)", () => {
+    it("fn form on join chain hits _fGroupBy.having()", () => {
+      expectSQL(
+        prisma.$from("User")
+          .join("Post", "authorId", "User.id")
+          .having(({ count }) => [[ count("Post.id"), { op: ">", value: 1 }]])
+          .select("User.id")
+          .getSQL(),
+        `SELECT ${dialect.quoteQualifiedColumn("User.id")} AS ${dialect.quote("User.id", true)} FROM ${dialect.quote("User")} JOIN ${dialect.quote("Post")} ON ${dialect.quoteQualifiedColumn("Post.authorId")} = ${dialect.quoteQualifiedColumn("User.id")} HAVING COUNT(${dialect.quoteQualifiedColumn("Post.id")}) > 1;`
       );
     });
   });
@@ -177,6 +190,19 @@ describe("coverage: extend.js gaps", () => {
           .select("id")
           .getSQL(),
         /Unsupported operation/
+      );
+    });
+  });
+
+  describe("manyToManyJoin error: no junction table", () => {
+    it("throws when target has no junction", () => {
+      assert.throws(
+        () => prisma.$from("User")
+          // @ts-expect-error runtime-only: exercising m2m error path
+          .manyToManyJoin("User", "Post")
+          .select("User.id")
+          .getSQL(),
+        /manyToManyJoin/
       );
     });
   });
