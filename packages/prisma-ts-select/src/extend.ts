@@ -436,7 +436,13 @@ type Values = {
   selectDistinct?: true;
   selects: Array<string>;
   tables: [{ table: string; alias?: string; }, ...Array<{ table: string; local: string; remote: string; alias?: string; joinWhere?: ClauseType; joinType?: JoinType; }>];
-  withs?: Array<{ name: string; sql: string; columns?: Array<string>; }>;
+  withs?: Array<{ name: string; sql: string; columns?: Array<string>; recursive?: boolean; selfRef?: boolean; }>;
+  /**
+   * Recursive-CTE member only: fold joined CTE columns into the ambiguity check.
+   * Deliberately opt-in, not global: qualifying columns for every joined CTE would change the
+   * emitted aliases of existing `$with` queries, desyncing them from the type-level row keys.
+   */
+  countCTEColumns?: boolean;
   limit?: number;
   offset?: number;
   where?: ClauseType;
@@ -704,10 +710,16 @@ class _fRun<TSources extends TArrSources, TFields extends TFieldsType, TSelectRT
 
   getSQL(formatted: boolean = false) {
 
-    const withClause = this.values.withs?.length
-      ? `WITH ${this.values.withs.map(w =>
-        `${dialect.quoteTableIdentifier(w.name, false)} AS (${w.sql})`
-      ).join(", ")}`
+    // selfRef entries only register a recursive CTE for typing/ambiguity — the outer WITH declares it.
+    const withEntries = this.values.withs?.filter(w => !w.selfRef) ?? [];
+    const withClause = withEntries.length
+      ? `WITH ${withEntries.some(w => w.recursive) ? "RECURSIVE " : ""}${withEntries.map(w => {
+        const name = dialect.quoteTableIdentifier(w.name, false);
+        const header = w.recursive && w.columns?.length
+          ? `${name}(${w.columns.map(col => dialect.quote(col, false)).join(", ")})`
+          : name;
+        return `${header} AS (${w.sql})`;
+      }).join(", ")}`
       : "";
 
     const whereClause = this.values.where !== undefined ? processCriteria(this.values.where, "AND", formatted) : undefined;
@@ -1142,7 +1154,16 @@ class _fSelect<TSources extends TArrSources, TFields extends TFieldsType, TSelec
         // else use table.column
         const currentTablesWithFields = this.values.tables.reduce<Record<string, number>>((acc, table) => {
           const { table:real } = table;
-          if (!DB[real]) return acc; // skip CTEs
+          if (!DB[real]) {
+            // Recursive-CTE member: count the self-referenced CTE's columns so names shared with a
+            // real table render qualified. The member's projection names are irrelevant — the CTE's
+            // column names come from the anchor-derived header list.
+            if (!this.values.countCTEColumns) return acc; // skip CTEs
+            for (const col of this.values.withs?.find(w => w.name === real)?.columns ?? []) {
+              acc[col] = acc[col] ? acc[col] + 1 : 1;
+            }
+            return acc;
+          }
           for (const col in DB[real].fields) {
             acc[col] = acc[col] ? acc[col] + 1 : 1;
           }
@@ -2270,6 +2291,15 @@ type NullifyTableFields<TFields extends TFieldsType> = { [T in keyof TFields]: M
 /** Extracts result row type from a _fRun query — used by $with to capture CTE shape. */
 export type InferCTEShape<T> = T extends _fRun<ANY_IS_OK, ANY_IS_OK, infer TSelectRT> ? TSelectRT : never;
 
+/** Strips `table.` prefixes from keys so anchor/recursive-member shapes are comparable. */
+type NormalizeCTEKeys<T> = { [K in keyof T & string as K extends `${string}.${infer C}` ? C : K]: T[K] };
+
+/** True when a recursive member's row shape matches the anchor's (ignoring table prefixes). */
+type IsCTECompatible<TAnchorRT, TRecRT> =
+  [NormalizeCTEKeys<TAnchorRT>] extends [NormalizeCTEKeys<TRecRT>]
+    ? [NormalizeCTEKeys<TRecRT>] extends [NormalizeCTEKeys<TAnchorRT>] ? true : false
+    : false;
+
 /** CTE names present in TSources (tagged with "__cte__" discriminant). */
 type CTENames<TSources extends TArrSources> = TSources[number] extends infer S
   ? S extends readonly ["__cte__", infer Name extends string]
@@ -3202,7 +3232,8 @@ function extractCTEColumns(query: _fRun<ANY_IS_OK, ANY_IS_OK, ANY_IS_OK>): Array
 class DbWith<TCTEs extends Record<string, Record<string, ANY_IS_OK>>> {
   constructor(
     private db: PrismaClient,
-    private _withs: Array<{ name: string; sql: string; columns?: Array<string>; }>
+    private _withs: NonNullable<Values["withs"]>,
+    private _extraValues: Pick<Values, "countCTEColumns"> = {}
   ) {}
 
   with<const TName extends string, TQuery extends _fRun<ANY_IS_OK, ANY_IS_OK, ANY_IS_OK>>(
@@ -3213,7 +3244,7 @@ class DbWith<TCTEs extends Record<string, Record<string, ANY_IS_OK>>> {
     return new DbWith(this.db, [
       ...this._withs,
       { name, sql: query.getSQL().replace(/;$/, ""), columns },
-    ]) as ANY_IS_OK;
+    ], this._extraValues) as ANY_IS_OK;
   }
 
   from<const TName extends keyof TCTEs & string>(
@@ -3231,6 +3262,7 @@ class DbWith<TCTEs extends Record<string, Record<string, ANY_IS_OK>>> {
       tables: [{ table: baseTableOrCTE, alias }],
       selects: [],
       withs: this._withs,
+      ...this._extraValues,
     }) as ANY_IS_OK;
   }
 }
@@ -3257,6 +3289,35 @@ const extendedPrismaClient = {
       const client = Prisma.getExtensionContext(this) as unknown as PrismaClient;
       const columns = extractCTEColumns(query);
       return new DbWith(client, [{ name, sql: query.getSQL().replace(/;$/, ""), columns }]);
+    },
+    /**
+     * Recursive CTE: `WITH RECURSIVE name(cols) AS (anchor UNION ALL recursive)`.
+     * Column names come from the anchor's select list; the recursive member must project
+     * the same columns, in the same order.
+     */
+    $withRecursive<const TName extends string,
+      TAnchor extends _fRun<ANY_IS_OK, ANY_IS_OK, ANY_IS_OK>,
+      TRecRT extends {} = BLANK_OBJECT
+    >(
+      name: TName,
+      anchor: TAnchor,
+      recursive: (w: DbWith<Record<TName, InferCTEShape<TAnchor>>>) =>
+      IsCTECompatible<InferCTEShape<TAnchor>, TRecRT> extends true ? _fRun<ANY_IS_OK, ANY_IS_OK, TRecRT> : never
+    ): DbWith<Record<TName, InferCTEShape<TAnchor>>> {
+      const client = Prisma.getExtensionContext(this) as unknown as PrismaClient;
+      const columns = extractCTEColumns(anchor);
+
+      const member = recursive(new DbWith(client, [
+        { name, sql: "", columns, selfRef: true },
+      ], { countCTEColumns: true }) as ANY_IS_OK) as unknown as _fRun<ANY_IS_OK, ANY_IS_OK, ANY_IS_OK>;
+
+      const memberColumns = extractCTEColumns(member).map(c => c.replace(/^.*\./, ""));
+      if (memberColumns.length !== columns.length || memberColumns.some((c, i) => c !== columns[i])) {
+        throw new Error(`Recursive CTE "${name}": recursive member columns [${memberColumns.join(", ")}] must match the anchor columns [${columns.join(", ")}] in the same order`);
+      }
+
+      const sql = `${anchor.getSQL().replace(/;$/, "")} UNION ALL ${member.getSQL().replace(/;$/, "")}`;
+      return new DbWith(client, [{ name, sql, columns, recursive: true }]);
     },
   },
 };
