@@ -1,4 +1,5 @@
 {
+  "private": true,
   "type": "module",
   "devDependencies": {
     "@commitlint/cli": "21.2.1",
