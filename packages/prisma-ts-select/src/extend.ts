@@ -430,13 +430,18 @@ type ClauseType = Array<string | WhereCriteria<TArrSources, {}>>;
  */
 type JoinType = "INNER" | "LEFT" | "LEFT OUTER" | "RIGHT" | "RIGHT OUTER" | "FULL" | "FULL OUTER" | "CROSS";
 
+type WithEntry = { name: string; sql: string; columns?: Array<string>; recursive?: boolean; };
+
 type Values = {
   //baseTable: TTables,
   //baseTableAlias?: string;
   selectDistinct?: true;
   selects: Array<string>;
   tables: [{ table: string; alias?: string; }, ...Array<{ table: string; local: string; remote: string; alias?: string; joinWhere?: ClauseType; joinType?: JoinType; }>];
-  withs?: Array<{ name: string; sql: string; columns?: Array<string>; recursive?: boolean; selfRef?: boolean; }>;
+  /** CTEs this query declares — emitted by `buildWithClause`. */
+  withs?: Array<WithEntry>;
+  /** CTEs declared by an enclosing WITH — resolvable for typing/expansion, never emitted. */
+  cteRefs?: Array<WithEntry>;
   limit?: number;
   offset?: number;
   where?: ClauseType;
@@ -444,6 +449,11 @@ type Values = {
   groupBy?: Array<string>;
   orderBy?: Array<`${string}${ "" | " DESC" | " ASC"}`>;
 };
+
+/** Every CTE resolvable in this query — the ones it declares plus enclosing-scope declarations. */
+function resolvableCTEs(values: Values): Array<WithEntry> {
+  return [ ...(values.withs ?? []), ...(values.cteRefs ?? []) ];
+}
 
 function isColRef(v: unknown): v is { $colRaw: string; } {
   return typeof v === "object" && v !== null && "$colRaw" in v;
@@ -619,9 +629,8 @@ function quoteSelectColumn(select: string): string {
   return dialect.quote(select, false);
 }
 
-/** selfRef entries only register a recursive CTE for typing/ambiguity — an outer WITH declares it. */
 function buildWithClause(withs: Values["withs"]): string {
-  const entries = withs?.filter(w => !w.selfRef) ?? [];
+  const entries = withs ?? [];
   if (!entries.length) return "";
 
   const recursivePrefix = entries.some(w => w.recursive) ? "RECURSIVE " : "";
@@ -1166,7 +1175,7 @@ class _fSelect<TSources extends TArrSources, TFields extends TFieldsType, TSelec
         //Check if column is a unique
         // if is a unique strip table
         // else use table.column
-        const cteColumns = new Map((this.values.withs ?? []).map(w => [ w.name, w.columns ]));
+        const cteColumns = new Map(resolvableCTEs(this.values).map(w => [ w.name, w.columns ]));
         const currentTablesWithFields = this.values.tables.reduce<Record<string, number>>((acc, table) => {
           const { table:real } = table;
           if (!DB[real]) {
@@ -1218,7 +1227,7 @@ class _fSelect<TSources extends TArrSources, TFields extends TFieldsType, TSelec
     // Expand "*" for multi-table queries
     if (select === "*" && this.values.tables.length > 1) {
       const expandedSelects = this.values.tables.flatMap(tableObj =>
-        expandToQualifiedSelects(tableObj, this.values.withs)
+        expandToQualifiedSelects(tableObj, resolvableCTEs(this.values))
       );
       return new _fSelect(this.db, { ...this.values, selects: [ ...this.values.selects, ...expandedSelects ] }) as ANY_IS_OK;
     }
@@ -1265,7 +1274,7 @@ class _fSelectDistinct<TSources extends TArrSources, TFields extends TFieldsType
 
     const selects = (function (values: Values) {
       if (values.tables.length > 1) {
-        return values.tables.reduce<Array<string>>((acc, tableObj): Array<string> => acc.concat(expandToQualifiedSelects(tableObj, values.withs)), []);
+        return values.tables.reduce<Array<string>>((acc, tableObj): Array<string> => acc.concat(expandToQualifiedSelects(tableObj, resolvableCTEs(values))), []);
       }
       const t = values.tables[0];
       if (!DB[t.table]) throw new Error(`selectAll() is not supported when the base table is a CTE ("${t.table}"). Use select() with explicit column references.`);
@@ -3246,7 +3255,8 @@ function extractCTEColumns(query: _fRun<ANY_IS_OK, ANY_IS_OK, ANY_IS_OK>): Array
 class DbWith<TCTEs extends Record<string, Record<string, ANY_IS_OK>>> {
   constructor(
     private db: PrismaClient,
-    private _withs: NonNullable<Values["withs"]>
+    private _withs: NonNullable<Values["withs"]>,
+    private _cteRefs: NonNullable<Values["cteRefs"]> = []
   ) {}
 
   with<const TName extends string, TQuery extends _fRun<ANY_IS_OK, ANY_IS_OK, ANY_IS_OK>>(
@@ -3257,7 +3267,7 @@ class DbWith<TCTEs extends Record<string, Record<string, ANY_IS_OK>>> {
     return new DbWith(this.db, [
       ...this._withs,
       { name, sql: query.getSQL().replace(/;$/, ""), columns },
-    ]) as ANY_IS_OK;
+    ], this._cteRefs) as ANY_IS_OK;
   }
 
   from<const TName extends keyof TCTEs & string>(
@@ -3275,6 +3285,7 @@ class DbWith<TCTEs extends Record<string, Record<string, ANY_IS_OK>>> {
       tables: [{ table: baseTableOrCTE, alias }],
       selects: [],
       withs: this._withs,
+      cteRefs: this._cteRefs,
     }) as ANY_IS_OK;
   }
 }
@@ -3319,8 +3330,10 @@ const extendedPrismaClient = {
       const client = Prisma.getExtensionContext(this) as unknown as PrismaClient;
       const columns = extractCTEColumns(anchor);
 
-      const member = recursive(new DbWith(client, [
-        { name, sql: "", columns, selfRef: true },
+      // The self-reference goes in `cteRefs`: resolvable inside the member, never emitted
+      // (the outer WITH RECURSIVE built below declares it).
+      const member = recursive(new DbWith(client, [], [
+        { name, sql: "", columns },
       ]) as ANY_IS_OK) as unknown as _fRun<ANY_IS_OK, ANY_IS_OK, ANY_IS_OK>;
 
       const memberColumns = extractCTEColumns(member).map(c => c.replace(/^.*\./, ""));
@@ -3330,10 +3343,12 @@ const extendedPrismaClient = {
 
       // Any CTE the callback added via `.with()` must be declared on the outer WITH — a
       // `WITH ... AS (...)` prefix inside the UNION ALL body is invalid on all dialects.
-      // Marking them selfRef suppresses that prefix; we re-declare them below.
+      // Moving them to `cteRefs` drops that prefix while keeping them resolvable; we re-declare
+      // them on the returned DbWith below.
       const memberValues = (member as ANY_IS_OK).values as Values;
-      const hoisted = memberValues.withs?.filter(w => !w.selfRef) ?? [];
-      if (hoisted.length) memberValues.withs = memberValues.withs!.map(w => ({ ...w, selfRef: true }));
+      const hoisted = memberValues.withs ?? [];
+      memberValues.cteRefs = [ ...(memberValues.cteRefs ?? []), ...hoisted ];
+      memberValues.withs = [];
 
       const sql = `${anchor.getSQL().replace(/;$/, "")} UNION ALL ${member.getSQL().replace(/;$/, "")}`;
       return new DbWith(client, [ ...hoisted, { name, sql, columns, recursive: true }]);
