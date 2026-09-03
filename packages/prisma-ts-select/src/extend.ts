@@ -437,12 +437,6 @@ type Values = {
   selects: Array<string>;
   tables: [{ table: string; alias?: string; }, ...Array<{ table: string; local: string; remote: string; alias?: string; joinWhere?: ClauseType; joinType?: JoinType; }>];
   withs?: Array<{ name: string; sql: string; columns?: Array<string>; recursive?: boolean; selfRef?: boolean; }>;
-  /**
-   * Recursive-CTE member only: fold joined CTE columns into the ambiguity check.
-   * Deliberately opt-in, not global: qualifying columns for every joined CTE would change the
-   * emitted aliases of existing `$with` queries, desyncing them from the type-level row keys.
-   */
-  countCTEColumns?: boolean;
   limit?: number;
   offset?: number;
   where?: ClauseType;
@@ -888,7 +882,7 @@ type MergeItems<Field extends string,
           ? F extends keyof TFields[T]
           // [never] extends [never] = true means NOT a CTE → use uniqueness check
             ? [IsCTE<T, TSources>] extends [never]
-              ? IsColumnUnique<F, TSources> extends true
+              ? IsColumnUnique<F, TSources, TFields> extends true
                 ? Prettify<Pick<TFields[T], F>>
                 : Prettify<{ [K in Field]: TFields[T][F] }>
                 // CTE column — always keep qualified name
@@ -1003,15 +997,21 @@ type TablesArray2Name<TSources extends Array<TTableSources>, acc extends Array<s
  * Returns the keys of the table's fields object, handling both simple table names and aliased sources.
  *
  * @template TDBBase - Table source (table name string or [table, alias] tuple)
+ * @template TFields - Field map used to resolve CTE sources; omit it and CTEs contribute no columns
  * @returns Union of column names for the table
  *
  * @example
  * GetColumnNamesFromTable<"User"> // "id" | "name" | "email"
  * GetColumnNamesFromTable<["Post", "p"]> // "id" | "title" | "authorId"
+ *
+ * @example
+ * // A CTE only yields columns when TFields is supplied
+ * GetColumnNamesFromTable<["__cte__", "tree"]> // never
+ * GetColumnNamesFromTable<["__cte__", "tree"], { tree: { id: number; name: string } }> // "id" | "name"
  */
-type GetColumnNamesFromTable<TDBBase extends TTableSources> =
-  TDBBase extends TVirtualTableSource
-    ? never
+type GetColumnNamesFromTable<TDBBase extends TTableSources, TFields extends TFieldsType = BLANK_OBJECT> =
+  TDBBase extends readonly [ "__cte__", infer N extends string ]
+    ? N extends keyof TFields ? string & keyof TFields[N] : never
     : keyof GetFieldsFromTable<GetRealTableNames<TDBBase>>;
 
 /**
@@ -1019,15 +1019,16 @@ type GetColumnNamesFromTable<TDBBase extends TTableSources> =
  * Returns a union of all unqualified column names across all tables in the query.
  *
  * @template Tables - Array of table sources to extract columns from
+ * @template TFields - Field map used to resolve CTE sources; omit it and CTEs contribute no columns
  * @returns Union of all column names from all tables
  *
  * @example
  * GetColumnsFromTables<["User", "Post"]>
  * // Returns: "id" | "name" | "email" | "title" | "authorId" | ...
  */
-type GetColumnsFromTables<Tables extends Array<TTableSources>> =
+type GetColumnsFromTables<Tables extends Array<TTableSources>, TFields extends TFieldsType = BLANK_OBJECT> =
   Tables extends [infer T extends TTableSources, ...infer Rest extends Array<TTableSources>]
-    ? GetColumnNamesFromTable<T> | GetColumnsFromTables<Rest>
+    ? GetColumnNamesFromTable<T, TFields> | GetColumnsFromTables<Rest, TFields>
     : never;
 
 /**
@@ -1036,6 +1037,7 @@ type GetColumnsFromTables<Tables extends Array<TTableSources>> =
  * Checks each pair of tables for overlapping column names.
  *
  * @template Tables - Array of table sources to check for duplicate columns
+ * @template TFields - Field map used to resolve CTE sources; omit it and CTEs contribute no columns
  * @returns Union of column names that appear in more than one table
  *
  * @example
@@ -1046,11 +1048,11 @@ type GetColumnsFromTables<Tables extends Array<TTableSources>> =
  * // Given all three have "id":
  * GetDuplicateColumnsPairwise<["User", "Post", "Comment"]> // "id"
  */
-type GetDuplicateColumnsPairwise<Tables extends TArrSources> =
+type GetDuplicateColumnsPairwise<Tables extends TArrSources, TFields extends TFieldsType = BLANK_OBJECT> =
   Tables extends [infer T1 extends TTableSources, infer T2 extends TTableSources, ...infer Rest extends Array<TTableSources>]
-    ? (GetColumnNamesFromTable<T1> & GetColumnNamesFromTable<T2>)
-        | GetDuplicateColumnsPairwise<[T1, ...Rest]>
-        | GetDuplicateColumnsPairwise<[T2, ...Rest]>
+    ? (GetColumnNamesFromTable<T1, TFields> & GetColumnNamesFromTable<T2, TFields>)
+        | GetDuplicateColumnsPairwise<[T1, ...Rest], TFields>
+        | GetDuplicateColumnsPairwise<[T2, ...Rest], TFields>
     : never;
 
 /**
@@ -1059,14 +1061,19 @@ type GetDuplicateColumnsPairwise<Tables extends TArrSources> =
  *
  * @template Col - Column name to check
  * @template Tables - Array of table sources in the query
+ * @template TFields - Field map used to resolve CTE sources; omit it and CTEs contribute no columns
  * @returns Boolean literal type: true if unique, false if duplicate
  *
  * @example
  * IsColumnUnique<"name", ["User", "Post"]> // true (only User has "name")
  * IsColumnUnique<"id", ["User", "Post"]> // false (both have "id")
+ *
+ * @example
+ * // A joined CTE only collides when TFields is supplied
+ * IsColumnUnique<"name", ["Employee", ["__cte__", "tree"]], { tree: { name: string } }> // false
  */
-type IsColumnUnique<Col extends string, Tables extends TArrSources> =
-  Col extends GetDuplicateColumnsPairwise<Tables> ? false : true;
+type IsColumnUnique<Col extends string, Tables extends TArrSources, TFields extends TFieldsType = BLANK_OBJECT> =
+  Col extends GetDuplicateColumnsPairwise<Tables, TFields> ? false : true;
 
 // Updated: Returns unique column names (unqualified) + all table.column syntax
 type GetOtherColumns<Tables extends TArrSources> =
@@ -1159,14 +1166,14 @@ class _fSelect<TSources extends TArrSources, TFields extends TFieldsType, TSelec
         //Check if column is a unique
         // if is a unique strip table
         // else use table.column
+        const cteColumns = new Map((this.values.withs ?? []).map(w => [ w.name, w.columns ]));
         const currentTablesWithFields = this.values.tables.reduce<Record<string, number>>((acc, table) => {
           const { table:real } = table;
           if (!DB[real]) {
-            // Recursive-CTE member: count the self-referenced CTE's columns so names shared with a
-            // real table render qualified. The member's projection names are irrelevant — the CTE's
-            // column names come from the anchor-derived header list.
-            if (!this.values.countCTEColumns) return acc; // skip CTEs
-            for (const col of this.values.withs?.find(w => w.name === real)?.columns ?? []) {
+            // A CTE: count its columns so names it shares with a real table render qualified.
+            // Projection names inside the CTE body are irrelevant — the CTE's column names are the
+            // ones extracted when it was declared. Mirrors `GetColumnNamesFromTable`'s CTE branch.
+            for (const col of cteColumns.get(real) ?? []) {
               acc[col] = acc[col] ? acc[col] + 1 : 1;
             }
             return acc;
@@ -3239,8 +3246,7 @@ function extractCTEColumns(query: _fRun<ANY_IS_OK, ANY_IS_OK, ANY_IS_OK>): Array
 class DbWith<TCTEs extends Record<string, Record<string, ANY_IS_OK>>> {
   constructor(
     private db: PrismaClient,
-    private _withs: NonNullable<Values["withs"]>,
-    private _extraValues: Pick<Values, "countCTEColumns"> = {}
+    private _withs: NonNullable<Values["withs"]>
   ) {}
 
   with<const TName extends string, TQuery extends _fRun<ANY_IS_OK, ANY_IS_OK, ANY_IS_OK>>(
@@ -3251,7 +3257,7 @@ class DbWith<TCTEs extends Record<string, Record<string, ANY_IS_OK>>> {
     return new DbWith(this.db, [
       ...this._withs,
       { name, sql: query.getSQL().replace(/;$/, ""), columns },
-    ], this._extraValues) as ANY_IS_OK;
+    ]) as ANY_IS_OK;
   }
 
   from<const TName extends keyof TCTEs & string>(
@@ -3269,7 +3275,6 @@ class DbWith<TCTEs extends Record<string, Record<string, ANY_IS_OK>>> {
       tables: [{ table: baseTableOrCTE, alias }],
       selects: [],
       withs: this._withs,
-      ...this._extraValues,
     }) as ANY_IS_OK;
   }
 }
@@ -3316,7 +3321,7 @@ const extendedPrismaClient = {
 
       const member = recursive(new DbWith(client, [
         { name, sql: "", columns, selfRef: true },
-      ], { countCTEColumns: true }) as ANY_IS_OK) as unknown as _fRun<ANY_IS_OK, ANY_IS_OK, ANY_IS_OK>;
+      ]) as ANY_IS_OK) as unknown as _fRun<ANY_IS_OK, ANY_IS_OK, ANY_IS_OK>;
 
       const memberColumns = extractCTEColumns(member).map(c => c.replace(/^.*\./, ""));
       if (memberColumns.length !== columns.length || memberColumns.some((c, i) => c !== columns[i])) {

@@ -102,9 +102,8 @@ describe("$withRecursive (recursive CTE)", () => {
       )
         .from("Employee")
         .join("tree", "id", "Employee.managerId")
-        // `Employee.name` is deliberately avoided: `tree` also has a `name`, and the ambiguity map
-        // skips joined CTEs, so it would emit a bare `name` that no dialect can resolve.
-        .select("Employee.managerId")
+        // Both sources have a `name`, so both must render qualified.
+        .select("Employee.name")
         .select("tree.name");
     }
 
@@ -112,7 +111,8 @@ describe("$withRecursive (recursive CTE)", () => {
       const anchorSQL = prisma.$from("Employee").whereIsNull("Employee.managerId")
         .select("id")
         .select("name")
-        .getSQL().replace(/;$/, "");
+        .getSQL()
+        .replace(/;$/, "");
       const recursiveSQL = [
         `SELECT ${qq("Employee.id")} AS ${dialect.quote("Employee.id", true)}, ${qq("Employee.name")} AS ${dialect.quote("Employee.name", true)}`,
         `FROM ${q("Employee")}`,
@@ -122,7 +122,7 @@ describe("$withRecursive (recursive CTE)", () => {
       expectSQL(createJoinQuery().getSQL(), [
         `WITH RECURSIVE ${qt("tree")}(${q("id")}, ${q("name")}) AS`,
         `(${anchorSQL} UNION ALL ${recursiveSQL})`,
-        `SELECT ${q("managerId")}, ${qq("tree.name")} AS ${dialect.quote("tree.name", true)}`,
+        `SELECT ${qq("Employee.name")} AS ${dialect.quote("Employee.name", true)}, ${qq("tree.name")} AS ${dialect.quote("tree.name", true)}`,
         `FROM ${q("Employee")}`,
         `JOIN ${qt("tree")} ON ${qq("tree.id")} = ${qq("Employee.managerId")};`,
       ].join(" "));
@@ -132,10 +132,20 @@ describe("$withRecursive (recursive CTE)", () => {
       const rows = await createJoinQuery().run();
 
       assert.deepEqual(
-        rows.map(r => [ r.managerId, r["tree.name"] ] as const)
-          .sort((a, b) => a[1].localeCompare(b[1])),
-        [ [ 1, "CEO" ], [ 2, "Manager" ] ]
+        rows.map(r => [ r["Employee.name"], r["tree.name"] ] as const)
+          .sort((a, b) => a[0].localeCompare(b[0])),
+        [[ "Employee", "Manager" ], [ "Manager", "CEO" ]]
       );
+    });
+
+    it("should qualify both colliding columns in the row type", () => {
+      const _query = createJoinQuery();
+
+      type TResult = Awaited<ReturnType<typeof _query.run>>;
+      typeCheck({} as Expect<Equal<TResult[number], {
+        "Employee.name": string;
+        "tree.name": string;
+      }>>);
     });
   });
 
