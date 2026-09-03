@@ -625,6 +625,23 @@ function quoteSelectColumn(select: string): string {
   return dialect.quote(select, false);
 }
 
+/** selfRef entries only register a recursive CTE for typing/ambiguity — an outer WITH declares it. */
+function buildWithClause(withs: Values["withs"]): string {
+  const entries = withs?.filter(w => !w.selfRef) ?? [];
+  if (!entries.length) return "";
+
+  const recursivePrefix = entries.some(w => w.recursive) ? "RECURSIVE " : "";
+  const declarations = entries.map(w => {
+    const name = dialect.quoteTableIdentifier(w.name, false);
+    const header = w.recursive && w.columns?.length
+      ? `${name}(${w.columns.map(col => dialect.quote(col, false)).join(", ")})`
+      : name;
+    return `${header} AS (${w.sql})`;
+  });
+
+  return `WITH ${recursivePrefix}${declarations.join(", ")}`;
+}
+
 /*
 run
  */
@@ -710,17 +727,7 @@ class _fRun<TSources extends TArrSources, TFields extends TFieldsType, TSelectRT
 
   getSQL(formatted: boolean = false) {
 
-    // selfRef entries only register a recursive CTE for typing/ambiguity — the outer WITH declares it.
-    const withEntries = this.values.withs?.filter(w => !w.selfRef) ?? [];
-    const withClause = withEntries.length
-      ? `WITH ${withEntries.some(w => w.recursive) ? "RECURSIVE " : ""}${withEntries.map(w => {
-        const name = dialect.quoteTableIdentifier(w.name, false);
-        const header = w.recursive && w.columns?.length
-          ? `${name}(${w.columns.map(col => dialect.quote(col, false)).join(", ")})`
-          : name;
-        return `${header} AS (${w.sql})`;
-      }).join(", ")}`
-      : "";
+    const withClause = buildWithClause(this.values.withs);
 
     const whereClause = this.values.where !== undefined ? processCriteria(this.values.where, "AND", formatted) : undefined;
     const havingClause = this.values.having !== undefined ? processCriteria(this.values.having, "AND", formatted) : undefined;
@@ -3316,8 +3323,15 @@ const extendedPrismaClient = {
         throw new Error(`Recursive CTE "${name}": recursive member columns [${memberColumns.join(", ")}] must match the anchor columns [${columns.join(", ")}] in the same order`);
       }
 
+      // Any CTE the callback added via `.with()` must be declared on the outer WITH — a
+      // `WITH ... AS (...)` prefix inside the UNION ALL body is invalid on all dialects.
+      // Marking them selfRef suppresses that prefix; we re-declare them below.
+      const memberValues = (member as ANY_IS_OK).values as Values;
+      const hoisted = memberValues.withs?.filter(w => !w.selfRef) ?? [];
+      if (hoisted.length) memberValues.withs = memberValues.withs!.map(w => ({ ...w, selfRef: true }));
+
       const sql = `${anchor.getSQL().replace(/;$/, "")} UNION ALL ${member.getSQL().replace(/;$/, "")}`;
-      return new DbWith(client, [{ name, sql, columns, recursive: true }]);
+      return new DbWith(client, [ ...hoisted, { name, sql, columns, recursive: true }]);
     },
   },
 };

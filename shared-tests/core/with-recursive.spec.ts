@@ -24,7 +24,7 @@ describe("$withRecursive (recursive CTE)", () => {
       w => w.from("Employee")
         .join("tree", "id", "Employee.managerId")
         .select("Employee.id")
-        .select("Employee.name"),
+        .select("Employee.name")
     )
       .from("tree")
       .select("tree.name");
@@ -55,16 +55,37 @@ describe("$withRecursive (recursive CTE)", () => {
     const rows = await createQuery().run();
 
     assert.deepEqual(
-      rows.map(r => r["tree.name"]).sort(),
-      ["CEO", "Employee", "Manager"],
+      rows.map(r => r["tree.name"]).sort((a, b) => a.localeCompare(b)),
+      [ "CEO", "Employee", "Manager" ]
     );
   });
 
   it("should type the result row from the anchor's projection", () => {
-    const query = createQuery();
+    const _query = createQuery();
 
-    type TResult = Awaited<ReturnType<typeof query.run>>;
+    type TResult = Awaited<ReturnType<typeof _query.run>>;
     typeCheck({} as Expect<Equal<TResult[number]["tree.name"], string>>);
+  });
+
+  it("should hoist a CTE added inside the recursive member onto the outer WITH", () => {
+    // A `WITH ... AS (...)` prefix inside the UNION ALL body is invalid SQL everywhere.
+    const query = prisma.$withRecursive(
+      "tree",
+      prisma.$from("Employee").whereIsNull("Employee.managerId")
+        .select("id")
+        .select("name"),
+      w => w.with("extra", prisma.$from("Employee").select("id"))
+        .from("Employee")
+        .join("tree", "id", "Employee.managerId")
+        .select("Employee.id")
+        .select("Employee.name")
+    )
+      .from("tree")
+      .select("tree.name");
+
+    const sql = query.getSQL();
+    assert.equal(sql.match(/WITH/g)?.length, 1);
+    assert.match(sql, new RegExp(`WITH RECURSIVE ${qt("extra")} AS \\(.*\\), ${qt("tree")}\\(`));
   });
 
   it("should reject a recursive member that projects a different shape", () => {
@@ -76,7 +97,7 @@ describe("$withRecursive (recursive CTE)", () => {
       // @ts-expect-error recursive member must project the same columns as the anchor
       w => w.from("Employee")
         .join("tree", "id", "Employee.managerId")
-        .select("Employee.id"),
+        .select("Employee.id")
     ), /must match the anchor columns/);
   });
 
@@ -90,7 +111,7 @@ describe("$withRecursive (recursive CTE)", () => {
       w => w.from("Employee")
         .join("tree", "id", "Employee.managerId")
         .select("Employee.name")
-        .select("Employee.id"),
+        .select("Employee.id")
     ), /\[name, id\] must match the anchor columns \[id, name\]/);
   });
 
