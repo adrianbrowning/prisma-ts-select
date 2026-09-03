@@ -88,6 +88,57 @@ describe("$withRecursive (recursive CTE)", () => {
     assert.match(sql, new RegExp(`WITH RECURSIVE ${qt("extra")} AS \\(.*\\), ${qt("tree")}\\(`));
   });
 
+  describe("used as a joined table", () => {
+    function createJoinQuery() {
+      return prisma.$withRecursive(
+        "tree",
+        prisma.$from("Employee").whereIsNull("Employee.managerId")
+          .select("id")
+          .select("name"),
+        w => w.from("Employee")
+          .join("tree", "id", "Employee.managerId")
+          .select("Employee.id")
+          .select("Employee.name")
+      )
+        .from("Employee")
+        .join("tree", "id", "Employee.managerId")
+        // `Employee.name` is deliberately avoided: `tree` also has a `name`, and the ambiguity map
+        // skips joined CTEs, so it would emit a bare `name` that no dialect can resolve.
+        .select("Employee.managerId")
+        .select("tree.name");
+    }
+
+    it("should emit the CTE as a JOIN target", () => {
+      const anchorSQL = prisma.$from("Employee").whereIsNull("Employee.managerId")
+        .select("id")
+        .select("name")
+        .getSQL().replace(/;$/, "");
+      const recursiveSQL = [
+        `SELECT ${qq("Employee.id")} AS ${dialect.quote("Employee.id", true)}, ${qq("Employee.name")} AS ${dialect.quote("Employee.name", true)}`,
+        `FROM ${q("Employee")}`,
+        `JOIN ${qt("tree")} ON ${qq("tree.id")} = ${qq("Employee.managerId")}`,
+      ].join(" ");
+
+      expectSQL(createJoinQuery().getSQL(), [
+        `WITH RECURSIVE ${qt("tree")}(${q("id")}, ${q("name")}) AS`,
+        `(${anchorSQL} UNION ALL ${recursiveSQL})`,
+        `SELECT ${q("managerId")}, ${qq("tree.name")} AS ${dialect.quote("tree.name", true)}`,
+        `FROM ${q("Employee")}`,
+        `JOIN ${qt("tree")} ON ${qq("tree.id")} = ${qq("Employee.managerId")};`,
+      ].join(" "));
+    });
+
+    it("should pair each employee with their manager", async () => {
+      const rows = await createJoinQuery().run();
+
+      assert.deepEqual(
+        rows.map(r => [ r.managerId, r["tree.name"] ] as const)
+          .sort((a, b) => a[1].localeCompare(b[1])),
+        [ [ 1, "CEO" ], [ 2, "Manager" ] ]
+      );
+    });
+  });
+
   it("should reject a recursive member that projects a different shape", () => {
     assert.throws(() => prisma.$withRecursive(
       "tree",
