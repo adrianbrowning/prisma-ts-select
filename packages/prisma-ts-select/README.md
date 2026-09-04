@@ -571,7 +571,7 @@ FROM tree;
 
 The resulting CTE behaves like any `.$with()` CTE — usable as a base table via `.from()` or joined with `.join()`.
 
-**Column names** come from the anchor's select list, emitted as an explicit `tree(id, name)` header. The recursive member must project the same columns in the same order: a mismatched shape is rejected at compile time, and a same-arity reordering throws at build time (`UNION ALL` is positional, so it would otherwise silently return wrong rows).
+**Column names** come from the anchor's select list — table qualifiers stripped, so a joined anchor selecting `"Employee.id"` still yields `tree(id)` — emitted as an explicit `tree(id, name)` header. The recursive member must project the same columns in the same order: a mismatched shape is rejected at compile time, and a same-arity reordering throws at build time (`UNION ALL` is positional, so it would otherwise silently return wrong rows).
 
 **Version requirements:** SQLite 3.8.3+, MySQL 8.0+, PostgreSQL 8.4+.
 

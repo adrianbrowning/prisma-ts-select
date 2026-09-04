@@ -2,4 +2,4 @@
 prisma-ts-select: minor
 ---
 
-Adding support from Recursive CTEs
+Adding support for Recursive CTEs

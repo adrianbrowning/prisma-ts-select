@@ -1178,16 +1178,11 @@ class _fSelect<TSources extends TArrSources, TFields extends TFieldsType, TSelec
         const cteColumns = new Map(resolvableCTEs(this.values).map(w => [ w.name, w.columns ]));
         const currentTablesWithFields = this.values.tables.reduce<Record<string, number>>((acc, table) => {
           const { table:real } = table;
-          if (!DB[real]) {
-            // A CTE: count its columns so names it shares with a real table render qualified.
-            // Projection names inside the CTE body are irrelevant — the CTE's column names are the
-            // ones extracted when it was declared. Mirrors `GetColumnNamesFromTable`'s CTE branch.
-            for (const col of cteColumns.get(real) ?? []) {
-              acc[col] = acc[col] ? acc[col] + 1 : 1;
-            }
-            return acc;
-          }
-          for (const col in DB[real].fields) {
+          // A CTE contributes its declared column names (extracted when it was declared —
+          // projection names inside its body are irrelevant), so names it shares with a real
+          // table render qualified. Mirrors `GetColumnNamesFromTable`'s CTE branch.
+          const cols = DB[real] ? Object.keys(DB[real].fields) : cteColumns.get(real) ?? [];
+          for (const col of cols) {
             acc[col] = acc[col] ? acc[col] + 1 : 1;
           }
           return acc;
@@ -2314,7 +2309,11 @@ type NullifyTableFields<TFields extends TFieldsType> = { [T in keyof TFields]: M
 /** Extracts result row type from a _fRun query — used by $with to capture CTE shape. */
 export type InferCTEShape<T> = T extends _fRun<ANY_IS_OK, ANY_IS_OK, infer TSelectRT> ? TSelectRT : never;
 
-/** Strips `table.` prefixes from keys so anchor/recursive-member shapes are comparable. */
+/**
+ * Strips `table.` prefixes from keys so anchor/recursive-member shapes are comparable.
+ * Assumes no collisions after stripping (`a.id` + `b.id`) — such a select list can't produce a
+ * valid CTE anyway, since the two columns would need the same name.
+ */
 type NormalizeCTEKeys<T> = { [K in keyof T & string as K extends `${string}.${infer C}` ? C : K]: T[K] };
 
 /** True when a recursive member's row shape matches the anchor's (ignoring table prefixes). */
@@ -3252,6 +3251,23 @@ function extractCTEColumns(query: _fRun<ANY_IS_OK, ANY_IS_OK, ANY_IS_OK>): Array
     .filter((c: string | null): c is string => c !== null);
 }
 
+/** `Employee.id` → `id`. */
+function stripQualifier(column: string): string {
+  return column.replace(/^.*\./, "");
+}
+
+/**
+ * Moves a query's own CTE declarations to `cteRefs`, so its SQL drops the `WITH ... AS (...)`
+ * prefix but still resolves those names. Returns the entries for the caller to re-declare.
+ */
+function hoistWiths(query: _fRun<ANY_IS_OK, ANY_IS_OK, ANY_IS_OK>): NonNullable<Values["withs"]> {
+  const values = (query as ANY_IS_OK).values as Values;
+  const hoisted = values.withs ?? [];
+  values.cteRefs = [ ...(values.cteRefs ?? []), ...hoisted ];
+  values.withs = [];
+  return hoisted;
+}
+
 class DbWith<TCTEs extends Record<string, Record<string, ANY_IS_OK>>> {
   constructor(
     private db: PrismaClient,
@@ -3315,8 +3331,15 @@ const extendedPrismaClient = {
     },
     /**
      * Recursive CTE: `WITH RECURSIVE name(cols) AS (anchor UNION ALL recursive)`.
-     * Column names come from the anchor's select list; the recursive member must project
-     * the same columns, in the same order.
+     * Column names come from the anchor's select list (table qualifiers stripped — the header
+     * renames the columns); the recursive member must project the same columns, in the same order.
+     *
+     * Ordering is checked at runtime only: a same-arity reordering still satisfies the
+     * compile-time shape check.
+     *
+     * @warning No depth guard. Cyclic data (e.g. a `managerId` cycle) recurses until the server
+     * stops it — indefinitely on SQLite and PostgreSQL. Add a depth column to the anchor and bound
+     * it in the member's `where` (see README) if the data can contain cycles.
      */
     $withRecursive<const TName extends string,
       TAnchor extends _fRun<ANY_IS_OK, ANY_IS_OK, ANY_IS_OK>,
@@ -3324,11 +3347,14 @@ const extendedPrismaClient = {
     >(
       name: TName,
       anchor: TAnchor,
-      recursive: (w: DbWith<Record<TName, InferCTEShape<TAnchor>>>) =>
+      recursive: (w: DbWith<Record<TName, NormalizeCTEKeys<InferCTEShape<TAnchor>>>>) =>
       IsCTECompatible<InferCTEShape<TAnchor>, TRecRT> extends true ? _fRun<ANY_IS_OK, ANY_IS_OK, TRecRT> : never
-    ): DbWith<Record<TName, InferCTEShape<TAnchor>>> {
+    ): DbWith<Record<TName, NormalizeCTEKeys<InferCTEShape<TAnchor>>>> {
       const client = Prisma.getExtensionContext(this) as unknown as PrismaClient;
-      const columns = extractCTEColumns(anchor);
+      const columns = extractCTEColumns(anchor).map(stripQualifier);
+      if (columns.length === 0) {
+        throw new Error(`Recursive CTE "${name}": anchor must project at least one named column`);
+      }
 
       // The self-reference goes in `cteRefs`: resolvable inside the member, never emitted
       // (the outer WITH RECURSIVE built below declares it).
@@ -3336,19 +3362,14 @@ const extendedPrismaClient = {
         { name, sql: "", columns },
       ]) as ANY_IS_OK) as unknown as _fRun<ANY_IS_OK, ANY_IS_OK, ANY_IS_OK>;
 
-      const memberColumns = extractCTEColumns(member).map(c => c.replace(/^.*\./, ""));
+      const memberColumns = extractCTEColumns(member).map(stripQualifier);
       if (memberColumns.length !== columns.length || memberColumns.some((c, i) => c !== columns[i])) {
         throw new Error(`Recursive CTE "${name}": recursive member columns [${memberColumns.join(", ")}] must match the anchor columns [${columns.join(", ")}] in the same order`);
       }
 
-      // Any CTE the callback added via `.with()` must be declared on the outer WITH — a
-      // `WITH ... AS (...)` prefix inside the UNION ALL body is invalid on all dialects.
-      // Moving them to `cteRefs` drops that prefix while keeping them resolvable; we re-declare
-      // them on the returned DbWith below.
-      const memberValues = (member as ANY_IS_OK).values as Values;
-      const hoisted = memberValues.withs ?? [];
-      memberValues.cteRefs = [ ...(memberValues.cteRefs ?? []), ...hoisted ];
-      memberValues.withs = [];
+      // A `WITH ... AS (...)` prefix inside the UNION ALL body is invalid on all dialects, so any
+      // CTE either side brought along (via `.with()`) is re-declared on the returned DbWith below.
+      const hoisted = [ ...hoistWiths(anchor), ...hoistWiths(member) ];
 
       const sql = `${anchor.getSQL().replace(/;$/, "")} UNION ALL ${member.getSQL().replace(/;$/, "")}`;
       return new DbWith(client, [ ...hoisted, { name, sql, columns, recursive: true }]);

@@ -88,6 +88,62 @@ describe("$withRecursive (recursive CTE)", () => {
     assert.match(sql, new RegExp(`WITH RECURSIVE ${qt("extra")} AS \\(.*\\), ${qt("tree")}\\(`));
   });
 
+  it("should hoist a CTE used by the anchor onto the outer WITH", () => {
+    const query = prisma.$withRecursive(
+      "tree",
+      prisma.$with("roots", prisma.$from("Employee").whereIsNull("Employee.managerId")
+        .select("id")
+        .select("name"))
+        .from("roots")
+        .select("roots.id")
+        .select("roots.name"),
+      w => w.from("Employee")
+        .join("tree", "id", "Employee.managerId")
+        .select("Employee.id")
+        .select("Employee.name")
+    )
+      .from("tree")
+      .select("tree.name");
+
+    const sql = query.getSQL();
+    assert.equal(sql.match(/WITH/g)?.length, 1);
+    // Anchor aliases are `roots.id` / `roots.name`; the header must declare them bare.
+    assert.match(sql, new RegExp(
+      `WITH RECURSIVE ${qt("roots")} AS \\(.*\\), ${qt("tree")}\\(${q("id")}, ${q("name")}\\)`
+    ));
+  });
+
+  it("should reject an anchor that projects no columns", () => {
+    // An empty column list makes the arity check vacuous, so every member would validate.
+    // Cast because the types already model an anchor as having a select list.
+    const noSelect = prisma.$from("Employee").whereIsNull("Employee.managerId") as never;
+
+    assert.throws(
+      () => prisma.$withRecursive("tree", noSelect, w => w as never),
+      /must project at least one named column/
+    );
+  });
+
+  it("should emit a mixed recursive + plain CTE list", () => {
+    const query = prisma.$withRecursive(
+      "tree",
+      prisma.$from("Employee").whereIsNull("Employee.managerId")
+        .select("id")
+        .select("name"),
+      w => w.from("Employee")
+        .join("tree", "id", "Employee.managerId")
+        .select("Employee.id")
+        .select("Employee.name")
+    )
+      .with("other", prisma.$from("Employee").select("id"))
+      .from("other")
+      .select("other.id");
+
+    const sql = query.getSQL();
+    assert.equal(sql.match(/WITH/g)?.length, 1);
+    assert.match(sql, new RegExp(`WITH RECURSIVE ${qt("tree")}\\(.*\\) AS \\(.*\\), ${qt("other")} AS \\(`));
+  });
+
   describe("used as a joined table", () => {
     function createJoinQuery() {
       return prisma.$withRecursive(
