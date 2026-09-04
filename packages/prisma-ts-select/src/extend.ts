@@ -430,13 +430,18 @@ type ClauseType = Array<string | WhereCriteria<TArrSources, {}>>;
  */
 type JoinType = "INNER" | "LEFT" | "LEFT OUTER" | "RIGHT" | "RIGHT OUTER" | "FULL" | "FULL OUTER" | "CROSS";
 
+type WithEntry = { name: string; sql: string; columns?: Array<string>; recursive?: boolean; };
+
 type Values = {
   //baseTable: TTables,
   //baseTableAlias?: string;
   selectDistinct?: true;
   selects: Array<string>;
   tables: [{ table: string; alias?: string; }, ...Array<{ table: string; local: string; remote: string; alias?: string; joinWhere?: ClauseType; joinType?: JoinType; }>];
-  withs?: Array<{ name: string; sql: string; columns?: Array<string>; }>;
+  /** CTEs this query declares — emitted by `buildWithClause`. */
+  withs?: Array<WithEntry>;
+  /** CTEs declared by an enclosing WITH — resolvable for typing/expansion, never emitted. */
+  cteRefs?: Array<WithEntry>;
   limit?: number;
   offset?: number;
   where?: ClauseType;
@@ -444,6 +449,11 @@ type Values = {
   groupBy?: Array<string>;
   orderBy?: Array<`${string}${ "" | " DESC" | " ASC"}`>;
 };
+
+/** Every CTE resolvable in this query — the ones it declares plus enclosing-scope declarations. */
+function resolvableCTEs(values: Values): Array<WithEntry> {
+  return [ ...(values.withs ?? []), ...(values.cteRefs ?? []) ];
+}
 
 function isColRef(v: unknown): v is { $colRaw: string; } {
   return typeof v === "object" && v !== null && "$colRaw" in v;
@@ -619,6 +629,22 @@ function quoteSelectColumn(select: string): string {
   return dialect.quote(select, false);
 }
 
+function buildWithClause(withs: Values["withs"]): string {
+  const entries = withs ?? [];
+  if (!entries.length) return "";
+
+  const recursivePrefix = entries.some(w => w.recursive) ? "RECURSIVE " : "";
+  const declarations = entries.map(w => {
+    const name = dialect.quoteTableIdentifier(w.name, false);
+    const header = w.recursive && w.columns?.length
+      ? `${name}(${w.columns.map(col => dialect.quote(col, false)).join(", ")})`
+      : name;
+    return `${header} AS (${w.sql})`;
+  });
+
+  return `WITH ${recursivePrefix}${declarations.join(", ")}`;
+}
+
 /*
 run
  */
@@ -704,11 +730,7 @@ class _fRun<TSources extends TArrSources, TFields extends TFieldsType, TSelectRT
 
   getSQL(formatted: boolean = false) {
 
-    const withClause = this.values.withs?.length
-      ? `WITH ${this.values.withs.map(w =>
-        `${dialect.quoteTableIdentifier(w.name, false)} AS (${w.sql})`
-      ).join(", ")}`
-      : "";
+    const withClause = buildWithClause(this.values.withs);
 
     const whereClause = this.values.where !== undefined ? processCriteria(this.values.where, "AND", formatted) : undefined;
     const havingClause = this.values.having !== undefined ? processCriteria(this.values.having, "AND", formatted) : undefined;
@@ -869,7 +891,7 @@ type MergeItems<Field extends string,
           ? F extends keyof TFields[T]
           // [never] extends [never] = true means NOT a CTE → use uniqueness check
             ? [IsCTE<T, TSources>] extends [never]
-              ? IsColumnUnique<F, TSources> extends true
+              ? IsColumnUnique<F, TSources, TFields> extends true
                 ? Prettify<Pick<TFields[T], F>>
                 : Prettify<{ [K in Field]: TFields[T][F] }>
                 // CTE column — always keep qualified name
@@ -984,15 +1006,21 @@ type TablesArray2Name<TSources extends Array<TTableSources>, acc extends Array<s
  * Returns the keys of the table's fields object, handling both simple table names and aliased sources.
  *
  * @template TDBBase - Table source (table name string or [table, alias] tuple)
+ * @template TFields - Field map used to resolve CTE sources; omit it and CTEs contribute no columns
  * @returns Union of column names for the table
  *
  * @example
  * GetColumnNamesFromTable<"User"> // "id" | "name" | "email"
  * GetColumnNamesFromTable<["Post", "p"]> // "id" | "title" | "authorId"
+ *
+ * @example
+ * // A CTE only yields columns when TFields is supplied
+ * GetColumnNamesFromTable<["__cte__", "tree"]> // never
+ * GetColumnNamesFromTable<["__cte__", "tree"], { tree: { id: number; name: string } }> // "id" | "name"
  */
-type GetColumnNamesFromTable<TDBBase extends TTableSources> =
-  TDBBase extends TVirtualTableSource
-    ? never
+type GetColumnNamesFromTable<TDBBase extends TTableSources, TFields extends TFieldsType = BLANK_OBJECT> =
+  TDBBase extends readonly [ "__cte__", infer N extends string ]
+    ? N extends keyof TFields ? string & keyof TFields[N] : never
     : keyof GetFieldsFromTable<GetRealTableNames<TDBBase>>;
 
 /**
@@ -1000,15 +1028,16 @@ type GetColumnNamesFromTable<TDBBase extends TTableSources> =
  * Returns a union of all unqualified column names across all tables in the query.
  *
  * @template Tables - Array of table sources to extract columns from
+ * @template TFields - Field map used to resolve CTE sources; omit it and CTEs contribute no columns
  * @returns Union of all column names from all tables
  *
  * @example
  * GetColumnsFromTables<["User", "Post"]>
  * // Returns: "id" | "name" | "email" | "title" | "authorId" | ...
  */
-type GetColumnsFromTables<Tables extends Array<TTableSources>> =
+type GetColumnsFromTables<Tables extends Array<TTableSources>, TFields extends TFieldsType = BLANK_OBJECT> =
   Tables extends [infer T extends TTableSources, ...infer Rest extends Array<TTableSources>]
-    ? GetColumnNamesFromTable<T> | GetColumnsFromTables<Rest>
+    ? GetColumnNamesFromTable<T, TFields> | GetColumnsFromTables<Rest, TFields>
     : never;
 
 /**
@@ -1017,6 +1046,7 @@ type GetColumnsFromTables<Tables extends Array<TTableSources>> =
  * Checks each pair of tables for overlapping column names.
  *
  * @template Tables - Array of table sources to check for duplicate columns
+ * @template TFields - Field map used to resolve CTE sources; omit it and CTEs contribute no columns
  * @returns Union of column names that appear in more than one table
  *
  * @example
@@ -1027,11 +1057,11 @@ type GetColumnsFromTables<Tables extends Array<TTableSources>> =
  * // Given all three have "id":
  * GetDuplicateColumnsPairwise<["User", "Post", "Comment"]> // "id"
  */
-type GetDuplicateColumnsPairwise<Tables extends TArrSources> =
+type GetDuplicateColumnsPairwise<Tables extends TArrSources, TFields extends TFieldsType = BLANK_OBJECT> =
   Tables extends [infer T1 extends TTableSources, infer T2 extends TTableSources, ...infer Rest extends Array<TTableSources>]
-    ? (GetColumnNamesFromTable<T1> & GetColumnNamesFromTable<T2>)
-        | GetDuplicateColumnsPairwise<[T1, ...Rest]>
-        | GetDuplicateColumnsPairwise<[T2, ...Rest]>
+    ? (GetColumnNamesFromTable<T1, TFields> & GetColumnNamesFromTable<T2, TFields>)
+        | GetDuplicateColumnsPairwise<[T1, ...Rest], TFields>
+        | GetDuplicateColumnsPairwise<[T2, ...Rest], TFields>
     : never;
 
 /**
@@ -1040,14 +1070,19 @@ type GetDuplicateColumnsPairwise<Tables extends TArrSources> =
  *
  * @template Col - Column name to check
  * @template Tables - Array of table sources in the query
+ * @template TFields - Field map used to resolve CTE sources; omit it and CTEs contribute no columns
  * @returns Boolean literal type: true if unique, false if duplicate
  *
  * @example
  * IsColumnUnique<"name", ["User", "Post"]> // true (only User has "name")
  * IsColumnUnique<"id", ["User", "Post"]> // false (both have "id")
+ *
+ * @example
+ * // A joined CTE only collides when TFields is supplied
+ * IsColumnUnique<"name", ["Employee", ["__cte__", "tree"]], { tree: { name: string } }> // false
  */
-type IsColumnUnique<Col extends string, Tables extends TArrSources> =
-  Col extends GetDuplicateColumnsPairwise<Tables> ? false : true;
+type IsColumnUnique<Col extends string, Tables extends TArrSources, TFields extends TFieldsType = BLANK_OBJECT> =
+  Col extends GetDuplicateColumnsPairwise<Tables, TFields> ? false : true;
 
 // Updated: Returns unique column names (unqualified) + all table.column syntax
 type GetOtherColumns<Tables extends TArrSources> =
@@ -1140,10 +1175,14 @@ class _fSelect<TSources extends TArrSources, TFields extends TFieldsType, TSelec
         //Check if column is a unique
         // if is a unique strip table
         // else use table.column
+        const cteColumns = new Map(resolvableCTEs(this.values).map(w => [ w.name, w.columns ]));
         const currentTablesWithFields = this.values.tables.reduce<Record<string, number>>((acc, table) => {
           const { table:real } = table;
-          if (!DB[real]) return acc; // skip CTEs
-          for (const col in DB[real].fields) {
+          // A CTE contributes its declared column names (extracted when it was declared —
+          // projection names inside its body are irrelevant), so names it shares with a real
+          // table render qualified. Mirrors `GetColumnNamesFromTable`'s CTE branch.
+          const cols = DB[real] ? Object.keys(DB[real].fields) : cteColumns.get(real) ?? [];
+          for (const col of cols) {
             acc[col] = acc[col] ? acc[col] + 1 : 1;
           }
           return acc;
@@ -1183,7 +1222,7 @@ class _fSelect<TSources extends TArrSources, TFields extends TFieldsType, TSelec
     // Expand "*" for multi-table queries
     if (select === "*" && this.values.tables.length > 1) {
       const expandedSelects = this.values.tables.flatMap(tableObj =>
-        expandToQualifiedSelects(tableObj, this.values.withs)
+        expandToQualifiedSelects(tableObj, resolvableCTEs(this.values))
       );
       return new _fSelect(this.db, { ...this.values, selects: [ ...this.values.selects, ...expandedSelects ] }) as ANY_IS_OK;
     }
@@ -1230,7 +1269,7 @@ class _fSelectDistinct<TSources extends TArrSources, TFields extends TFieldsType
 
     const selects = (function (values: Values) {
       if (values.tables.length > 1) {
-        return values.tables.reduce<Array<string>>((acc, tableObj): Array<string> => acc.concat(expandToQualifiedSelects(tableObj, values.withs)), []);
+        return values.tables.reduce<Array<string>>((acc, tableObj): Array<string> => acc.concat(expandToQualifiedSelects(tableObj, resolvableCTEs(values))), []);
       }
       const t = values.tables[0];
       if (!DB[t.table]) throw new Error(`selectAll() is not supported when the base table is a CTE ("${t.table}"). Use select() with explicit column references.`);
@@ -2270,6 +2309,19 @@ type NullifyTableFields<TFields extends TFieldsType> = { [T in keyof TFields]: M
 /** Extracts result row type from a _fRun query — used by $with to capture CTE shape. */
 export type InferCTEShape<T> = T extends _fRun<ANY_IS_OK, ANY_IS_OK, infer TSelectRT> ? TSelectRT : never;
 
+/**
+ * Strips `table.` prefixes from keys so anchor/recursive-member shapes are comparable.
+ * Assumes no collisions after stripping (`a.id` + `b.id`) — such a select list can't produce a
+ * valid CTE anyway, since the two columns would need the same name.
+ */
+type NormalizeCTEKeys<T> = { [K in keyof T & string as K extends `${string}.${infer C}` ? C : K]: T[K] };
+
+/** True when a recursive member's row shape matches the anchor's (ignoring table prefixes). */
+type IsCTECompatible<TAnchorRT, TRecRT> =
+  [NormalizeCTEKeys<TAnchorRT>] extends [NormalizeCTEKeys<TRecRT>]
+    ? [NormalizeCTEKeys<TRecRT>] extends [NormalizeCTEKeys<TAnchorRT>] ? true : false
+    : false;
+
 /** CTE names present in TSources (tagged with "__cte__" discriminant). */
 type CTENames<TSources extends TArrSources> = TSources[number] extends infer S
   ? S extends readonly ["__cte__", infer Name extends string]
@@ -3199,10 +3251,28 @@ function extractCTEColumns(query: _fRun<ANY_IS_OK, ANY_IS_OK, ANY_IS_OK>): Array
     .filter((c: string | null): c is string => c !== null);
 }
 
+/** `Employee.id` → `id`. */
+function stripQualifier(column: string): string {
+  return column.replace(/^.*\./, "");
+}
+
+/**
+ * Moves a query's own CTE declarations to `cteRefs`, so its SQL drops the `WITH ... AS (...)`
+ * prefix but still resolves those names. Returns the entries for the caller to re-declare.
+ */
+function hoistWiths(query: _fRun<ANY_IS_OK, ANY_IS_OK, ANY_IS_OK>): NonNullable<Values["withs"]> {
+  const values = (query as ANY_IS_OK).values as Values;
+  const hoisted = values.withs ?? [];
+  values.cteRefs = [ ...(values.cteRefs ?? []), ...hoisted ];
+  values.withs = [];
+  return hoisted;
+}
+
 class DbWith<TCTEs extends Record<string, Record<string, ANY_IS_OK>>> {
   constructor(
     private db: PrismaClient,
-    private _withs: Array<{ name: string; sql: string; columns?: Array<string>; }>
+    private _withs: NonNullable<Values["withs"]>,
+    private _cteRefs: NonNullable<Values["cteRefs"]> = []
   ) {}
 
   with<const TName extends string, TQuery extends _fRun<ANY_IS_OK, ANY_IS_OK, ANY_IS_OK>>(
@@ -3213,7 +3283,7 @@ class DbWith<TCTEs extends Record<string, Record<string, ANY_IS_OK>>> {
     return new DbWith(this.db, [
       ...this._withs,
       { name, sql: query.getSQL().replace(/;$/, ""), columns },
-    ]) as ANY_IS_OK;
+    ], this._cteRefs) as ANY_IS_OK;
   }
 
   from<const TName extends keyof TCTEs & string>(
@@ -3231,6 +3301,7 @@ class DbWith<TCTEs extends Record<string, Record<string, ANY_IS_OK>>> {
       tables: [{ table: baseTableOrCTE, alias }],
       selects: [],
       withs: this._withs,
+      cteRefs: this._cteRefs,
     }) as ANY_IS_OK;
   }
 }
@@ -3257,6 +3328,51 @@ const extendedPrismaClient = {
       const client = Prisma.getExtensionContext(this) as unknown as PrismaClient;
       const columns = extractCTEColumns(query);
       return new DbWith(client, [{ name, sql: query.getSQL().replace(/;$/, ""), columns }]);
+    },
+    /**
+     * Recursive CTE: `WITH RECURSIVE name(cols) AS (anchor UNION ALL recursive)`.
+     * Column names come from the anchor's select list (table qualifiers stripped — the header
+     * renames the columns); the recursive member must project the same columns, in the same order.
+     *
+     * Ordering is checked at runtime only: a same-arity reordering still satisfies the
+     * compile-time shape check.
+     *
+     * @warning No depth guard. Cyclic data (e.g. a `managerId` cycle) recurses until the server
+     * stops it — indefinitely on SQLite and PostgreSQL. Add a depth column to the anchor and bound
+     * it in the member's `where` (see README) if the data can contain cycles.
+     */
+    $withRecursive<const TName extends string,
+      TAnchor extends _fRun<ANY_IS_OK, ANY_IS_OK, ANY_IS_OK>,
+      TRecRT extends {} = BLANK_OBJECT
+    >(
+      name: TName,
+      anchor: TAnchor,
+      recursive: (w: DbWith<Record<TName, NormalizeCTEKeys<InferCTEShape<TAnchor>>>>) =>
+      IsCTECompatible<InferCTEShape<TAnchor>, TRecRT> extends true ? _fRun<ANY_IS_OK, ANY_IS_OK, TRecRT> : never
+    ): DbWith<Record<TName, NormalizeCTEKeys<InferCTEShape<TAnchor>>>> {
+      const client = Prisma.getExtensionContext(this) as unknown as PrismaClient;
+      const columns = extractCTEColumns(anchor).map(stripQualifier);
+      if (columns.length === 0) {
+        throw new Error(`Recursive CTE "${name}": anchor must project at least one named column`);
+      }
+
+      // The self-reference goes in `cteRefs`: resolvable inside the member, never emitted
+      // (the outer WITH RECURSIVE built below declares it).
+      const member = recursive(new DbWith(client, [], [
+        { name, sql: "", columns },
+      ]) as ANY_IS_OK) as unknown as _fRun<ANY_IS_OK, ANY_IS_OK, ANY_IS_OK>;
+
+      const memberColumns = extractCTEColumns(member).map(stripQualifier);
+      if (memberColumns.length !== columns.length || memberColumns.some((c, i) => c !== columns[i])) {
+        throw new Error(`Recursive CTE "${name}": recursive member columns [${memberColumns.join(", ")}] must match the anchor columns [${columns.join(", ")}] in the same order`);
+      }
+
+      // A `WITH ... AS (...)` prefix inside the UNION ALL body is invalid on all dialects, so any
+      // CTE either side brought along (via `.with()`) is re-declared on the returned DbWith below.
+      const hoisted = [ ...hoistWiths(anchor), ...hoistWiths(member) ];
+
+      const sql = `${anchor.getSQL().replace(/;$/, "")} UNION ALL ${member.getSQL().replace(/;$/, "")}`;
+      return new DbWith(client, [ ...hoisted, { name, sql, columns, recursive: true }]);
     },
   },
 };

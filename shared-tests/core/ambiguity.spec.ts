@@ -197,6 +197,26 @@ describe("Ambiguous column detection", () => {
       typeCheck({} as Expect<Equal<typeof _result, Array<UserPostQualifiedJoinRow>>>);
     });
 
+    test("should qualify a real-table column that collides with a joined CTE column", async () => {
+      const query = prisma.$with("pp", prisma.$from("User").select("id")
+        .select("name"))
+        .from("Employee")
+        .join("pp", "id", "Employee.managerId")
+        .select("Employee.name") // `pp` also projects `name`
+        .select("pp.name");
+
+      const _result = await query.run();
+      typeCheck({} as Expect<Equal<typeof _result, Array<{
+        "Employee.name": string;
+        "pp.name": string | null; // User.name is nullable
+      }>>>);
+
+      expectSQL(
+        query.getSQL(),
+        `WITH ${dialect.quote("pp")} AS (SELECT ${dialect.quote("id")}, ${dialect.quote("name")} FROM ${dialect.quote("User")}) SELECT ${dialect.quoteQualifiedColumn("Employee.name")} AS ${dialect.quote("Employee.name", true)}, ${dialect.quoteQualifiedColumn("pp.name")} AS ${dialect.quote("pp.name", true)} FROM ${dialect.quote("Employee")} JOIN ${dialect.quote("pp")} ON ${dialect.quoteQualifiedColumn("pp.id")} = ${dialect.quoteQualifiedColumn("Employee.managerId")};`
+      );
+    });
+
     test("should allow mixing unambiguous unqualified with qualified columns", async () => {
       const query = prisma.$from("User")
         .join("Post", "authorId", "User.id")

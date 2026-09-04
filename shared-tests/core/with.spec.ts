@@ -227,15 +227,23 @@ describe("$with (CTE)", () => {
     typeCheck({} as Expect<Equal<K, "name">>);
   });
 
-  test("type check - id col is unqualified (CTE not counted for dedup)", () => {
-    // 'id' in User + pp CTE, but CTEs are skipped for dedup → same as runtime → key is 'id'
+  test("type check - col colliding with a joined CTE is qualified", async () => {
+    // 'id' is on both User and the pp CTE, so a bare `id` would be ambiguous SQL.
     const _q = prisma.$with("pp", prisma.$from("Post").select("id")
       .select("title"))
       .from("User")
       .join("pp", "id", "User.id")
       .select("User.id");
     type K = keyof Awaited<ReturnType<typeof _q.run>>[0];
-    typeCheck({} as Expect<Equal<K, "id">>);
+    typeCheck({} as Expect<Equal<K, "User.id">>);
+
+    expectSQL(
+      _q.getSQL(),
+      `WITH ${dialect.quote("pp")} AS (SELECT ${dialect.quote("id")}, ${dialect.quote("title")} FROM ${dialect.quote("Post")}) SELECT ${dialect.quoteQualifiedColumn("User.id")} AS ${dialect.quote("User.id", true)} FROM ${dialect.quote("User")} JOIN ${dialect.quote("pp")} ON ${dialect.quoteQualifiedColumn("pp.id")} = ${dialect.quoteQualifiedColumn("User.id")};`
+    );
+
+    // Previously emitted a bare `id`, which the database rejects as ambiguous.
+    await _q.run();
   });
 
   test("type check - alias table unique col is unqualified", () => {

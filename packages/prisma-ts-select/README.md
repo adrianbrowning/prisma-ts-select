@@ -13,135 +13,195 @@
 
 <!-- toc -->
 
-  * [Summary](#summary)
-  * [Installation](#installation)
-  * [Setup](#setup)
-    + [Schema](#schema)
-    + [Client — Prisma v6](#client--prisma-v6)
-    + [Client — Prisma v7](#client--prisma-v7)
-  * [Supported DBs](#supported-dbs)
-  * [Usage](#usage)
-    + [Generator](#generator)
-  * [API](#api)
-    + [`.$from`](#from)
-      - [Example](#example)
-      - [Example - With Table Alias](#example---with-table-alias)
-        * [SQL](#sql)
-      - [Example - Inline Alias Syntax](#example---inline-alias-syntax)
-        * [SQL](#sql-1)
-    + [`.$with`](#with)
-      - [Example — CTE as joined table](#example--cte-as-joined-table)
-        * [SQL](#sql-2)
-      - [Example — CTE as base table](#example--cte-as-base-table)
-        * [SQL](#sql-3)
-      - [Example — Multiple CTEs](#example--multiple-ctes)
-        * [SQL](#sql-4)
-    + [Table Aliases](#table-aliases)
-      - [Table Alias Syntax Options](#table-alias-syntax-options)
-      - [Basic Table Alias](#basic-table-alias)
-        * [SQL](#sql-2)
-      - [Table Aliases with Joins](#table-aliases-with-joins)
-        * [Inline Alias Syntax](#inline-alias-syntax)
-        * [Object Syntax](#object-syntax)
-        * [SQL](#sql-3)
-      - [Self-Joins with Aliases](#self-joins-with-aliases)
-        * [SQL](#sql-4)
-      - [Table.* with Aliases](#table-with-aliases)
-        * [SQL](#sql-5)
-        * [SQL](#sql-6)
-    + [Joins](#joins)
-      - [Dialect Support](#dialect-support)
-      - [Nullability Semantics](#nullability-semantics)
-      - [`.join`](#join)
-        * [Example](#example-1)
-        * [SQL](#sql-7)
-        * [Parameters](#parameters)
-      - [`.joinUnsafeTypeEnforced`](#joinunsafetypeenforced)
-        * [Example](#example-2)
-        * [SQL](#sql-8)
-        * [Parameters](#parameters-1)
-      - [`.joinUnsafeIgnoreType`](#joinunsafeignoretype)
-        * [Example](#example-3)
-        * [SQL](#sql-9)
-        * [Parameters](#parameters-2)
-      - [`.innerJoin`](#innerjoin)
-      - [`.leftJoin`](#leftjoin)
-      - [`.crossJoin`](#crossjoin)
-      - [`.rightJoin`](#rightjoin) *(MySQL / PostgreSQL)*
-      - [`.fullJoin`](#fulljoin) *(PostgreSQL only)*
-      - [`.manyToManyJoin`](#manytomanyjoin)
-        * [Example](#example-4)
-        * [SQL](#sql-10)
-        * [Parameters](#parameters-3)
-    + [Where](#where)
-      - [`.where`](#where)
-        * [TypeSyntax](#typesyntax)
-        * [Operation types](#operation-types)
-        * [Examples](#examples)
-          + [Columns](#columns)
-          + [$AND](#and)
-          + [$OR](#or)
-          + [$NOT](#not)
-          + [$NOR](#nor)
-          + [`$col` — Type-safe Column References](#col--type-safe-column-references)
-          + [`$colRaw` — Column References](#colraw--column-references)
-      - [`.whereNotNull`](#wherenotnull)
-        * [Example](#example-4)
-        * [SQL](#sql-10)
-      - [`.whereIsNull`](#whereisnull)
-        * [Example](#example-5)
-        * [SQL](#sql-11)
-      - [`.whereRaw`](#whereraw)
-        * [Example](#example-6)
-        * [SQL](#sql-12)
-    + [Group By](#group-by)
-      - [Example](#example-7)
+- [Summary](#summary)
+- [Installation](#installation)
+- [Setup](#setup)
+  * [Schema](#schema)
+    + [Options](#options)
+  * [Client — Prisma v6](#client--prisma-v6)
+  * [Client — Prisma v7](#client--prisma-v7)
+- [Supported DBs](#supported-dbs)
+- [Usage](#usage)
+  * [Generator](#generator)
+- [API](#api)
+  * [`.$from`](#from)
+    + [Example](#example)
+    + [Example - With Table Alias](#example---with-table-alias)
+      - [SQL](#sql)
+  * [`.$with`](#with)
+    + [Example — CTE as joined table](#example--cte-as-joined-table)
+      - [SQL](#sql-1)
+    + [Example — CTE as base table](#example--cte-as-base-table)
+      - [SQL](#sql-2)
+    + [Example — Multiple CTEs](#example--multiple-ctes)
+      - [SQL](#sql-3)
+  * [`.$withRecursive`](#withrecursive)
+    + [Example — walk a management chain](#example--walk-a-management-chain)
+      - [SQL](#sql-4)
+  * [Table Aliases](#table-aliases)
+    + [Table Alias Syntax Options](#table-alias-syntax-options)
+    + [Table Aliases with Joins](#table-aliases-with-joins)
+      - [Inline Alias Syntax](#inline-alias-syntax)
+      - [Object Syntax](#object-syntax)
+      - [SQL](#sql-5)
+    + [Self-Joins with Aliases](#self-joins-with-aliases)
+      - [SQL](#sql-6)
+    + [Table.* with Aliases](#table-with-aliases)
+      - [SQL](#sql-7)
+      - [SQL](#sql-8)
+  * [Joins](#joins)
+    + [Dialect Support](#dialect-support)
+    + [Nullability Semantics](#nullability-semantics)
+    + [`.join`](#join)
+      - [Example](#example-1)
+      - [SQL](#sql-9)
+      - [Parameters](#parameters)
+      - [Join Type](#join-type)
+      - [Join-level WHERE](#join-level-where)
+    + [`.joinUnsafeTypeEnforced`](#joinunsafetypeenforced)
+      - [Example](#example-2)
+      - [SQL](#sql-10)
+      - [Parameters](#parameters-1)
+    + [`.joinUnsafeIgnoreType`](#joinunsafeignoretype)
+      - [Example](#example-3)
+      - [SQL](#sql-11)
+      - [Parameters](#parameters-2)
+    + [`.manyToManyJoin`](#manytomanyjoin)
+      - [Example](#example-4)
+      - [SQL](#sql-12)
+      - [Parameters](#parameters-3)
+      - [With Alias](#with-alias)
+      - [Named Junction (`refName`)](#named-junction-refname)
+      - [Explicit Source (`source`)](#explicit-source-source)
+    + [`.innerJoin`](#innerjoin)
+      - [Example](#example-5)
       - [SQL](#sql-13)
-    + [Selecting](#selecting)
-      - [`.selectDistinct`](#selectdistinct)
-      - [Example](#example-8)
+      - [`.innerJoinUnsafeTypeEnforced`](#innerjoinunsafetypeenforced)
+      - [`.innerJoinUnsafeIgnoreType`](#innerjoinunsafeignoretype)
+    + [`.leftJoin`](#leftjoin)
+      - [Example](#example-6)
       - [SQL](#sql-14)
-      - [`.selectAll`](#selectall)
-      - [Example - Single Table](#example---single-table)
-        * [SQL](#sql-15)
-      - [Example - Join table](#example---join-table)
-        * [SQL](#sql-16)
-      - [`.selectAllOmit`](#selectallomit)
-      - [`.select`](#select)
-      - [Example - `*`](#example---)
-        * [SQL](#sql-17)
-      - [Example - `Table.*` (Single Table)](#example---table-single-table)
-        * [SQL](#sql-18)
-      - [Example - `Table.*` (With Join)](#example---table-with-join)
-        * [SQL](#sql-19)
-      - [Example - Chained](#example---chained)
-        * [SQL](#sql-20)
-      - [Example - Join + Chained](#example---join--chained)
-        * [SQL](#sql-21)
-      - [Example - Column Aliases](#example---column-aliases)
-        * [SQL](#sql-22)
-      - [Example - Aliases with Joins](#example---aliases-with-joins)
-        * [SQL](#sql-23)
-    + [Having](#having)
+      - [`.leftJoinUnsafeTypeEnforced`](#leftjoinunsafetypeenforced)
+      - [`.leftJoinUnsafeIgnoreType`](#leftjoinunsafeignoretype)
+    + [`.crossJoin`](#crossjoin)
+      - [Example](#example-7)
+      - [SQL](#sql-15)
+      - [`.crossJoinUnsafeTypeEnforced` / `.crossJoinUnsafeIgnoreType`](#crossjoinunsafetypeenforced--crossjoinunsafeignoretype)
+    + [`.rightJoin`](#rightjoin)
+      - [Example](#example-8)
+      - [SQL](#sql-16)
+      - [`.rightJoinUnsafeTypeEnforced`](#rightjoinunsafetypeenforced)
+      - [`.rightJoinUnsafeIgnoreType`](#rightjoinunsafeignoretype)
+    + [`.fullJoin`](#fulljoin)
       - [Example](#example-9)
-        * [SQL](#sql-24)
-    + [Order By](#order-by)
+      - [SQL](#sql-17)
+      - [`.fullJoinUnsafeTypeEnforced`](#fulljoinunsafetypeenforced)
+      - [`.fullJoinUnsafeIgnoreType`](#fulljoinunsafeignoretype)
+  * [Where](#where)
+    + [`.where`](#where)
+      - [TypeSyntax](#typesyntax)
+      - [Operation types](#operation-types)
+      - [Examples](#examples)
+        * [Columns](#columns)
+        * [$AND](#and)
+        * [$OR](#or)
+        * [$NOT](#not)
+        * [$NOR](#nor)
+        * [Array (Scalar → IN)](#array-scalar-%E2%86%92-in)
+        * [Array (Op-Object → OR)](#array-op-object-%E2%86%92-or)
+        * [`$col` — Type-safe Column References](#col--type-safe-column-references)
+        * [`$colRaw` — Column References](#colraw--column-references)
+    + [`.whereNotNull`](#wherenotnull)
       - [Example](#example-10)
-        * [SQL](#sql-25)
-    + [Limit](#limit)
+      - [SQL](#sql-18)
+    + [`.whereIsNull`](#whereisnull)
       - [Example](#example-11)
-        * [SQL](#sql-26)
-    + [Offset](#offset)
+      - [SQL](#sql-19)
+    + [`.where` — fn overload (SQL expressions)](#where--fn-overload-sql-expressions)
+    + [`.whereRaw`](#whereraw)
       - [Example](#example-12)
-        * [SQL](#sql-27)
-  * [Select Functions](#select-functions)
-    + [Shared (all dialects)](#shared-all-dialects)
-    + [MySQL-specific](#mysql-specific)
-    + [PostgreSQL-specific](#postgresql-specific)
-    + [SQLite-specific](#sqlite-specific)
-  * [Future updates](#future-updates)
-  * [Changelog / Versioning](#changelog--versioning)
-  * [License](#license)
+      - [SQL](#sql-20)
+  * [Group By](#group-by)
+    + [Example](#example-13)
+    + [SQL](#sql-21)
+  * [Selecting](#selecting)
+    + [`.selectDistinct`](#selectdistinct)
+    + [Example](#example-14)
+    + [SQL](#sql-22)
+    + [`.selectAll`](#selectall)
+    + [Example - Single Table](#example---single-table)
+      - [SQL](#sql-23)
+    + [Example - Join table](#example---join-table)
+      - [SQL](#sql-24)
+    + [`.selectAllOmit`](#selectallomit)
+    + [Example - Single Table](#example---single-table-1)
+      - [SQL](#sql-25)
+    + [Example - Multiple Columns](#example---multiple-columns)
+    + [Example - With Join](#example---with-join)
+    + [`.select`](#select)
+    + [Example - `*`](#example---)
+      - [SQL](#sql-26)
+    + [Example - `Table.*` (Single Table)](#example---table-single-table)
+      - [SQL](#sql-27)
+    + [Example - `Table.*` (With Join)](#example---table-with-join)
+      - [SQL](#sql-28)
+    + [Example - Chained](#example---chained)
+      - [SQL](#sql-29)
+    + [Example - Join + Chained](#example---join--chained)
+      - [SQL](#sql-30)
+    + [Example - Column Aliases](#example---column-aliases)
+      - [SQL](#sql-31)
+    + [Example - Aliases with Joins](#example---aliases-with-joins)
+      - [SQL](#sql-32)
+    + [Example - Scalar Subquery](#example---scalar-subquery)
+      - [SQL](#sql-33)
+    + [Example - Scalar Subquery with Filter](#example---scalar-subquery-with-filter)
+      - [SQL](#sql-34)
+    + [Example - Scalar Subquery in `coalesce()`](#example---scalar-subquery-in-coalesce)
+      - [SQL](#sql-35)
+    + [Example - Correlated Subquery via `from()`](#example---correlated-subquery-via-from)
+      - [SQL](#sql-36)
+    + [Example - Correlated Subquery with Table Alias](#example---correlated-subquery-with-table-alias)
+      - [SQL](#sql-37)
+  * [Having](#having)
+    + [Criteria object](#criteria-object)
+    + [fn overload — aggregate functions](#fn-overload--aggregate-functions)
+      - [`countAll()` with comparison op](#countall-with-comparison-op)
+      - [`count(col)` with bigint value](#countcol-with-bigint-value)
+      - [String expr — `upper(col)` LIKE](#string-expr--uppercol-like)
+  * [Order By](#order-by)
+    + [Example](#example-15)
+      - [SQL](#sql-38)
+  * [Limit](#limit)
+    + [Example](#example-16)
+      - [SQL](#sql-39)
+  * [Offset](#offset)
+    + [Example](#example-17)
+      - [SQL](#sql-40)
+- [Select Functions](#select-functions)
+  * [Shared (all dialects)](#shared-all-dialects)
+    + [`lit(value)` — SQL literal](#litvalue--sql-literal)
+      - [Example](#example-18)
+    + [`countAll()` — COUNT(*)](#countall--count)
+      - [Example](#example-19)
+      - [SQL](#sql-41)
+    + [`count(col)` — COUNT(col)](#countcol--countcol)
+    + [`countDistinct(col)` — COUNT(DISTINCT col)](#countdistinctcol--countdistinct-col)
+    + [`sum(col)` / `avg(col)` / `min(col)` / `max(col)`](#sumcol--avgcol--mincol--maxcol)
+    + [String Functions (all dialects)](#string-functions-all-dialects)
+    + [DateTime Functions (all dialects)](#datetime-functions-all-dialects)
+    + [Math Functions (all dialects)](#math-functions-all-dialects)
+    + [Control Flow Functions (all dialects)](#control-flow-functions-all-dialects)
+    + [Combining with `.groupBy()`](#combining-with-groupby)
+      - [SQL](#sql-42)
+  * [MySQL-specific](#mysql-specific)
+  * [PostgreSQL-specific](#postgresql-specific)
+  * [SQLite-specific](#sqlite-specific)
+- [Security](#security)
+- [Future updates](#future-updates)
+- [Changelog / Versioning](#changelog--versioning)
+- [License](#license)
+
 <!-- tocstop -->
 
 ## Summary
@@ -369,12 +429,12 @@ This takes the `base` table to work from.
 
 #### Example
 ```typescript file=../usage-sqlite-v7/tests/readme/from-basic.ts region=example-$from
-prisma.$from("User");
+      prisma.$from("User");
 ```
 
 #### Example - With Table Alias
 ```typescript file=../usage-sqlite-v7/tests/readme/from-inline-alias.ts region=example-$from
-prisma.$from("User u");
+      prisma.$from("User u");
 ```
 ##### SQL
 ```sql file=../usage-sqlite-v7/tests/readme/from-inline-alias.ts region=inline-alias-sql
@@ -398,11 +458,13 @@ Chain `.with(name, query)` before `.from()` to define additional CTEs.
 #### Example — CTE as joined table
 
 ```typescript file=../../shared-tests/readme/with-cte.ts region=join
-const posts = prisma.$from("Post").select("id").select("authorId").select("title");
+    const posts = prisma.$from("Post").select("id")
+      .select("authorId")
+      .select("title");
 
-prisma.$with("pp", posts)
-      .from("User")
-      .join("pp", "authorId", "User.id")
+      prisma.$with("pp", posts)
+        .from("User")
+        .join("pp", "authorId", "User.id")
 ```
 
 ##### SQL
@@ -420,12 +482,13 @@ JOIN pp ON pp.authorId = User.id;
 Use `.from('cteName')` to query a CTE directly, without a real table as the base.
 
 ```typescript file=../../shared-tests/readme/with-cte.ts region=cte-base
-const posts = prisma.$from("Post").select("id").select("title");
+    const posts = prisma.$from("Post").select("id")
+      .select("title");
 
-prisma.$with("pp", posts)
-      .from("pp")
-      .select("pp.id")
-      .select("pp.title")
+      prisma.$with("pp", posts)
+        .from("pp")
+        .select("pp.id")
+        .select("pp.title")
 ```
 
 ##### SQL
@@ -443,13 +506,16 @@ FROM pp;
 #### Example — Multiple CTEs
 
 ```typescript file=../../shared-tests/readme/with-cte.ts region=multi-cte
-const posts = prisma.$from("Post").select("id").select("authorId").select("title");
-const users = prisma.$from("User").select("id").select("name");
+    const posts = prisma.$from("Post").select("id")
+      .select("authorId")
+      .select("title");
+    const users = prisma.$from("User").select("id")
+      .select("name");
 
-prisma.$with("pp", posts)
-      .with("uu", users)
-      .from("User")
-      .join("pp", "authorId", "User.id")
+      prisma.$with("pp", posts)
+        .with("uu", users)
+        .from("User")
+        .join("pp", "authorId", "User.id")
 ```
 
 ##### SQL
@@ -463,6 +529,55 @@ FROM User)
 FROM User 
 JOIN pp ON pp.authorId = User.id;
 ```
+
+### `.$withRecursive`
+
+Defines a recursive CTE — `WITH RECURSIVE name(cols) AS (anchor UNION ALL member)` — for hierarchy and graph traversal (org charts, category trees, threaded comments).
+
+| Param | Description |
+|-------|-------------|
+| `name` | CTE name — used to reference the CTE in `join()` or `from()` |
+| `anchor` | Non-recursive starting query, built with `.$from()`. Its select list fixes the CTE's column names |
+| `recursive` | Callback receiving a builder with `name` already registered, so `.join(name, …)` is typed |
+
+#### Example — walk a management chain
+
+```typescript file=../../shared-tests/readme/with-recursive.ts region=recursive
+    const roots = prisma.$from("Employee").whereIsNull("Employee.managerId")
+      .select("id")
+      .select("name");
+
+      prisma.$withRecursive("tree", roots, w => w.from("Employee")
+        .join("tree", "id", "Employee.managerId")
+        .select("Employee.id")
+        .select("Employee.name"))
+        .from("tree")
+        .select("tree.name")
+```
+
+##### SQL
+
+```sql file=../../shared-tests/readme/with-recursive.ts region=recursive-sql
+WITH RECURSIVE tree(id, name) AS (
+SELECT id, name 
+FROM Employee 
+WHERE (Employee.managerId IS NULL) UNION ALL 
+SELECT Employee.id AS `Employee.id`, Employee.name AS `Employee.name` 
+FROM Employee 
+JOIN tree ON tree.id = Employee.managerId) 
+SELECT tree.name AS `tree.name` 
+FROM tree;
+```
+
+The resulting CTE behaves like any `.$with()` CTE — usable as a base table via `.from()` or joined with `.join()`.
+
+**Column names** come from the anchor's select list — table qualifiers stripped, so a joined anchor selecting `"Employee.id"` still yields `tree(id)` — emitted as an explicit `tree(id, name)` header. The recursive member must project the same columns in the same order: a mismatched shape is rejected at compile time, and a same-arity reordering throws at build time (`UNION ALL` is positional, so it would otherwise silently return wrong rows).
+
+**Version requirements:** SQLite 3.8.3+, MySQL 8.0+, PostgreSQL 8.4+.
+
+**Recursion limits:** MySQL caps recursion at `cte_max_recursion_depth` (default 1000) and errors past it. SQLite and PostgreSQL are unbounded.
+
+**Cycle safety:** cyclic data (an employee who is their own ancestor) loops forever on SQLite and PostgreSQL. There is no automatic cycle detection, and `SEARCH` / `CYCLE` clauses are not supported — add a depth column to the anchor and recursive member via the expression form of `.select()`, then bound it in the recursive member's `where()`.
 
 ### Table Aliases
 
@@ -482,18 +597,18 @@ Multiple syntaxes supported:
 
 ##### Inline Alias Syntax
 ```typescript file=../usage-sqlite-v7/tests/readme/table-alias.ts region=inline-join
-prisma.$from("User u")
-      .join("Post p", "authorId", "u.id")
-      .select("u.name")
-      .select("p.title");
+      prisma.$from("User u")
+        .join("Post p", "authorId", "u.id")
+        .select("u.name")
+        .select("p.title");
 ```
 
 ##### Object Syntax
 ```typescript file=../usage-sqlite-v7/tests/readme/table-alias.ts region=object-join-1
-prisma.$from("User u")
-      .join({table: "Post", src: "authorId", on: "u.id", alias: "p"})
-      .select("u.name")
-      .select("p.title");
+      prisma.$from("User u")
+        .join({ table: "Post", src: "authorId", on: "u.id", alias: "p" })
+        .select("u.name")
+        .select("p.title");
 ```
 
 ##### SQL
@@ -510,10 +625,10 @@ JOIN Post AS `p` ON p.authorId = u.id;
 Self-joins require aliases to distinguish between the different "instances" of the same table:
 
 ```typescript file=../usage-sqlite-v7/tests/readme/table-alias.ts region=self-join
-prisma.$from("User u1")
-      .joinUnsafeTypeEnforced("User u2", "id", "u1.id")
-      .select("u1.name", "user1Name")
-      .select("u2.name", "user2Name");
+      prisma.$from("User u1")
+        .joinUnsafeTypeEnforced("User u2", "id", "u1.id")
+        .select("u1.name", "user1Name")
+        .select("u2.name", "user2Name");
 ```
 
 ##### SQL
@@ -528,8 +643,8 @@ JOIN User AS `u2` ON u2.id = u1.id;
 You can use the `alias.*` syntax to select all columns from an aliased table:
 
 ```typescript file=../usage-sqlite-v7/tests/readme/table-alias.ts region=star-single
-prisma.$from("User u")
-      .select("u.*");
+      prisma.$from("User u")
+        .select("u.*");
 ```
 
 ##### SQL
@@ -540,10 +655,10 @@ FROM User AS `u`;
 
 With joins:
 ```typescript file=../usage-sqlite-v7/tests/readme/table-alias.ts region=star-join
-prisma.$from("User u")
-      .join("Post p", "authorId", "u.id")
-      .select("u.*")
-      .select("p.*");
+      prisma.$from("User u")
+        .join("Post p", "authorId", "u.id")
+        .select("u.*")
+        .select("p.*");
 ```
 
 ##### SQL
@@ -580,8 +695,8 @@ Using the defined links (foreign keys) defined in the schema, provides a type-sa
 
 ##### Example
 ```typescript file=../usage-sqlite-v7/tests/readme/join-basic.ts region=example
-prisma.$from("User")
-      .join("Post", "authorId", "User.id");
+      prisma.$from("User")
+        .join("Post", "authorId", "User.id");
 ```
 
 ![Type-safe join](./assets/typesafe-join.gif)
@@ -625,8 +740,8 @@ JOIN Post ON Post.authorId = User.id;
 Control the SQL join variant via the `joinType` option:
 
 ```typescript file=../usage-sqlite-v7/tests/readme/join-type.ts region=join-type-left
-prisma.$from("User")
-      .join("Post", "authorId", "User.id", { joinType: "LEFT" })
+      prisma.$from("User")
+        .join("Post", "authorId", "User.id", { joinType: "LEFT" })
 ```
 
 ```sql file=../usage-sqlite-v7/tests/readme/join-type.ts region=join-type-left-sql
@@ -637,8 +752,8 @@ LEFT JOIN Post ON Post.authorId = User.id;
 `CROSS JOIN` has no `ON` clause — it is suppressed automatically:
 
 ```typescript file=../usage-sqlite-v7/tests/readme/join-type.ts region=join-type-cross
-prisma.$from("User")
-      .joinUnsafeIgnoreType("Post", "id", "User.id", { joinType: "CROSS" })
+      prisma.$from("User")
+        .joinUnsafeIgnoreType("Post", "id", "User.id", { joinType: "CROSS" })
 ```
 
 ```sql file=../usage-sqlite-v7/tests/readme/join-type.ts region=join-type-cross-sql
@@ -649,11 +764,11 @@ CROSS JOIN Post;
 `joinType` and `where` can be combined — `where` is ignored for `CROSS`:
 
 ```typescript file=../usage-sqlite-v7/tests/readme/join-type.ts region=join-type-with-where
-prisma.$from("User")
-      .join("Post", "authorId", "User.id", {
-        joinType: "LEFT",
-        where: { "Post.published": true }
-      })
+      prisma.$from("User")
+        .join("Post", "authorId", "User.id", {
+          joinType: "LEFT",
+          where: { "Post.published": true },
+        })
 ```
 
 ```sql file=../usage-sqlite-v7/tests/readme/join-type.ts region=join-type-with-where-sql
@@ -666,8 +781,8 @@ LEFT JOIN Post ON Post.authorId = User.id AND Post.published = true;
 Conditions placed on the `ON` clause instead of the top-level `WHERE`:
 
 ```typescript file=../usage-sqlite-v7/tests/readme/join-where.ts region=join-where-example
-prisma.$from("User")
-      .join("Post", "authorId", "User.id", { where: { "Post.published": true } })
+      prisma.$from("User")
+        .join("Post", "authorId", "User.id", { where: { "Post.published": true } })
 ```
 
 ```sql file=../usage-sqlite-v7/tests/readme/join-where.ts region=join-where-sql
@@ -678,15 +793,15 @@ JOIN Post ON Post.authorId = User.id AND Post.published = true;
 Supports the same MongoDB-inspired operators as `.where()` — `$AND`, `$OR`, `$NOT`, `$NOR`:
 
 ```typescript file=../usage-sqlite-v7/tests/readme/join-where.ts region=join-where-ops-example
-prisma.$from("User")
-      .join("Post", "authorId", "User.id", {
-        where: {
-          $AND: [
-            { "Post.published": true },
-            { "Post.id": { op: ">", value: 0 } }
-          ]
-        }
-      })
+      prisma.$from("User")
+        .join("Post", "authorId", "User.id", {
+          where: {
+            $AND: [
+              { "Post.published": true },
+              { "Post.id": { op: ">", value: 0 } },
+            ],
+          },
+        })
 ```
 
 ```sql file=../usage-sqlite-v7/tests/readme/join-where.ts region=join-where-ops-sql
@@ -702,8 +817,8 @@ Unlike the `.join` command, this will allow you to join on columns that are not 
 
 ##### Example
 ```typescript file=../usage-sqlite-v7/tests/readme/join-unsafe.ts region=type-enforced
-prisma.$from("User")
-      .joinUnsafeTypeEnforced("Post", "title", "User.name");
+      prisma.$from("User")
+        .joinUnsafeTypeEnforced("Post", "title", "User.name");
 ```
 ![joinUnsafeTypeEnforced](./assets/joinUnsafeTypeEnforced.gif)
 
@@ -730,8 +845,8 @@ Unlike the `.joinUnsafeIgnoreType` command, this will allow you to join on colum
 
 ##### Example
 ```typescript file=../usage-sqlite-v7/tests/readme/join-unsafe.ts region=ignore-type
-prisma.$from("User")
-      .joinUnsafeIgnoreType("Post", "id", "User.name");
+      prisma.$from("User")
+        .joinUnsafeIgnoreType("Post", "id", "User.name");
 ```
 ![joinUnsafeIgnoreType](./assets/joinUnsafeIgnoreType.gif)
 
@@ -758,8 +873,8 @@ Joins through Prisma's implicit or explicit many-to-many junction tables. Automa
 
 ##### Example
 ```typescript file=../usage-sqlite-v7/tests/readme/join-many-to-many.ts region=m2m-basic
-prisma.$from("M2M_Post")
-      .manyToManyJoin("M2M_Post", "M2M_Category");
+      prisma.$from("M2M_Post")
+        .manyToManyJoin("M2M_Post", "M2M_Category");
 ```
 
 ##### SQL
@@ -778,8 +893,8 @@ JOIN M2M_Category ON M2M_Category.id = _M2M_CategoryToM2M_Post.A;
 
 ##### With Alias
 ```typescript file=../usage-sqlite-v7/tests/readme/join-many-to-many.ts region=m2m-alias
-prisma.$from("M2M_Post")
-      .manyToManyJoin("M2M_Post", "M2M_Category mc");
+      prisma.$from("M2M_Post")
+        .manyToManyJoin("M2M_Post", "M2M_Category mc");
 ```
 
 ```sql file=../usage-sqlite-v7/tests/readme/join-many-to-many.ts region=m2m-alias-sql
@@ -793,8 +908,8 @@ JOIN M2M_Category AS `mc` ON mc.id = _M2M_CategoryToM2M_Post.A;
 Use `refName` when a model has multiple M2M relations to the same target:
 
 ```typescript file=../usage-sqlite-v7/tests/readme/join-many-to-many.ts region=m2m-refname
-prisma.$from("MMM_Post")
-      .manyToManyJoin("MMM_Post", "MMM_Category", { refName: "M2M_NC_M1" });
+      prisma.$from("MMM_Post")
+        .manyToManyJoin("MMM_Post", "MMM_Category", { refName: "M2M_NC_M1" });
 ```
 
 ```sql file=../usage-sqlite-v7/tests/readme/join-many-to-many.ts region=m2m-refname-sql
@@ -808,8 +923,8 @@ JOIN MMM_Category ON MMM_Category.id = _M2M_NC_M1.A;
 Use `source` to pin the source alias and column when the source table is aliased:
 
 ```typescript file=../usage-sqlite-v7/tests/readme/join-many-to-many.ts region=m2m-source
-prisma.$from("M2M_Post mp")
-      .manyToManyJoin("mp", "M2M_Category mc");
+      prisma.$from("M2M_Post mp")
+        .manyToManyJoin("mp", "M2M_Category mc");
 ```
 
 ```sql file=../usage-sqlite-v7/tests/readme/join-many-to-many.ts region=m2m-source-sql
@@ -824,8 +939,8 @@ Alias for `.join` — explicitly emits `INNER JOIN`. Same type-safe FK constrain
 
 ##### Example
 ```typescript file=../../shared-tests/readme/join-inner.ts region=example
-prisma.$from("User")
-      .innerJoin("Post", "authorId", "User.id")
+      prisma.$from("User")
+        .innerJoin("Post", "authorId", "User.id")
 ```
 
 ##### SQL
@@ -839,8 +954,8 @@ INNER JOIN Post ON Post.authorId = User.id;
 Same-type column join, INNER semantics.
 
 ```typescript file=../../shared-tests/readme/join-inner.ts region=type-enforced
-prisma.$from("User")
-      .innerJoinUnsafeTypeEnforced("Post", "title", "User.name")
+      prisma.$from("User")
+        .innerJoinUnsafeTypeEnforced("Post", "title", "User.name")
 ```
 
 ```sql file=../../shared-tests/readme/join-inner.ts region=type-enforced-sql
@@ -853,8 +968,8 @@ INNER JOIN Post ON Post.title = User.name;
 Any-column join, INNER semantics.
 
 ```typescript file=../../shared-tests/readme/join-inner.ts region=ignore-type
-prisma.$from("User")
-      .innerJoinUnsafeIgnoreType("Post", "id", "User.name")
+      prisma.$from("User")
+        .innerJoinUnsafeIgnoreType("Post", "id", "User.name")
 ```
 
 ```sql file=../../shared-tests/readme/join-inner.ts region=ignore-type-sql
@@ -870,8 +985,8 @@ FK-safe LEFT JOIN. Joined table fields become `T | null` in the result type.
 
 ##### Example
 ```typescript file=../../shared-tests/readme/join-left.ts region=example
-prisma.$from("User")
-      .leftJoin("Post", "authorId", "User.id")
+      prisma.$from("User")
+        .leftJoin("Post", "authorId", "User.id")
 ```
 
 ##### SQL
@@ -885,8 +1000,8 @@ LEFT JOIN Post ON Post.authorId = User.id;
 Same-type column join, LEFT semantics.
 
 ```typescript file=../../shared-tests/readme/join-left.ts region=type-enforced
-prisma.$from("User")
-      .leftJoinUnsafeTypeEnforced("Post", "title", "User.name")
+      prisma.$from("User")
+        .leftJoinUnsafeTypeEnforced("Post", "title", "User.name")
 ```
 
 ```sql file=../../shared-tests/readme/join-left.ts region=type-enforced-sql
@@ -899,8 +1014,8 @@ LEFT JOIN Post ON Post.title = User.name;
 Any-column join, LEFT semantics.
 
 ```typescript file=../../shared-tests/readme/join-left.ts region=ignore-type
-prisma.$from("User")
-      .leftJoinUnsafeIgnoreType("Post", "id", "User.name")
+      prisma.$from("User")
+        .leftJoinUnsafeIgnoreType("Post", "id", "User.name")
 ```
 
 ```sql file=../../shared-tests/readme/join-left.ts region=ignore-type-sql
@@ -916,8 +1031,8 @@ Produces a cartesian product — no `ON` clause. All dialects supported.
 
 ##### Example
 ```typescript file=../../shared-tests/readme/join-cross.ts region=example
-prisma.$from("User")
-      .crossJoin("Post")
+      prisma.$from("User")
+        .crossJoin("Post")
 ```
 
 ##### SQL
@@ -931,8 +1046,8 @@ CROSS JOIN Post;
 Type-permission variants — still emit `CROSS JOIN` with no `ON` clause (takes only a table argument).
 
 ```typescript file=../../shared-tests/readme/join-cross.ts region=type-enforced
-prisma.$from("User")
-      .crossJoinUnsafeTypeEnforced("Post")
+      prisma.$from("User")
+        .crossJoinUnsafeTypeEnforced("Post")
 ```
 
 ```sql file=../../shared-tests/readme/join-cross.ts region=type-enforced-sql
@@ -1058,87 +1173,87 @@ type WhereClause = {
 
 ###### Columns
 ```typescript file=../usage-sqlite-v7/tests/readme/where.ts region=columns
-prisma.$from("User")
-      .joinUnsafeIgnoreType("Post", "id", "User.name")
-      .where({
-        "User.age": 20,
-        "User.name": {op: "LIKE", value: "Stuart%"},
-      });
+      prisma.$from("User")
+        .joinUnsafeIgnoreType("Post", "id", "User.name")
+        .where({
+          "User.age": 20,
+          "User.name": { op: "LIKE", value: "Stuart%" },
+        });
 ```
 
 ###### $AND
 ```typescript file=../usage-sqlite-v7/tests/readme/where.ts region=and
-prisma.$from("User")
-      .joinUnsafeIgnoreType("Post", "id", "User.name")
-      .where({
-        $AND: [
-          {"User.age": {op: ">", value: 20}},
-          {"User.age": {op: "<", value: 60}},
-        ]
-      });
+      prisma.$from("User")
+        .joinUnsafeIgnoreType("Post", "id", "User.name")
+        .where({
+          $AND: [
+            { "User.age": { op: ">", value: 20 } },
+            { "User.age": { op: "<", value: 60 } },
+          ],
+        });
 ```
 
 ###### $OR
 ```typescript file=../usage-sqlite-v7/tests/readme/where.ts region=or
-prisma.$from("User")
-      .joinUnsafeIgnoreType("Post", "id", "User.name")
-      .where({
-        $OR: [
-          {"User.name": {op: "LIKE", value: "a%"}},
-          {"User.name": {op: "LIKE", value: "d%"}},
-        ]
-      });
+      prisma.$from("User")
+        .joinUnsafeIgnoreType("Post", "id", "User.name")
+        .where({
+          $OR: [
+            { "User.name": { op: "LIKE", value: "a%" } },
+            { "User.name": { op: "LIKE", value: "d%" } },
+          ],
+        });
 ```
 
 ###### $NOT
 ```typescript file=../usage-sqlite-v7/tests/readme/where.ts region=not
-prisma.$from("User")
-      .joinUnsafeIgnoreType("Post", "id", "User.name")
-      .where({
-        $NOT: [
-          {"User.age": 20},
-          {
-            "User.age": {op: "=", value: 60},
-            "User.name": "Bob",
-          },
-        ]
-      });
+      prisma.$from("User")
+        .joinUnsafeIgnoreType("Post", "id", "User.name")
+        .where({
+          $NOT: [
+            { "User.age": 20 },
+            {
+              "User.age": { op: "=", value: 60 },
+              "User.name": "Bob",
+            },
+          ],
+        });
 ```
 
 ###### $NOR
 ```typescript file=../usage-sqlite-v7/tests/readme/where.ts region=nor
-prisma.$from("User")
-      .joinUnsafeIgnoreType("Post", "id", "User.name")
-      .where({
-        $NOR: [
-          {"User.age": 20},
-          {
-            "User.age": {op: "!=", value: 60},
-            "User.name": "Bob",
-          },
-        ]
-      });
+      prisma.$from("User")
+        .joinUnsafeIgnoreType("Post", "id", "User.name")
+        .where({
+          $NOR: [
+            { "User.age": 20 },
+            {
+              "User.age": { op: "!=", value: 60 },
+              "User.name": "Bob",
+            },
+          ],
+        });
 ```
 
 ###### Array (Scalar → IN)
 ```typescript file=../usage-sqlite-v7/tests/readme/where.ts region=array-scalar
-prisma.$from("User")
-      .joinUnsafeIgnoreType("Post", "id", "User.name")
-      .where({
-        "User.name": ["Alice", "Bob"],
-      });
+      prisma.$from("User")
+        .joinUnsafeIgnoreType("Post", "id", "User.name")
+        .where({
+          "User.name": [ "Alice", "Bob" ],
+        });
 ```
 
 ###### Array (Op-Object → OR)
 ```typescript file=../usage-sqlite-v7/tests/readme/where.ts region=array-op
-prisma.$from("User")
-      .joinUnsafeIgnoreType("Post", "id", "User.name")
-      .where({
-        "User.name": [
-          { op: "LIKE", value: "A%" },
-          { op: "LIKE", value: "B%" },
-        ],
-      });
+      prisma.$from("User")
+        .joinUnsafeIgnoreType("Post", "id", "User.name")
+        .where({
+          "User.name": [
+            { op: "LIKE", value: "A%" },
+            { op: "LIKE", value: "B%" },
+          ],
+        });
 ```
 
 ###### `$col` — Type-safe Column References
@@ -1147,10 +1262,10 @@ Use `{ $col: "Table.column" }` to compare against another column instead of a li
 
 **Equality:**
 ```typescript file=../usage-sqlite-v7/tests/readme/where.ts region=col-equality
-prisma.$from("User")
-      .join("Post", "authorId", "User.id")
-      .where({ "User.id": { $col: "Post.authorId" } })
-      .select("User.id")
+      prisma.$from("User")
+        .join("Post", "authorId", "User.id")
+        .where({ "User.id": { $col: "Post.authorId" } })
+        .select("User.id")
 ```
 
 ```sql file=../usage-sqlite-v7/tests/readme/where.ts region=col-equality-sql
@@ -1162,10 +1277,10 @@ WHERE User.id = Post.authorId;
 
 **With operator:**
 ```typescript file=../usage-sqlite-v7/tests/readme/where.ts region=col-op
-prisma.$from("User")
-      .join("Post", "authorId", "User.id")
-      .where({ "User.id": { op: ">", value: { $col: "Post.authorId" } } })
-      .select("User.id")
+      prisma.$from("User")
+        .join("Post", "authorId", "User.id")
+        .where({ "User.id": { op: ">", value: { $col: "Post.authorId" } } })
+        .select("User.id")
 ```
 
 ```sql file=../usage-sqlite-v7/tests/readme/where.ts region=col-op-sql
@@ -1177,10 +1292,10 @@ WHERE User.id > Post.authorId;
 
 **IN with mixed literals and column refs:**
 ```typescript file=../usage-sqlite-v7/tests/readme/where.ts region=col-in
-prisma.$from("User")
-      .join("Post", "authorId", "User.id")
-      .where({ "User.id": { op: "IN", values: [1, { $col: "Post.authorId" }, 3] } })
-      .select("User.id")
+      prisma.$from("User")
+        .join("Post", "authorId", "User.id")
+        .where({ "User.id": { op: "IN", values: [ 1, { $col: "Post.authorId" }, 3 ] } })
+        .select("User.id")
 ```
 
 ```sql file=../usage-sqlite-v7/tests/readme/where.ts region=col-in-sql
@@ -1192,9 +1307,9 @@ WHERE User.id IN (1, Post.authorId, 3);
 
 **In join.where (ON clause):**
 ```typescript file=../usage-sqlite-v7/tests/readme/where.ts region=col-join-where
-prisma.$from("User")
-      .join("Post", "authorId", "User.id", { where: { "Post.authorId": { $col: "User.id" } } })
-      .select("User.id")
+      prisma.$from("User")
+        .join("Post", "authorId", "User.id", { where: { "Post.authorId": { $col: "User.id" } } })
+        .select("User.id")
 ```
 
 ```sql file=../usage-sqlite-v7/tests/readme/where.ts region=col-join-where-sql
@@ -1205,11 +1320,11 @@ JOIN Post ON Post.authorId = User.id AND Post.authorId = User.id;
 
 **In having():**
 ```typescript file=../usage-sqlite-v7/tests/readme/where.ts region=col-having
-prisma.$from("User")
-      .join("Post", "authorId", "User.id")
-      .groupBy(["User.id"])
-      .having(({ count }) => [[count("Post.id"), { op: ">", value: { $col: "User.id" } }]])
-      .select("User.id")
+      prisma.$from("User")
+        .join("Post", "authorId", "User.id")
+        .groupBy([ "User.id" ])
+        .having(({ count }) => [[ count("Post.id"), { op: ">", value: { $col: "User.id" } }]])
+        .select("User.id")
 ```
 
 ```sql file=../usage-sqlite-v7/tests/readme/where.ts region=col-having-sql
@@ -1233,10 +1348,10 @@ The value must be in `"Alias.field"` format (must contain a dot). Column names a
 
 **Equality:**
 ```typescript file=../usage-sqlite-v7/tests/readme/where.ts region=colraw-equality
-prisma.$from("User")
-      .join("Post", "authorId", "User.id")
-      .where({ "User.id": { $colRaw: "Post.authorId" } })
-      .select("User.id")
+      prisma.$from("User")
+        .join("Post", "authorId", "User.id")
+        .where({ "User.id": { $colRaw: "Post.authorId" } })
+        .select("User.id")
 ```
 
 ```sql file=../usage-sqlite-v7/tests/readme/where.ts region=colraw-equality-sql
@@ -1248,10 +1363,10 @@ WHERE User.id = Post.authorId;
 
 **With operator:**
 ```typescript file=../usage-sqlite-v7/tests/readme/where.ts region=colraw-op
-prisma.$from("User")
-      .join("Post", "authorId", "User.id")
-      .where({ "User.id": { op: ">", value: { $colRaw: "Post.authorId" } } })
-      .select("User.id")
+      prisma.$from("User")
+        .join("Post", "authorId", "User.id")
+        .where({ "User.id": { op: ">", value: { $colRaw: "Post.authorId" } } })
+        .select("User.id")
 ```
 
 ```sql file=../usage-sqlite-v7/tests/readme/where.ts region=colraw-op-sql
@@ -1263,10 +1378,10 @@ WHERE User.id > Post.authorId;
 
 **IN with mixed literals and column refs:**
 ```typescript file=../usage-sqlite-v7/tests/readme/where.ts region=colraw-in
-prisma.$from("User")
-      .join("Post", "authorId", "User.id")
-      .where({ "User.id": { op: "IN", values: [1, { $colRaw: "Post.authorId" }, 3] } })
-      .select("User.id")
+      prisma.$from("User")
+        .join("Post", "authorId", "User.id")
+        .where({ "User.id": { op: "IN", values: [ 1, { $colRaw: "Post.authorId" }, 3 ] } })
+        .select("User.id")
 ```
 
 ```sql file=../usage-sqlite-v7/tests/readme/where.ts region=colraw-in-sql
@@ -1278,9 +1393,9 @@ WHERE User.id IN (1, Post.authorId, 3);
 
 **In join.where (ON clause):**
 ```typescript file=../usage-sqlite-v7/tests/readme/where.ts region=colraw-join-where
-prisma.$from("User")
-      .join("Post", "authorId", "User.id", { where: { "Post.authorId": { $colRaw: "User.id" } } })
-      .select("User.id")
+      prisma.$from("User")
+        .join("Post", "authorId", "User.id", { where: { "Post.authorId": { $colRaw: "User.id" } } })
+        .select("User.id")
 ```
 
 ```sql file=../usage-sqlite-v7/tests/readme/where.ts region=colraw-join-where-sql
@@ -1291,11 +1406,11 @@ JOIN Post ON Post.authorId = User.id AND Post.authorId = User.id;
 
 **In having():**
 ```typescript file=../usage-sqlite-v7/tests/readme/where.ts region=colraw-having
-prisma.$from("User")
-      .join("Post", "authorId", "User.id")
-      .groupBy(["User.id"])
-      .having(({ count }) => [[count("Post.id"), { op: ">", value: { $colRaw: "User.id" } }]])
-      .select("User.id")
+      prisma.$from("User")
+        .join("Post", "authorId", "User.id")
+        .groupBy([ "User.id" ])
+        .having(({ count }) => [[ count("Post.id"), { op: ">", value: { $colRaw: "User.id" } }]])
+        .select("User.id")
 ```
 
 ```sql file=../usage-sqlite-v7/tests/readme/where.ts region=colraw-having-sql
@@ -1312,9 +1427,9 @@ Type narrowing is reflected in all downstream `.select()` calls.
 
 ##### Example
 ```typescript file=../usage-sqlite-v7/tests/readme/whereNotNull.ts region=whereNotNull
-prisma.$from("User")
-      .join("Post", "authorId", "User.id")
-      .whereNotNull("User.name")
+      prisma.$from("User")
+        .join("Post", "authorId", "User.id")
+        .whereNotNull("User.name")
 ```
 ![whereNotNull](./assets/whereNotNull.gif)
 
@@ -1333,9 +1448,9 @@ Narrows the column's type to exactly `null` and adds an `IS NULL` condition to t
 
 ##### Example
 ```typescript file=../usage-sqlite-v7/tests/readme/whereNotNull.ts region=whereIsNull
-prisma.$from("User")
-      .join("Post", "authorId", "User.id")
-      .whereIsNull("Post.content")
+      prisma.$from("User")
+        .join("Post", "authorId", "User.id")
+        .whereIsNull("Post.content")
 ```
 ![whereIsNull](./assets/whereIsNull.gif)
 
@@ -1353,9 +1468,9 @@ WHERE (Post.content IS NULL);
 Pass a callback instead of a criteria object to apply SQL functions as conditions. The callback receives the same select-fn context as `.select()`, giving access to `upper`, `lower`, `length`, `count`, `avg`, etc.
 
 ```typescript file=../../shared-tests/readme/where.ts region=fn-upper-like
-prisma.$from("User")
-      .where(({ upper }) => [[upper('name'), { op: 'LIKE', value: 'John%' }]])
-      .select("name")
+      prisma.$from("User")
+        .where(({ upper }) => [[ upper("name"), { op: "LIKE", value: "John%" }]])
+        .select("name")
 ```
 
 ```sql file=../../shared-tests/readme/where.ts region=fn-upper-like-sql
@@ -1372,9 +1487,9 @@ When you want to write a complex `where`, or you just don't want the TypeSafety 
 
 ##### Example
 ```typescript file=../usage-sqlite-v7/tests/readme/where.ts region=raw
-prisma.$from("User")
-      .join("Post", "authorId", "User.id")
-      .whereRaw("this is a raw where statement");
+      prisma.$from("User")
+        .join("Post", "authorId", "User.id")
+        .whereRaw("this is a raw where statement");
 ```
 
 ##### SQL
@@ -1394,9 +1509,9 @@ Will allow you to pass a list of columns, that haven been specified from the `.$
 
 #### Example
 ```typescript file=../usage-sqlite-v7/tests/readme/groupby.ts region=basic
-prisma.$from("User")
-      .join("Post", "authorId", "User.id")
-      .groupBy(["name", "Post.content"]);
+      prisma.$from("User")
+        .join("Post", "authorId", "User.id")
+        .groupBy([ "name", "Post.content" ]);
 ```
 ![groupBy](./assets/groupBy.gif)
 
@@ -1417,9 +1532,9 @@ Will add the keyword `DISTINCT` after the select.
 
 #### Example
 ```typescript file=../usage-sqlite-v7/tests/readme/select-advanced.ts region=distinct
-prisma.$from("User")
-      .selectDistinct()
-      .select("User.name");
+      prisma.$from("User")
+        .selectDistinct()
+        .select("User.name");
 ```
 
 #### SQL
@@ -1438,8 +1553,8 @@ This method will explicitly list all the tables from the `$from` and `.join`. So
 
 #### Example - Single Table
 ```typescript file=../usage-sqlite-v7/tests/readme/select-advanced.ts region=all-single
-prisma.$from("User")
-      .selectAll();
+      prisma.$from("User")
+        .selectAll();
 ```
 
 ##### SQL
@@ -1452,9 +1567,9 @@ FROM User;
 
 #### Example - Join table
 ```typescript file=../usage-sqlite-v7/tests/readme/select-advanced.ts region=all-join
-prisma.$from("User")
-      .join("Post", "authorId", "User.id")
-      .selectAll();
+      prisma.$from("User")
+        .join("Post", "authorId", "User.id")
+        .selectAll();
 ```
 
 ##### SQL
@@ -1472,8 +1587,8 @@ Like `.selectAll`, but excludes specific columns. Accepts `Table.column` or bare
 
 #### Example - Single Table
 ```typescript file=../usage-sqlite-v7/tests/readme/select-all-omit.ts region=single-omit
-prisma.$from("User")
-      .selectAllOmit(["User.email"]);
+      prisma.$from("User")
+        .selectAllOmit([ "User.email" ]);
 ```
 
 ##### SQL
@@ -1484,15 +1599,15 @@ FROM User;
 
 #### Example - Multiple Columns
 ```typescript file=../usage-sqlite-v7/tests/readme/select-all-omit.ts region=multi-omit
-prisma.$from("User")
-      .selectAllOmit(["User.email", "User.age"]);
+      prisma.$from("User")
+        .selectAllOmit([ "User.email", "User.age" ]);
 ```
 
 #### Example - With Join
 ```typescript file=../usage-sqlite-v7/tests/readme/select-all-omit.ts region=join-omit
-prisma.$from("User")
-      .join("Post", "authorId", "User.id")
-      .selectAllOmit(["User.email", "Post.content"]);
+      prisma.$from("User")
+        .join("Post", "authorId", "User.id")
+        .selectAllOmit([ "User.email", "Post.content" ]);
 ```
 
 > **Note:** `*` and `Table.*` are not valid arguments — use `Table.column` or bare `column` references.
@@ -1503,8 +1618,8 @@ You can supply either; `*`, `Table.*` OR `table.field` and then chain them toget
 
 #### Example - `*`
 ```typescript file=../usage-sqlite-v7/tests/readme/select-star.ts region=example
-prisma.$from("User")
-      .select("*");
+      prisma.$from("User")
+        .select("*");
 ```
 
 ##### SQL
@@ -1517,8 +1632,8 @@ FROM User;
 
 #### Example - `Table.*` (Single Table)
 ```typescript file=../usage-sqlite-v7/tests/readme/select-advanced.ts region=table-star-single
-prisma.$from("User")
-      .select("User.*");
+      prisma.$from("User")
+        .select("User.*");
 ```
 
 ##### SQL
@@ -1531,10 +1646,10 @@ FROM User;
 
 #### Example - `Table.*` (With Join)
 ```typescript file=../usage-sqlite-v7/tests/readme/select-advanced.ts region=table-star-join
-prisma.$from("User")
-      .join("Post", "authorId", "User.id")
-      .select("User.*")
-      .select("Post.*");
+      prisma.$from("User")
+        .join("Post", "authorId", "User.id")
+        .select("User.*")
+        .select("Post.*");
 ```
 
 ##### SQL
@@ -1551,9 +1666,9 @@ JOIN Post ON Post.authorId = User.id;
 
 #### Example - Chained
 ```typescript file=../usage-sqlite-v7/tests/readme/select-chained.ts region=example
-prisma.$from("User")
-      .select("name")
-      .select("email");
+      prisma.$from("User")
+        .select("name")
+        .select("email");
 ```
 
 ##### SQL
@@ -1566,10 +1681,10 @@ FROM User;
 
 #### Example - Join + Chained
 ```typescript file=../usage-sqlite-v7/tests/readme/select-advanced.ts region=join-chained
-prisma.$from("User")
-      .join("Post", "authorId", "User.id")
-      .select("name")
-      .select("Post.title");
+      prisma.$from("User")
+        .join("Post", "authorId", "User.id")
+        .select("name")
+        .select("Post.title");
 ```
 
 ##### SQL
@@ -1583,21 +1698,21 @@ JOIN Post ON Post.authorId = User.id;
 
 #### Example - Column Aliases
 ```typescript file=../usage-sqlite-v7/tests/readme/select-column-alias.ts region=basic
-prisma.$from("User")
-      .select("User.name", "username");
+      prisma.$from("User")
+        .select("User.name", "username");
 ```
 
 ```typescript file=../usage-sqlite-v7/tests/readme/select-column-alias.ts region=multiple
-prisma.$from("User")
-      .select("User.id", "userId")
-      .select("User.email", "emailAddress");
+      prisma.$from("User")
+        .select("User.id", "userId")
+        .select("User.email", "emailAddress");
 ```
 
 ```typescript file=../usage-sqlite-v7/tests/readme/select-column-alias.ts region=mixed
-prisma.$from("User")
-      .select("User.id")
-      .select("User.name", "username")
-      .select("User.email");
+      prisma.$from("User")
+        .select("User.id")
+        .select("User.name", "username")
+        .select("User.email");
 ```
 
 ##### SQL
@@ -1620,10 +1735,10 @@ FROM User;
 
 #### Example - Aliases with Joins
 ```typescript file=../usage-sqlite-v7/tests/readme/select-advanced.ts region=aliases-joins
-prisma.$from("User")
-      .join("Post", "authorId", "User.id")
-      .select("User.name", "authorName")
-      .select("Post.title", "postTitle");
+      prisma.$from("User")
+        .join("Post", "authorId", "User.id")
+        .select("User.name", "authorName")
+        .select("Post.title", "postTitle");
 ```
 
 ##### SQL
@@ -1643,14 +1758,14 @@ JOIN Post ON Post.authorId = User.id;
 Pass a single-column query builder directly to `.select()` as a scalar subquery. The builder must select exactly one column (multi-column builders are rejected at the type level).
 
 ```typescript file=../usage-sqlite-v7/tests/readme/select-scalar-subquery.ts region=scalar-subquery
-prisma.$from("User")
-      .select("name")
-      .select(
-        prisma.$from("Post")
-              .where({ authorId: 1 })
-              .select(({ countAll }) => countAll(), "cnt"),
-        "postCount"
-      )
+      prisma.$from("User")
+        .select("name")
+        .select(
+          prisma.$from("Post")
+            .where({ authorId: 1 })
+            .select(({ countAll }) => countAll(), "cnt"),
+          "postCount"
+        )
 ```
 
 ##### SQL
@@ -1666,14 +1781,14 @@ FROM User;
 #### Example - Scalar Subquery with Filter
 
 ```typescript file=../usage-sqlite-v7/tests/readme/select-scalar-subquery.ts region=scalar-subquery-where
-prisma.$from("User")
-      .select("name")
-      .select(
-        prisma.$from("Post")
-              .where({ published: true })
-              .select(({ countAll }) => countAll(), "cnt"),
-        "publishedCount"
-      )
+      prisma.$from("User")
+        .select("name")
+        .select(
+          prisma.$from("Post")
+            .where({ published: true })
+            .select(({ countAll }) => countAll(), "cnt"),
+          "publishedCount"
+        )
 ```
 
 ##### SQL
@@ -1691,13 +1806,13 @@ FROM User;
 Subquery builders also work as arguments to select functions like `coalesce()`:
 
 ```typescript file=../usage-sqlite-v7/tests/readme/select-scalar-subquery.ts region=scalar-subquery-coalesce
-prisma.$from("User")
-      .select(({ coalesce }) => coalesce(
-        prisma.$from("Post")
-              .where({ authorId: 1 })
-              .select("title"),
-        "User.name"
-      ), "label")
+      prisma.$from("User")
+        .select(({ coalesce }) => coalesce(
+          prisma.$from("Post")
+            .where({ authorId: 1 })
+            .select("title"),
+          "User.name"
+        ), "label")
 ```
 
 ##### SQL
@@ -1715,14 +1830,14 @@ FROM User;
 Use `from()` inside a `.select()` callback to build a correlated subquery that references columns from the outer query via `$col`:
 
 ```typescript file=../usage-sqlite-v7/tests/readme/select-scalar-subquery.ts region=correlated-subquery-from
-prisma.$from("User")
-      .select("name")
-      .select(({ from }) =>
-        from("Post")
-          .where({ "Post.authorId": { $col: "User.id" } })
-          .select(({ countAll }) => countAll(), "cnt"),
+      prisma.$from("User")
+        .select("name")
+        .select(({ from }) =>
+          from("Post")
+            .where({ "Post.authorId": { $col: "User.id" } })
+            .select(({ countAll }) => countAll(), "cnt"),
         "postCount"
-      )
+        )
 ```
 
 ##### SQL
@@ -1740,14 +1855,14 @@ FROM User;
 `from()` accepts an inline alias (e.g. `"Post p"`) just like `$from()`:
 
 ```typescript file=../usage-sqlite-v7/tests/readme/select-scalar-subquery.ts region=correlated-subquery-alias
-prisma.$from("User")
-      .select("name")
-      .select(({ from }) =>
-        from("Post p")
-          .where({ "p.authorId": { $col: "User.id" } })
-          .select("title"),
+      prisma.$from("User")
+        .select("name")
+        .select(({ from }) =>
+          from("Post p")
+            .where({ "p.authorId": { $col: "User.id" } })
+            .select("title"),
         "latestTitle"
-      )
+        )
 ```
 
 ##### SQL
@@ -1767,16 +1882,16 @@ FROM User;
 #### Criteria object
 
 ```typescript file=../../shared-tests/readme/having.ts region=with-groupby
-prisma.$from("User")
-      .join("Post", "authorId", "User.id")
-      .groupBy(["name", "Post.content"])
-      .having({
-        "User.name": {
-          "op": "LIKE",
-          "value": "bob%"
-        }
-      })
-      .select("email");
+      prisma.$from("User")
+        .join("Post", "authorId", "User.id")
+        .groupBy([ "name", "Post.content" ])
+        .having({
+          "User.name": {
+            "op": "LIKE",
+            "value": "bob%",
+          },
+        })
+        .select("email");
 ```
 
 ```sql file=../../shared-tests/readme/having.ts region=with-groupby-sql
@@ -1793,11 +1908,11 @@ Pass a callback returning `Array<[SQLExpr<T>, condition]>` pairs. The callback r
 ##### `countAll()` with comparison op
 
 ```typescript file=../../shared-tests/readme/having.ts region=agg-fn-tuple-countall
-prisma.$from("User")
-      .join("Post", "authorId", "User.id")
-      .groupBy(["User.name"])
-      .having(({ countAll }) => [[countAll(), { op: '>', value: 1 }]])
-      .select("User.name")
+      prisma.$from("User")
+        .join("Post", "authorId", "User.id")
+        .groupBy([ "User.name" ])
+        .having(({ countAll }) => [[ countAll(), { op: ">", value: 1 }]])
+        .select("User.name")
 ```
 
 ```sql file=../../shared-tests/readme/having.ts region=agg-fn-tuple-countall-sql
@@ -1810,11 +1925,11 @@ GROUP BY User.name HAVING COUNT(*) > 1;
 ##### `count(col)` with bigint value
 
 ```typescript file=../../shared-tests/readme/having.ts region=agg-fn-tuple-count
-prisma.$from("User")
-      .join("Post", "authorId", "User.id")
-      .groupBy(["User.name"])
-      .having(({ count }) => [[count('User.id'), { op: '>=', value: 2n }]])
-      .select("User.name")
+      prisma.$from("User")
+        .join("Post", "authorId", "User.id")
+        .groupBy([ "User.name" ])
+        .having(({ count }) => [[ count("User.id"), { op: ">=", value: 2n }]])
+        .select("User.name")
 ```
 
 ```sql file=../../shared-tests/readme/having.ts region=agg-fn-tuple-count-sql
@@ -1827,11 +1942,11 @@ GROUP BY User.name HAVING COUNT(User.id) >= 2;
 ##### String expr — `upper(col)` LIKE
 
 ```typescript file=../../shared-tests/readme/having.ts region=agg-fn-string-upper
-prisma.$from("User")
-      .join("Post", "authorId", "User.id")
-      .groupBy(["User.name"])
-      .having(({ upper }) => [[upper('User.name'), { op: 'LIKE', value: 'John%' }]])
-      .select("User.name")
+      prisma.$from("User")
+        .join("Post", "authorId", "User.id")
+        .groupBy([ "User.name" ])
+        .having(({ upper }) => [[ upper("User.name"), { op: "LIKE", value: "John%" }]])
+        .select("User.name")
 ```
 
 ```sql file=../../shared-tests/readme/having.ts region=agg-fn-string-upper-sql
@@ -1850,9 +1965,9 @@ Multiple pairs in one `.having()` call are AND-ed together. `.having()` can also
 #### Example
 
 ```typescript file=../usage-sqlite-v7/tests/readme/orderby.ts region=basic
-prisma.$from("User")
-      .join("Post", "authorId", "User.id")
-      .orderBy(["name", "Post.content DESC"]);
+      prisma.$from("User")
+        .join("Post", "authorId", "User.id")
+        .orderBy([ "name", "Post.content DESC" ]);
 ```
 
 ##### SQL
@@ -1870,9 +1985,9 @@ ORDER BY name, Post.content DESC;
 #### Example
 
 ```typescript file=../usage-sqlite-v7/tests/readme/pagination.ts region=limit
-prisma.$from("User")
-      .join("Post", "authorId", "User.id")
-      .limit(1);
+      prisma.$from("User")
+        .join("Post", "authorId", "User.id")
+        .limit(1);
 ```
 
 ##### SQL
@@ -1889,10 +2004,10 @@ LIMIT 1;
 
 #### Example
 ```typescript file=../usage-sqlite-v7/tests/readme/pagination.ts region=offset
-prisma.$from("User")
-      .join("Post", "authorId", "User.id")
-      .limit(1)
-      .offset(1);
+      prisma.$from("User")
+        .join("Post", "authorId", "User.id")
+        .limit(1)
+        .offset(1);
 ```
 
 ##### SQL
@@ -1916,8 +2031,8 @@ Produces a typed SQL literal from a JS value.
 
 ##### Example
 ```typescript file=../usage-sqlite-v7/tests/readme/select-fns.ts region=lit-string
-prisma.$from("User")
-      .select(({ lit }) => lit("hello"), "greeting");
+      prisma.$from("User")
+        .select(({ lit }) => lit("hello"), "greeting");
 ```
 
 #### `countAll()` — COUNT(*)
@@ -1926,8 +2041,8 @@ The most common aggregate. Always produces `COUNT(*)`.
 
 ##### Example
 ```typescript file=../usage-sqlite-v7/tests/readme/select-fns.ts region=count-all
-prisma.$from("User")
-      .select(({ countAll }) => countAll(), "total");
+      prisma.$from("User")
+        .select(({ countAll }) => countAll(), "total");
 ```
 
 ##### SQL
@@ -1939,15 +2054,15 @@ FROM User;
 #### `count(col)` — COUNT(col)
 
 ```typescript file=../usage-sqlite-v7/tests/readme/select-fns.ts region=count-col
-prisma.$from("User")
-      .select(({ count }) => count("User.id"), "cnt");
+      prisma.$from("User")
+        .select(({ count }) => count("User.id"), "cnt");
 ```
 
 #### `countDistinct(col)` — COUNT(DISTINCT col)
 
 ```typescript file=../usage-sqlite-v7/tests/readme/select-fns.ts region=count-distinct
-prisma.$from("User")
-      .select(({ countDistinct }) => countDistinct("User.id"), "cnt");
+      prisma.$from("User")
+        .select(({ countDistinct }) => countDistinct("User.id"), "cnt");
 ```
 
 #### `sum(col)` / `avg(col)` / `min(col)` / `max(col)`
@@ -1962,8 +2077,8 @@ Standard numeric aggregates. **Return types vary by dialect** — `sum` and `avg
 | `max(col)` | `T \| null` | `T \| null` | `T \| null` |
 
 ```typescript file=../usage-sqlite-v7/tests/readme/select-fns.ts region=sum
-prisma.$from("User")
-      .select(({ sum }) => sum("User.age"), "total");
+      prisma.$from("User")
+        .select(({ sum }) => sum("User.age"), "total");
 ```
 
 #### String Functions (all dialects)
@@ -2004,20 +2119,20 @@ prisma.$from("Post").select(({ year, now }) => year(now()), "y");
 ```
 
 ```typescript file=../usage-sqlite-v7/tests/readme/select-fns.ts region=upper
-prisma.$from("User")
-      .select(({ upper }) => upper("User.name"), "uname");
+      prisma.$from("User")
+        .select(({ upper }) => upper("User.name"), "uname");
 ```
 
 String fns accept a `SQLExpr<string>` as input, enabling composition:
 
 ```typescript file=../usage-sqlite-v7/tests/readme/select-fns.ts region=lower
-prisma.$from("User")
-      .select(({ lower }) => lower("User.name"), "lname");
+      prisma.$from("User")
+        .select(({ lower }) => lower("User.name"), "lname");
 ```
 
 ```typescript file=../usage-sqlite-v7/tests/readme/select-fns.ts region=replace
-prisma.$from("User")
-      .select(({ replace }) => replace("User.email", "@example.com", ""), "handle");
+      prisma.$from("User")
+        .select(({ replace }) => replace("User.email", "@example.com", ""), "handle");
 ```
 
 #### Math Functions (all dialects)
@@ -2062,35 +2177,35 @@ prisma.$from("User")
 `cond()` converts a `WhereCriteria` object into a `SQLExpr<unknown>` — useful when you need a condition expression outside of a dedicated function. Note: `$if()`/`iif()` and `caseWhen()` all accept `WhereCriteria` directly, so `cond()` is rarely needed.
 
 ```typescript file=../usage-sqlite-v7/tests/readme/select-fns-control-flow.ts region=coalesce
-prisma.$from("User")
-      .select(({ coalesce, lit }) => coalesce("User.email", lit("unknown")), "contact")
+      prisma.$from("User")
+        .select(({ coalesce, lit }) => coalesce("User.email", lit("unknown")), "contact")
 ```
 
 ```typescript file=../usage-sqlite-v7/tests/readme/select-fns-control-flow.ts region=nullif
-prisma.$from("User")
-      .select(({ nullif, lit }) => nullif(lit(0), lit(0)), "val")
+      prisma.$from("User")
+        .select(({ nullif, lit }) => nullif(lit(0), lit(0)), "val")
 ```
 
 ```typescript file=../usage-sqlite-v7/tests/readme/select-fns-control-flow.ts region=case-when
-prisma.$from("User")
-      .select(({ caseWhen, lit }) => caseWhen([
-        { when: { age: { op: ">=", value: 18 } }, then: lit("adult") },
-      ], lit("minor")), "status")
+      prisma.$from("User")
+        .select(({ caseWhen, lit }) => caseWhen([
+          { when: { age: { op: ">=", value: 18 } }, then: lit("adult") },
+        ], lit("minor")), "status")
 ```
 
 ```typescript file=../usage-sqlite-v7/tests/readme/select-fns-control-flow.ts region=cond
-prisma.$from("User")
-      .select(({ cond }) => cond({ age: { op: ">", value: 0 } }), "flag")
+      prisma.$from("User")
+        .select(({ cond }) => cond({ age: { op: ">", value: 0 } }), "flag")
 ```
 
 #### Combining with `.groupBy()`
 
 ```typescript file=../usage-sqlite-v7/tests/readme/select-fns.ts region=count-groupby
-prisma.$from("User")
-      .join("Post", "authorId", "User.id")
-      .groupBy(["User.name"])
-      .select("User.name")
-      .select(({ countAll }) => countAll(), "postCount");
+      prisma.$from("User")
+        .join("Post", "authorId", "User.id")
+        .groupBy([ "User.name" ])
+        .select("User.name")
+        .select(({ countAll }) => countAll(), "postCount");
 ```
 
 ##### SQL

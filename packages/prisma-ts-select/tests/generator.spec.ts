@@ -54,11 +54,13 @@ void describe("Generator package.json output", () => {
     assert.deepEqual(Object.keys(exports), [ ".", "./db", "./extend-v6", "./extend-v7", "./dialects", "./dialects/*" ]);
   });
 
+  function getEntries(exports: Record<string, unknown>) {
+    return Object.values(exports) as Array<Record<string, string>>;
+  }
+
   void test("exports shape", () => {
     const { exports } = readPkgJson("usage-sqlite-v7");
-
-    // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion
-    for (const entry of Object.values(exports) as Array<Record<string, string>>) {
+    for (const entry of getEntries(exports)) {
       assert.strictEqual(typeof entry.types, "string");
       assert.strictEqual(typeof entry.import, "string");
     }
