@@ -442,6 +442,8 @@ type Values = {
   withs?: Array<WithEntry>;
   /** CTEs declared by an enclosing WITH — resolvable for typing/expansion, never emitted. */
   cteRefs?: Array<WithEntry>;
+  /** Compound arms appended after this query's clauses — `UNION`/`UNION ALL`, in order. */
+  unions?: Array<{ all: boolean; sql: string; }>;
   limit?: number;
   offset?: number;
   where?: ClauseType;
@@ -629,6 +631,18 @@ function quoteSelectColumn(select: string): string {
   return dialect.quote(select, false);
 }
 
+/**
+ * Quote one ORDER BY term of a compound (UNION) query.
+ *
+ * After a compound the tables are gone: the term may only name an *output column*, so the whole
+ * name is a single identifier — `"User.name"`, quoted exactly as the SELECT aliased it, never
+ * `"User"."name"` (which every engine rejects here).
+ */
+function quoteCompoundOrderBy(clause: string): string {
+  const [ col, ...direction ] = clause.split(/\s+/);
+  return [ dialect.quote(col!, col!.includes(".")), ...direction ].join(" ");
+}
+
 function buildWithClause(withs: Values["withs"]): string {
   const entries = withs ?? [];
   if (!entries.length) return "";
@@ -734,6 +748,9 @@ class _fRun<TSources extends TArrSources, TFields extends TFieldsType, TSelectRT
 
     const whereClause = this.values.where !== undefined ? processCriteria(this.values.where, "AND", formatted) : undefined;
     const havingClause = this.values.having !== undefined ? processCriteria(this.values.having, "AND", formatted) : undefined;
+    const unionClause = (this.values.unions ?? []).map(u => `UNION${u.all ? " ALL" : ""} ${u.sql}`).join(formatted ? "\n" : " ");
+    // After a compound the tables are gone, so ORDER BY names an output column, not a table column.
+    const quoteOrderBy = unionClause ? quoteCompoundOrderBy : dialect.quoteOrderByClause;
 
     const [ base, ...joins ] = this.values.tables;
 
@@ -775,7 +792,8 @@ class _fRun<TSources extends TArrSources, TFields extends TFieldsType, TSelectRT
       whereClause ? `WHERE ${whereClause}` : "",
       this.values.groupBy?.length ? `GROUP BY ${this.values.groupBy.map(g => dialect.quoteQualifiedColumn(g)).join(", ")}` : "",
       havingClause ? `HAVING ${havingClause}` : "",
-      this.values.orderBy && this.values.orderBy.length > 0 ? "ORDER BY " + this.values.orderBy.map(o => dialect.quoteOrderByClause(o)).join(", ") : "",
+      unionClause,
+      this.values.orderBy?.length ? "ORDER BY " + this.values.orderBy.map(quoteOrderBy).join(", ") : "",
       this.values.limit ? `LIMIT ${this.values.limit}` : "",
       this.values.offset ? `OFFSET ${this.values.offset}` : "",
     ]
@@ -836,6 +854,28 @@ run
 class _fOrderBy<TSources extends TArrSources, TFields extends TFieldsType, TSelectRT extends {} = BLANK_OBJECT> extends _fLimit<TSources, TFields, TSelectRT> {
   orderBy(orderBy: Array<`${OrderBy<TSources, TSelectRT>}${ "" | " DESC" | " ASC"}`>) {
     return new _fLimit<TSources, TFields, TSelectRT>(this.db, { ...this.values, orderBy });
+  }
+}
+
+/*
+A compound (UNION / UNION ALL) query.
+
+ORDER BY - restricted to the compound's own output columns; the arms' tables are out of scope.
+LIMIT / OFFSET - apply to the whole compound.
+run
+*/
+
+class _fUnion<TSelectRT extends {}> extends _fRun<ANY_IS_OK, ANY_IS_OK, TSelectRT> {
+  orderBy(orderBy: Array<`${keyof TSelectRT & string}${ "" | " DESC" | " ASC"}`>) {
+    return new _fLimit<ANY_IS_OK, ANY_IS_OK, TSelectRT>(this.db, { ...this.values, orderBy });
+  }
+
+  limit(limit: number) {
+    return new _fOffset<ANY_IS_OK, ANY_IS_OK, TSelectRT>(this.db, { ...this.values, limit });
+  }
+
+  offset(offset: number) {
+    return new _fRun<ANY_IS_OK, ANY_IS_OK, TSelectRT>(this.db, { ...this.values, offset });
   }
 }
 
@@ -3268,6 +3308,63 @@ function hoistWiths(query: _fRun<ANY_IS_OK, ANY_IS_OK, ANY_IS_OK>): NonNullable<
   return hoisted;
 }
 
+/**
+ * A query usable as a compound arm.
+ *
+ * `_fOrderBy` *is* the restriction: `orderBy()` returns `_fLimit` and `limit()` returns `_fOffset`,
+ * neither of which has `orderBy`, so an already-ordered or paginated query is not assignable.
+ * `_fUnion` is assignable too, which is what makes `$unionAll($union(a, b), c)` work.
+ */
+type UnionArm = _fOrderBy<ANY_IS_OK, ANY_IS_OK, ANY_IS_OK>;
+
+/** A query's select-list names, or `null` if any entry has no extractable name. */
+function positionalColumns(query: _fRun<ANY_IS_OK, ANY_IS_OK, ANY_IS_OK>): Array<string> | null {
+  const columns = extractCTEColumns(query).map(stripQualifier);
+  return columns.length === ((query as ANY_IS_OK).values as Values).selects.length ? columns : null;
+}
+
+function buildCompound<TSelectRT extends {}>(
+  db: PrismaClient,
+  all: boolean,
+  first: _fRun<ANY_IS_OK, ANY_IS_OK, ANY_IS_OK>,
+  rest: Array<_fRun<ANY_IS_OK, ANY_IS_OK, ANY_IS_OK>>
+): _fUnion<TSelectRT> {
+  const op = all ? "UNION ALL" : "UNION";
+  const arms = [ first, ...rest ];
+
+  for (const arm of arms) {
+    const values = (arm as ANY_IS_OK).values as Values;
+    if (values.orderBy?.length || values.limit !== undefined || values.offset !== undefined) {
+      throw new Error(`${op}: an arm cannot carry its own ORDER BY / LIMIT / OFFSET — chain them onto the compound instead`);
+    }
+  }
+
+  // The type check compares key *sets*, but UNION matches columns *positionally*, so
+  // `select("id").select("name")` unioned with `select("name").select("id")` type-checks and
+  // returns wrong-typed values. Caught here instead.
+  const firstColumns = positionalColumns(first);
+  if (firstColumns) {
+    for (const arm of rest) {
+      const armColumns = positionalColumns(arm);
+      if (armColumns && armColumns.length === firstColumns.length && armColumns.some((c, i) => c !== firstColumns[i])) {
+        throw new Error(`${op}: arm columns [${armColumns.join(", ")}] must match the first arm's columns [${firstColumns.join(", ")}] in the same order`);
+      }
+    }
+  }
+
+  // A `WITH ... AS (...)` prefix inside a compound arm is invalid on all dialects, so every arm's
+  // CTEs are hoisted onto the compound. Must run before reading `first.values` or any arm's SQL.
+  const hoisted = arms.flatMap(arm => hoistWiths(arm));
+  const values = (first as ANY_IS_OK).values as Values;
+
+  return new _fUnion<TSelectRT>(db, {
+    ...values,
+    withs: hoisted,
+    // Spreading `first`'s own unions is what flattens `$unionAll($union(a, b), c)`.
+    unions: [ ...(values.unions ?? []), ...rest.map(arm => ({ all, sql: arm.getSQL().replace(/;$/, "") })) ],
+  });
+}
+
 class DbWith<TCTEs extends Record<string, Record<string, ANY_IS_OK>>> {
   constructor(
     private db: PrismaClient,
@@ -3373,6 +3470,31 @@ const extendedPrismaClient = {
 
       const sql = `${anchor.getSQL().replace(/;$/, "")} UNION ALL ${member.getSQL().replace(/;$/, "")}`;
       return new DbWith(client, [ ...hoisted, { name, sql, columns, recursive: true }]);
+    },
+    /**
+     * `UNION` — combine compatible queries, discarding duplicate rows.
+     *
+     * The first argument fixes the output column names and the result type; every later argument
+     * must project the same shape. `ORDER BY`/`LIMIT`/`OFFSET` belong to the whole compound, so
+     * chain them onto the result — an arm carrying its own is rejected (SQLite forbids
+     * parenthesised arms, so there is no portable encoding).
+     *
+     * Mix operators by nesting: `$unionAll($union(a, b), c)` → `a UNION b UNION ALL c`.
+     */
+    $union<TFirst extends UnionArm, TRest extends Array<UnionArm>>(
+      first: TFirst,
+      ...rest: { [K in keyof TRest]: IsCTECompatible<InferCTEShape<TFirst>, InferCTEShape<TRest[K]>> extends true ? TRest[K] : never }
+    ): _fUnion<InferCTEShape<TFirst>> {
+      const client = Prisma.getExtensionContext(this) as unknown as PrismaClient;
+      return buildCompound(client, false, first, rest as ANY_IS_OK);
+    },
+    /** `UNION ALL` — as {@link $union}, but keeping duplicate rows. */
+    $unionAll<TFirst extends UnionArm, TRest extends Array<UnionArm>>(
+      first: TFirst,
+      ...rest: { [K in keyof TRest]: IsCTECompatible<InferCTEShape<TFirst>, InferCTEShape<TRest[K]>> extends true ? TRest[K] : never }
+    ): _fUnion<InferCTEShape<TFirst>> {
+      const client = Prisma.getExtensionContext(this) as unknown as PrismaClient;
+      return buildCompound(client, true, first, rest as ANY_IS_OK);
     },
   },
 };
