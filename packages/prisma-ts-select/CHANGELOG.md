@@ -1,5 +1,13 @@
 # prisma-ts-select
 
+
+## 0.5.0
+<sub>2026-09-05</sub>
+
+- [#208](https://github.com/adrianbrowning/prisma-ts-select/pull/208)  *(minor)* Thanks [@adrianbrowning](https://github.com/adrianbrowning)! - Adding support for Recursive CTEs
+- [#209](https://github.com/adrianbrowning/prisma-ts-select/pull/209)  *(minor)* Thanks [@adrianbrowning](https://github.com/adrianbrowning)! - Adding typed `$union` / `$unionAll` query composition
+- [#182](https://github.com/adrianbrowning/prisma-ts-select/pull/182)  *(patch)* Thanks [@adrianbrowning](https://github.com/adrianbrowning)! - Reworked to remove a @ts-expect-error
+
 ## 0.4.0
 
 ### Minor Changes
