@@ -178,13 +178,20 @@
   * [Offset](#offset)
     + [Example](#example-17)
       - [SQL](#sql-40)
+  * [Union](#union)
+    + [Example](#example-18)
+      - [SQL](#sql-41)
+    + [Example — `$unionAll`](#example--unionall)
+      - [SQL](#sql-42)
+    + [Mixing `UNION` and `UNION ALL`](#mixing-union-and-union-all)
+      - [SQL](#sql-43)
 - [Select Functions](#select-functions)
   * [Shared (all dialects)](#shared-all-dialects)
     + [`lit(value)` — SQL literal](#litvalue--sql-literal)
-      - [Example](#example-18)
-    + [`countAll()` — COUNT(*)](#countall--count)
       - [Example](#example-19)
-      - [SQL](#sql-41)
+    + [`countAll()` — COUNT(*)](#countall--count)
+      - [Example](#example-20)
+      - [SQL](#sql-44)
     + [`count(col)` — COUNT(col)](#countcol--countcol)
     + [`countDistinct(col)` — COUNT(DISTINCT col)](#countdistinctcol--countdistinct-col)
     + [`sum(col)` / `avg(col)` / `min(col)` / `max(col)`](#sumcol--avgcol--mincol--maxcol)
@@ -193,7 +200,7 @@
     + [Math Functions (all dialects)](#math-functions-all-dialects)
     + [Control Flow Functions (all dialects)](#control-flow-functions-all-dialects)
     + [Combining with `.groupBy()`](#combining-with-groupby)
-      - [SQL](#sql-42)
+      - [SQL](#sql-45)
   * [MySQL-specific](#mysql-specific)
   * [PostgreSQL-specific](#postgresql-specific)
   * [SQLite-specific](#sqlite-specific)
@@ -2017,6 +2024,99 @@ FROM User
 JOIN Post ON Post.authorId = User.id 
 LIMIT 1 
 OFFSET 1;
+```
+
+### Union
+
+`prisma.$union(...)` and `prisma.$unionAll(...)` combine compatible queries into one result set —
+`$union` discards duplicate rows, `$unionAll` keeps them.
+
+The **first argument** fixes the output column names and the result type; every later argument must
+project the same shape, or the call is a type error. The type check is stricter than PostgreSQL's:
+PG would happily union an `INTEGER` column with a `BIGINT` one, but Prisma maps those to `number` and
+`bigint`, so `prisma-ts-select` rejects it.
+
+`ORDER BY` / `LIMIT` / `OFFSET` belong to the **whole compound**, so chain them onto the
+`$union(...)` result rather than onto an arm — an arm that carries its own is rejected at compile time
+and at runtime. SQLite forbids parenthesised compound arms, so there is no portable way to encode a
+per-arm ordering or limit.
+
+A compound's `ORDER BY` may only name one of its **output columns**. For a single-table arm that is
+the bare column name; for a multi-table arm whose column names collide the select list aliases them
+qualified, so the output column is literally called `Post.id` and must be ordered by as such.
+
+`INTERSECT` and `EXCEPT` are not supported.
+
+#### Example
+```typescript file=../usage-sqlite-v7/tests/readme/union.ts region=union
+    const managers = prisma.$from("Employee").whereIsNull("Employee.managerId")
+      .select("name");
+    const everyone = prisma.$from("Employee").select("name");
+
+      prisma.$union(managers, everyone)
+        .orderBy([ "name" ])
+        .limit(10)
+```
+
+##### SQL
+
+```sql file=../usage-sqlite-v7/tests/readme/union.ts region=union-sql
+SELECT name 
+FROM Employee 
+WHERE (Employee.managerId IS NULL) UNION 
+SELECT name 
+FROM Employee 
+ORDER BY name 
+LIMIT 10;
+```
+
+#### Example — `$unionAll`
+```typescript file=../usage-sqlite-v7/tests/readme/union.ts region=union-all
+    const roots = prisma.$from("Employee").whereIsNull("Employee.managerId")
+      .select("name");
+    const rest = prisma.$from("Employee").whereNotNull("Employee.managerId")
+      .select("name");
+
+      prisma.$unionAll(roots, rest)
+```
+
+##### SQL
+
+```sql file=../usage-sqlite-v7/tests/readme/union.ts region=union-all-sql
+SELECT name 
+FROM Employee 
+WHERE (Employee.managerId IS NULL) UNION ALL 
+SELECT name 
+FROM Employee 
+WHERE (Employee.managerId IS NOT NULL);
+```
+
+#### Mixing `UNION` and `UNION ALL`
+
+Nest the calls. SQL's compound operators are equal-precedence and left-associative, so the nested
+compound flattens left-to-right into a single statement rather than nesting in the SQL.
+
+```typescript file=../usage-sqlite-v7/tests/readme/union.ts region=union-nested
+    const a = prisma.$from("Employee").whereIsNull("Employee.managerId")
+      .select("name");
+    const b = prisma.$from("Employee").whereNotNull("Employee.managerId")
+      .select("name");
+    const c = prisma.$from("Employee").select("name");
+
+      prisma.$unionAll(prisma.$union(a, b), c)
+```
+
+##### SQL
+
+```sql file=../usage-sqlite-v7/tests/readme/union.ts region=union-nested-sql
+SELECT name 
+FROM Employee 
+WHERE (Employee.managerId IS NULL) UNION 
+SELECT name 
+FROM Employee 
+WHERE (Employee.managerId IS NOT NULL) UNION ALL 
+SELECT name 
+FROM Employee;
 ```
 
 ## Select Functions
