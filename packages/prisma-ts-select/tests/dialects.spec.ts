@@ -171,9 +171,16 @@ void describe("sqliteContextFns", () => {
   void test("groupConcat plain", () => assert.equal(fns.groupConcat("name").sql, "GROUP_CONCAT(`name`)"));
   void test("groupConcat with separator", () => assert.equal(fns.groupConcat("name", ",").sql, "GROUP_CONCAT(`name`, ',')"));
   void test("groupConcat with distinct+separator throws", () => {
-    // @ts-expect-error — testing runtime guard against misuse
+    // @ts-expect-error — distinct overload has no sep param; SQLite rejects DISTINCT + separator
     assert.throws(() => fns.groupConcat(sqlDistinct<string>("DISTINCT `name`"), ","), /DISTINCT/);
   });
+  void test("groupConcat orderBy + filter", () => assert.equal(
+    fns.groupConcat("name", ",").orderBy("name", "DESC")
+      .filter({}).sql,
+    "GROUP_CONCAT(`name`, ',' ORDER BY name DESC) FILTER (WHERE 1=1)"));
+  void test("groupConcat orderBy without direction", () => assert.equal(
+    fns.groupConcat("name").orderBy("name").sql,
+    "GROUP_CONCAT(`name` ORDER BY name)"));
   void test("cast", () => assert.equal(fns.cast("val", "INTEGER").sql, "CAST(`val` AS INTEGER)"));
   void test("cast invalid throws", () => {
     assert.throws(() => fns.cast("val", "BOGUS" as never), /invalid cast type/);
@@ -300,6 +307,13 @@ void describe("mysqlContextFns", () => {
   void test("jsonObjectAgg", () => assert.equal(fns.jsonObjectAgg("name", "val").sql, "JSON_OBJECTAGG(`name`, `val`)"));
   void test("groupConcat plain", () => assert.equal(fns.groupConcat("name").sql, "GROUP_CONCAT(`name`)"));
   void test("groupConcat with separator", () => assert.equal(fns.groupConcat("name", ",").sql, "GROUP_CONCAT(`name` SEPARATOR ',')"));
+  void test("groupConcat orderBy + filter compiles to CASE WHEN", () => assert.equal(
+    fns.groupConcat("name", ",").orderBy("name", "DESC")
+      .filter({}).sql,
+    "GROUP_CONCAT(CASE WHEN 1=1 THEN `name` END ORDER BY `name` DESC SEPARATOR ',')"));
+  void test("groupConcat orderBy without direction", () => assert.equal(
+    fns.groupConcat("name").orderBy("name").sql,
+    "GROUP_CONCAT(`name` ORDER BY `name`)"));
   void test("cast", () => assert.equal(fns.cast("val", "SIGNED").sql, "CAST(`val` AS SIGNED)"));
   void test("cast invalid throws", () => {
     assert.throws(() => fns.cast("val", "BOGUS" as never), /invalid cast type/);
@@ -307,7 +321,7 @@ void describe("mysqlContextFns", () => {
 });
 
 void describe("postgresqlContextFns", () => {
-  const fns = postgresqlContextFns<TestCols>(dq);
+  const fns = postgresqlContextFns<TestCols, object>(dq, () => "1=1");
 
   void test("countAll", () => assert.equal(fns.countAll().sql, "COUNT(*)"));
   void test("count col", () => assert.equal(fns.count("id").sql, "COUNT(\"id\")"));
@@ -347,6 +361,19 @@ void describe("postgresqlContextFns", () => {
   void test("bitAnd", () => assert.equal(fns.bitAnd("val").sql, "BIT_AND(\"val\")"));
   void test("bitOr", () => assert.equal(fns.bitOr("val").sql, "BIT_OR(\"val\")"));
   void test("jsonObjectAgg", () => assert.equal(fns.jsonObjectAgg("name", "val").sql, "JSON_OBJECT_AGG(\"name\", \"val\")"));
+  void test("stringAgg orderBy + filter", () => assert.equal(
+    fns.stringAgg("name", ",").orderBy("name", "ASC")
+      .filter({}).sql,
+    "STRING_AGG(\"name\", ',' ORDER BY \"name\" ASC) FILTER (WHERE 1=1)"));
+  void test("arrayAgg orderBy without direction", () => assert.equal(
+    fns.arrayAgg("name").orderBy("name").sql,
+    "ARRAY_AGG(\"name\" ORDER BY \"name\")"));
+  void test("jsonAgg filter", () => assert.equal(
+    fns.jsonAgg("data").filter({}).sql,
+    "JSON_AGG(\"data\") FILTER (WHERE 1=1)"));
+  void test("jsonObjectAgg orderBy", () => assert.equal(
+    fns.jsonObjectAgg("name", "val").orderBy("name", "DESC").sql,
+    "JSON_OBJECT_AGG(\"name\", \"val\" ORDER BY \"name\" DESC)"));
   void test("greatest", () => assert.equal(fns.greatest<number>("val", "price").sql, "GREATEST(\"val\", \"price\")"));
   void test("greatest throws with 0 args", () => {
     assert.throws(() => (fns.greatest as (...a: Array<never>) => unknown)(), /at least one/);
@@ -419,7 +446,7 @@ void describe("mysqlV7ContextFns", () => {
 });
 
 void describe("postgresqlV6ContextFns overrides", () => {
-  const fns = postgresqlV6ContextFns<TestCols>(dq);
+  const fns = postgresqlV6ContextFns<TestCols, object>(dq, () => "1=1");
 
   void test("countAll", () => assert.equal(fns.countAll().sql, "COUNT(*)"));
   void test("count col", () => assert.equal(fns.count("id").sql, "COUNT(\"id\")"));
@@ -430,7 +457,7 @@ void describe("postgresqlV6ContextFns overrides", () => {
 });
 
 void describe("postgresqlV7ContextFns overrides", () => {
-  const fns = postgresqlV7ContextFns<TestCols>(dq);
+  const fns = postgresqlV7ContextFns<TestCols, object>(dq, () => "1=1");
 
   void test("countAll", () => assert.equal(fns.countAll().sql, "COUNT(*)"));
   void test("count col", () => assert.equal(fns.count("id").sql, "COUNT(\"id\")"));

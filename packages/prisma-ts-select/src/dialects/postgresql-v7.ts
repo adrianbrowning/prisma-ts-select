@@ -15,10 +15,11 @@ export { postgresqlDialect };
  * - COUNT* → bigint (node-postgres in Prisma v7 returns bigint for SQL integer results)
  * - CEIL/FLOOR of numeric literal → Decimal (PostgreSQL returns `numeric` for CEIL/FLOOR(numeric))
  */
-export const postgresqlV7ContextFns = <TColEntries extends [string, unknown] = never>(
-  quoteFn: (ref: string) => string
+export const postgresqlV7ContextFns = <TColEntries extends [string, unknown] = never, TCriteria extends object = object>(
+  quoteFn: (ref: string) => string,
+  condFn: (criteria: TCriteria) => string
 ) => ({
-  ...postgresqlContextFns<TColEntries>(quoteFn),
+  ...postgresqlContextFns<TColEntries, TCriteria>(quoteFn, condFn),
   countAll:      (): SQLExpr<bigint> => sqlExpr("COUNT(*)"),
   count:         (col: ColName<TColEntries> | "*" | SQLExpr<unknown>): SQLExpr<bigint> =>
     sqlExpr(col === "*" ? "COUNT(*)" : `COUNT(${resolveArg(col as string | SQLExpr<unknown>, quoteFn)})`),
@@ -30,4 +31,4 @@ export const postgresqlV7ContextFns = <TColEntries extends [string, unknown] = n
     sqlExpr(`FLOOR(${resolveArg(col, quoteFn)})`),
 });
 
-export type DialectFns<TColEntries extends [string, unknown] = never, _TCriteria extends object = object> = ReturnType<typeof postgresqlV7ContextFns<TColEntries>>;
+export type DialectFns<TColEntries extends [string, unknown] = never, TCriteria extends object = object> = ReturnType<typeof postgresqlV7ContextFns<TColEntries, TCriteria>>;

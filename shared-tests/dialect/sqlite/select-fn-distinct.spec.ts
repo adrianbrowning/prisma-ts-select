@@ -62,19 +62,11 @@ describe("SQLite distinct() helper", () => {
   });
 
   describe("groupConcat(distinct(col), sep) — unsupported in SQLite", () => {
-    it("@ts-expect-error: sep not allowed with distinct", () => {
-      // eslint-disable-next-line no-constant-condition, sonarjs/no-gratuitous-expressions, @typescript-eslint/no-unnecessary-condition
-      if (false) {
-        // @ts-expect-error - SQLite: GROUP_CONCAT(DISTINCT col, sep) not supported
-        prisma.$from("User").select(({ groupConcat, distinct }) => groupConcat(distinct("User.name"), ", "), "names");
-      }
-    });
-
-    it("throws at runtime if bypassed", () => {
+    it("is a type error and throws at runtime", () => {
       assert.throws(
         () => prisma.$from("User").select(({ groupConcat, distinct }) =>
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          (groupConcat as any)(distinct("User.name"), ", "), "names")
+          // @ts-expect-error — distinct overload has no sep param; SQLite rejects DISTINCT + separator
+          groupConcat(distinct("User.name"), ", "), "names")
           .getSQL(),
         /does not support GROUP_CONCAT/
       );
@@ -82,12 +74,14 @@ describe("SQLite distinct() helper", () => {
   });
 
   describe("groupConcat(distinct(col), sep with single quote) — unsupported in SQLite", () => {
-    it("@ts-expect-error: sep not allowed with distinct", () => {
-      // eslint-disable-next-line no-constant-condition, sonarjs/no-gratuitous-expressions, @typescript-eslint/no-unnecessary-condition
-      if (false) {
-        // @ts-expect-error - SQLite: GROUP_CONCAT(DISTINCT col, sep) not supported
-        prisma.$from("User").select(({ groupConcat, distinct }) => groupConcat(distinct("User.name"), "it's"), "names");
-      }
+    it("is a type error and throws at runtime", () => {
+      assert.throws(
+        () => prisma.$from("User").select(({ groupConcat, distinct }) =>
+          // @ts-expect-error — distinct overload has no sep param; SQLite rejects DISTINCT + separator
+          groupConcat(distinct("User.name"), "it's"), "names")
+          .getSQL(),
+        /does not support GROUP_CONCAT/
+      );
     });
   });
 
