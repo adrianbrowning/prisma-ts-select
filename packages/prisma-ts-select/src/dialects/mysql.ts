@@ -2,6 +2,8 @@ import type { Decimal } from "@prisma/client/runtime/client";
 import { resolveArg, sqlExpr, sqlDistinct } from "../sql-expr.ts";
 import type { SQLExpr, SQLDistinct, DISTINCT_BRAND } from "../sql-expr.ts";
 import type { JSONValue, JSONObject } from "../utils/types.ts";
+import { createAggExpr } from "./aggregate-expr.ts";
+import type { AggregateExpr } from "./aggregate-expr.ts";
 import { esc, flattenJsonObjectPairs } from "./shared.ts";
 import type { FilterCols, FilterJsonCols, ColName, ColTypeOf } from "./shared.ts";
 import type { Dialect } from "./types.ts";
@@ -26,12 +28,19 @@ export const mysqlContextFns = <TColEntries extends [string, unknown] = never, T
   countDistinct: (col: ColName<TColEntries>): SQLExpr<bigint> => sqlExpr(`COUNT(DISTINCT ${quoteFn(col)})`),
   distinct:      <Col extends ColName<TColEntries>>(col: Col): SQLDistinct<ColTypeOf<TColEntries, Col>> => sqlDistinct(`DISTINCT ${quoteFn(col)}`),
   length: (col: FilterCols<TColEntries, string> | SQLExpr<string>): SQLExpr<bigint> => sqlExpr(`LENGTH(${resolveArg(col, quoteFn)})`),
-  groupConcat: ((col: ColName<TColEntries> | SQLExpr<string>, sep?: string): SQLExpr<string | null> =>
-    sqlExpr(`GROUP_CONCAT(${resolveArg(col, quoteFn)}${sep !== undefined ? ` SEPARATOR '${esc(sep)}'` : ""})`)
-  ) as (
-    & (<T extends string | null>(col: SQLDistinct<T>, sep?: string) => SQLExpr<T>)
-    & (<Col extends ColName<TColEntries>>(col: Col, sep?: string) => SQLExpr<null extends ColTypeOf<TColEntries, Col> ? string | null : string>)
-    & (<T extends string | null>(col: SQLExpr<T> & { readonly [DISTINCT_BRAND]?: never; }, sep?: string) => SQLExpr<T>)
+  groupConcat: ((col: ColName<TColEntries> | SQLExpr<string>, sep?: string) => {
+    const inner = resolveArg(col, quoteFn);
+    const sepSql = sep !== undefined ? ` SEPARATOR '${esc(sep)}'` : "";
+    // MySQL has no FILTER clause; GROUP_CONCAT ignores NULL, so CASE WHEN is an exact equivalent.
+    return createAggExpr<string | null>(
+      (orderBySql, cond) => `GROUP_CONCAT(${cond ? `CASE WHEN ${cond} THEN ${inner} END` : inner}${orderBySql}${sepSql})`,
+      mysqlDialect.quoteOrderByClause,
+      condFn as (c: object) => string
+    ) as AggregateExpr<string | null, TColEntries, TCriteria>;
+  }) as (
+    & (<T extends string | null>(col: SQLDistinct<T>, sep?: string) => AggregateExpr<T, TColEntries, TCriteria>)
+    & (<Col extends ColName<TColEntries>>(col: Col, sep?: string) => AggregateExpr<null extends ColTypeOf<TColEntries, Col> ? string | null : string, TColEntries, TCriteria>)
+    & (<T extends string | null>(col: SQLExpr<T> & { readonly [DISTINCT_BRAND]?: never; }, sep?: string) => AggregateExpr<T, TColEntries, TCriteria>)
   ),
   bitAnd:        (col: FilterCols<TColEntries, number>): SQLExpr<number> => sqlExpr(`BIT_AND(${quoteFn(col)})`),
   bitOr:         (col: FilterCols<TColEntries, number>): SQLExpr<number> => sqlExpr(`BIT_OR(${quoteFn(col)})`),
@@ -40,6 +49,8 @@ export const mysqlContextFns = <TColEntries extends [string, unknown] = never, T
   stddevSamp:    (col: FilterCols<TColEntries, number>): SQLExpr<number> => sqlExpr(`STDDEV_SAMP(${quoteFn(col)})`),
   variance:      (col: FilterCols<TColEntries, number>): SQLExpr<number> => sqlExpr(`VARIANCE(${quoteFn(col)})`),
   varSamp:       (col: FilterCols<TColEntries, number>): SQLExpr<number> => sqlExpr(`VAR_SAMP(${quoteFn(col)})`),
+  // No aggregate-local ORDER BY, and no FILTER equivalent: JSON_ARRAYAGG keeps NULL elements and
+  // JSON_OBJECTAGG rejects NULL keys, so a CASE WHEN rewrite cannot drop filtered-out rows.
   jsonArrayAgg:  (col: ColName<TColEntries>): SQLExpr<JSONValue> => sqlExpr(`JSON_ARRAYAGG(${quoteFn(col)})`),
   jsonObjectAgg: (key: ColName<TColEntries>, val: ColName<TColEntries>): SQLExpr<JSONValue> =>
     sqlExpr(`JSON_OBJECTAGG(${quoteFn(key)}, ${quoteFn(val)})`),

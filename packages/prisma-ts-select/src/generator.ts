@@ -156,7 +156,7 @@ generatorHandler({
 
     // Copy dialect files - both .js and .d.ts for types, shared, and provider-specific
     const dialectFiles = [
-      "types", "shared", provider,
+      "types", "shared", "aggregate-expr", provider,
       ...(hasVersions ? [ `${provider}-v6`, `${provider}-v7` ] : []),
     ];
     const dialectOutDir = path.join(outputPath, "dialects");

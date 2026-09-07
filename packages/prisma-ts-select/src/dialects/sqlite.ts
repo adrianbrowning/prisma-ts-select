@@ -2,9 +2,10 @@
 // (no v6/v7 shim files), so generated extend-*.d.ts for SQLite packages import it
 // directly from sql-expr.js rather than via a shim.
 import { resolveArg, sqlExpr, sqlDistinct, isDistinct } from "../sql-expr.ts";
-import type { DISTINCT_BRAND } from "../sql-expr.ts";
-import type { SQLExpr, SQLDistinct } from "../sql-expr.ts";
+import type { SQLExpr, SQLDistinct, DISTINCT_BRAND } from "../sql-expr.ts";
 import type { JSONValue, JSONObject } from "../utils/types.ts";
+import { createAggExpr } from "./aggregate-expr.ts";
+import type { AggregateExpr } from "./aggregate-expr.ts";
 import { esc, flattenJsonObjectPairs } from "./shared.ts";
 import type { FilterCols, FilterJsonCols, ColName, ColTypeOf } from "./shared.ts";
 import type { Dialect } from "./types.ts";
@@ -43,19 +44,24 @@ export const sqliteContextFns = <TColEntries extends [string, unknown] = never, 
   distinct:      <Col extends ColName<TColEntries>>(col: Col): SQLDistinct<ColTypeOf<TColEntries, Col>> => sqlDistinct(`DISTINCT ${quoteFn(col)}`),
   // LENGTH returns INTEGER → bigint in SQLite
   length: (col: FilterCols<TColEntries, string> | SQLExpr<string>): SQLExpr<bigint> => sqlExpr(`LENGTH(${resolveArg(col, quoteFn)})`),
-  groupConcat: ((col: ColName<TColEntries> | SQLExpr<string>, sep?: string): SQLExpr<string | null> => {
+  groupConcat: ((col: ColName<TColEntries> | SQLExpr<string>, sep?: string) => {
     const inner = resolveArg(col, quoteFn);
     if (isDistinct(col) && sep !== undefined) {
       throw new Error("SQLite does not support GROUP_CONCAT(DISTINCT col, sep) — omit the separator.");
     }
-    return sqlExpr(`GROUP_CONCAT(${inner}${sep !== undefined ? `, '${esc(sep)}'` : ""})`);
+    const sepSql = sep !== undefined ? `, '${esc(sep)}'` : "";
+    return createAggExpr<string | null>(
+      (orderBySql, cond) => `GROUP_CONCAT(${inner}${sepSql}${orderBySql})${cond ? ` FILTER (WHERE ${cond})` : ""}`,
+      sqliteDialect.quoteOrderByClause,
+      condFn as (c: object) => string
+    ) as AggregateExpr<string | null, TColEntries, TCriteria>;
   }) as (
-    // distinct overload: propagate T (string | null if left-joined, string otherwise)
-    & (<T extends string | null>(col: SQLDistinct<T>) => SQLExpr<T>)
+    // distinct overload: propagate T (string | null if left-joined, string otherwise); no sep — SQLite rejects it
+    & (<T extends string | null>(col: SQLDistinct<T>) => AggregateExpr<T, TColEntries, TCriteria>)
     // column name: conditional — null if col type contains null
-    & (<Col extends ColName<TColEntries>>(col: Col, sep?: string) => SQLExpr<null extends ColTypeOf<TColEntries, Col> ? string | null : string>)
+    & (<Col extends ColName<TColEntries>>(col: Col, sep?: string) => AggregateExpr<null extends ColTypeOf<TColEntries, Col> ? string | null : string, TColEntries, TCriteria>)
     // raw SQLExpr: propagate T
-    & (<T extends string | null>(col: SQLExpr<T> & { readonly [DISTINCT_BRAND]?: never; }, sep?: string) => SQLExpr<T>)
+    & (<T extends string | null>(col: SQLExpr<T> & { readonly [DISTINCT_BRAND]?: never; }, sep?: string) => AggregateExpr<T, TColEntries, TCriteria>)
   ),
   total: (col: ColName<TColEntries>): SQLExpr<number> => sqlExpr(`TOTAL(${quoteFn(col)})`),
   // SQLite MIN/MAX return bigint for integer columns — override base (number) return types
