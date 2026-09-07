@@ -1,4 +1,4 @@
-import { resolveArg, sqlExpr, sqlDistinct } from "../sql-expr.ts";
+import { resolveArg, sqlExpr, sqlDistinct, isDistinct } from "../sql-expr.ts";
 import type { SQLExpr, SQLDistinct, DISTINCT_BRAND } from "../sql-expr.ts";
 import type { JSONValue, JSONObject } from "../utils/types.ts";
 import { createAggExpr } from "./aggregate-expr.ts";
@@ -14,162 +14,180 @@ const PG_CAST_TYPES = new Set<string>([ "INTEGER", "TEXT", "BIGINT", "BOOLEAN", 
 export type PgExtractField ="YEAR" | "MONTH" | "DAY" | "HOUR" | "MINUTE" | "SECOND" | "DOW" | "DOY" | "EPOCH" | "WEEK" | "QUARTER";
 export type PgDateTruncUnit = "microseconds" | "milliseconds" | "second" | "minute" | "hour" | "day" | "week" | "month" | "quarter" | "year" | "decade" | "century" | "millennium";
 
-/** Native aggregate FILTER clause — `""` when the aggregate is unfiltered. */
+/**
+ * Native aggregate FILTER clause — `""` when the aggregate is unfiltered.
+ * Deliberately local rather than shared from `aggregate-expr.ts`: the generator copies
+ * `aggregate-expr.js` into every provider's bundle (`generator.ts`), so a helper only some
+ * dialects call would ship as unreachable dead code for the rest — MySQL has no FILTER clause at
+ * all. SQLite keeps its own inline copy for the same reason; do not hoist this.
+ */
 const filterSuffix = (cond: string) => cond ? ` FILTER (WHERE ${cond})` : "";
 
-export const postgresqlContextFns = <TColEntries extends [string, unknown] = never, TCriteria extends object = object>(quoteFn: (ref: string) => string, condFn: (criteria: TCriteria) => string) => ({
-  avg: (col: FilterCols<TColEntries, number> | SQLExpr<number | null>): SQLExpr<number> => sqlExpr(`AVG(${resolveArg(col, quoteFn)})`),
-  sum: (col: FilterCols<TColEntries, number> | SQLExpr<number | null>): SQLExpr<number> => sqlExpr(`SUM(${resolveArg(col, quoteFn)})`),
-  countAll:      (): SQLExpr<number> => sqlExpr("COUNT(*)"),
-  count:         (col: ColName<TColEntries> | "*" | SQLExpr<unknown>): SQLExpr<number> =>
-    sqlExpr(col === "*" ? "COUNT(*)" : `COUNT(${resolveArg(col as string | SQLExpr<unknown>, quoteFn)})`),
-  countDistinct: (col: ColName<TColEntries>): SQLExpr<number> => sqlExpr(`COUNT(DISTINCT ${quoteFn(col)})`),
-  distinct:      <Col extends ColName<TColEntries>>(col: Col): SQLDistinct<ColTypeOf<TColEntries, Col>> => sqlDistinct(`DISTINCT ${quoteFn(col)}`),
-  length: (col: FilterCols<TColEntries, string> | SQLExpr<string>): SQLExpr<number> => sqlExpr(`LENGTH(${resolveArg(col, quoteFn)})`),
-  stringAgg: ((col: ColName<TColEntries> | SQLExpr<string>, sep: string) => {
-    const inner = resolveArg(col, quoteFn);
-    const sepSql = `, '${esc(sep)}'`;
-    return createAggExpr<string | null>(
-      (orderBySql, cond) => `STRING_AGG(${inner}${sepSql}${orderBySql})${filterSuffix(cond)}`,
-      postgresqlDialect.quoteOrderByClause,
-      condFn as (c: object) => string
-    ) as AggregateExpr<string | null, TColEntries, TCriteria>;
-  }) as (
-    // distinct overload: propagate T (string | null if left-joined, string otherwise)
-    & (<T extends string | null>(col: SQLDistinct<T>, sep: string) => AggregateExpr<T, TColEntries, TCriteria>)
-    // column name: conditional — null if col type contains null
-    & (<Col extends ColName<TColEntries>>(col: Col, sep: string) => AggregateExpr<null extends ColTypeOf<TColEntries, Col> ? string | null : string, TColEntries, TCriteria>)
-    // raw SQLExpr: propagate T
-    & (<T extends string | null>(col: SQLExpr<T> & { readonly [DISTINCT_BRAND]?: never; }, sep: string) => AggregateExpr<T, TColEntries, TCriteria>)
-  ),
-  arrayAgg:      (col: ColName<TColEntries> | SQLExpr<unknown>): AggregateExpr<Array<unknown>, TColEntries, TCriteria> => {
-    const inner = resolveArg(col, quoteFn);
-    return createAggExpr<Array<unknown>>(
-      (orderBySql, cond) => `ARRAY_AGG(${inner}${orderBySql})${filterSuffix(cond)}`,
-      postgresqlDialect.quoteOrderByClause,
-      condFn as (c: object) => string
-    );
-  },
-  stddevPop:     (col: FilterCols<TColEntries, number>): SQLExpr<number> => sqlExpr(`STDDEV_POP(${quoteFn(col)})`),
-  stddevSamp:    (col: FilterCols<TColEntries, number>): SQLExpr<number> => sqlExpr(`STDDEV_SAMP(${quoteFn(col)})`),
-  varPop:        (col: FilterCols<TColEntries, number>): SQLExpr<number> => sqlExpr(`VAR_POP(${quoteFn(col)})`),
-  varSamp:       (col: FilterCols<TColEntries, number>): SQLExpr<number> => sqlExpr(`VAR_SAMP(${quoteFn(col)})`),
-  boolAnd:       (col: FilterCols<TColEntries, boolean>): SQLExpr<boolean> => sqlExpr(`BOOL_AND(${quoteFn(col)})`),
-  boolOr:        (col: FilterCols<TColEntries, boolean>): SQLExpr<boolean> => sqlExpr(`BOOL_OR(${quoteFn(col)})`),
-  jsonAgg:       (col: ColName<TColEntries>): AggregateExpr<Array<JSONValue>, TColEntries, TCriteria> =>
-    createAggExpr<Array<JSONValue>>(
-      (orderBySql, cond) => `JSON_AGG(${quoteFn(col)}${orderBySql})${filterSuffix(cond)}`,
-      postgresqlDialect.quoteOrderByClause,
-      condFn as (c: object) => string
+/**
+ * PostgreSQL rejects an aggregate with DISTINCT whose ORDER BY term is not in its argument list
+ * (SQLSTATE 42P10), so the only legal aggregate ordering is by the aggregated argument itself.
+ * Returns `undefined` for a non-DISTINCT argument — there is nothing to guard.
+ */
+const distinctOrderByGuard = (
+  col: string | SQLExpr<unknown>,
+  quoteFn: (ref: string) => string
+): ((orderCol: string) => void) | undefined => {
+  if (!isDistinct(col)) return undefined;
+  const { arg } = col;
+  return orderCol => {
+    const quoted = quoteFn(orderCol);
+    if (quoted !== arg) {
+      throw new Error(`PostgreSQL does not support an aggregate with DISTINCT ordered by ${quoted} — a DISTINCT aggregate can only ORDER BY its own argument (${arg}).`);
+    }
+  };
+};
+
+export const postgresqlContextFns = <TColEntries extends [string, unknown] = never, TCriteria extends object = object>(quoteFn: (ref: string) => string, condFn: (criteria: TCriteria) => string) => {
+  const aggExpr = createAggExpr<TColEntries, TCriteria>(postgresqlDialect.quoteOrderByClause, condFn);
+  return {
+    avg: (col: FilterCols<TColEntries, number> | SQLExpr<number | null>): SQLExpr<number> => sqlExpr(`AVG(${resolveArg(col, quoteFn)})`),
+    sum: (col: FilterCols<TColEntries, number> | SQLExpr<number | null>): SQLExpr<number> => sqlExpr(`SUM(${resolveArg(col, quoteFn)})`),
+    countAll:      (): SQLExpr<number> => sqlExpr("COUNT(*)"),
+    count:         (col: ColName<TColEntries> | "*" | SQLExpr<unknown>): SQLExpr<number> =>
+      sqlExpr(col === "*" ? "COUNT(*)" : `COUNT(${resolveArg(col as string | SQLExpr<unknown>, quoteFn)})`),
+    countDistinct: (col: ColName<TColEntries>): SQLExpr<number> => sqlExpr(`COUNT(DISTINCT ${quoteFn(col)})`),
+    distinct:      <Col extends ColName<TColEntries>>(col: Col): SQLDistinct<ColTypeOf<TColEntries, Col>> => sqlDistinct(quoteFn(col)),
+    length: (col: FilterCols<TColEntries, string> | SQLExpr<string>): SQLExpr<number> => sqlExpr(`LENGTH(${resolveArg(col, quoteFn)})`),
+    stringAgg: ((col: ColName<TColEntries> | SQLExpr<string>, sep: string) => {
+      const inner = resolveArg(col, quoteFn);
+      const sepSql = `, '${esc(sep)}'`;
+      return aggExpr<string | null>(
+        ({ orderBySql, filterCond }) => `STRING_AGG(${inner}${sepSql}${orderBySql})${filterSuffix(filterCond)}`,
+        distinctOrderByGuard(col, quoteFn)
+      );
+    }) as (
+      // distinct overload: propagate T (string | null if left-joined, string otherwise)
+      & (<T extends string | null>(col: SQLDistinct<T>, sep: string) => AggregateExpr<T, TColEntries, TCriteria>)
+      // column name: conditional — null if col type contains null
+      & (<Col extends ColName<TColEntries>>(col: Col, sep: string) => AggregateExpr<null extends ColTypeOf<TColEntries, Col> ? string | null : string, TColEntries, TCriteria>)
+      // raw SQLExpr: propagate T
+      & (<T extends string | null>(col: SQLExpr<T> & { readonly [DISTINCT_BRAND]?: never; }, sep: string) => AggregateExpr<T, TColEntries, TCriteria>)
     ),
-  bitAnd:        (col: FilterCols<TColEntries, number>): SQLExpr<number> => sqlExpr(`BIT_AND(${quoteFn(col)})`),
-  bitOr:         (col: FilterCols<TColEntries, number>): SQLExpr<number> => sqlExpr(`BIT_OR(${quoteFn(col)})`),
-  jsonObjectAgg: (key: ColName<TColEntries>, val: ColName<TColEntries>): AggregateExpr<JSONValue, TColEntries, TCriteria> =>
-    createAggExpr<JSONValue>(
-      (orderBySql, cond) => `JSON_OBJECT_AGG(${quoteFn(key)}, ${quoteFn(val)}${orderBySql})${filterSuffix(cond)}`,
-      postgresqlDialect.quoteOrderByClause,
-      condFn as (c: object) => string
-    ),
-  concat: (...args: [FilterCols<TColEntries, string> | SQLExpr<string>, ...Array<FilterCols<TColEntries, string> | SQLExpr<string>>]): SQLExpr<string> => {
-    if (args.length === 0) throw new Error("concat: requires at least one argument");
-    return sqlExpr(`CONCAT(${args.map(a => resolveArg(a, quoteFn)).join(", ")})`);
-  },
-  substring: (col: FilterCols<TColEntries, string> | SQLExpr<string>, start: number, len?: number): SQLExpr<string> =>
-    sqlExpr(`SUBSTRING(${resolveArg(col, quoteFn)}, ${start}${len !== undefined ? `, ${len}` : ""})`),
-  left: (col: FilterCols<TColEntries, string> | SQLExpr<string>, n: number): SQLExpr<string> =>
-    sqlExpr(`LEFT(${resolveArg(col, quoteFn)}, ${n})`),
-  right: (col: FilterCols<TColEntries, string> | SQLExpr<string>, n: number): SQLExpr<string> =>
-    sqlExpr(`RIGHT(${resolveArg(col, quoteFn)}, ${n})`),
-  repeat: (col: FilterCols<TColEntries, string> | SQLExpr<string>, n: number): SQLExpr<string> =>
-    sqlExpr(`REPEAT(${resolveArg(col, quoteFn)}, ${n})`),
-  reverse: (col: FilterCols<TColEntries, string> | SQLExpr<string>): SQLExpr<string> =>
-    sqlExpr(`REVERSE(${resolveArg(col, quoteFn)})`),
-  lpad: (col: FilterCols<TColEntries, string> | SQLExpr<string>, len: number, pad: string): SQLExpr<string> =>
-    sqlExpr(`LPAD(${resolveArg(col, quoteFn)}, ${len}, '${esc(pad)}')`),
-  rpad: (col: FilterCols<TColEntries, string> | SQLExpr<string>, len: number, pad: string): SQLExpr<string> =>
-    sqlExpr(`RPAD(${resolveArg(col, quoteFn)}, ${len}, '${esc(pad)}')`),
-  initcap: (col: FilterCols<TColEntries, string> | SQLExpr<string>): SQLExpr<string> =>
-    sqlExpr(`INITCAP(${resolveArg(col, quoteFn)})`),
-  strpos: (col: FilterCols<TColEntries, string> | SQLExpr<string>, substr: string): SQLExpr<number> =>
-    sqlExpr(`STRPOS(${resolveArg(col, quoteFn)}, '${esc(substr)}')`),
-  splitPart: (col: FilterCols<TColEntries, string> | SQLExpr<string>, delimiter: string, field: number): SQLExpr<string> =>
-    sqlExpr(`SPLIT_PART(${resolveArg(col, quoteFn)}, '${esc(delimiter)}', ${field})`),
-  btrim: (col: FilterCols<TColEntries, string> | SQLExpr<string>, chars?: string): SQLExpr<string> =>
-    sqlExpr(`BTRIM(${resolveArg(col, quoteFn)}${chars !== undefined ? `, '${esc(chars)}'` : ""})`),
-  md5: (col: FilterCols<TColEntries, string> | SQLExpr<string>): SQLExpr<string> =>
-    sqlExpr(`MD5(${resolveArg(col, quoteFn)})`),
-  // Control flow
-  greatest: <T>(...args: [FilterCols<TColEntries, T> | SQLExpr<T>, ...Array<FilterCols<TColEntries, T> | SQLExpr<T>>]): SQLExpr<T> => {
-    if (args.length === 0) throw new Error("greatest: requires at least one argument");
-    return sqlExpr(`GREATEST(${args.map(a => resolveArg(a, quoteFn)).join(", ")})`);
-  },
-  least: <T>(...args: [FilterCols<TColEntries, T> | SQLExpr<T>, ...Array<FilterCols<TColEntries, T> | SQLExpr<T>>]): SQLExpr<T> => {
-    if (args.length === 0) throw new Error("least: requires at least one argument");
-    return sqlExpr(`LEAST(${args.map(a => resolveArg(a, quoteFn)).join(", ")})`);
-  },
-  // DateTime overrides
-  now:       (): SQLExpr<Date> => sqlExpr("NOW()"),
-  curDate:   (): SQLExpr<Date> => sqlExpr("CURRENT_DATE"),
-  year:      (col: FilterCols<TColEntries, Date> | SQLExpr<Date>): SQLExpr<number> => sqlExpr(`EXTRACT(YEAR FROM ${resolveArg(col, quoteFn)})::integer`),
-  month:     (col: FilterCols<TColEntries, Date> | SQLExpr<Date>): SQLExpr<number> => sqlExpr(`EXTRACT(MONTH FROM ${resolveArg(col, quoteFn)})::integer`),
-  day:       (col: FilterCols<TColEntries, Date> | SQLExpr<Date>): SQLExpr<number> => sqlExpr(`EXTRACT(DAY FROM ${resolveArg(col, quoteFn)})::integer`),
-  hour:      (col: FilterCols<TColEntries, Date> | SQLExpr<Date>): SQLExpr<number> => sqlExpr(`EXTRACT(HOUR FROM ${resolveArg(col, quoteFn)})::integer`),
-  minute:    (col: FilterCols<TColEntries, Date> | SQLExpr<Date>): SQLExpr<number> => sqlExpr(`EXTRACT(MINUTE FROM ${resolveArg(col, quoteFn)})::integer`),
-  second:    (col: FilterCols<TColEntries, Date> | SQLExpr<Date>): SQLExpr<number> => sqlExpr(`EXTRACT(SECOND FROM ${resolveArg(col, quoteFn)})::integer`),
-  // PG-only DateTime fns
-  extract:   (field: PgExtractField, col: FilterCols<TColEntries, Date> | SQLExpr<Date>): SQLExpr<number> =>
-    sqlExpr(`EXTRACT(${field} FROM ${resolveArg(col, quoteFn)})`),
-  dateTrunc: (unit: PgDateTruncUnit, col: FilterCols<TColEntries, Date> | SQLExpr<Date>): SQLExpr<Date> =>
-    sqlExpr(`DATE_TRUNC('${unit}', ${resolveArg(col, quoteFn)})`),
-  /**
-   * PG `AGE()` returns an `interval`. Typed as `string` since node-postgres serializes
-   * intervals as strings (e.g. `"1 year 2 mons 3 days"`). Arithmetic on the result
-   * must be done in SQL, not JS — use `sqlExpr` to compose further expressions.
-   */
-  age:       (ts1: FilterCols<TColEntries, Date> | SQLExpr<Date>, ts2?: FilterCols<TColEntries, Date> | SQLExpr<Date>): SQLExpr<string> =>
-    sqlExpr(ts2 !== undefined ? `AGE(${resolveArg(ts1, quoteFn)}, ${resolveArg(ts2, quoteFn)})` : `AGE(${resolveArg(ts1, quoteFn)})`),
-  toDate:    (text: FilterCols<TColEntries, string> | SQLExpr<string>, fmt: string): SQLExpr<Date> =>
-    sqlExpr(`TO_DATE(${resolveArg(text, quoteFn)}, '${esc(fmt)}')`),
-  // ── Math ─────────────────────────────────────────────────────────────────
-  abs:   (col: FilterCols<TColEntries, number> | SQLExpr<number>): SQLExpr<number> => sqlExpr(`ABS(${resolveArg(col, quoteFn)})`),
-  ceil:  (col: FilterCols<TColEntries, number> | SQLExpr<number>): SQLExpr<number> => sqlExpr(`CEIL(${resolveArg(col, quoteFn)})`),
-  floor: (col: FilterCols<TColEntries, number> | SQLExpr<number>): SQLExpr<number> => sqlExpr(`FLOOR(${resolveArg(col, quoteFn)})`),
-  round: (col: FilterCols<TColEntries, number> | SQLExpr<number>, decimals?: number): SQLExpr<number> => sqlExpr(decimals !== undefined ? `ROUND(${resolveArg(col, quoteFn)}, ${decimals})` : `ROUND(${resolveArg(col, quoteFn)})`),
-  power: (base: FilterCols<TColEntries, number> | SQLExpr<number>, exp: number | SQLExpr<number>): SQLExpr<number> => sqlExpr(`POWER(${resolveArg(base, quoteFn)}, ${typeof exp === "number" ? exp : exp.sql})`),
-  sqrt:  (col: FilterCols<TColEntries, number> | SQLExpr<number>): SQLExpr<number> => sqlExpr(`SQRT(${resolveArg(col, quoteFn)})`),
-  mod:   (col: FilterCols<TColEntries, number> | SQLExpr<number>, divisor: number): SQLExpr<number> => sqlExpr(`MOD(${resolveArg(col, quoteFn)}, ${divisor})`),
-  sign:  (col: FilterCols<TColEntries, number> | SQLExpr<number>): SQLExpr<number> => sqlExpr(`SIGN(${resolveArg(col, quoteFn)})`),
-  exp:   (col: FilterCols<TColEntries, number> | SQLExpr<number>): SQLExpr<number> => sqlExpr(`EXP(${resolveArg(col, quoteFn)})`),
-  // ── Math (PostgreSQL-specific) ────────────────────────────────────────────
-  pi:      (): SQLExpr<number> => sqlExpr("PI()"),
-  ln:      (x: FilterCols<TColEntries, number> | SQLExpr<number>): SQLExpr<number> => sqlExpr(`LN(${resolveArg(x, quoteFn)})`),
-  log:     (x: FilterCols<TColEntries, number> | SQLExpr<number>): SQLExpr<number> => sqlExpr(`LOG(${resolveArg(x, quoteFn)})`),
-  logBase: (base: number, x: FilterCols<TColEntries, number> | SQLExpr<number>): SQLExpr<number> => sqlExpr(`LOG(${base}, ${resolveArg(x, quoteFn)})`),
-  trunc:   (x: FilterCols<TColEntries, number> | SQLExpr<number>, n?: number): SQLExpr<number> => sqlExpr(n !== undefined ? `TRUNC(${resolveArg(x, quoteFn)}, ${n})` : `TRUNC(${resolveArg(x, quoteFn)})`),
-  div:     (x: FilterCols<TColEntries, number> | SQLExpr<number>, y: number): SQLExpr<number> => sqlExpr(`DIV(${resolveArg(x, quoteFn)}, ${y})`),
-  random:  (): SQLExpr<number> => sqlExpr("RANDOM()"),
-  // ── JSON scalar fns ───────────────────────────────────────────────────────
-  /**
-   * Uses jsonb_path_query_first — requires PG 12+ (Prisma 5+ minimum).
-   * @note PG uses JSONPath syntax (e.g. `$.tags[0]`, `$.name`).
-   * MySQL/SQLite use SQL/JSON path syntax — paths are NOT cross-dialect compatible.
-   * Mismatched paths silently return NULL.
-   */
-  jsonExtract: (col: FilterJsonCols<TColEntries> | SQLExpr<JSONValue>, path: string): SQLExpr<JSONValue> =>
-    sqlExpr(`jsonb_path_query_first(${resolveArg(col, quoteFn)}, '${esc(path)}')`),
-  jsonArray: (...args: [ColName<TColEntries> | SQLExpr<unknown>, ...Array<ColName<TColEntries> | SQLExpr<unknown>>]): SQLExpr<Array<JSONValue>> =>
-    sqlExpr(`jsonb_build_array(${args.map(a => resolveArg(a, quoteFn)).join(", ")})`),
-  jsonObject: (pairs: Array<[string, ColName<TColEntries> | SQLExpr<unknown>]>): SQLExpr<JSONObject> =>
-    sqlExpr(`jsonb_build_object(${flattenJsonObjectPairs(pairs, quoteFn).join(", ")})`),
-  // ── Type coercion ────────────────────────────────────────────────────────
-  cast: <T extends keyof PgCastTypeMap>(
-    expr: ColName<TColEntries> | SQLExpr<unknown>,
-    type: T
-  ): SQLExpr<PgCastTypeMap[T]> => {
-    if (!PG_CAST_TYPES.has(type)) throw new Error(`cast: invalid cast type '${String(type)}'`);
-    return sqlExpr(`CAST(${resolveArg(expr, quoteFn)} AS ${type})`);
-  },
-});
+    arrayAgg:      (col: ColName<TColEntries> | SQLExpr<unknown>): AggregateExpr<Array<unknown>, TColEntries, TCriteria> => {
+      const inner = resolveArg(col, quoteFn);
+      return aggExpr<Array<unknown>>(
+        ({ orderBySql, filterCond }) => `ARRAY_AGG(${inner}${orderBySql})${filterSuffix(filterCond)}`,
+        distinctOrderByGuard(col, quoteFn)
+      );
+    },
+    stddevPop:     (col: FilterCols<TColEntries, number>): SQLExpr<number> => sqlExpr(`STDDEV_POP(${quoteFn(col)})`),
+    stddevSamp:    (col: FilterCols<TColEntries, number>): SQLExpr<number> => sqlExpr(`STDDEV_SAMP(${quoteFn(col)})`),
+    varPop:        (col: FilterCols<TColEntries, number>): SQLExpr<number> => sqlExpr(`VAR_POP(${quoteFn(col)})`),
+    varSamp:       (col: FilterCols<TColEntries, number>): SQLExpr<number> => sqlExpr(`VAR_SAMP(${quoteFn(col)})`),
+    boolAnd:       (col: FilterCols<TColEntries, boolean>): SQLExpr<boolean> => sqlExpr(`BOOL_AND(${quoteFn(col)})`),
+    boolOr:        (col: FilterCols<TColEntries, boolean>): SQLExpr<boolean> => sqlExpr(`BOOL_OR(${quoteFn(col)})`),
+    jsonAgg:       (col: ColName<TColEntries>): AggregateExpr<Array<JSONValue>, TColEntries, TCriteria> =>
+      aggExpr<Array<JSONValue>>(({ orderBySql, filterCond }) => `JSON_AGG(${quoteFn(col)}${orderBySql})${filterSuffix(filterCond)}`),
+    bitAnd:        (col: FilterCols<TColEntries, number>): SQLExpr<number> => sqlExpr(`BIT_AND(${quoteFn(col)})`),
+    bitOr:         (col: FilterCols<TColEntries, number>): SQLExpr<number> => sqlExpr(`BIT_OR(${quoteFn(col)})`),
+    jsonObjectAgg: (key: ColName<TColEntries>, val: ColName<TColEntries>): AggregateExpr<JSONValue, TColEntries, TCriteria> =>
+      aggExpr<JSONValue>(({ orderBySql, filterCond }) => `JSON_OBJECT_AGG(${quoteFn(key)}, ${quoteFn(val)}${orderBySql})${filterSuffix(filterCond)}`),
+    concat: (...args: [FilterCols<TColEntries, string> | SQLExpr<string>, ...Array<FilterCols<TColEntries, string> | SQLExpr<string>>]): SQLExpr<string> => {
+      if (args.length === 0) throw new Error("concat: requires at least one argument");
+      return sqlExpr(`CONCAT(${args.map(a => resolveArg(a, quoteFn)).join(", ")})`);
+    },
+    substring: (col: FilterCols<TColEntries, string> | SQLExpr<string>, start: number, len?: number): SQLExpr<string> =>
+      sqlExpr(`SUBSTRING(${resolveArg(col, quoteFn)}, ${start}${len !== undefined ? `, ${len}` : ""})`),
+    left: (col: FilterCols<TColEntries, string> | SQLExpr<string>, n: number): SQLExpr<string> =>
+      sqlExpr(`LEFT(${resolveArg(col, quoteFn)}, ${n})`),
+    right: (col: FilterCols<TColEntries, string> | SQLExpr<string>, n: number): SQLExpr<string> =>
+      sqlExpr(`RIGHT(${resolveArg(col, quoteFn)}, ${n})`),
+    repeat: (col: FilterCols<TColEntries, string> | SQLExpr<string>, n: number): SQLExpr<string> =>
+      sqlExpr(`REPEAT(${resolveArg(col, quoteFn)}, ${n})`),
+    reverse: (col: FilterCols<TColEntries, string> | SQLExpr<string>): SQLExpr<string> =>
+      sqlExpr(`REVERSE(${resolveArg(col, quoteFn)})`),
+    lpad: (col: FilterCols<TColEntries, string> | SQLExpr<string>, len: number, pad: string): SQLExpr<string> =>
+      sqlExpr(`LPAD(${resolveArg(col, quoteFn)}, ${len}, '${esc(pad)}')`),
+    rpad: (col: FilterCols<TColEntries, string> | SQLExpr<string>, len: number, pad: string): SQLExpr<string> =>
+      sqlExpr(`RPAD(${resolveArg(col, quoteFn)}, ${len}, '${esc(pad)}')`),
+    initcap: (col: FilterCols<TColEntries, string> | SQLExpr<string>): SQLExpr<string> =>
+      sqlExpr(`INITCAP(${resolveArg(col, quoteFn)})`),
+    strpos: (col: FilterCols<TColEntries, string> | SQLExpr<string>, substr: string): SQLExpr<number> =>
+      sqlExpr(`STRPOS(${resolveArg(col, quoteFn)}, '${esc(substr)}')`),
+    splitPart: (col: FilterCols<TColEntries, string> | SQLExpr<string>, delimiter: string, field: number): SQLExpr<string> =>
+      sqlExpr(`SPLIT_PART(${resolveArg(col, quoteFn)}, '${esc(delimiter)}', ${field})`),
+    btrim: (col: FilterCols<TColEntries, string> | SQLExpr<string>, chars?: string): SQLExpr<string> =>
+      sqlExpr(`BTRIM(${resolveArg(col, quoteFn)}${chars !== undefined ? `, '${esc(chars)}'` : ""})`),
+    md5: (col: FilterCols<TColEntries, string> | SQLExpr<string>): SQLExpr<string> =>
+      sqlExpr(`MD5(${resolveArg(col, quoteFn)})`),
+    // Control flow
+    greatest: <T>(...args: [FilterCols<TColEntries, T> | SQLExpr<T>, ...Array<FilterCols<TColEntries, T> | SQLExpr<T>>]): SQLExpr<T> => {
+      if (args.length === 0) throw new Error("greatest: requires at least one argument");
+      return sqlExpr(`GREATEST(${args.map(a => resolveArg(a, quoteFn)).join(", ")})`);
+    },
+    least: <T>(...args: [FilterCols<TColEntries, T> | SQLExpr<T>, ...Array<FilterCols<TColEntries, T> | SQLExpr<T>>]): SQLExpr<T> => {
+      if (args.length === 0) throw new Error("least: requires at least one argument");
+      return sqlExpr(`LEAST(${args.map(a => resolveArg(a, quoteFn)).join(", ")})`);
+    },
+    // DateTime overrides
+    now:       (): SQLExpr<Date> => sqlExpr("NOW()"),
+    curDate:   (): SQLExpr<Date> => sqlExpr("CURRENT_DATE"),
+    year:      (col: FilterCols<TColEntries, Date> | SQLExpr<Date>): SQLExpr<number> => sqlExpr(`EXTRACT(YEAR FROM ${resolveArg(col, quoteFn)})::integer`),
+    month:     (col: FilterCols<TColEntries, Date> | SQLExpr<Date>): SQLExpr<number> => sqlExpr(`EXTRACT(MONTH FROM ${resolveArg(col, quoteFn)})::integer`),
+    day:       (col: FilterCols<TColEntries, Date> | SQLExpr<Date>): SQLExpr<number> => sqlExpr(`EXTRACT(DAY FROM ${resolveArg(col, quoteFn)})::integer`),
+    hour:      (col: FilterCols<TColEntries, Date> | SQLExpr<Date>): SQLExpr<number> => sqlExpr(`EXTRACT(HOUR FROM ${resolveArg(col, quoteFn)})::integer`),
+    minute:    (col: FilterCols<TColEntries, Date> | SQLExpr<Date>): SQLExpr<number> => sqlExpr(`EXTRACT(MINUTE FROM ${resolveArg(col, quoteFn)})::integer`),
+    second:    (col: FilterCols<TColEntries, Date> | SQLExpr<Date>): SQLExpr<number> => sqlExpr(`EXTRACT(SECOND FROM ${resolveArg(col, quoteFn)})::integer`),
+    // PG-only DateTime fns
+    extract:   (field: PgExtractField, col: FilterCols<TColEntries, Date> | SQLExpr<Date>): SQLExpr<number> =>
+      sqlExpr(`EXTRACT(${field} FROM ${resolveArg(col, quoteFn)})`),
+    dateTrunc: (unit: PgDateTruncUnit, col: FilterCols<TColEntries, Date> | SQLExpr<Date>): SQLExpr<Date> =>
+      sqlExpr(`DATE_TRUNC('${unit}', ${resolveArg(col, quoteFn)})`),
+    /**
+     * PG `AGE()` returns an `interval`. Typed as `string` since node-postgres serializes
+     * intervals as strings (e.g. `"1 year 2 mons 3 days"`). Arithmetic on the result
+     * must be done in SQL, not JS — use `sqlExpr` to compose further expressions.
+     */
+    age:       (ts1: FilterCols<TColEntries, Date> | SQLExpr<Date>, ts2?: FilterCols<TColEntries, Date> | SQLExpr<Date>): SQLExpr<string> =>
+      sqlExpr(ts2 !== undefined ? `AGE(${resolveArg(ts1, quoteFn)}, ${resolveArg(ts2, quoteFn)})` : `AGE(${resolveArg(ts1, quoteFn)})`),
+    toDate:    (text: FilterCols<TColEntries, string> | SQLExpr<string>, fmt: string): SQLExpr<Date> =>
+      sqlExpr(`TO_DATE(${resolveArg(text, quoteFn)}, '${esc(fmt)}')`),
+    // ── Math ─────────────────────────────────────────────────────────────────
+    abs:   (col: FilterCols<TColEntries, number> | SQLExpr<number>): SQLExpr<number> => sqlExpr(`ABS(${resolveArg(col, quoteFn)})`),
+    ceil:  (col: FilterCols<TColEntries, number> | SQLExpr<number>): SQLExpr<number> => sqlExpr(`CEIL(${resolveArg(col, quoteFn)})`),
+    floor: (col: FilterCols<TColEntries, number> | SQLExpr<number>): SQLExpr<number> => sqlExpr(`FLOOR(${resolveArg(col, quoteFn)})`),
+    round: (col: FilterCols<TColEntries, number> | SQLExpr<number>, decimals?: number): SQLExpr<number> => sqlExpr(decimals !== undefined ? `ROUND(${resolveArg(col, quoteFn)}, ${decimals})` : `ROUND(${resolveArg(col, quoteFn)})`),
+    power: (base: FilterCols<TColEntries, number> | SQLExpr<number>, exp: number | SQLExpr<number>): SQLExpr<number> => sqlExpr(`POWER(${resolveArg(base, quoteFn)}, ${typeof exp === "number" ? exp : exp.sql})`),
+    sqrt:  (col: FilterCols<TColEntries, number> | SQLExpr<number>): SQLExpr<number> => sqlExpr(`SQRT(${resolveArg(col, quoteFn)})`),
+    mod:   (col: FilterCols<TColEntries, number> | SQLExpr<number>, divisor: number): SQLExpr<number> => sqlExpr(`MOD(${resolveArg(col, quoteFn)}, ${divisor})`),
+    sign:  (col: FilterCols<TColEntries, number> | SQLExpr<number>): SQLExpr<number> => sqlExpr(`SIGN(${resolveArg(col, quoteFn)})`),
+    exp:   (col: FilterCols<TColEntries, number> | SQLExpr<number>): SQLExpr<number> => sqlExpr(`EXP(${resolveArg(col, quoteFn)})`),
+    // ── Math (PostgreSQL-specific) ────────────────────────────────────────────
+    pi:      (): SQLExpr<number> => sqlExpr("PI()"),
+    ln:      (x: FilterCols<TColEntries, number> | SQLExpr<number>): SQLExpr<number> => sqlExpr(`LN(${resolveArg(x, quoteFn)})`),
+    log:     (x: FilterCols<TColEntries, number> | SQLExpr<number>): SQLExpr<number> => sqlExpr(`LOG(${resolveArg(x, quoteFn)})`),
+    logBase: (base: number, x: FilterCols<TColEntries, number> | SQLExpr<number>): SQLExpr<number> => sqlExpr(`LOG(${base}, ${resolveArg(x, quoteFn)})`),
+    trunc:   (x: FilterCols<TColEntries, number> | SQLExpr<number>, n?: number): SQLExpr<number> => sqlExpr(n !== undefined ? `TRUNC(${resolveArg(x, quoteFn)}, ${n})` : `TRUNC(${resolveArg(x, quoteFn)})`),
+    div:     (x: FilterCols<TColEntries, number> | SQLExpr<number>, y: number): SQLExpr<number> => sqlExpr(`DIV(${resolveArg(x, quoteFn)}, ${y})`),
+    random:  (): SQLExpr<number> => sqlExpr("RANDOM()"),
+    // ── JSON scalar fns ───────────────────────────────────────────────────────
+    /**
+     * Uses jsonb_path_query_first — requires PG 12+ (Prisma 5+ minimum).
+     * @note PG uses JSONPath syntax (e.g. `$.tags[0]`, `$.name`).
+     * MySQL/SQLite use SQL/JSON path syntax — paths are NOT cross-dialect compatible.
+     * Mismatched paths silently return NULL.
+     */
+    jsonExtract: (col: FilterJsonCols<TColEntries> | SQLExpr<JSONValue>, path: string): SQLExpr<JSONValue> =>
+      sqlExpr(`jsonb_path_query_first(${resolveArg(col, quoteFn)}, '${esc(path)}')`),
+    jsonArray: (...args: [ColName<TColEntries> | SQLExpr<unknown>, ...Array<ColName<TColEntries> | SQLExpr<unknown>>]): SQLExpr<Array<JSONValue>> =>
+      sqlExpr(`jsonb_build_array(${args.map(a => resolveArg(a, quoteFn)).join(", ")})`),
+    jsonObject: (pairs: Array<[string, ColName<TColEntries> | SQLExpr<unknown>]>): SQLExpr<JSONObject> =>
+      sqlExpr(`jsonb_build_object(${flattenJsonObjectPairs(pairs, quoteFn).join(", ")})`),
+    // ── Type coercion ────────────────────────────────────────────────────────
+    cast: <T extends keyof PgCastTypeMap>(
+      expr: ColName<TColEntries> | SQLExpr<unknown>,
+      type: T
+    ): SQLExpr<PgCastTypeMap[T]> => {
+      if (!PG_CAST_TYPES.has(type)) throw new Error(`cast: invalid cast type '${String(type)}'`);
+      return sqlExpr(`CAST(${resolveArg(expr, quoteFn)} AS ${type})`);
+    },
+  };
+};
 
 export type DialectFns<TColEntries extends [string, unknown] = never, TCriteria extends object = object> = ReturnType<typeof postgresqlContextFns<TColEntries, TCriteria>>;
 

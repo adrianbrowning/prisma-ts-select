@@ -201,6 +201,7 @@
     + [Control Flow Functions (all dialects)](#control-flow-functions-all-dialects)
     + [Combining with `.groupBy()`](#combining-with-groupby)
       - [SQL](#sql-45)
+  * [Aggregate clauses — `.orderBy()` / `.filter()`](#aggregate-clauses--orderby--filter)
   * [MySQL-specific](#mysql-specific)
   * [PostgreSQL-specific](#postgresql-specific)
   * [SQLite-specific](#sqlite-specific)
@@ -2318,12 +2319,69 @@ GROUP BY User.name;
 
 ---
 
+### Aggregate clauses — `.orderBy()` / `.filter()`
+
+List-building aggregates return an expression carrying two optional aggregate-local clauses. Both return a new expression, so chains are immutable.
+
+| Method | Effect | Chaining |
+|---|---|---|
+| `.orderBy(col, dir?)` | orders rows *inside* the aggregate | successive calls append terms, left to right |
+| `.filter(criteria)` | restricts which rows the aggregate sees | successive calls `AND` their conditions |
+
+Available on `groupConcat` (MySQL, SQLite) and on `stringAgg`, `arrayAgg`, `jsonAgg`, `jsonObjectAgg` (PostgreSQL). Deliberately **not** available on MySQL `jsonArrayAgg`/`jsonObjectAgg`: MySQL supports neither clause for them and no rewrite is faithful, so calling `.orderBy()`/`.filter()` there is a compile error.
+
+The aggregate's own `ORDER BY` stays separate from the query-level one:
+
+```typescript file=../usage-sqlite-v7/tests/dialect/sqlite/select-fn-agg-options.spec.ts region=agg-order-by
+        prisma.$from("User")
+          .innerJoin("Post", "authorId", "User.id")
+          .groupBy([ "User.id" ])
+          .select(({ groupConcat }) => groupConcat("Post.title", ",").orderBy("Post.title", "DESC"), "titles")
+          .orderBy([ "User.id DESC" ])
+```
+
+```sql
+SELECT GROUP_CONCAT(Post.title, ',' ORDER BY Post.title DESC) AS `titles`
+FROM User INNER JOIN Post ON Post.authorId = User.id
+GROUP BY User.id ORDER BY User.id DESC;
+```
+
+Two `.filter()` calls compose with `AND` rather than the last one winning:
+
+```typescript file=../usage-sqlite-v7/tests/dialect/sqlite/select-fn-agg-options.spec.ts region=agg-filter-chained
+        prisma.$from("User")
+          .innerJoin("Post", "authorId", "User.id")
+          .groupBy([ "User.id" ])
+          .select(({ groupConcat }) => groupConcat("Post.title", ",")
+            .filter({ "Post.id": { op: ">", value: 1 } })
+            .filter({ "Post.id": { op: "<", value: 3 } }), "titles")
+          .orderBy([ "User.id ASC" ])
+```
+
+```sql
+SELECT GROUP_CONCAT(Post.title, ',') FILTER (WHERE (Post.id > 1) AND (Post.id < 3)) AS `titles`
+FROM User INNER JOIN Post ON Post.authorId = User.id
+GROUP BY User.id ORDER BY User.id ASC;
+```
+
+`.filter()` compiles to a native `FILTER (WHERE …)` clause on PostgreSQL and SQLite. MySQL has no `FILTER` clause, so it compiles to `GROUP_CONCAT(CASE WHEN <cond> THEN <col> END)` — an exact equivalent, because `GROUP_CONCAT` ignores NULL and so the rows the condition excludes drop out of the result.
+
+Three combinations fail in the library rather than at the database:
+
+- Criteria that compile to an empty condition, such as `.filter({})`, throw `filter: criteria compiled to an empty condition — pass at least one predicate`. An aggregate the caller believes is restricted must not silently cover every row.
+- On PostgreSQL, a `DISTINCT` aggregate may only `ORDER BY` its own argument; any other column throws. PostgreSQL itself rejects that combination with `42P10`, while MySQL and SQLite accept it.
+- On SQLite, `groupConcat(distinct(col), sep)` throws — SQLite accepts no separator alongside `DISTINCT`.
+
+**SQLite engine floors**: aggregate-local `ORDER BY` requires SQLite ≥ 3.44.0 and `FILTER (WHERE …)` requires ≥ 3.30.0. An older bundled driver rejects the emitted SQL even though it type-checks.
+
+---
+
 ### MySQL-specific
 
 | Function | SQL | Returns |
 |---|---|---|
 | `distinct(col)` | `DISTINCT col` | `ColType` (use inside `avg`, `sum`, `count`, `groupConcat`) |
-| `groupConcat(col, sep?)` | `GROUP_CONCAT(col SEPARATOR sep)` | `string` |
+| `groupConcat(col, sep?)` | `GROUP_CONCAT(col SEPARATOR sep)` | `string` — supports [`.orderBy()`/`.filter()`](#aggregate-clauses--orderby--filter) |
 | `bitAnd(col)` | `BIT_AND(col)` | `number` |
 | `bitOr(col)` | `BIT_OR(col)` | `number` |
 | `bitXor(col)` | `BIT_XOR(col)` | `number` |
@@ -2331,8 +2389,8 @@ GROUP BY User.name;
 | `stddevSamp(col)` | `STDDEV_SAMP(col)` | `number` |
 | `variance(col)` | `VARIANCE(col)` | `number` |
 | `varSamp(col)` | `VAR_SAMP(col)` | `number` |
-| `jsonArrayAgg(col)` | `JSON_ARRAYAGG(col)` | `JSONValue` |
-| `jsonObjectAgg(key, val)` | `JSON_OBJECTAGG(key, val)` | `JSONValue` |
+| `jsonArrayAgg(col)` | `JSON_ARRAYAGG(col)` | `JSONValue` — no aggregate clauses (MySQL supports neither) |
+| `jsonObjectAgg(key, val)` | `JSON_OBJECTAGG(key, val)` | `JSONValue` — no aggregate clauses (MySQL supports neither) |
 | `concat(...cols)` | `CONCAT(a, b, ...)` | `string` |
 | `substring(col, start, len?)` | `SUBSTRING(col, start, len)` | `string` |
 | `left(col, n)` | `LEFT(col, n)` | `string` |
@@ -2379,18 +2437,18 @@ GROUP BY User.name;
 | `greatest(...args)` | `GREATEST(a, b, ...)` | `T` |
 | `least(...args)` | `LEAST(a, b, ...)` | `T` |
 | `distinct(col)` | `DISTINCT col` | `ColType` (use inside `avg`, `sum`, `count`, `stringAgg`, `arrayAgg`) |
-| `stringAgg(col, sep)` | `STRING_AGG(col, sep)` | `string` |
-| `arrayAgg(col)` | `ARRAY_AGG(col)` | `unknown[]` |
+| `stringAgg(col, sep)` | `STRING_AGG(col, sep)` | `string` — supports [`.orderBy()`/`.filter()`](#aggregate-clauses--orderby--filter) |
+| `arrayAgg(col)` | `ARRAY_AGG(col)` | `unknown[]` — supports [`.orderBy()`/`.filter()`](#aggregate-clauses--orderby--filter) |
 | `stddevPop(col)` | `STDDEV_POP(col)` | `number` |
 | `stddevSamp(col)` | `STDDEV_SAMP(col)` | `number` |
 | `varPop(col)` | `VAR_POP(col)` | `number` |
 | `varSamp(col)` | `VAR_SAMP(col)` | `number` |
 | `boolAnd(col)` | `BOOL_AND(col)` | `boolean` |
 | `boolOr(col)` | `BOOL_OR(col)` | `boolean` |
-| `jsonAgg(col)` | `JSON_AGG(col)` | `JSONValue[]` |
+| `jsonAgg(col)` | `JSON_AGG(col)` | `JSONValue[]` — supports [`.orderBy()`/`.filter()`](#aggregate-clauses--orderby--filter) |
 | `bitAnd(col)` | `BIT_AND(col)` | `number` |
 | `bitOr(col)` | `BIT_OR(col)` | `number` |
-| `jsonObjectAgg(key, val)` | `JSON_OBJECT_AGG(key, val)` | `JSONValue` |
+| `jsonObjectAgg(key, val)` | `JSON_OBJECT_AGG(key, val)` | `JSONValue` — supports [`.orderBy()`/`.filter()`](#aggregate-clauses--orderby--filter) |
 | `concat(...cols)` | `CONCAT(a, b, ...)` | `string` |
 | `substring(col, start, len?)` | `SUBSTRING(col, start, len)` | `string` |
 | `left(col, n)` | `LEFT(col, n)` | `string` |
@@ -2431,7 +2489,7 @@ GROUP BY User.name;
 | `iif(cond, trueVal, falseVal)` | `IIF(cond, a, b)` | `T` |
 | `ifNull(col, fallback)` | `IFNULL(col, fallback)` | `NonNullable<T>` |
 | `distinct(col)` | `DISTINCT col` | `ColType` (use inside `avg`, `sum`, `count`, `groupConcat`; sep with ≥ 3.44) |
-| `groupConcat(col, sep?)` | `GROUP_CONCAT(col, sep)` | `string` |
+| `groupConcat(col, sep?)` | `GROUP_CONCAT(col, sep)` | `string` — supports [`.orderBy()`/`.filter()`](#aggregate-clauses--orderby--filter) (ORDER BY needs ≥ 3.44, FILTER ≥ 3.30) |
 | `total(col)` | `TOTAL(col)` | `number` |
 | `concat(...cols)` | `a \|\| b \|\| ...` | `string` |
 | `substr(col, start, len?)` | `SUBSTR(col, start, len)` | `string` |

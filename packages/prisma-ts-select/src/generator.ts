@@ -180,6 +180,7 @@ generatorHandler({
 
     const dialectIndexDts = `export { type Dialect, type FunctionRegistry, SUPPORTED_PROVIDERS, type SupportedProvider } from './types.js';
 export { sharedFunctions } from './shared.js';
+export type { AggregateExpr } from './aggregate-expr.js';
 export { ${provider}Dialect as dialect, ${provider}Dialect, ${defaultCtxFns} as dialectContextFns } from './${defaultSrc}.js';
 `;
     fs.writeFileSync(path.join(dialectOutDir, "index.d.ts"), dialectIndexDts);
@@ -194,6 +195,7 @@ export { ${provider}Dialect as dialect, ${provider}Dialect, ${defaultCtxFns} as 
       const js = `export { ${provider}Dialect as dialect, ${ctxName} as dialectContextFns } from './${srcFile}.js';\n`;
       const dts = `export { type Dialect, type FunctionRegistry, SUPPORTED_PROVIDERS, type SupportedProvider } from './types.js';
 export { sharedFunctions } from './shared.js';
+export type { AggregateExpr } from './aggregate-expr.js';
 export { ${provider}Dialect as dialect, ${provider}Dialect, ${ctxName} as dialectContextFns } from './${srcFile}.js';
 `;
       fs.writeFileSync(path.join(dialectOutDir, `${ver}.js`), js);

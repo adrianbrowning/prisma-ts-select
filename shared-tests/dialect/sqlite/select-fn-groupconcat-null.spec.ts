@@ -247,8 +247,7 @@ describe("groupConcat nullability propagation (SQLite)", () => {
       assert.throws(() => prisma.$from("User").innerJoin("Post", "authorId", "User.id")
         .groupBy([ "User.id" ])
       // @ts-expect-error — distinct overload has no sep param; DISTINCT_BRAND excludes overload 3
-        .select(({ groupConcat, distinct }) => groupConcat(distinct("Post.title"), ","), "names")
-        .getSQL(),
+        .select(({ groupConcat, distinct }) => groupConcat(distinct("Post.title"), ","), "names"),
       /SQLite does not support GROUP_CONCAT\(DISTINCT col, sep\)/);
     });
   });
