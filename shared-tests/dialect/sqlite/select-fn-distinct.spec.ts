@@ -73,18 +73,6 @@ describe("SQLite distinct() helper", () => {
     });
   });
 
-  describe("groupConcat(distinct(col), sep with single quote) — unsupported in SQLite", () => {
-    it("is a type error and throws at runtime", () => {
-      assert.throws(
-        () => prisma.$from("User").select(({ groupConcat, distinct }) =>
-          // @ts-expect-error — distinct overload has no sep param; SQLite rejects DISTINCT + separator
-          groupConcat(distinct("User.name"), "it's"), "names")
-          .getSQL(),
-        /does not support GROUP_CONCAT/
-      );
-    });
-  });
-
   describe("count(distinct(col))", () => {
     function createQuery() {
       return prisma.$from("User")

@@ -37,7 +37,11 @@ describe("pg coverage: dialect functions", () => {
 
   describe("base postgresqlContextFns (overridden by version layer)", () => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const baseFns: any = postgresqlContextFns((id: string) => `"${id}"`);
+    const baseFns: any = postgresqlContextFns(
+      (id: string) => `"${id}"`,
+      (c: object) => Object.keys(c).map(k => `${k} > 18`)
+        .join(" AND ")
+    );
 
     it("countAll", () => {
       assert.equal(baseFns.countAll().sql, "COUNT(*)");

@@ -17,13 +17,17 @@ void describe("sqlExpr", () => {
 
 void describe("sqlDistinct", () => {
   void test("creates object with sql and DISTINCT_BRAND", () => {
-    const expr = sqlDistinct<number>("DISTINCT id");
+    const expr = sqlDistinct<number>("id");
     assert.equal(expr.sql, "DISTINCT id");
     assert.equal(expr[DISTINCT_BRAND], true);
   });
 
+  void test("arg keeps the bare argument, without the DISTINCT keyword", () => {
+    assert.equal(sqlDistinct<string>("`name`").arg, "`name`");
+  });
+
   void test("toString returns sql", () => {
-    const expr = sqlDistinct<number>("DISTINCT name");
+    const expr = sqlDistinct<number>("name");
     assert.equal(expr.toString(), "DISTINCT name");
   });
 });

@@ -9,10 +9,15 @@ export function sqlExpr<T>(sql: string): SQLExpr<T> {
 
 export const DISTINCT_BRAND: unique symbol = Symbol("sqlDistinct");
 
-export type SQLDistinct<T> = SQLExpr<T> & { readonly [DISTINCT_BRAND]: true; };
+/**
+ * A DISTINCT-modified aggregate argument. `sql` is the rendered `DISTINCT <arg>` form; `arg` is the
+ * bare argument, which dialects that rewrite the argument (MySQL's `CASE WHEN`) need on its own.
+ */
+export type SQLDistinct<T> = SQLExpr<T> & { readonly [DISTINCT_BRAND]: true; readonly arg: string; };
 
-export function sqlDistinct<T>(sql: string): SQLDistinct<T> {
-  return { sql, [DISTINCT_BRAND]: true as const, toString() { return sql; } };
+export function sqlDistinct<T>(arg: string): SQLDistinct<T> {
+  const sql = `DISTINCT ${arg}`;
+  return { sql, arg, [DISTINCT_BRAND]: true as const, toString() { return sql; } };
 }
  
 export function isDistinct(val: SQLExpr<unknown> | string): val is SQLDistinct<unknown> {

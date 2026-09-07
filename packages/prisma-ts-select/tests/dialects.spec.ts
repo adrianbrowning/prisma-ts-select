@@ -16,6 +16,18 @@ const id = (s: string) => s;
 const bt = (s: string) => `\`${s}\``;
 const dq = (s: string) => `"${s}"`;
 
+/**
+ * Mirrors production `processCriteria` (`src/extend.ts:564`): a criteria object with no keys
+ * compiles to the empty string. A stub that always returns a condition hides both the
+ * fails-open `.filter({})` path and the discarded-criteria `.filter(a).filter(b)` path.
+ */
+const condStub = (c: object) => Object.keys(c).map(k => `${k} > 18`)
+  .join(" AND ");
+
+/** Two criteria objects that compile to two distinct conditions under `condStub`. */
+const ageCriteria = { age: { op: ">", value: 18 } };
+const priceCriteria = { price: { op: ">", value: 18 } };
+
 type TestCols =
   | ["id", number]
   | ["name", string]
@@ -117,7 +129,7 @@ void describe("postgresqlDialect", () => {
 });
 
 void describe("sqliteContextFns", () => {
-  const fns = sqliteContextFns<TestCols, object>(bt, () => "1=1");
+  const fns = sqliteContextFns<TestCols, object>(bt, condStub);
 
   void test("countAll", () => assert.equal(fns.countAll().sql, "COUNT(*)"));
   void test("count with column", () => assert.equal(fns.count("id").sql, "COUNT(`id`)"));
@@ -160,7 +172,7 @@ void describe("sqliteContextFns", () => {
   void test("iif with criteria object", () => {
     const t = sqlExpr<number>("1");
     const f = sqlExpr<number>("0");
-    assert.equal(fns.iif({} as never, t, f).sql, "IIF(1=1, 1, 0)");
+    assert.equal(fns.iif(ageCriteria as never, t, f).sql, "IIF(age > 18, 1, 0)");
   });
   void test("iif with SQLExpr cond", () => {
     const t = sqlExpr<number>("1");
@@ -172,12 +184,24 @@ void describe("sqliteContextFns", () => {
   void test("groupConcat with separator", () => assert.equal(fns.groupConcat("name", ",").sql, "GROUP_CONCAT(`name`, ',')"));
   void test("groupConcat with distinct+separator throws", () => {
     // @ts-expect-error — distinct overload has no sep param; SQLite rejects DISTINCT + separator
-    assert.throws(() => fns.groupConcat(sqlDistinct<string>("DISTINCT `name`"), ","), /DISTINCT/);
+    assert.throws(() => fns.groupConcat(sqlDistinct<string>("`name`"), ","), /DISTINCT/);
   });
+  // The expected string quotes `name` inside the call but leaves it bare in ORDER BY: a fixture
+  // artifact, not dialect behaviour. The aggregate fns take the injected `bt` quoter for the
+  // argument but reach for the module singleton `sqliteDialect.quoteOrderByClause` for the ORDER BY
+  // term, and that quoter passes an unqualified name through untouched. Production is internally
+  // consistent — both sides go through the same dialect quoter. Same applies below.
   void test("groupConcat orderBy + filter", () => assert.equal(
     fns.groupConcat("name", ",").orderBy("name", "DESC")
-      .filter({}).sql,
-    "GROUP_CONCAT(`name`, ',' ORDER BY name DESC) FILTER (WHERE 1=1)"));
+      .filter(ageCriteria).sql,
+    "GROUP_CONCAT(`name`, ',' ORDER BY name DESC) FILTER (WHERE age > 18)"));
+  void test("groupConcat filter with an empty criteria object throws", () => {
+    assert.throws(() => fns.groupConcat("name", ",").filter({}), /filter/);
+  });
+  void test("groupConcat chained filter ANDs both conditions", () => assert.equal(
+    fns.groupConcat("name", ",").filter(ageCriteria)
+      .filter(priceCriteria).sql,
+    "GROUP_CONCAT(`name`, ',') FILTER (WHERE (age > 18) AND (price > 18))"));
   void test("groupConcat orderBy without direction", () => assert.equal(
     fns.groupConcat("name").orderBy("name").sql,
     "GROUP_CONCAT(`name` ORDER BY name)"));
@@ -206,7 +230,7 @@ void describe("sqliteContextFns", () => {
 });
 
 void describe("mysqlContextFns", () => {
-  const fns = mysqlContextFns<TestCols, object>(bt, () => "1=1");
+  const fns = mysqlContextFns<TestCols, object>(bt, condStub);
 
   void test("countAll", () => assert.equal(fns.countAll().sql, "COUNT(*)"));
   void test("count col", () => assert.equal(fns.count("id").sql, "COUNT(`id`)"));
@@ -256,7 +280,7 @@ void describe("mysqlContextFns", () => {
   void test("$if with criteria", () => {
     const t = sqlExpr<number>("1");
     const f = sqlExpr<number>("0");
-    assert.equal(fns.$if({} as never, t, f).sql, "IF(1=1, 1, 0)");
+    assert.equal(fns.$if(ageCriteria as never, t, f).sql, "IF(age > 18, 1, 0)");
   });
   void test("$if with SQLExpr cond", () => {
     const t = sqlExpr<number>("1");
@@ -309,8 +333,22 @@ void describe("mysqlContextFns", () => {
   void test("groupConcat with separator", () => assert.equal(fns.groupConcat("name", ",").sql, "GROUP_CONCAT(`name` SEPARATOR ',')"));
   void test("groupConcat orderBy + filter compiles to CASE WHEN", () => assert.equal(
     fns.groupConcat("name", ",").orderBy("name", "DESC")
-      .filter({}).sql,
-    "GROUP_CONCAT(CASE WHEN 1=1 THEN `name` END ORDER BY `name` DESC SEPARATOR ',')"));
+      .filter(ageCriteria).sql,
+    "GROUP_CONCAT(CASE WHEN age > 18 THEN `name` END ORDER BY `name` DESC SEPARATOR ',')"));
+  void test("groupConcat distinct + filter keeps DISTINCT outside the CASE", () => assert.equal(
+    fns.groupConcat(fns.distinct("name"), ",").filter(ageCriteria).sql,
+    "GROUP_CONCAT(DISTINCT CASE WHEN age > 18 THEN `name` END SEPARATOR ',')"));
+  void test("groupConcat distinct + filter + orderBy keeps clause order", () => assert.equal(
+    fns.groupConcat(fns.distinct("name"), ",").orderBy("name", "DESC")
+      .filter(ageCriteria).sql,
+    "GROUP_CONCAT(DISTINCT CASE WHEN age > 18 THEN `name` END ORDER BY `name` DESC SEPARATOR ',')"));
+  void test("groupConcat filter with an empty criteria object throws", () => {
+    assert.throws(() => fns.groupConcat("name", ",").filter({}), /filter/);
+  });
+  void test("groupConcat chained filter ANDs both conditions", () => assert.equal(
+    fns.groupConcat("name", ",").filter(ageCriteria)
+      .filter(priceCriteria).sql,
+    "GROUP_CONCAT(CASE WHEN (age > 18) AND (price > 18) THEN `name` END SEPARATOR ',')"));
   void test("groupConcat orderBy without direction", () => assert.equal(
     fns.groupConcat("name").orderBy("name").sql,
     "GROUP_CONCAT(`name` ORDER BY `name`)"));
@@ -321,7 +359,7 @@ void describe("mysqlContextFns", () => {
 });
 
 void describe("postgresqlContextFns", () => {
-  const fns = postgresqlContextFns<TestCols, object>(dq, () => "1=1");
+  const fns = postgresqlContextFns<TestCols, object>(dq, condStub);
 
   void test("countAll", () => assert.equal(fns.countAll().sql, "COUNT(*)"));
   void test("count col", () => assert.equal(fns.count("id").sql, "COUNT(\"id\")"));
@@ -363,14 +401,21 @@ void describe("postgresqlContextFns", () => {
   void test("jsonObjectAgg", () => assert.equal(fns.jsonObjectAgg("name", "val").sql, "JSON_OBJECT_AGG(\"name\", \"val\")"));
   void test("stringAgg orderBy + filter", () => assert.equal(
     fns.stringAgg("name", ",").orderBy("name", "ASC")
-      .filter({}).sql,
-    "STRING_AGG(\"name\", ',' ORDER BY \"name\" ASC) FILTER (WHERE 1=1)"));
+      .filter(ageCriteria).sql,
+    "STRING_AGG(\"name\", ',' ORDER BY \"name\" ASC) FILTER (WHERE age > 18)"));
+  void test("stringAgg filter with an empty criteria object throws", () => {
+    assert.throws(() => fns.stringAgg("name", ",").filter({}), /filter/);
+  });
+  void test("stringAgg chained filter ANDs both conditions", () => assert.equal(
+    fns.stringAgg("name", ",").filter(ageCriteria)
+      .filter(priceCriteria).sql,
+    "STRING_AGG(\"name\", ',') FILTER (WHERE (age > 18) AND (price > 18))"));
   void test("arrayAgg orderBy without direction", () => assert.equal(
     fns.arrayAgg("name").orderBy("name").sql,
     "ARRAY_AGG(\"name\" ORDER BY \"name\")"));
   void test("jsonAgg filter", () => assert.equal(
-    fns.jsonAgg("data").filter({}).sql,
-    "JSON_AGG(\"data\") FILTER (WHERE 1=1)"));
+    fns.jsonAgg("data").filter(ageCriteria).sql,
+    "JSON_AGG(\"data\") FILTER (WHERE age > 18)"));
   void test("jsonObjectAgg orderBy", () => assert.equal(
     fns.jsonObjectAgg("name", "val").orderBy("name", "DESC").sql,
     "JSON_OBJECT_AGG(\"name\", \"val\" ORDER BY \"name\" DESC)"));
