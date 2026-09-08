@@ -1,6 +1,7 @@
 # prisma-ts-select
 
 ![npm version](https://img.shields.io/npm/v/prisma-ts-select)
+![build](https://github.com/adrianbrowning/prisma-ts-select/actions/workflows/test-v7-sqlite.yml/badge.svg)
 ![license](https://img.shields.io/github/license/adrianbrowning/prisma-ts-select)
 
 Type-safe raw SQL query builder for Prisma — write complex `SELECT` statements with full TypeScript inference, without leaving the Prisma ecosystem.
