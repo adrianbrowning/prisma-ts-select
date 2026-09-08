@@ -17,18 +17,21 @@ export default defineTransform (({ tag, code, meta }) => {
 
   // Double-quoted string literal: "SQL" or "SQL";
   const dq = t.match(/^"([\s\S]*?)";\s*$/) ?? t.match(/^"([\s\S]*?)"\s*$/);
-  if (dq) return sqlPretty(dq[1]);
+  if (dq?.[1] !== undefined) return sqlPretty(dq[1]);
 
   // Backtick template literal (static only — skip if contains ${): `SQL`; or `SQL`
   const bt = t.match(/^`([\s\S]*?)`;\s*$/) ?? t.match(/^`([\s\S]*?)`\s*$/);
-  if (bt && !bt[1].includes('${')) {
+  if (bt?.[1] !== undefined && !bt[1].includes('${')) {
     return sqlPretty(bt[1].replace(/\\`/g, '`'));
   }
 
   return sqlPretty(code);
 });
 
-function sqlPretty(code) {
-  return code.replace(/\b(SELECT|WITH|FROM|RIGHT\sJOIN|LEFT\sJOIN|INNER\sJOIN|FULL\sJOIN|CROSS\sJOIN|JOIN|WHERE|GROUP\s+BY|ORDER\s+BY|LIMIT|OFFSET)\b/gi, '\n$1').trim();
+function sqlPretty(code: string): string {
+  return code
+    .replace(/\b(SELECT|WITH|FROM|RIGHT\sJOIN|LEFT\sJOIN|INNER\sJOIN|FULL\sJOIN|CROSS\sJOIN|JOIN|WHERE|GROUP\s+BY|ORDER\s+BY|LIMIT|OFFSET)\b/gi, '\n$1')
+    .replace(/[ \t]+$/gm, '')
+    .trim();
 }
 
