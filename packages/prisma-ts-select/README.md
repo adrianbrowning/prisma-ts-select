@@ -201,6 +201,7 @@
     + [Control Flow Functions (all dialects)](#control-flow-functions-all-dialects)
     + [Combining with `.groupBy()`](#combining-with-groupby)
       - [SQL](#sql-45)
+  * [Aggregate clauses — `.orderBy()` / `.filter()`](#aggregate-clauses--orderby--filter)
   * [MySQL-specific](#mysql-specific)
   * [PostgreSQL-specific](#postgresql-specific)
   * [SQLite-specific](#sqlite-specific)
@@ -478,9 +479,9 @@ Chain `.with(name, query)` before `.from()` to define additional CTEs.
 
 ```sql file=../../shared-tests/readme/with-cte.ts region=join-sql
 WITH pp AS (
-SELECT id, authorId, title 
-FROM Post) 
-FROM User 
+SELECT id, authorId, title
+FROM Post)
+FROM User
 JOIN pp ON pp.authorId = User.id;
 ```
 
@@ -502,9 +503,9 @@ Use `.from('cteName')` to query a CTE directly, without a real table as the base
 
 ```sql file=../../shared-tests/readme/with-cte.ts region=cte-base-sql
 WITH pp AS (
-SELECT id, title 
-FROM Post) 
-SELECT pp.id AS `pp.id`, pp.title AS `pp.title` 
+SELECT id, title
+FROM Post)
+SELECT pp.id AS `pp.id`, pp.title AS `pp.title`
 FROM pp;
 ```
 
@@ -529,11 +530,11 @@ FROM pp;
 
 ```sql file=../../shared-tests/readme/with-cte.ts region=multi-cte-sql
 WITH pp AS (
-SELECT id, authorId, title 
+SELECT id, authorId, title
 FROM Post), uu AS (
-SELECT id, name 
-FROM User) 
-FROM User 
+SELECT id, name
+FROM User)
+FROM User
 JOIN pp ON pp.authorId = User.id;
 ```
 
@@ -566,13 +567,13 @@ Defines a recursive CTE — `WITH RECURSIVE name(cols) AS (anchor UNION ALL memb
 
 ```sql file=../../shared-tests/readme/with-recursive.ts region=recursive-sql
 WITH RECURSIVE tree(id, name) AS (
-SELECT id, name 
-FROM Employee 
-WHERE (Employee.managerId IS NULL) UNION ALL 
-SELECT Employee.id AS `Employee.id`, Employee.name AS `Employee.name` 
-FROM Employee 
-JOIN tree ON tree.id = Employee.managerId) 
-SELECT tree.name AS `tree.name` 
+SELECT id, name
+FROM Employee
+WHERE (Employee.managerId IS NULL) UNION ALL
+SELECT Employee.id AS `Employee.id`, Employee.name AS `Employee.name`
+FROM Employee
+JOIN tree ON tree.id = Employee.managerId)
+SELECT tree.name AS `tree.name`
 FROM tree;
 ```
 
@@ -620,8 +621,8 @@ Multiple syntaxes supported:
 
 ##### SQL
 ```sql file=../usage-sqlite-v7/tests/readme/table-alias.ts region=inline-join-sql
-SELECT name, title 
-FROM User AS `u` 
+SELECT name, title
+FROM User AS `u`
 JOIN Post AS `p` ON p.authorId = u.id;
 ```
 
@@ -640,8 +641,8 @@ Self-joins require aliases to distinguish between the different "instances" of t
 
 ##### SQL
 ```sql file=../usage-sqlite-v7/tests/readme/table-alias.ts region=self-join-sql
-SELECT u1.name AS `user1Name`, u2.name AS `user2Name` 
-FROM User AS `u1` 
+SELECT u1.name AS `user1Name`, u2.name AS `user2Name`
+FROM User AS `u1`
 JOIN User AS `u2` ON u2.id = u1.id;
 ```
 
@@ -656,7 +657,7 @@ You can use the `alias.*` syntax to select all columns from an aliased table:
 
 ##### SQL
 ```sql file=../usage-sqlite-v7/tests/readme/table-alias.ts region=star-single-sql
-SELECT id, email, name, age 
+SELECT id, email, name, age
 FROM User AS `u`;
 ```
 
@@ -670,8 +671,8 @@ With joins:
 
 ##### SQL
 ```sql file=../usage-sqlite-v7/tests/readme/table-alias.ts region=star-join-sql
-SELECT u.id AS `u.id`, u.email AS `u.email`, u.name AS `u.name`, u.age AS `u.age`, p.id AS `p.id`, p.title AS `p.title`, p.content AS `p.content`, p.published AS `p.published`, p.createdAt AS `p.createdAt`, p.authorId AS `p.authorId`, p.lastModifiedById AS `p.lastModifiedById`, p.metadata AS `p.metadata` 
-FROM User AS `u` 
+SELECT u.id AS `u.id`, u.email AS `u.email`, u.name AS `u.name`, u.age AS `u.age`, p.id AS `p.id`, p.title AS `p.title`, p.content AS `p.content`, p.published AS `p.published`, p.createdAt AS `p.createdAt`, p.authorId AS `p.authorId`, p.lastModifiedById AS `p.lastModifiedById`, p.metadata AS `p.metadata`
+FROM User AS `u`
 JOIN Post AS `p` ON p.authorId = u.id;
 ```
 
@@ -713,7 +714,7 @@ Using the defined links (foreign keys) defined in the schema, provides a type-sa
 The resulting SQL will look like:
 
 ```sql file=../usage-sqlite-v7/tests/readme/join-basic.ts region=join-basic-sql
-FROM User 
+FROM User
 JOIN Post ON Post.authorId = User.id;
 ```
 
@@ -752,7 +753,7 @@ Control the SQL join variant via the `joinType` option:
 ```
 
 ```sql file=../usage-sqlite-v7/tests/readme/join-type.ts region=join-type-left-sql
-FROM User 
+FROM User
 LEFT JOIN Post ON Post.authorId = User.id;
 ```
 
@@ -764,7 +765,7 @@ LEFT JOIN Post ON Post.authorId = User.id;
 ```
 
 ```sql file=../usage-sqlite-v7/tests/readme/join-type.ts region=join-type-cross-sql
-FROM User 
+FROM User
 CROSS JOIN Post;
 ```
 
@@ -779,7 +780,7 @@ CROSS JOIN Post;
 ```
 
 ```sql file=../usage-sqlite-v7/tests/readme/join-type.ts region=join-type-with-where-sql
-FROM User 
+FROM User
 LEFT JOIN Post ON Post.authorId = User.id AND Post.published = true;
 ```
 
@@ -793,7 +794,7 @@ Conditions placed on the `ON` clause instead of the top-level `WHERE`:
 ```
 
 ```sql file=../usage-sqlite-v7/tests/readme/join-where.ts region=join-where-sql
-FROM User 
+FROM User
 JOIN Post ON Post.authorId = User.id AND Post.published = true;
 ```
 
@@ -812,7 +813,7 @@ Supports the same MongoDB-inspired operators as `.where()` — `$AND`, `$OR`, `$
 ```
 
 ```sql file=../usage-sqlite-v7/tests/readme/join-where.ts region=join-where-ops-sql
-FROM User 
+FROM User
 JOIN Post ON Post.authorId = User.id AND (Post.published = true AND Post.id > 0);
 ```
 
@@ -833,7 +834,7 @@ Unlike the `.join` command, this will allow you to join on columns that are not 
 The resulting SQL will look like:
 
 ```sql file=../usage-sqlite-v7/tests/readme/join-unsafe.ts region=type-enforced-sql
-FROM User 
+FROM User
 JOIN Post ON Post.title = User.name;
 ```
 
@@ -861,7 +862,7 @@ Unlike the `.joinUnsafeIgnoreType` command, this will allow you to join on colum
 The resulting SQL will look like:
 
 ```sql file=../usage-sqlite-v7/tests/readme/join-unsafe.ts region=ignore-type-sql
-FROM User 
+FROM User
 JOIN Post ON Post.id = User.name;
 ```
 
@@ -886,8 +887,8 @@ Joins through Prisma's implicit or explicit many-to-many junction tables. Automa
 
 ##### SQL
 ```sql file=../usage-sqlite-v7/tests/readme/join-many-to-many.ts region=m2m-basic-sql
-FROM M2M_Post 
-JOIN _M2M_CategoryToM2M_Post ON _M2M_CategoryToM2M_Post.B = M2M_Post.id 
+FROM M2M_Post
+JOIN _M2M_CategoryToM2M_Post ON _M2M_CategoryToM2M_Post.B = M2M_Post.id
 JOIN M2M_Category ON M2M_Category.id = _M2M_CategoryToM2M_Post.A;
 ```
 
@@ -905,8 +906,8 @@ JOIN M2M_Category ON M2M_Category.id = _M2M_CategoryToM2M_Post.A;
 ```
 
 ```sql file=../usage-sqlite-v7/tests/readme/join-many-to-many.ts region=m2m-alias-sql
-FROM M2M_Post 
-JOIN _M2M_CategoryToM2M_Post ON _M2M_CategoryToM2M_Post.B = M2M_Post.id 
+FROM M2M_Post
+JOIN _M2M_CategoryToM2M_Post ON _M2M_CategoryToM2M_Post.B = M2M_Post.id
 JOIN M2M_Category AS `mc` ON mc.id = _M2M_CategoryToM2M_Post.A;
 ```
 
@@ -920,8 +921,8 @@ Use `refName` when a model has multiple M2M relations to the same target:
 ```
 
 ```sql file=../usage-sqlite-v7/tests/readme/join-many-to-many.ts region=m2m-refname-sql
-FROM MMM_Post 
-JOIN _M2M_NC_M1 ON _M2M_NC_M1.B = MMM_Post.id 
+FROM MMM_Post
+JOIN _M2M_NC_M1 ON _M2M_NC_M1.B = MMM_Post.id
 JOIN MMM_Category ON MMM_Category.id = _M2M_NC_M1.A;
 ```
 
@@ -935,8 +936,8 @@ Use `source` to pin the source alias and column when the source table is aliased
 ```
 
 ```sql file=../usage-sqlite-v7/tests/readme/join-many-to-many.ts region=m2m-source-sql
-FROM M2M_Post AS `mp` 
-JOIN _M2M_CategoryToM2M_Post ON _M2M_CategoryToM2M_Post.B = mp.id 
+FROM M2M_Post AS `mp`
+JOIN _M2M_CategoryToM2M_Post ON _M2M_CategoryToM2M_Post.B = mp.id
 JOIN M2M_Category AS `mc` ON mc.id = _M2M_CategoryToM2M_Post.A;
 ```
 
@@ -952,7 +953,7 @@ Alias for `.join` — explicitly emits `INNER JOIN`. Same type-safe FK constrain
 
 ##### SQL
 ```sql file=../../shared-tests/readme/join-inner.ts region=sql
-FROM User 
+FROM User
 INNER JOIN Post ON Post.authorId = User.id;
 ```
 
@@ -966,7 +967,7 @@ Same-type column join, INNER semantics.
 ```
 
 ```sql file=../../shared-tests/readme/join-inner.ts region=type-enforced-sql
-FROM User 
+FROM User
 INNER JOIN Post ON Post.title = User.name;
 ```
 
@@ -980,7 +981,7 @@ Any-column join, INNER semantics.
 ```
 
 ```sql file=../../shared-tests/readme/join-inner.ts region=ignore-type-sql
-FROM User 
+FROM User
 INNER JOIN Post ON Post.id = User.name;
 ```
 
@@ -998,7 +999,7 @@ FK-safe LEFT JOIN. Joined table fields become `T | null` in the result type.
 
 ##### SQL
 ```sql file=../../shared-tests/readme/join-left.ts region=sql
-FROM User 
+FROM User
 LEFT JOIN Post ON Post.authorId = User.id;
 ```
 
@@ -1012,7 +1013,7 @@ Same-type column join, LEFT semantics.
 ```
 
 ```sql file=../../shared-tests/readme/join-left.ts region=type-enforced-sql
-FROM User 
+FROM User
 LEFT JOIN Post ON Post.title = User.name;
 ```
 
@@ -1026,7 +1027,7 @@ Any-column join, LEFT semantics.
 ```
 
 ```sql file=../../shared-tests/readme/join-left.ts region=ignore-type-sql
-FROM User 
+FROM User
 LEFT JOIN Post ON Post.id = User.name;
 ```
 
@@ -1044,7 +1045,7 @@ Produces a cartesian product — no `ON` clause. All dialects supported.
 
 ##### SQL
 ```sql file=../../shared-tests/readme/join-cross.ts region=sql
-FROM User 
+FROM User
 CROSS JOIN Post;
 ```
 
@@ -1058,7 +1059,7 @@ Type-permission variants — still emit `CROSS JOIN` with no `ON` clause (takes 
 ```
 
 ```sql file=../../shared-tests/readme/join-cross.ts region=type-enforced-sql
-FROM User 
+FROM User
 CROSS JOIN Post;
 ```
 
@@ -1276,9 +1277,9 @@ Use `{ $col: "Table.column" }` to compare against another column instead of a li
 ```
 
 ```sql file=../usage-sqlite-v7/tests/readme/where.ts region=col-equality-sql
-SELECT User.id AS `User.id` 
-FROM User 
-JOIN Post ON Post.authorId = User.id 
+SELECT User.id AS `User.id`
+FROM User
+JOIN Post ON Post.authorId = User.id
 WHERE User.id = Post.authorId;
 ```
 
@@ -1291,9 +1292,9 @@ WHERE User.id = Post.authorId;
 ```
 
 ```sql file=../usage-sqlite-v7/tests/readme/where.ts region=col-op-sql
-SELECT User.id AS `User.id` 
-FROM User 
-JOIN Post ON Post.authorId = User.id 
+SELECT User.id AS `User.id`
+FROM User
+JOIN Post ON Post.authorId = User.id
 WHERE User.id > Post.authorId;
 ```
 
@@ -1306,9 +1307,9 @@ WHERE User.id > Post.authorId;
 ```
 
 ```sql file=../usage-sqlite-v7/tests/readme/where.ts region=col-in-sql
-SELECT User.id AS `User.id` 
-FROM User 
-JOIN Post ON Post.authorId = User.id 
+SELECT User.id AS `User.id`
+FROM User
+JOIN Post ON Post.authorId = User.id
 WHERE User.id IN (1, Post.authorId, 3);
 ```
 
@@ -1320,8 +1321,8 @@ WHERE User.id IN (1, Post.authorId, 3);
 ```
 
 ```sql file=../usage-sqlite-v7/tests/readme/where.ts region=col-join-where-sql
-SELECT User.id AS `User.id` 
-FROM User 
+SELECT User.id AS `User.id`
+FROM User
 JOIN Post ON Post.authorId = User.id AND Post.authorId = User.id;
 ```
 
@@ -1335,9 +1336,9 @@ JOIN Post ON Post.authorId = User.id AND Post.authorId = User.id;
 ```
 
 ```sql file=../usage-sqlite-v7/tests/readme/where.ts region=col-having-sql
-SELECT User.id AS `User.id` 
-FROM User 
-JOIN Post ON Post.authorId = User.id 
+SELECT User.id AS `User.id`
+FROM User
+JOIN Post ON Post.authorId = User.id
 GROUP BY User.id HAVING COUNT(Post.id) > User.id;
 ```
 
@@ -1362,9 +1363,9 @@ The value must be in `"Alias.field"` format (must contain a dot). Column names a
 ```
 
 ```sql file=../usage-sqlite-v7/tests/readme/where.ts region=colraw-equality-sql
-SELECT User.id AS `User.id` 
-FROM User 
-JOIN Post ON Post.authorId = User.id 
+SELECT User.id AS `User.id`
+FROM User
+JOIN Post ON Post.authorId = User.id
 WHERE User.id = Post.authorId;
 ```
 
@@ -1377,9 +1378,9 @@ WHERE User.id = Post.authorId;
 ```
 
 ```sql file=../usage-sqlite-v7/tests/readme/where.ts region=colraw-op-sql
-SELECT User.id AS `User.id` 
-FROM User 
-JOIN Post ON Post.authorId = User.id 
+SELECT User.id AS `User.id`
+FROM User
+JOIN Post ON Post.authorId = User.id
 WHERE User.id > Post.authorId;
 ```
 
@@ -1392,9 +1393,9 @@ WHERE User.id > Post.authorId;
 ```
 
 ```sql file=../usage-sqlite-v7/tests/readme/where.ts region=colraw-in-sql
-SELECT User.id AS `User.id` 
-FROM User 
-JOIN Post ON Post.authorId = User.id 
+SELECT User.id AS `User.id`
+FROM User
+JOIN Post ON Post.authorId = User.id
 WHERE User.id IN (1, Post.authorId, 3);
 ```
 
@@ -1406,8 +1407,8 @@ WHERE User.id IN (1, Post.authorId, 3);
 ```
 
 ```sql file=../usage-sqlite-v7/tests/readme/where.ts region=colraw-join-where-sql
-SELECT User.id AS `User.id` 
-FROM User 
+SELECT User.id AS `User.id`
+FROM User
 JOIN Post ON Post.authorId = User.id AND Post.authorId = User.id;
 ```
 
@@ -1421,9 +1422,9 @@ JOIN Post ON Post.authorId = User.id AND Post.authorId = User.id;
 ```
 
 ```sql file=../usage-sqlite-v7/tests/readme/where.ts region=colraw-having-sql
-SELECT User.id AS `User.id` 
-FROM User 
-JOIN Post ON Post.authorId = User.id 
+SELECT User.id AS `User.id`
+FROM User
+JOIN Post ON Post.authorId = User.id
 GROUP BY User.id HAVING COUNT(Post.id) > User.id;
 ```
 
@@ -1444,8 +1445,8 @@ Type narrowing is reflected in all downstream `.select()` calls.
 The resulting SQL will look like:
 
 ```sql file=../usage-sqlite-v7/tests/readme/whereNotNull.ts region=whereNotNull-sql
-FROM User 
-JOIN Post ON Post.authorId = User.id 
+FROM User
+JOIN Post ON Post.authorId = User.id
 WHERE (User.name IS NOT NULL);
 ```
 
@@ -1465,8 +1466,8 @@ Narrows the column's type to exactly `null` and adds an `IS NULL` condition to t
 The resulting SQL will look like:
 
 ```sql file=../usage-sqlite-v7/tests/readme/whereNotNull.ts region=whereIsNull-sql
-FROM User 
-JOIN Post ON Post.authorId = User.id 
+FROM User
+JOIN Post ON Post.authorId = User.id
 WHERE (Post.content IS NULL);
 ```
 
@@ -1481,8 +1482,8 @@ Pass a callback instead of a criteria object to apply SQL functions as condition
 ```
 
 ```sql file=../../shared-tests/readme/where.ts region=fn-upper-like-sql
-SELECT name 
-FROM User 
+SELECT name
+FROM User
 WHERE UPPER(name) LIKE 'John%';
 ```
 
@@ -1503,9 +1504,9 @@ When you want to write a complex `where`, or you just don't want the TypeSafety 
 The resulting SQL will look like:
 
 ```sql file=../usage-sqlite-v7/tests/readme/where.ts region=raw-sql
-FROM User 
-JOIN Post ON Post.authorId = User.id 
-WHERE this is a raw 
+FROM User
+JOIN Post ON Post.authorId = User.id
+WHERE this is a raw
 where statement;
 ```
 
@@ -1526,8 +1527,8 @@ Will allow you to pass a list of columns, that haven been specified from the `.$
 The resulting SQL will look like:
 
 ```sql file=../usage-sqlite-v7/tests/readme/groupby.ts region=basic-sql
-FROM User 
-JOIN Post ON Post.authorId = User.id 
+FROM User
+JOIN Post ON Post.authorId = User.id
 GROUP BY name, Post.content;
 ```
 
@@ -1548,7 +1549,7 @@ Will add the keyword `DISTINCT` after the select.
 The resulting SQL will look like:
 
 ```sql file=../usage-sqlite-v7/tests/readme/select-advanced.ts region=distinct-sql
-SELECT DISTINCT name 
+SELECT DISTINCT name
 FROM User;
 ```
 
@@ -1568,7 +1569,7 @@ This method will explicitly list all the tables from the `$from` and `.join`. So
 The resulting SQL will look like:
 
 ```sql file=../usage-sqlite-v7/tests/readme/select-advanced.ts region=all-single-sql
-SELECT id, email, name, age 
+SELECT id, email, name, age
 FROM User;
 ```
 
@@ -1583,8 +1584,8 @@ FROM User;
 The resulting SQL will look like:
 
 ```sql file=../usage-sqlite-v7/tests/readme/select-advanced.ts region=all-join-sql
-SELECT User.id AS `User.id`, User.email AS `User.email`, User.name AS `User.name`, User.age AS `User.age`, Post.id AS `Post.id`, Post.title AS `Post.title`, Post.content AS `Post.content`, Post.published AS `Post.published`, Post.createdAt AS `Post.createdAt`, Post.authorId AS `Post.authorId`, Post.lastModifiedById AS `Post.lastModifiedById`, Post.metadata AS `Post.metadata` 
-FROM User 
+SELECT User.id AS `User.id`, User.email AS `User.email`, User.name AS `User.name`, User.age AS `User.age`, Post.id AS `Post.id`, Post.title AS `Post.title`, Post.content AS `Post.content`, Post.published AS `Post.published`, Post.createdAt AS `Post.createdAt`, Post.authorId AS `Post.authorId`, Post.lastModifiedById AS `Post.lastModifiedById`, Post.metadata AS `Post.metadata`
+FROM User
 JOIN Post ON Post.authorId = User.id;
 ```
 
@@ -1600,7 +1601,7 @@ Like `.selectAll`, but excludes specific columns. Accepts `Table.column` or bare
 
 ##### SQL
 ```sql file=../usage-sqlite-v7/tests/readme/select-all-omit.ts region=single-omit-sql
-SELECT id, name, age 
+SELECT id, name, age
 FROM User;
 ```
 
@@ -1633,7 +1634,7 @@ You can supply either; `*`, `Table.*` OR `table.field` and then chain them toget
 The resulting SQL will look like:
 
 ```sql file=../usage-sqlite-v7/tests/readme/select-star.ts region=example-sql
-SELECT * 
+SELECT *
 FROM User;
 ```
 
@@ -1647,7 +1648,7 @@ FROM User;
 The resulting SQL will look like:
 
 ```sql file=../usage-sqlite-v7/tests/readme/select-advanced.ts region=table-star-single-sql
-SELECT id, email, name, age 
+SELECT id, email, name, age
 FROM User;
 ```
 
@@ -1663,8 +1664,8 @@ FROM User;
 The resulting SQL will look like:
 
 ```sql file=../usage-sqlite-v7/tests/readme/select-advanced.ts region=table-star-join-sql
-SELECT User.id AS `User.id`, User.email AS `User.email`, User.name AS `User.name`, User.age AS `User.age`, Post.id AS `Post.id`, Post.title AS `Post.title`, Post.content AS `Post.content`, Post.published AS `Post.published`, Post.createdAt AS `Post.createdAt`, Post.authorId AS `Post.authorId`, Post.lastModifiedById AS `Post.lastModifiedById`, Post.metadata AS `Post.metadata` 
-FROM User 
+SELECT User.id AS `User.id`, User.email AS `User.email`, User.name AS `User.name`, User.age AS `User.age`, Post.id AS `Post.id`, Post.title AS `Post.title`, Post.content AS `Post.content`, Post.published AS `Post.published`, Post.createdAt AS `Post.createdAt`, Post.authorId AS `Post.authorId`, Post.lastModifiedById AS `Post.lastModifiedById`, Post.metadata AS `Post.metadata`
+FROM User
 JOIN Post ON Post.authorId = User.id;
 ```
 
@@ -1682,7 +1683,7 @@ JOIN Post ON Post.authorId = User.id;
 The resulting SQL will look like:
 
 ```sql file=../usage-sqlite-v7/tests/readme/select-chained.ts region=example-sql
-SELECT name, email 
+SELECT name, email
 FROM User;
 ```
 
@@ -1698,8 +1699,8 @@ FROM User;
 The resulting SQL will look like:
 
 ```sql file=../usage-sqlite-v7/tests/readme/select-advanced.ts region=join-chained-sql
-SELECT name, title 
-FROM User 
+SELECT name, title
+FROM User
 JOIN Post ON Post.authorId = User.id;
 ```
 
@@ -1726,17 +1727,17 @@ JOIN Post ON Post.authorId = User.id;
 The resulting SQL will look like:
 
 ```sql file=../usage-sqlite-v7/tests/readme/select-column-alias.ts region=basic-sql
-SELECT User.name AS `username` 
+SELECT User.name AS `username`
 FROM User;
 ```
 
 ```sql file=../usage-sqlite-v7/tests/readme/select-column-alias.ts region=multiple-sql
-SELECT User.id AS `userId`, User.email AS `emailAddress` 
+SELECT User.id AS `userId`, User.email AS `emailAddress`
 FROM User;
 ```
 
 ```sql file=../usage-sqlite-v7/tests/readme/select-column-alias.ts region=mixed-sql
-SELECT id, User.name AS `username`, email 
+SELECT id, User.name AS `username`, email
 FROM User;
 ```
 
@@ -1752,8 +1753,8 @@ FROM User;
 The resulting SQL will look like:
 
 ```sql file=../usage-sqlite-v7/tests/readme/select-advanced.ts region=aliases-joins-sql
-SELECT User.name AS `authorName`, Post.title AS `postTitle` 
-FROM User 
+SELECT User.name AS `authorName`, Post.title AS `postTitle`
+FROM User
 JOIN Post ON Post.authorId = User.id;
 ```
 
@@ -1779,9 +1780,9 @@ Pass a single-column query builder directly to `.select()` as a scalar subquery.
 
 ```sql file=../usage-sqlite-v7/tests/readme/select-scalar-subquery.ts region=scalar-subquery-sql
 SELECT name, (
-SELECT COUNT(*) AS `cnt` 
-FROM Post 
-WHERE authorId = 1) AS `postCount` 
+SELECT COUNT(*) AS `cnt`
+FROM Post
+WHERE authorId = 1) AS `postCount`
 FROM User;
 ```
 
@@ -1802,9 +1803,9 @@ FROM User;
 
 ```sql file=../usage-sqlite-v7/tests/readme/select-scalar-subquery.ts region=scalar-subquery-where-sql
 SELECT name, (
-SELECT COUNT(*) AS `cnt` 
-FROM Post 
-WHERE published = true) AS `publishedCount` 
+SELECT COUNT(*) AS `cnt`
+FROM Post
+WHERE published = true) AS `publishedCount`
 FROM User;
 ```
 
@@ -1826,9 +1827,9 @@ Subquery builders also work as arguments to select functions like `coalesce()`:
 
 ```sql file=../usage-sqlite-v7/tests/readme/select-scalar-subquery.ts region=scalar-subquery-coalesce-sql
 SELECT COALESCE((
-SELECT title 
-FROM Post 
-WHERE authorId = 1), User.name) AS `label` 
+SELECT title
+FROM Post
+WHERE authorId = 1), User.name) AS `label`
 FROM User;
 ```
 
@@ -1851,9 +1852,9 @@ Use `from()` inside a `.select()` callback to build a correlated subquery that r
 
 ```sql file=../usage-sqlite-v7/tests/readme/select-scalar-subquery.ts region=correlated-subquery-from-sql
 SELECT name, (
-SELECT COUNT(*) AS `cnt` 
-FROM Post 
-WHERE Post.authorId = User.id) AS `postCount` 
+SELECT COUNT(*) AS `cnt`
+FROM Post
+WHERE Post.authorId = User.id) AS `postCount`
 FROM User;
 ```
 
@@ -1876,9 +1877,9 @@ FROM User;
 
 ```sql file=../usage-sqlite-v7/tests/readme/select-scalar-subquery.ts region=correlated-subquery-alias-sql
 SELECT name, (
-SELECT title 
-FROM Post AS `p` 
-WHERE p.authorId = User.id) AS `latestTitle` 
+SELECT title
+FROM Post AS `p`
+WHERE p.authorId = User.id) AS `latestTitle`
 FROM User;
 ```
 
@@ -1902,9 +1903,9 @@ FROM User;
 ```
 
 ```sql file=../../shared-tests/readme/having.ts region=with-groupby-sql
-SELECT email 
-FROM User 
-JOIN Post ON Post.authorId = User.id 
+SELECT email
+FROM User
+JOIN Post ON Post.authorId = User.id
 GROUP BY name, Post.content HAVING User.name LIKE 'bob%';
 ```
 
@@ -1923,9 +1924,9 @@ Pass a callback returning `Array<[SQLExpr<T>, condition]>` pairs. The callback r
 ```
 
 ```sql file=../../shared-tests/readme/having.ts region=agg-fn-tuple-countall-sql
-SELECT name 
-FROM User 
-JOIN Post ON Post.authorId = User.id 
+SELECT name
+FROM User
+JOIN Post ON Post.authorId = User.id
 GROUP BY User.name HAVING COUNT(*) > 1;
 ```
 
@@ -1940,9 +1941,9 @@ GROUP BY User.name HAVING COUNT(*) > 1;
 ```
 
 ```sql file=../../shared-tests/readme/having.ts region=agg-fn-tuple-count-sql
-SELECT name 
-FROM User 
-JOIN Post ON Post.authorId = User.id 
+SELECT name
+FROM User
+JOIN Post ON Post.authorId = User.id
 GROUP BY User.name HAVING COUNT(User.id) >= 2;
 ```
 
@@ -1957,9 +1958,9 @@ GROUP BY User.name HAVING COUNT(User.id) >= 2;
 ```
 
 ```sql file=../../shared-tests/readme/having.ts region=agg-fn-string-upper-sql
-SELECT name 
-FROM User 
-JOIN Post ON Post.authorId = User.id 
+SELECT name
+FROM User
+JOIN Post ON Post.authorId = User.id
 GROUP BY User.name HAVING UPPER(User.name) LIKE 'John%';
 ```
 
@@ -1980,8 +1981,8 @@ Multiple pairs in one `.having()` call are AND-ed together. `.having()` can also
 ##### SQL
 
 ```sql file=../usage-sqlite-v7/tests/readme/orderby.ts region=basic-sql
-FROM User 
-JOIN Post ON Post.authorId = User.id 
+FROM User
+JOIN Post ON Post.authorId = User.id
 ORDER BY name, Post.content DESC;
 ```
 
@@ -2000,8 +2001,8 @@ ORDER BY name, Post.content DESC;
 ##### SQL
 
 ```sql file=../usage-sqlite-v7/tests/readme/pagination.ts region=limit-sql
-FROM User 
-JOIN Post ON Post.authorId = User.id 
+FROM User
+JOIN Post ON Post.authorId = User.id
 LIMIT 1;
 ```
 
@@ -2020,9 +2021,9 @@ LIMIT 1;
 ##### SQL
 
 ```sql file=../usage-sqlite-v7/tests/readme/pagination.ts region=offset-sql
-FROM User 
-JOIN Post ON Post.authorId = User.id 
-LIMIT 1 
+FROM User
+JOIN Post ON Post.authorId = User.id
+LIMIT 1
 OFFSET 1;
 ```
 
@@ -2061,12 +2062,12 @@ qualified, so the output column is literally called `Post.id` and must be ordere
 ##### SQL
 
 ```sql file=../usage-sqlite-v7/tests/readme/union.ts region=union-sql
-SELECT name 
-FROM Employee 
-WHERE (Employee.managerId IS NULL) UNION 
-SELECT name 
-FROM Employee 
-ORDER BY name 
+SELECT name
+FROM Employee
+WHERE (Employee.managerId IS NULL) UNION
+SELECT name
+FROM Employee
+ORDER BY name
 LIMIT 10;
 ```
 
@@ -2083,11 +2084,11 @@ LIMIT 10;
 ##### SQL
 
 ```sql file=../usage-sqlite-v7/tests/readme/union.ts region=union-all-sql
-SELECT name 
-FROM Employee 
-WHERE (Employee.managerId IS NULL) UNION ALL 
-SELECT name 
-FROM Employee 
+SELECT name
+FROM Employee
+WHERE (Employee.managerId IS NULL) UNION ALL
+SELECT name
+FROM Employee
 WHERE (Employee.managerId IS NOT NULL);
 ```
 
@@ -2109,13 +2110,13 @@ compound flattens left-to-right into a single statement rather than nesting in t
 ##### SQL
 
 ```sql file=../usage-sqlite-v7/tests/readme/union.ts region=union-nested-sql
-SELECT name 
-FROM Employee 
-WHERE (Employee.managerId IS NULL) UNION 
-SELECT name 
-FROM Employee 
-WHERE (Employee.managerId IS NOT NULL) UNION ALL 
-SELECT name 
+SELECT name
+FROM Employee
+WHERE (Employee.managerId IS NULL) UNION
+SELECT name
+FROM Employee
+WHERE (Employee.managerId IS NOT NULL) UNION ALL
+SELECT name
 FROM Employee;
 ```
 
@@ -2147,7 +2148,7 @@ The most common aggregate. Always produces `COUNT(*)`.
 
 ##### SQL
 ```sql file=../usage-sqlite-v7/tests/readme/select-fns.ts region=count-all-sql
-SELECT COUNT(*) AS `total` 
+SELECT COUNT(*) AS `total`
 FROM User;
 ```
 
@@ -2318,12 +2319,69 @@ GROUP BY User.name;
 
 ---
 
+### Aggregate clauses — `.orderBy()` / `.filter()`
+
+List-building aggregates return an expression carrying two optional aggregate-local clauses. Both return a new expression, so chains are immutable.
+
+| Method | Effect | Chaining |
+|---|---|---|
+| `.orderBy(col, dir?)` | orders rows *inside* the aggregate | successive calls append terms, left to right |
+| `.filter(criteria)` | restricts which rows the aggregate sees | successive calls `AND` their conditions |
+
+Available on `groupConcat` (MySQL, SQLite) and on `stringAgg`, `arrayAgg`, `jsonAgg`, `jsonObjectAgg` (PostgreSQL). Deliberately **not** available on MySQL `jsonArrayAgg`/`jsonObjectAgg`: MySQL supports neither clause for them and no rewrite is faithful, so calling `.orderBy()`/`.filter()` there is a compile error.
+
+The aggregate's own `ORDER BY` stays separate from the query-level one:
+
+```typescript file=../usage-sqlite-v7/tests/dialect/sqlite/select-fn-agg-options.spec.ts region=agg-order-by
+        prisma.$from("User")
+          .innerJoin("Post", "authorId", "User.id")
+          .groupBy([ "User.id" ])
+          .select(({ groupConcat }) => groupConcat("Post.title", ",").orderBy("Post.title", "DESC"), "titles")
+          .orderBy([ "User.id DESC" ])
+```
+
+```sql
+SELECT GROUP_CONCAT(Post.title, ',' ORDER BY Post.title DESC) AS `titles`
+FROM User INNER JOIN Post ON Post.authorId = User.id
+GROUP BY User.id ORDER BY User.id DESC;
+```
+
+Two `.filter()` calls compose with `AND` rather than the last one winning:
+
+```typescript file=../usage-sqlite-v7/tests/dialect/sqlite/select-fn-agg-options.spec.ts region=agg-filter-chained
+        prisma.$from("User")
+          .innerJoin("Post", "authorId", "User.id")
+          .groupBy([ "User.id" ])
+          .select(({ groupConcat }) => groupConcat("Post.title", ",")
+            .filter({ "Post.id": { op: ">", value: 1 } })
+            .filter({ "Post.id": { op: "<", value: 3 } }), "titles")
+          .orderBy([ "User.id ASC" ])
+```
+
+```sql
+SELECT GROUP_CONCAT(Post.title, ',') FILTER (WHERE (Post.id > 1) AND (Post.id < 3)) AS `titles`
+FROM User INNER JOIN Post ON Post.authorId = User.id
+GROUP BY User.id ORDER BY User.id ASC;
+```
+
+`.filter()` compiles to a native `FILTER (WHERE …)` clause on PostgreSQL and SQLite. MySQL has no `FILTER` clause, so it compiles to `GROUP_CONCAT(CASE WHEN <cond> THEN <col> END)` — an exact equivalent, because `GROUP_CONCAT` ignores NULL and so the rows the condition excludes drop out of the result.
+
+Three combinations fail in the library rather than at the database:
+
+- Criteria that compile to an empty condition, such as `.filter({})`, throw `filter: criteria compiled to an empty condition — pass at least one predicate`. An aggregate the caller believes is restricted must not silently cover every row.
+- On PostgreSQL, a `DISTINCT` aggregate may only `ORDER BY` its own argument; any other column throws. PostgreSQL itself rejects that combination with `42P10`, while MySQL and SQLite accept it.
+- On SQLite, `groupConcat(distinct(col), sep)` throws — SQLite accepts no separator alongside `DISTINCT`.
+
+**SQLite engine floors**: aggregate-local `ORDER BY` requires SQLite ≥ 3.44.0 and `FILTER (WHERE …)` requires ≥ 3.30.0. An older bundled driver rejects the emitted SQL even though it type-checks.
+
+---
+
 ### MySQL-specific
 
 | Function | SQL | Returns |
 |---|---|---|
 | `distinct(col)` | `DISTINCT col` | `ColType` (use inside `avg`, `sum`, `count`, `groupConcat`) |
-| `groupConcat(col, sep?)` | `GROUP_CONCAT(col SEPARATOR sep)` | `string` |
+| `groupConcat(col, sep?)` | `GROUP_CONCAT(col SEPARATOR sep)` | `string` — supports [`.orderBy()`/`.filter()`](#aggregate-clauses--orderby--filter) |
 | `bitAnd(col)` | `BIT_AND(col)` | `number` |
 | `bitOr(col)` | `BIT_OR(col)` | `number` |
 | `bitXor(col)` | `BIT_XOR(col)` | `number` |
@@ -2331,8 +2389,8 @@ GROUP BY User.name;
 | `stddevSamp(col)` | `STDDEV_SAMP(col)` | `number` |
 | `variance(col)` | `VARIANCE(col)` | `number` |
 | `varSamp(col)` | `VAR_SAMP(col)` | `number` |
-| `jsonArrayAgg(col)` | `JSON_ARRAYAGG(col)` | `JSONValue` |
-| `jsonObjectAgg(key, val)` | `JSON_OBJECTAGG(key, val)` | `JSONValue` |
+| `jsonArrayAgg(col)` | `JSON_ARRAYAGG(col)` | `JSONValue` — no aggregate clauses (MySQL supports neither) |
+| `jsonObjectAgg(key, val)` | `JSON_OBJECTAGG(key, val)` | `JSONValue` — no aggregate clauses (MySQL supports neither) |
 | `concat(...cols)` | `CONCAT(a, b, ...)` | `string` |
 | `substring(col, start, len?)` | `SUBSTRING(col, start, len)` | `string` |
 | `left(col, n)` | `LEFT(col, n)` | `string` |
@@ -2379,18 +2437,18 @@ GROUP BY User.name;
 | `greatest(...args)` | `GREATEST(a, b, ...)` | `T` |
 | `least(...args)` | `LEAST(a, b, ...)` | `T` |
 | `distinct(col)` | `DISTINCT col` | `ColType` (use inside `avg`, `sum`, `count`, `stringAgg`, `arrayAgg`) |
-| `stringAgg(col, sep)` | `STRING_AGG(col, sep)` | `string` |
-| `arrayAgg(col)` | `ARRAY_AGG(col)` | `unknown[]` |
+| `stringAgg(col, sep)` | `STRING_AGG(col, sep)` | `string` — supports [`.orderBy()`/`.filter()`](#aggregate-clauses--orderby--filter) |
+| `arrayAgg(col)` | `ARRAY_AGG(col)` | `unknown[]` — supports [`.orderBy()`/`.filter()`](#aggregate-clauses--orderby--filter) |
 | `stddevPop(col)` | `STDDEV_POP(col)` | `number` |
 | `stddevSamp(col)` | `STDDEV_SAMP(col)` | `number` |
 | `varPop(col)` | `VAR_POP(col)` | `number` |
 | `varSamp(col)` | `VAR_SAMP(col)` | `number` |
 | `boolAnd(col)` | `BOOL_AND(col)` | `boolean` |
 | `boolOr(col)` | `BOOL_OR(col)` | `boolean` |
-| `jsonAgg(col)` | `JSON_AGG(col)` | `JSONValue[]` |
+| `jsonAgg(col)` | `JSON_AGG(col)` | `JSONValue[]` — supports [`.orderBy()`/`.filter()`](#aggregate-clauses--orderby--filter) |
 | `bitAnd(col)` | `BIT_AND(col)` | `number` |
 | `bitOr(col)` | `BIT_OR(col)` | `number` |
-| `jsonObjectAgg(key, val)` | `JSON_OBJECT_AGG(key, val)` | `JSONValue` |
+| `jsonObjectAgg(key, val)` | `JSON_OBJECT_AGG(key, val)` | `JSONValue` — supports [`.orderBy()`/`.filter()`](#aggregate-clauses--orderby--filter) |
 | `concat(...cols)` | `CONCAT(a, b, ...)` | `string` |
 | `substring(col, start, len?)` | `SUBSTRING(col, start, len)` | `string` |
 | `left(col, n)` | `LEFT(col, n)` | `string` |
@@ -2431,7 +2489,7 @@ GROUP BY User.name;
 | `iif(cond, trueVal, falseVal)` | `IIF(cond, a, b)` | `T` |
 | `ifNull(col, fallback)` | `IFNULL(col, fallback)` | `NonNullable<T>` |
 | `distinct(col)` | `DISTINCT col` | `ColType` (use inside `avg`, `sum`, `count`, `groupConcat`; sep with ≥ 3.44) |
-| `groupConcat(col, sep?)` | `GROUP_CONCAT(col, sep)` | `string` |
+| `groupConcat(col, sep?)` | `GROUP_CONCAT(col, sep)` | `string` — supports [`.orderBy()`/`.filter()`](#aggregate-clauses--orderby--filter) (ORDER BY needs ≥ 3.44, FILTER ≥ 3.30) |
 | `total(col)` | `TOTAL(col)` | `number` |
 | `concat(...cols)` | `a \|\| b \|\| ...` | `string` |
 | `substr(col, start, len?)` | `SUBSTR(col, start, len)` | `string` |

@@ -243,7 +243,7 @@ describe("groupConcat nullability propagation (SQLite)", () => {
       prisma.$from("User").select(({ groupConcat, distinct }) => groupConcat(distinct("User.age")), "v");
     });
 
-    it("groupConcat(distinct(col), sep) should be a type error + runtime guard", () => {
+    it("groupConcat(distinct(col), sep) is a type error + runtime guard", () => {
       assert.throws(() => prisma.$from("User").innerJoin("Post", "authorId", "User.id")
         .groupBy([ "User.id" ])
       // @ts-expect-error — distinct overload has no sep param; DISTINCT_BRAND excludes overload 3

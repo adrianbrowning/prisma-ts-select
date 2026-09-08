@@ -97,6 +97,33 @@ void describe("Generator dialect replacement", () => {
   });
 });
 
+void describe("Generator aggregate-expr output", () => {
+  // Every provider needs dialects/aggregate-expr.{js,d.ts}: the aggregate fluent API
+  // (.orderBy()/.filter()) lives there, and the dialect files import createAggExpr from it.
+  const pkgs = [ "usage-sqlite-v7", "usage-mysql-v7", "usage-pg-v7" ];
+
+  function readDialectFile(pkg: string, file: string) {
+    return fs.readFileSync(
+      path.join(__dirname, `../../${pkg}/generated/prisma-ts-select/dialects/${file}`),
+      "utf-8"
+    );
+  }
+
+  void test("should emit dialects/aggregate-expr.js for every provider", () => {
+    for (const pkg of pkgs) {
+      assert.strictEqual(readDialectFile(pkg, "aggregate-expr.js").includes("createAggExpr"), true,
+        `${pkg} dialects/aggregate-expr.js should export createAggExpr`);
+    }
+  });
+
+  void test("should emit dialects/aggregate-expr.d.ts for every provider", () => {
+    for (const pkg of pkgs) {
+      assert.strictEqual(readDialectFile(pkg, "aggregate-expr.d.ts").includes("AggregateExpr"), true,
+        `${pkg} dialects/aggregate-expr.d.ts should declare AggregateExpr`);
+    }
+  });
+});
+
 void describe("Generator M2MMap output", () => {
   function readExtendDts(pkg: string) {
     return fs.readFileSync(

@@ -19,7 +19,8 @@ describe("$union / $unionAll", () => {
 
   it("should join two arms with UNION", () => {
     const a = prisma.$from("Employee").select("name");
-    const b = prisma.$from("Employee").whereIsNull("Employee.managerId").select("name");
+    const b = prisma.$from("Employee").whereIsNull("Employee.managerId")
+      .select("name");
     const [ aSQL, bSQL ] = [ body(a), body(b) ];
 
     expectSQL(prisma.$union(a, b).getSQL(), `${aSQL} UNION ${bSQL};`);
@@ -27,15 +28,18 @@ describe("$union / $unionAll", () => {
 
   it("should join two arms with UNION ALL", () => {
     const a = prisma.$from("Employee").select("name");
-    const b = prisma.$from("Employee").whereIsNull("Employee.managerId").select("name");
+    const b = prisma.$from("Employee").whereIsNull("Employee.managerId")
+      .select("name");
     const [ aSQL, bSQL ] = [ body(a), body(b) ];
 
     expectSQL(prisma.$unionAll(a, b).getSQL(), `${aSQL} UNION ALL ${bSQL};`);
   });
 
   it("should keep three arms in argument order", () => {
-    const a = prisma.$from("Employee").whereIsNull("Employee.managerId").select("name");
-    const b = prisma.$from("Employee").where({ id: { op: ">", value: 1 } }).select("name");
+    const a = prisma.$from("Employee").whereIsNull("Employee.managerId")
+      .select("name");
+    const b = prisma.$from("Employee").where({ id: { op: ">", value: 1 } })
+      .select("name");
     const c = prisma.$from("Employee").select("name");
     const [ aSQL, bSQL, cSQL ] = [ body(a), body(b), body(c) ];
 
@@ -54,7 +58,10 @@ describe("$union / $unionAll", () => {
     const [ aSQL, bSQL ] = [ body(a), body(b) ];
 
     expectSQL(
-      prisma.$unionAll(a, b).orderBy([ "name" ]).limit(2).offset(1).getSQL(),
+      prisma.$unionAll(a, b).orderBy([ "name" ])
+        .limit(2)
+        .offset(1)
+        .getSQL(),
       `${aSQL} UNION ALL ${bSQL} ORDER BY ${outCol("name")} LIMIT 2 OFFSET 1;`
     );
   });
@@ -65,19 +72,24 @@ describe("$union / $unionAll", () => {
     const [ aSQL, bSQL ] = [ body(a), body(b) ];
 
     expectSQL(
-      prisma.$union(a, b).limit(2).offset(1).getSQL(),
+      prisma.$union(a, b).limit(2)
+        .offset(1)
+        .getSQL(),
       `${aSQL} UNION ${bSQL} LIMIT 2 OFFSET 1;`
     );
     expectSQL(
-      prisma.$union(a, b).offset(1).getSQL(),
+      prisma.$union(a, b).offset(1)
+        .getSQL(),
       `${aSQL} UNION ${bSQL} OFFSET 1;`
     );
   });
 
   it("should type the result row from the first arm's projection", () => {
     const _query = prisma.$union(
-      prisma.$from("Employee").select("id").select("name"),
-      prisma.$from("Employee").select("id").select("name")
+      prisma.$from("Employee").select("id")
+        .select("name"),
+      prisma.$from("Employee").select("id")
+        .select("name")
     );
 
     type TResult = Awaited<ReturnType<typeof _query.run>>;
@@ -85,18 +97,22 @@ describe("$union / $unionAll", () => {
   });
 
   it("should reject arms whose projections are incompatible", () => {
-    const left = prisma.$from("Employee").select("id").select("name");
+    const left = prisma.$from("Employee").select("id")
+      .select("name");
 
     prisma.$union(
       left,
       // @ts-expect-error extra column
-      prisma.$from("Employee").select("id").select("name").select("managerId")
+      prisma.$from("Employee").select("id")
+        .select("name")
+        .select("managerId")
     );
 
     prisma.$union(
       left,
       // @ts-expect-error `id` is a string here, a number in `left`
-      prisma.$from("Employee").select("name", "id").select("name")
+      prisma.$from("Employee").select("name", "id")
+        .select("name")
     );
 
     prisma.$union(
@@ -114,13 +130,15 @@ describe("$union / $unionAll", () => {
     assert.throws(() => prisma.$union(
       left,
       // @ts-expect-error arm carries its own ORDER BY
-      prisma.$from("Employee").select("name").orderBy([ "name" ])
+      prisma.$from("Employee").select("name")
+        .orderBy([ "name" ])
     ), /cannot carry its own ORDER BY \/ LIMIT \/ OFFSET/);
 
     assert.throws(() => prisma.$union(
       left,
       // @ts-expect-error arm carries its own LIMIT
-      prisma.$from("Employee").select("name").limit(1)
+      prisma.$from("Employee").select("name")
+        .limit(1)
     ), /cannot carry its own ORDER BY \/ LIMIT \/ OFFSET/);
   });
 
@@ -128,8 +146,10 @@ describe("$union / $unionAll", () => {
     // UNION is positional, but the type check compares key *sets* — a same-arity reordering
     // type-checks and would return wrong-typed values.
     assert.throws(() => prisma.$union(
-      prisma.$from("Employee").select("id").select("name"),
-      prisma.$from("Employee").select("name").select("id")
+      prisma.$from("Employee").select("id")
+        .select("name"),
+      prisma.$from("Employee").select("name")
+        .select("id")
     ), /\[name, id\] must match the first arm's columns \[id, name\]/);
   });
 
@@ -152,7 +172,8 @@ describe("$union / $unionAll", () => {
   });
 
   it("should keep an arm's DISTINCT inside that arm", () => {
-    const a = prisma.$from("Employee").selectDistinct().select("name");
+    const a = prisma.$from("Employee").selectDistinct()
+      .select("name");
     const b = prisma.$from("Employee").select("name");
     const [ aSQL, bSQL ] = [ body(a), body(b) ];
 
@@ -164,8 +185,10 @@ describe("$union / $unionAll", () => {
     // SQL compound operators are equal-precedence and left-associative, so a left-nested
     // compound needs no parentheses — which SQLite forbids on arms anyway.
     const a = prisma.$from("Employee").select("name");
-    const b = prisma.$from("Employee").whereIsNull("Employee.managerId").select("name");
-    const c = prisma.$from("Employee").where({ id: { op: ">", value: 1 } }).select("name");
+    const b = prisma.$from("Employee").whereIsNull("Employee.managerId")
+      .select("name");
+    const c = prisma.$from("Employee").where({ id: { op: ">", value: 1 } })
+      .select("name");
     const [ aSQL, bSQL, cSQL ] = [ body(a), body(b), body(c) ];
 
     expectSQL(
@@ -177,7 +200,8 @@ describe("$union / $unionAll", () => {
   it("should hoist an arm's CTE onto the compound", () => {
     // A `WITH ... AS (...)` prefix inside a compound arm is invalid SQL everywhere.
     const sql = prisma.$unionAll(
-      prisma.$with("roots", prisma.$from("Employee").whereIsNull("Employee.managerId").select("name"))
+      prisma.$with("roots", prisma.$from("Employee").whereIsNull("Employee.managerId")
+        .select("name"))
         .from("roots")
         .select("roots.name"),
       prisma.$from("Employee").select("name")
@@ -199,8 +223,10 @@ describe("$union / $unionAll", () => {
 
   it("should return rows from every arm", async () => {
     const rows = await prisma.$unionAll(
-      prisma.$from("Employee").whereIsNull("Employee.managerId").select("name"),
-      prisma.$from("Employee").whereNotNull("Employee.managerId").select("name")
+      prisma.$from("Employee").whereIsNull("Employee.managerId")
+        .select("name"),
+      prisma.$from("Employee").whereNotNull("Employee.managerId")
+        .select("name")
     ).run();
 
     assert.deepEqual(
@@ -225,7 +251,8 @@ describe("$union / $unionAll", () => {
       // `"Post"."id"` is a hard error on PostgreSQL and MySQL: after a compound the tables are
       // gone, and the output column is literally named `Post.id`.
       assert.ok(
-        createQuery().getSQL().endsWith(`ORDER BY ${outCol("Post.id")};`),
+        createQuery().getSQL()
+          .endsWith(`ORDER BY ${outCol("Post.id")};`),
         createQuery().getSQL()
       );
     });
