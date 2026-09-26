@@ -149,7 +149,7 @@ On PostgreSQL the column side is always cast to `jsonb`. On a `jsonb` column the
 - Rendering: SQLite `(col -> ?)`, MySQL `JSON_EXTRACT(col, ?)`, PostgreSQL `jsonb_path_query_first(CAST(col AS jsonb), CAST($n AS jsonpath), '{}', true)`.
 - Normalization. SQLite `->` always returns JSON text: `'{"b":1}'`, `'"x"'`, `'true'`, or `'null'` for JSON null, and SQL NULL when the path is missing. The `jsonGet` expression carries a runtime result decoder, and `run()` applies it to the expression's output column (by alias). On SQLite the decoder is `JSON.parse` for non-NULL values. On MySQL and PostgreSQL Prisma has already decoded the value and the decoder does nothing. Decoding applies only when `jsonGet` is a top-level selected expression. Nested inside another function, the dialect's native SQL type applies.
 - Numbers decode as IEEE-754 doubles on all dialects, so integers above 2^53 lose precision. Store exact large integers as JSON strings.
-- The existing `jsonExtract` helpers are not changed by this ADR. Their SQLite typing mismatch is tracked in #214.
+- The existing `jsonExtract` helpers are not changed by this ADR. #214 later narrowed the SQLite result type to `string | number | bigint | null`, which is what SQLite returns.
 
 ### 7. Path existence
 
@@ -194,7 +194,7 @@ Legend: **supported** means the dialect has a native equivalent. **translated** 
 | JSON column-to-column comparison | excluded | excluded | excluded | — |
 | JSON criteria in `having`, `joinWhere`, `ON` | excluded | excluded | excluded | — |
 | Wildcards, filters, negative index, `last` in paths | excluded | excluded | excluded | — |
-| Native-path `jsonExtract` (select) | exists, outside this contract | exists, outside this contract | exists, outside this contract | today's helpers: native path strings inlined with `esc()`, not parameter-safe, not portable; SQLite typing tracked in #214 |
+| Native-path `jsonExtract` (select) | exists, outside this contract | exists, outside this contract | exists, outside this contract | today's helpers: native path strings inlined with `esc()`, not parameter-safe, not portable; SQLite result typed as SQL values (#214) |
 
 An excluded operation can only enter the portable API through a new ADR that defines its cross-dialect contract.
 

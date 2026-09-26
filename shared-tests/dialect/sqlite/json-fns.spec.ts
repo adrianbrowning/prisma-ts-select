@@ -3,6 +3,8 @@ import { describe, it } from "node:test";
 import { prisma } from "#client";
 import { dialect } from "#dialect";
 import { expectSQL } from "../../test-utils.ts";
+import { typeCheck } from "../../utils.ts";
+import type { Equal, Expect } from "../../utils.ts";
 
 describe("SQLite JSON scalar fns", () => {
   describe("jsonExtract(col, path)", () => {
@@ -85,6 +87,47 @@ describe("SQLite JSON scalar fns", () => {
       assert.ok(rows.some(r => r.firstTag === "prisma"), "expected $.tags[0] to return first tag");
       // Posts 2 & 3 have null metadata — expect null
       assert.ok(rows.some(r => r.firstTag === null), "expected null for posts with null metadata");
+    });
+  });
+
+  // SQLite json_extract returns SQL values, not decoded JSON: objects/arrays as JSON text,
+  // integers (and JSON booleans) as INTEGER → bigint, reals as number, JSON null / missing path as NULL.
+  describe("jsonExtract — SQLite result types", () => {
+    it("returns an array value as JSON text", async () => {
+      const rows = await prisma.$from("Post")
+        .where({ id: 1 })
+        .select(({ jsonExtract }) => jsonExtract("Post.metadata", "$.tags"), "tags")
+        .run();
+      typeCheck({} as Expect<Equal<typeof rows, Array<{ tags: string | number | bigint | null; }>>>);
+      assert.deepStrictEqual(rows, [{ tags: "[\"prisma\",\"ts\"]" }]);
+    });
+
+    const doc = JSON.stringify({ obj: { k: 1 }, int: 7, real: 1.5, yes: true, no: false, nil: null });
+    const cases: Array<[path: string, expected: string | number | bigint | null]> = [
+      [ "$.obj", "{\"k\":1}" ],
+      [ "$.int", 7n ],
+      [ "$.real", 1.5 ],
+      [ "$.yes", 1n ],
+      [ "$.no", 0n ],
+      [ "$.nil", null ],
+      [ "$.missing", null ],
+    ];
+    for (const [ path, expected ] of cases) {
+      it(`returns ${path} as ${typeof expected === "bigint" ? `${expected}n` : JSON.stringify(expected)}`, async () => {
+        const rows = await prisma.$from("Post")
+          .where({ id: 1 })
+          .select(({ jsonExtract, lit }) => jsonExtract(lit(doc), path), "v")
+          .run();
+        assert.deepStrictEqual(rows, [{ v: expected }]);
+      });
+    }
+
+    it("extracts from the JSON text of an inner jsonExtract", async () => {
+      const rows = await prisma.$from("Post")
+        .where({ id: 1 })
+        .select(({ jsonExtract }) => jsonExtract(jsonExtract("Post.metadata", "$.tags"), "$[0]"), "firstTag")
+        .run();
+      assert.deepStrictEqual(rows, [{ firstTag: "prisma" }]);
     });
   });
 

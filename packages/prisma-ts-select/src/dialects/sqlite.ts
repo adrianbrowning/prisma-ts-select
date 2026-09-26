@@ -22,6 +22,13 @@ type SqliteCastTypeMap = { INTEGER: bigint; TEXT: string; REAL: number; NUMERIC:
 
 const SQLITE_CAST_TYPES = new Set<string>([ "INTEGER", "TEXT", "REAL", "NUMERIC", "BLOB" ]);
 
+/**
+ * What SQLite's json_extract() returns: SQL values, not decoded JSON.
+ * Objects/arrays → JSON text (string), integers and JSON booleans → INTEGER (bigint),
+ * reals → number, JSON null and a missing path → NULL.
+ */
+type SqliteJsonExtractResult = string | number | bigint | null;
+
 const dateArg = (col: string | SQLExpr<Date>, quoteFn: (ref: string) => string): string => {
   if (typeof col !== "string") return col.sql;
   const ref = quoteFn(col);
@@ -126,7 +133,9 @@ export const sqliteContextFns = <TColEntries extends [string, unknown] = never, 
   log2:  (x: FilterCols<TColEntries, number> | SQLExpr<number>): SQLExpr<number> => sqlExpr(`LOG2(${resolveArg(x, quoteFn)})`),
   log10: (x: FilterCols<TColEntries, number> | SQLExpr<number>): SQLExpr<number> => sqlExpr(`LOG10(${resolveArg(x, quoteFn)})`),
   // ── JSON scalar fns ───────────────────────────────────────────────────────
-  jsonExtract: (col: FilterJsonCols<TColEntries> | SQLExpr<JSONValue>, path: string): SQLExpr<JSONValue> =>
+  // Accepts its own result so nested extraction keeps type-checking. SQLite reads an inner object/array (JSON text),
+  // number, bigint or NULL as JSON; an inner plain-string result is not JSON text and makes the outer call error.
+  jsonExtract: (col: FilterJsonCols<TColEntries> | SQLExpr<JSONValue | SqliteJsonExtractResult>, path: string): SQLExpr<SqliteJsonExtractResult> =>
     sqlExpr(`json_extract(${resolveArg(col, quoteFn)}, '${esc(path)}')`),
   jsonArray: (...args: [ColName<TColEntries> | SQLExpr<unknown>, ...Array<ColName<TColEntries> | SQLExpr<unknown>>]): SQLExpr<Array<JSONValue>> =>
     sqlExpr(`json_array(${args.map(a => resolveArg(a, quoteFn)).join(", ")})`),
