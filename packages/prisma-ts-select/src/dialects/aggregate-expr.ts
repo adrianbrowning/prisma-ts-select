@@ -1,5 +1,5 @@
 import type { SQLExpr } from "../sql-expr.ts";
-import type { ColName } from "./shared.ts";
+import type { ValidateAggregateColumn } from "./shared.ts";
 
 /**
  * A SQL aggregate expression carrying aggregate-local clauses.
@@ -8,7 +8,10 @@ import type { ColName } from "./shared.ts";
  * Both return a new expression — instances are immutable.
  */
 export type AggregateExpr<T, TColEntries extends [string, unknown], TCriteria extends object> = SQLExpr<T> & {
-  orderBy: (col: ColName<TColEntries>, dir?: "ASC" | "DESC") => AggregateExpr<T, TColEntries, TCriteria>;
+  orderBy: <const C extends string>(
+    col: C extends ValidateAggregateColumn<TColEntries, C> ? C : ValidateAggregateColumn<TColEntries, C>,
+    dir?: "ASC" | "DESC"
+  ) => AggregateExpr<T, TColEntries, TCriteria>;
   filter: (criteria: TCriteria) => AggregateExpr<T, TColEntries, TCriteria>;
 };
 
