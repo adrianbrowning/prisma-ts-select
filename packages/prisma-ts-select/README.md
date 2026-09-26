@@ -111,6 +111,7 @@
         * [Array (Op-Object → OR)](#array-op-object-%E2%86%92-or)
         * [`$col` — Type-safe Column References](#col--type-safe-column-references)
         * [`$colRaw` — Column References](#colraw--column-references)
+        * [`exists` / `notExists` — Subquery Predicates](#exists--notexists--subquery-predicates)
     + [`.whereNotNull`](#wherenotnull)
       - [Example](#example-10)
       - [SQL](#sql-18)
@@ -1143,7 +1144,9 @@ type WhereClause = {
   "$AND": [WhereClause, ...Array<WhereClause>],
   "$OR":  [WhereClause, ...Array<WhereClause>],
   "$NOT": [WhereClause, ...Array<WhereClause>],
-  "$NOR": [WhereClause, ...Array<WhereClause>]
+  "$NOR": [WhereClause, ...Array<WhereClause>],
+  "exists":    <subquery> | (({ from }) => <subquery>),
+  "notExists": <subquery> | (({ from }) => <subquery>)
 }
 ```
 
@@ -1177,6 +1180,8 @@ type WhereClause = {
 | `Array (op-objects)` | Non-empty array of op-objects → `OR` chain | `.where({ "User.name": [{ op: "LIKE", value: "A%" }, { op: "LIKE", value: "B%" }] })` | `(User.name LIKE 'A%' OR User.name LIKE 'B%')` |
 | `$col` | Type-safe column reference (enforces type match) | `.where({ "User.id": { $col: "Post.authorId" } })` | `User.id = Post.authorId` |
 | `$colRaw` | Column reference without type matching | `.where({ "User.id": { $colRaw: "Post.authorId" } })` | `User.id = Post.authorId` |
+| `exists` | True when the subquery returns at least one row | `.where({ exists: ({ from }) => from("Post").where({ "Post.authorId": { $col: "User.id" } }) })` | `EXISTS (SELECT 1 FROM Post WHERE Post.authorId = User.id)` |
+| `notExists` | True when the subquery returns no rows | `.where({ notExists: ({ from }) => from("Post").where({ "Post.authorId": { $col: "User.id" } }) })` | `NOT EXISTS (SELECT 1 FROM Post WHERE Post.authorId = User.id)` |
 
 
 ###### Columns
@@ -1426,6 +1431,101 @@ SELECT User.id AS `User.id`
 FROM User
 JOIN Post ON Post.authorId = User.id
 GROUP BY User.id HAVING COUNT(Post.id) > User.id;
+```
+
+###### `exists` / `notExists` — Subquery Predicates
+
+`exists` keeps a row when a subquery returns at least one row; `notExists` keeps it when the subquery returns none. They are criteria, so they sit next to column conditions and nest inside `$AND`, `$OR`, `$NOT` and `$NOR`.
+
+Pass a callback to correlate the subquery with the outer query. Its `from()` opens the subquery with the outer query's tables still in scope, so the subquery's criteria can name outer columns through `$col` / `$colRaw`. Only the subquery's own table goes in its `FROM`. A column from a table the outer query does not have is a type error, and so is a subquery table whose name or alias the outer query already uses: give it an alias (`from("User other")`). Subqueries nest, and each level sees every enclosing table.
+
+Any query builder works as the operand, from `$from(...)` onwards, so you can also pass an uncorrelated query directly: `.where({ exists: prisma.$from("Post").where({ published: true }) })`. A subquery without a `.select()` projects `SELECT 1`. The rendered SQL is the same on SQLite, MySQL and PostgreSQL.
+
+`exists` and `notExists` are reserved criteria keys. On a single-table query, a model column with either name can't be filtered with the criteria object; use its qualified key after a join (`"Table.exists"`), or `.whereRaw()`.
+
+**`exists`:**
+```typescript file=../usage-sqlite-v7/tests/readme/where-exists.ts region=exists
+      prisma.$from("User")
+        .where({
+          exists: ({ from }) => from("Post").where({ "Post.authorId": { $col: "User.id" } }),
+        })
+        .select("id")
+```
+
+```sql file=../usage-sqlite-v7/tests/readme/where-exists.ts region=exists-sql
+SELECT id
+FROM User
+WHERE EXISTS (
+SELECT 1
+FROM Post
+WHERE Post.authorId = User.id);
+```
+
+**`notExists`:**
+```typescript file=../usage-sqlite-v7/tests/readme/where-exists.ts region=not-exists
+      prisma.$from("User")
+        .where({
+          notExists: ({ from }) => from("Post").where({ "Post.authorId": { $col: "User.id" } }),
+        })
+        .select("id")
+```
+
+```sql file=../usage-sqlite-v7/tests/readme/where-exists.ts region=not-exists-sql
+SELECT id
+FROM User
+WHERE NOT EXISTS (
+SELECT 1
+FROM Post
+WHERE Post.authorId = User.id);
+```
+
+**Inside `$OR`:**
+```typescript file=../usage-sqlite-v7/tests/readme/where-exists.ts region=exists-or
+      prisma.$from("User")
+        .where({
+          $OR: [
+            { exists: ({ from }) => from("Post").where({ "Post.authorId": { $col: "User.id" }, "Post.published": true }) },
+            { age: { op: ">", value: 60 } },
+          ],
+        })
+        .select("id")
+```
+
+```sql file=../usage-sqlite-v7/tests/readme/where-exists.ts region=exists-or-sql
+SELECT id
+FROM User
+WHERE (EXISTS (
+SELECT 1
+FROM Post
+WHERE (Post.authorId = User.id AND Post.published = true)) OR age > 60);
+```
+
+**Compared with a join:** a join also finds users who have a post, but it returns one row per matching post. With the seed data, the query below returns User 1 twice because User 1 wrote two posts; `exists` returns each user once and needs no `DISTINCT` or `GROUP BY`.
+```typescript file=../usage-sqlite-v7/tests/readme/where-exists.ts region=exists-join
+      prisma.$from("User")
+        .join("Post", "authorId", "User.id")
+        .select("User.id")
+```
+
+```sql file=../usage-sqlite-v7/tests/readme/where-exists.ts region=exists-join-sql
+SELECT User.id AS `User.id`
+FROM User
+JOIN Post ON Post.authorId = User.id;
+```
+
+The join form of `notExists` is a `LEFT JOIN` filtered to rows where the joined key is `NULL`. It returns the same users, but the anti-join is implied by the `IS NULL` check rather than stated, and adding a second join to the query can bring the duplicate rows back.
+```typescript file=../usage-sqlite-v7/tests/readme/where-exists.ts region=not-exists-join
+      prisma.$from("User")
+        .leftJoin("Post", "authorId", "User.id")
+        .whereIsNull("Post.id")
+        .select("User.id")
+```
+
+```sql file=../usage-sqlite-v7/tests/readme/where-exists.ts region=not-exists-join-sql
+SELECT User.id AS `User.id`
+FROM User
+LEFT JOIN Post ON Post.authorId = User.id
+WHERE (Post.id IS NULL);
 ```
 
 #### `.whereNotNull`
