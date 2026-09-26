@@ -2459,13 +2459,31 @@ export type GetColumnsOfType<TSources extends TArrSources, TFields extends TFiel
       : never
     : never;
 
-/** Builds [colName, colType][] tuple union from all columns in scope. */
-export type ColEntries<TSources extends TArrSources, TFields extends TFieldsType> =
-  GetOtherColumns<TSources> extends infer K
-    ? K extends string
-      ? [K, ExtractColumnType<K, TSources, TFields>]
+/**
+ * `[cteName.col, colType]` for each column of each CTE source, typed from the CTE's result row.
+ * Distributes over the CTE names, so a query without CTEs contributes no entry at all.
+ */
+type CTEColEntries<TSources extends TArrSources, TFields extends TFieldsType> =
+  CTENames<TSources> extends infer CTE
+    ? CTE extends string & keyof TFields
+      ? { [C in string & keyof TFields[CTE]]: [`${CTE}.${C}`, TFields[CTE][C]] }[string & keyof TFields[CTE]]
       : never
     : never;
+
+/**
+ * Builds [colName, colType][] tuple union from all columns in scope.
+ * `GetOtherColumns` names a CTE source only as the open pattern `cte.${string}` (no model behind
+ * it), which would accept any column; CTE columns come from the CTE's own row type instead.
+ */
+export type ColEntries<TSources extends TArrSources, TFields extends TFieldsType> =
+  | (GetOtherColumns<TSources> extends infer K
+    ? K extends string
+      ? K extends `${CTENames<TSources>}.${infer C}`
+        ? string extends C ? never : [K, ExtractColumnType<K, TSources, TFields>]
+        : [K, ExtractColumnType<K, TSources, TFields>]
+      : never
+    : never)
+  | CTEColEntries<TSources, TFields>;
 
 type LitValue = string | number | boolean | null;
 

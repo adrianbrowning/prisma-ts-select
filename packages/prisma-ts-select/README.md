@@ -2594,7 +2594,7 @@ FROM ranked
 WHERE ranked.rn <= 1;
 ```
 
-Change `value: 1n` to `3n` for each author's three latest posts. The rank column is `bigint`, so compare it with a `bigint` literal.
+Change `value: 1n` to `3n` to keep up to three latest posts per author. The rank column is `bigint`, so compare it with a `bigint` literal.
 
 #### Navigation result types
 

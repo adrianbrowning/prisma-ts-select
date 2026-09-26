@@ -82,6 +82,22 @@ describe("select() fn context — window functions", () => {
         .select(({ over, rowNumber }) => over(rowNumber(), { orderBy: [ "id" ] }), "rn");
     });
 
+    it("accept a CTE's own columns and reject any other", async () => {
+      const inner = prisma.$from("Post").select("id")
+        .select("authorId");
+      const result = await prisma.$with("pp", inner)
+        .from("pp")
+        .select("pp.id", "id")
+        .select(({ over, rowNumber }) => over(rowNumber(), { partitionBy: [ "pp.authorId" ], orderBy: [ "pp.id DESC" ] }), "rn")
+        .orderBy([ "id" ])
+        .run();
+      assert.deepStrictEqual(result.map(r => r.rn), [ 2n, 1n, 1n ]);
+
+      prisma.$with("pp", inner).from("pp")
+        // @ts-expect-error — not a column of the CTE
+        .select(({ over, rowNumber }) => over(rowNumber(), { partitionBy: [ "pp.nope" ] }), "rn");
+    });
+
     it("a window function is not selectable without over()", () => {
       // @ts-expect-error — ROW_NUMBER() needs an OVER clause
       prisma.$from("Post").select(({ rowNumber }) => rowNumber(), "rn");
