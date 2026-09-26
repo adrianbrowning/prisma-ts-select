@@ -1,6 +1,7 @@
 test-results
 packages/*/generated
-.claude
+**/.claude/*
+!/.claude/skills/
 node_modules
 # Keep environment variables out of version control
 .env
