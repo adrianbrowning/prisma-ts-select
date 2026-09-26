@@ -2330,6 +2330,8 @@ List-building aggregates return an expression carrying two optional aggregate-lo
 
 Available on `groupConcat` (MySQL, SQLite) and on `stringAgg`, `arrayAgg`, `jsonAgg`, `jsonObjectAgg` (PostgreSQL). Deliberately **not** available on MySQL `jsonArrayAgg`/`jsonObjectAgg`: MySQL supports neither clause for them and no rewrite is faithful, so calling `.orderBy()`/`.filter()` there is a compile error.
 
+The `.orderBy()` column autocompletes the same way `.select()` does. At first it offers the `Table.` prefixes and any bare column that is unambiguous across the joined tables. Once you type `Table.`, it offers that table's columns. It accepts any column in scope, but not `*` or `Table.*`.
+
 The aggregate's own `ORDER BY` stays separate from the query-level one:
 
 ```typescript file=../usage-sqlite-v7/tests/dialect/sqlite/select-fn-agg-options.spec.ts region=agg-order-by

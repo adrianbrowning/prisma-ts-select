@@ -33,6 +33,24 @@ export type FilterCols<TEntries extends [string, unknown], T> =
 export type ColName<TEntries extends [string, unknown]> =
   TEntries extends [infer N extends string, unknown] ? N : never;
 
+type _TableDot<N extends string> = N extends `${infer T}.${string}` ? `${T}.` : never;
+type _BareCol<N extends string> = N extends `${string}.${string}` ? never : N;
+
+/**
+ * Progressive column validator for aggregate `.orderBy()`: accepts exactly `ColName<TEntries>`,
+ * but an invalid path resolves to the next level of suggestions — `Table.` prefixes plus
+ * unambiguous bare columns at the top, that table's columns once `Table.` is typed. Mirrors
+ * `ValidateSelect` without `*` / `Table.*`; used as `C extends V<E, C> ? C : V<E, C>`.
+ */
+export type ValidateAggregateColumn<TEntries extends [string, unknown], Path extends string> =
+  Path extends ColName<TEntries>
+    ? Path
+    : Path extends `${infer T}.${string}`
+      ? [Extract<ColName<TEntries>, `${T}.${string}`>] extends [never]
+        ? _BareCol<ColName<TEntries>> | _TableDot<ColName<TEntries>>
+        : Extract<ColName<TEntries>, `${T}.${string}`>
+      : _BareCol<ColName<TEntries>> | _TableDot<ColName<TEntries>>;
+
 /** Extracts the value type for a specific column from a col-entry tuple union. */
 export type ColTypeOf<TEntries extends [string, unknown], Col extends string> =
   TEntries extends [Col, infer V] ? V : never;
