@@ -28,6 +28,7 @@ await build({
     "src/dialects/types.ts",
     "src/dialects/shared.ts",
     "src/dialects/aggregate-expr.ts",
+    "src/dialects/window-expr.ts",
     "src/dialects/sqlite.ts",
     "src/dialects/mysql.ts",
     "src/dialects/mysql-v6.ts",

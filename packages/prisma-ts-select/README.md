@@ -203,6 +203,11 @@
     + [Combining with `.groupBy()`](#combining-with-groupby)
       - [SQL](#sql-45)
   * [Aggregate clauses — `.orderBy()` / `.filter()`](#aggregate-clauses--orderby--filter)
+  * [Window functions — `over()`](#window-functions--over)
+    + [Functions](#functions)
+    + [Frames](#frames)
+    + [Top-N per group](#top-n-per-group)
+    + [Navigation result types](#navigation-result-types)
   * [MySQL-specific](#mysql-specific)
   * [PostgreSQL-specific](#postgresql-specific)
   * [SQLite-specific](#sqlite-specific)
@@ -2475,6 +2480,141 @@ Three combinations fail in the library rather than at the database:
 - On SQLite, `groupConcat(distinct(col), sep)` throws — SQLite accepts no separator alongside `DISTINCT`.
 
 **SQLite engine floors**: aggregate-local `ORDER BY` requires SQLite ≥ 3.44.0 and `FILTER (WHERE …)` requires ≥ 3.30.0. An older bundled driver rejects the emitted SQL even though it type-checks.
+
+---
+
+### Window functions — `over()`
+
+A window function computes a value for each row from a set of related rows (a rank within a group, the previous row, the first value in a range) without collapsing rows the way `GROUP BY` does. Wrap one in `over(fn, options)` inside `.select()`:
+
+```typescript file=../usage-sqlite-v7/tests/readme/select-window.ts region=window-rank
+      prisma.$from("Post")
+        .select("id")
+        .select(({ over, rowNumber }) => over(rowNumber(), {
+          partitionBy: [ "authorId" ],
+          orderBy: [ "createdAt DESC" ],
+        }), "rn")
+```
+
+```sql file=../usage-sqlite-v7/tests/readme/select-window.ts region=window-rank-sql
+SELECT id, ROW_NUMBER() OVER (PARTITION BY authorId
+ORDER BY createdAt DESC) AS `rn`
+FROM Post;
+```
+
+All three options are optional; `over(rowNumber())` renders `ROW_NUMBER() OVER ()`.
+
+| Option | SQL | Accepts |
+|---|---|---|
+| `partitionBy` | `PARTITION BY …` | columns in scope, or expressions built from the same context |
+| `orderBy` | `ORDER BY …` | `"col"`, `"col ASC"`, `"col DESC"`, an expression, or `[expr, "ASC" \| "DESC"]` |
+| `frame` | `ROWS … / RANGE …` | see [Frames](#frames) |
+
+Columns are checked against the query's scope the same way `.select()` checks them: a table that is not joined, or a bare column that is ambiguous across the joins, is a compile error.
+
+#### Functions
+
+| Function | SQL | Returns |
+|---|---|---|
+| `rowNumber()` | `ROW_NUMBER()` | `bigint` |
+| `rank()` | `RANK()` | `bigint` |
+| `denseRank()` | `DENSE_RANK()` | `bigint` |
+| `lag(col, offset?, default?)` | `LAG(col, offset, default)` | the value, `\| null` without a default |
+| `lead(col, offset?, default?)` | `LEAD(col, offset, default)` | the value, `\| null` without a default |
+| `firstValue(col)` | `FIRST_VALUE(col)` | the value, `\| null` when the frame can be empty |
+| `lastValue(col)` | `LAST_VALUE(col)` | the value, `\| null` when the frame can be empty |
+
+Each function takes a column or an expression. A window function outside `over()`, such as `select(({ rowNumber }) => rowNumber())`, is a compile error, because SQL rejects a window function without an `OVER` clause. `offset` must be a non-negative integer, and `default` must have the argument's type.
+
+```typescript file=../usage-sqlite-v7/tests/readme/select-window.ts region=window-nav
+      prisma.$from("Post")
+        .select("id")
+        .select(({ over, lag, lit }) => over(lag("id", 1, lit(0)), { orderBy: [ "id" ] }), "prevId")
+        .select(({ over, lastValue }) => over(lastValue("title"), {
+          partitionBy: [ "authorId" ],
+          orderBy: [ "id" ],
+          frame: { rows: [ "currentRow", "unboundedFollowing" ] },
+        }), "latestTitle")
+```
+
+```sql file=../usage-sqlite-v7/tests/readme/select-window.ts region=window-nav-sql
+SELECT id, LAG(id, 1, 0) OVER (
+ORDER BY id) AS `prevId`, LAST_VALUE(title) OVER (PARTITION BY authorId
+ORDER BY id ROWS BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING) AS `latestTitle`
+FROM Post;
+```
+
+With the default frame, `lastValue()` returns the current row, since that frame ends at the current row. Pass a frame that reaches the end of the partition, as above.
+
+The "value" these return is not always the column's type: see [Navigation result types](#navigation-result-types).
+
+#### Frames
+
+`frame` accepts only the forms SQLite, MySQL and PostgreSQL all run with the same meaning:
+
+- `{ rows: [start, end] }`, where each bound is `"unboundedPreceding"`, `{ preceding: n }`, `"currentRow"`, `{ following: n }` or `"unboundedFollowing"`. The start cannot come after the end in that order: the types reject it, and an untyped call throws. Two offsets in the same direction may be reversed (`[{ preceding: 1 }, { preceding: 2 }]`); that frame is empty.
+- `{ range: [start, end] }`, with `"unboundedPreceding"` or `"currentRow"` to start and `"currentRow"` or `"unboundedFollowing"` to end.
+
+`firstValue()` and `lastValue()` over a ROWS frame that starts after the current row or ends before it are typed `| null`, because that frame is empty at the partition edges.
+
+Deferred to later work:
+
+- RANGE offsets. PostgreSQL needs a typed `INTERVAL` offset for a date sort key where MySQL and SQLite take a number, so there is no portable spelling.
+- `GROUPS` frames and `EXCLUDE`, which MySQL does not support.
+- Named windows (`WINDOW w AS (…)`) and aggregates as window functions (`SUM(col) OVER (…)`).
+
+#### Top-N per group
+
+SQL evaluates window functions after `WHERE`, so a query cannot filter on its own rank. Rank the rows in a CTE, then filter the CTE. This keeps each author's latest post:
+
+```typescript file=../usage-sqlite-v7/tests/readme/select-window.ts region=top-n
+    const ranked = prisma.$from("Post")
+      .select("id")
+      .select("authorId")
+      .select("title")
+      .select(({ over, rowNumber }) => over(rowNumber(), {
+        partitionBy: [ "authorId" ],
+        orderBy: [ "createdAt DESC" ],
+      }), "rn");
+
+    const latestPerAuthor = prisma.$with("ranked", ranked)
+      .from("ranked")
+      .where({ "ranked.rn": { op: "<=", value: 1n } })
+      .select("ranked.authorId", "authorId")
+      .select("ranked.title", "title");
+```
+
+```sql file=../usage-sqlite-v7/tests/readme/select-window.ts region=top-n-sql
+WITH ranked AS (
+SELECT id, authorId, title, ROW_NUMBER() OVER (PARTITION BY authorId
+ORDER BY createdAt DESC) AS `rn`
+FROM Post)
+SELECT ranked.authorId AS `authorId`, ranked.title AS `title`
+FROM ranked
+WHERE ranked.rn <= 1;
+```
+
+Change `value: 1n` to `3n` for each author's three latest posts. The rank column is `bigint`, so compare it with a `bigint` literal.
+
+#### Navigation result types
+
+A value read through `lag`, `lead`, `firstValue` or `lastValue` loses its column type in the database, so some drivers return it differently from the plain column. The declared types follow what each driver returns:
+
+| Column type | PostgreSQL | MySQL (Prisma v7) | MySQL (Prisma v6) | SQLite |
+|---|---|---|---|---|
+| `string` | `string` | `string` | `string` | `string` |
+| `number` | `number` | `bigint \| number` | `bigint \| number \| string` | `bigint \| number \| string` |
+| `boolean` | `boolean` | `number` (`0`/`1`) | `number` (`0`/`1`) | `bigint \| string` |
+| `Date` | `Date` | `Date` | `Date` | `bigint \| string` |
+| JSON | `JSONValue` | `JSONValue` | `JSONValue` | `string` (JSON text) |
+
+- Float values come back as `number` on every driver; only Int values change representation. Both are `number` in TypeScript, so the type cannot tell which one the column holds, and `number` maps to the union of every representation either can take.
+- MySQL returns an INT window result as `bigint` on Prisma v7 and as a string on Prisma v6, except that `lag`/`lead` with a default come back as `bigint` on v6.
+- SQLite has no column type for the result, so Prisma reads its storage class. On Prisma v6 it reads the whole result column as text when the first row is NULL, which a `lag()` without a default always is.
+
+The ranking functions return `bigint` on every dialect.
+
+**Engine floors**: window functions require SQLite ≥ 3.25.0 and MySQL ≥ 8.0.
 
 ---
 
