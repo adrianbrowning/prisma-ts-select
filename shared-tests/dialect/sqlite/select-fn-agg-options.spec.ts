@@ -201,6 +201,44 @@ describe("SQLite aggregate fluent API (ORDER BY + FILTER)", () => {
     });
   });
 
+  // The parameter type at each prefix is the IDE suggestion list, so this pins progressive
+  // `Table.` → `Table.column` completion on the generated fluent signature itself.
+  describe("groupConcat().orderBy() column autocomplete", () => {
+    it("type: suggests table prefixes first, then narrows to the typed table", () => {
+      prisma.$from("User")
+        .innerJoin("Post", "authorId", "User.id")
+        .groupBy([ "User.id" ])
+        .select(({ groupConcat }) => {
+          const agg = groupConcat("Post.title", ",");
+          type Top = Parameters<typeof agg.orderBy<"">>[0];
+          type InPost = Parameters<typeof agg.orderBy<"Post.">>[0];
+          typeCheck({} as Expect<Equal<Extract<Top, "Post." | "User.">, "Post." | "User.">>);
+          typeCheck({} as Expect<Equal<Extract<Exclude<Top, "Post." | "User.">, `${string}.${string}`>, never>>);
+          typeCheck({} as Expect<Equal<Exclude<InPost, `Post.${string}`>, never>>);
+          typeCheck({} as Expect<Equal<Extract<InPost, "Post.title" | "Post.id">, "Post.title" | "Post.id">>);
+          return agg;
+        }, "titles");
+    });
+
+    it("type: accepts qualified and unambiguous bare columns; rejects stars and ambiguous names", () => {
+      prisma.$from("User")
+        .innerJoin("Post", "authorId", "User.id")
+        .groupBy([ "User.id" ])
+        .select(({ groupConcat }) => {
+          const agg = groupConcat("Post.title", ",");
+          agg.orderBy("Post.id");
+          agg.orderBy("title");
+          // @ts-expect-error — `id` exists on both User and Post
+          agg.orderBy("id");
+          // @ts-expect-error — aggregate ORDER BY takes a column, not `Table.*`
+          agg.orderBy("Post.*");
+          // @ts-expect-error — a bare table prefix is a suggestion, not a column
+          agg.orderBy("Post.");
+          return agg;
+        }, "titles");
+    });
+  });
+
   describe("backwards compat: groupConcat without chaining", () => {
     function createQuery() {
       return prisma.$from("User")

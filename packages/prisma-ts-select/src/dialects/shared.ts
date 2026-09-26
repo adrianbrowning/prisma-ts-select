@@ -38,9 +38,10 @@ type _BareCol<N extends string> = N extends `${string}.${string}` ? never : N;
 
 /**
  * Progressive column validator for aggregate `.orderBy()`: accepts exactly `ColName<TEntries>`,
- * but an invalid path resolves to the next level of suggestions — `Table.` prefixes plus
- * unambiguous bare columns at the top, that table's columns once `Table.` is typed. Mirrors
- * `ValidateSelect` without `*` / `Table.*`; used as `C extends V<E, C> ? C : V<E, C>`.
+ * but an invalid path resolves to the next level of suggestions — `Table.` prefixes plus the
+ * bare columns in `TEntries` at the top (`ColEntries` lists a bare name only when it is
+ * unambiguous), that table's columns once `Table.` is typed. Mirrors `ValidateSelect` without
+ * `*` / `Table.*`; used as `C extends V<E, C> ? C : V<E, C>`.
  */
 export type ValidateAggregateColumn<TEntries extends [string, unknown], Path extends string> =
   Path extends ColName<TEntries>
