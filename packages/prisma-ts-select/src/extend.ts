@@ -561,7 +561,25 @@ function processConditions(condition: BasicOpTypes, formatted = false): string {
   return "(" + r.join(" AND " + (formatted ? "\n" : "")).trim() + ")";
 }
 
-function processCriteria(main: ClauseType, joinType: "AND" | "OR" = "AND", formatted = false): string {
+/** Criteria keys that take a subquery instead of a column condition. Reserved: never read as column names. */
+type ExistsKey = "exists" | "notExists";
+
+/**
+ * Renders an `exists` / `notExists` criterion. The operand is a query builder, or a callback whose
+ * `from()` opens the subquery on the outer query's client. Anything else throws.
+ */
+function renderExists(key: ExistsKey, value: unknown, db: PrismaClient, formatted: boolean): string {
+  const query = typeof value === "function"
+    ? (value as (ctx: { from: (table: string) => unknown; }) => unknown)({ from: table => openSubquery(db, table) })
+    : value;
+  if (!(query instanceof _fRun)) {
+    const got = query === null ? "null" : typeof query;
+    throw new TypeError(`"${key}" expects a query builder or a callback returning one, got ${typeof value === "function" ? `a callback returning ${got}` : got}`);
+  }
+  return `${key === "notExists" ? "NOT " : ""}EXISTS ${_fRun.existsOperand(query, formatted)}`;
+}
+
+function processCriteria(main: ClauseType, db: PrismaClient, joinType: "AND" | "OR" = "AND", formatted = false): string {
   const results: Array<string> = [];
   for (const criteria of main) {
     if (typeof criteria === "string") {
@@ -583,29 +601,33 @@ function processCriteria(main: ClauseType, joinType: "AND" | "OR" = "AND", forma
           processPending();
           return "(" +
                         //@ts-expect-error criterion
-                        processCriteria(criteria[criterion], "AND", formatted)
+                        processCriteria(criteria[criterion], db, "AND", formatted)
                         + ")";
         })
         .with("$OR", criterion => {
           processPending();
           return "(" +
                         //@ts-expect-error criterion
-                        processCriteria(criteria[criterion], "OR", formatted)
+                        processCriteria(criteria[criterion], db, "OR", formatted)
                         + ")";
         })
         .with("$NOT", criterion => {
           processPending();
           return "(NOT(" +
                         //@ts-expect-error criterion
-                        processCriteria(criteria[criterion], "AND", formatted)
+                        processCriteria(criteria[criterion], db, "AND", formatted)
                         + "))";
         })
         .with("$NOR", criterion => {
           processPending();
           return "(NOT(" +
                         //@ts-expect-error criterion
-                        processCriteria(criteria[criterion], "OR", formatted)
+                        processCriteria(criteria[criterion], db, "OR", formatted)
                         + "))";
+        })
+        .with(P.union("exists", "notExists"), key => {
+          processPending();
+          return renderExists(key, (criteria as Record<string, unknown>)[key], db, formatted);
         })
         .with(P.string, key => {
           //@ts-expect-error criterion
@@ -742,12 +764,18 @@ class _fRun<TSources extends TArrSources, TFields extends TFieldsType, TSelectRT
     return this.sql;
   }
 
+  /** Parenthesized EXISTS operand, rendered in the outer query's mode. EXISTS ignores the select list, so a query without one projects `1`. */
+  static existsOperand(query: _fRun<ANY_IS_OK, ANY_IS_OK, ANY_IS_OK>, formatted: boolean): string {
+    const operand = query.values.selects.length > 0 ? query : new _fRun(query.db, { ...query.values, selects: [ "1" ] });
+    return `(${operand.getSQL(formatted).replace(/;$/, "")})`;
+  }
+
   getSQL(formatted: boolean = false) {
 
     const withClause = buildWithClause(this.values.withs);
 
-    const whereClause = this.values.where !== undefined ? processCriteria(this.values.where, "AND", formatted) : undefined;
-    const havingClause = this.values.having !== undefined ? processCriteria(this.values.having, "AND", formatted) : undefined;
+    const whereClause = this.values.where !== undefined ? processCriteria(this.values.where, this.db, "AND", formatted) : undefined;
+    const havingClause = this.values.having !== undefined ? processCriteria(this.values.having, this.db, "AND", formatted) : undefined;
     const unionClause = (this.values.unions ?? []).map(u => `UNION${u.all ? " ALL" : ""} ${u.sql}`).join(formatted ? "\n" : " ");
     // After a compound the tables are gone, so ORDER BY names an output column, not a table column.
     const quoteOrderBy = unionClause ? quoteCompoundOrderBy : dialect.quoteOrderByClause;
@@ -786,7 +814,7 @@ class _fRun<TSources extends TArrSources, TFields extends TFieldsType, TSelectRT
         const quotedLocal = dialect.quoteQualifiedColumn(tLocal);
         const quotedRemote = dialect.quoteQualifiedColumn(remote);
         const onClause = `${quotedLocal} = ${quotedRemote}`;
-        const joinWhereStr = joinWhere ? ` AND ${processCriteria(joinWhere, "AND", formatted)}` : "";
+        const joinWhereStr = joinWhere ? ` AND ${processCriteria(joinWhere, this.db, "AND", formatted)}` : "";
         return `${typePrefix}JOIN ${tableStr} ON ${onClause}${joinWhereStr}`;
       }).join(formatted ? "\n" : " "),
       whereClause ? `WHERE ${whereClause}` : "",
@@ -1533,15 +1561,50 @@ type BasicOpTypes =
 
 type LogicalOperator = "$AND" | "$OR" | "$NOT" | "$NOR";
 
-type WhereCriteriaSingle<TFields extends Record<string, unknown>, TSources extends TArrSources = TArrSources, TAllFields extends TFieldsType = TFieldsType> = WhereCriteria_Fields_Single<TFields, TSources, TAllFields> & {
-  [k in LogicalOperator]?: [WhereCriteria_Fields_Single<TFields, TSources, TAllFields>, ...Array<WhereCriteria_Fields_Single<TFields, TSources, TAllFields>>];
+/**
+ * Context passed to an `exists` / `notExists` callback. `from()` opens the subquery with the outer
+ * query's sources still in scope, so its criteria can name outer columns (`{ $col: "User.id" }`).
+ * A subquery table whose name or alias is already used by the outer query is rejected, since SQL
+ * would resolve `Name.col` to the inner table and silently drop the correlation.
+ */
+type ExistsContext<TOuter extends TArrSources, TOuterFields extends TFieldsType> = {
+  from: <const T extends TTables | `${TTables} ${string}`,
+    TDBBase extends TTables = ExtractTableName<T>,
+    TAlias extends string | never = ExtractAlias<T>,
+    TNewSource extends TArrSources[number] = [TAlias] extends [never] ? TDBBase : [TDBBase, TAlias]
+  >(table: GetAliasTableNames<TNewSource> extends TablesArray2Name<TOuter>[number]
+    ? `"${GetAliasTableNames<TNewSource>}" is already used by the outer query; give the subquery table an alias`
+    : T
+  ) => _fJoinReturn<
+    [TNewSource, ...TOuter],
+    Record<GetAliasTableNames<TNewSource>, GetFieldsFromTable<TDBBase>> & TOuterFields,
+    BLANK_OBJECT
+  >;
+};
+
+/**
+ * Any query from `$from()` / `from()` onwards. `_fJoinReturn` is listed because the generator rewrites
+ * it to an `Omit<>` that is no longer assignable to `_fRun`.
+ */
+type ExistsQuery = _fRun<ANY_IS_OK, ANY_IS_OK, ANY_IS_OK> | _fJoinReturn<ANY_IS_OK, ANY_IS_OK, ANY_IS_OK>;
+
+/** `exists` / `notExists` criteria. Both keys are reserved: a single-table column with either name cannot be used as a criteria key. */
+type ExistsCriteria<TOuter extends TArrSources, TOuterFields extends TFieldsType> = {
+  [K in ExistsKey]?: ExistsQuery | ((ctx: ExistsContext<TOuter, TOuterFields>) => ExistsQuery);
+};
+
+type WhereCriteriaSingleItem<TFields extends Record<string, unknown>, TSources extends TArrSources, TAllFields extends TFieldsType> =
+  WhereCriteria_Fields_Single<TFields, TSources, TAllFields> & ExistsCriteria<TSources, TAllFields>;
+
+type WhereCriteriaSingle<TFields extends Record<string, unknown>, TSources extends TArrSources = TArrSources, TAllFields extends TFieldsType = TFieldsType> = WhereCriteriaSingleItem<TFields, TSources, TAllFields> & {
+  [k in LogicalOperator]?: [WhereCriteriaSingleItem<TFields, TSources, TAllFields>, ...Array<WhereCriteriaSingleItem<TFields, TSources, TAllFields>>];
 };
 
 type WhereCriteria_Fields_Single<TFields extends Record<string, unknown>, TSources extends TArrSources = TArrSources, TAllFields extends TFieldsType = TFieldsType> = {
-  [K in keyof TFields]?: CondValueForField<TFields[K], TSources, TAllFields>;
+  [K in Exclude<keyof TFields, ExistsKey>]?: CondValueForField<TFields[K], TSources, TAllFields>;
 };
 
-type WhereCriteriaMulti<T extends TArrSources, TFields extends TFieldsType, F = Prettify<WhereCriteria_Fields<T, TFields>>> = F & {
+type WhereCriteriaMulti<T extends TArrSources, TFields extends TFieldsType, F = Prettify<WhereCriteria_Fields<T, TFields>>> = F & ExistsCriteria<T, TFields> & {
   [k in LogicalOperator]?: [WhereCriteriaMulti<T, TFields, F>, ...Array<WhereCriteriaMulti<T, TFields, F>>];
 };
 
@@ -2440,6 +2503,12 @@ type BaseSelectFnContext<_TSources extends TArrSources, _TFields extends TFields
 export type SelectFnContext<_TSources extends TArrSources, _TFields extends TFieldsType> =
   BaseSelectFnContext<_TSources, _TFields>;
 
+/** Starts a subquery from `"Table"` or `"Table alias"`. Only the subquery's own table goes in its FROM; outer tables stay in the enclosing query. */
+function openSubquery(db: PrismaClient, table: string) {
+  const [ name, alias ] = table.split(" ");
+  return new _fJoin(db, { tables: [{ table: name!, alias: alias?.trim() || undefined }], selects: [] });
+}
+
 function buildContext<TSources extends TArrSources, TFields extends TFieldsType>(
   d: Dialect,
   db: PrismaClient
@@ -2447,10 +2516,7 @@ function buildContext<TSources extends TArrSources, TFields extends TFieldsType>
   const quoteFn = (col: string) => d.quoteQualifiedColumn(col);
 
   return {
-    from: (table: string) => {
-      const parts = table.split(" ");
-      return new _fJoin(db, { tables: [{ table: parts[0]!, alias: parts[1]?.trim() || undefined }], selects: [] }) as ANY_IS_OK;
-    },
+    from: (table: string) => openSubquery(db, table) as ANY_IS_OK,
     lit: _lit,
     min:           col => sqlExpr(`MIN(${resolveArg(col, quoteFn)})`),
     max:           col => sqlExpr(`MAX(${resolveArg(col, quoteFn)})`),
@@ -2460,7 +2526,7 @@ function buildContext<TSources extends TArrSources, TFields extends TFieldsType>
     trim:          col => sqlExpr(`TRIM(${resolveArg(col, quoteFn)})`),
     ltrim:         col => sqlExpr(`LTRIM(${resolveArg(col, quoteFn)})`),
     rtrim:         col => sqlExpr(`RTRIM(${resolveArg(col, quoteFn)})`),
-    cond:          criteria => sqlExpr(processCriteria([ criteria as ANY_IS_OK ])),
+    cond:          criteria => sqlExpr(processCriteria([ criteria as ANY_IS_OK ], db)),
     coalesce:      (...args) => {
       if (args.length === 0) throw new Error("coalesce: requires at least one argument");
       return sqlExpr(`COALESCE(${args.map(a => resolveArg(a as ANY_IS_OK, quoteFn)).join(", ")})`);
@@ -2468,11 +2534,11 @@ function buildContext<TSources extends TArrSources, TFields extends TFieldsType>
     nullif:        (expr1, expr2) => sqlExpr(`NULLIF(${expr1.sql}, ${expr2.sql})`),
     caseWhen:      (cases, elseVal?) => {
       if (cases.length === 0) throw new Error("caseWhen: requires at least one WHEN clause");
-      const parts = cases.map(c => `WHEN ${processCriteria([ c.when as ANY_IS_OK ])} THEN ${c.then.sql}`).join(" ");
+      const parts = cases.map(c => `WHEN ${processCriteria([ c.when as ANY_IS_OK ], db)} THEN ${c.then.sql}`).join(" ");
       return sqlExpr(`CASE ${parts}${elseVal ? ` ELSE ${elseVal.sql}` : ""} END`);
     },
     // Partial<> cast: SelectFnContext is a stub here; generator injects DialectFns at codegen time.
-    ...(dialectContextFns(quoteFn, (c: unknown) => processCriteria([ c as ANY_IS_OK ])) as unknown as Partial<SelectFnContext<TSources, TFields>>),
+    ...(dialectContextFns(quoteFn, (c: unknown) => processCriteria([ c as ANY_IS_OK ], db)) as unknown as Partial<SelectFnContext<TSources, TFields>>),
   } as SelectFnContext<TSources, TFields>;
 }
 
