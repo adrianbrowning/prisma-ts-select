@@ -156,7 +156,7 @@ generatorHandler({
 
     // Copy dialect files - both .js and .d.ts for types, shared, and provider-specific
     const dialectFiles = [
-      "types", "shared", provider,
+      "types", "shared", "aggregate-expr", provider,
       ...(hasVersions ? [ `${provider}-v6`, `${provider}-v7` ] : []),
     ];
     const dialectOutDir = path.join(outputPath, "dialects");
@@ -180,6 +180,7 @@ generatorHandler({
 
     const dialectIndexDts = `export { type Dialect, type FunctionRegistry, SUPPORTED_PROVIDERS, type SupportedProvider } from './types.js';
 export { sharedFunctions } from './shared.js';
+export type { AggregateExpr } from './aggregate-expr.js';
 export { ${provider}Dialect as dialect, ${provider}Dialect, ${defaultCtxFns} as dialectContextFns } from './${defaultSrc}.js';
 `;
     fs.writeFileSync(path.join(dialectOutDir, "index.d.ts"), dialectIndexDts);
@@ -194,6 +195,7 @@ export { ${provider}Dialect as dialect, ${provider}Dialect, ${defaultCtxFns} as 
       const js = `export { ${provider}Dialect as dialect, ${ctxName} as dialectContextFns } from './${srcFile}.js';\n`;
       const dts = `export { type Dialect, type FunctionRegistry, SUPPORTED_PROVIDERS, type SupportedProvider } from './types.js';
 export { sharedFunctions } from './shared.js';
+export type { AggregateExpr } from './aggregate-expr.js';
 export { ${provider}Dialect as dialect, ${provider}Dialect, ${ctxName} as dialectContextFns } from './${srcFile}.js';
 `;
       fs.writeFileSync(path.join(dialectOutDir, `${ver}.js`), js);

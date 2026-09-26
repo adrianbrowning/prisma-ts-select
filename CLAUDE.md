@@ -7,7 +7,7 @@ pnpm --filter prisma-ts-select build    # Build generator
 pnpm -r gen                             # Generate Prisma client + types
 
 # Testing
-./run-tests.sh [--version 6|7] [--db sqlite|mysql|pg] [--skip-build] [--reset-db] [--test <glob>]
+pnpm test:all [--version 6|7] [--db sqlite|mysql|pg] [--skip-build] [--reset-db] [--test <glob>]
 pnpm --filter <usage-[dialect]-v[version]> test          # All tests (lint:ts + node --test)
 pnpm --filter <usage-[dialect]-v[version]> test:readme   # README example tests
 pnpm --filter <usage-[dialect]-v[version]> test:core     # Core tests
