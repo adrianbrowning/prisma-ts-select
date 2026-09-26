@@ -419,6 +419,15 @@ void describe("postgresqlContextFns", () => {
   void test("jsonObjectAgg orderBy", () => assert.equal(
     fns.jsonObjectAgg("name", "val").orderBy("name", "DESC").sql,
     "JSON_OBJECT_AGG(\"name\", \"val\" ORDER BY \"name\" DESC)"));
+  void test("stringAgg distinct ordered by its own argument", () => assert.equal(
+    fns.stringAgg(fns.distinct("name"), ",").orderBy("name").sql,
+    "STRING_AGG(DISTINCT \"name\", ',' ORDER BY \"name\")"));
+  void test("arrayAgg distinct ordered by another column throws", () => {
+    assert.throws(() => fns.arrayAgg(fns.distinct("name")).orderBy("val"), /DISTINCT/);
+  });
+  void test("aggregate stringifies to its SQL", () => assert.equal(
+    String(fns.arrayAgg("name").orderBy("name", "DESC")),
+    "ARRAY_AGG(\"name\" ORDER BY \"name\" DESC)"));
   void test("greatest", () => assert.equal(fns.greatest<number>("val", "price").sql, "GREATEST(\"val\", \"price\")"));
   void test("greatest throws with 0 args", () => {
     assert.throws(() => (fns.greatest as (...a: Array<never>) => unknown)(), /at least one/);
