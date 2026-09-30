@@ -124,6 +124,10 @@ describe("select() fn context — window functions", () => {
       prisma.$from("Post").groupBy([ "authorId" ])
         // @ts-expect-error — and in HAVING
         .having(({ over, rowNumber }) => [[ over(rowNumber()), 1n ]]);
+      // @ts-expect-error — the navigation functions are left out too
+      prisma.$from("Post").where(({ over, lead }) => [[ over(lead("id")), 1 ]]);
+      // @ts-expect-error — and HAVING without GROUP BY
+      prisma.$from("Post").having(({ over, firstValue }) => [[ over(firstValue("id")), 1 ]]);
     });
   });
 
