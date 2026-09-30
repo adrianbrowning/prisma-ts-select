@@ -51,6 +51,21 @@ describe("select() fn context — window functions", () => {
         .getSQL(),
       `SELECT ROW_NUMBER() OVER () AS ${alias("rn")} FROM ${Post};`);
     });
+
+    it("ranking functions run with a frame, which they ignore", async () => {
+      const result = await prisma.$from("Post")
+        .select("id")
+        .select(({ over, rowNumber }) => over(rowNumber(), { orderBy: [ "id" ], frame: { rows: [{ following: 1 }, "unboundedFollowing" ] } }), "rn")
+        .select(({ over, rank }) => over(rank(), { orderBy: [ "authorId" ], frame: { range: [ "unboundedPreceding", "currentRow" ] } }), "rk")
+        .orderBy([ "id" ])
+        .run();
+      typeCheck({} as Expect<Equal<typeof result, Array<{ id: number; rn: bigint; rk: bigint; }>>>);
+      assert.deepStrictEqual(result, [
+        { id: 1, rn: 1n, rk: 1n },
+        { id: 2, rn: 2n, rk: 1n },
+        { id: 3, rn: 3n, rk: 3n },
+      ]);
+    });
   });
 
   describe("partition and order terms", () => {
