@@ -117,6 +117,14 @@ describe("select() fn context — window functions", () => {
       // @ts-expect-error — ROW_NUMBER() needs an OVER clause
       prisma.$from("Post").select(({ rowNumber }) => rowNumber(), "rn");
     });
+
+    it("window functions are not in the where() / having() context", () => {
+      // @ts-expect-error — SQL rejects a window function in WHERE
+      prisma.$from("Post").where(({ over, rowNumber }) => [[ over(rowNumber()), 1n ]]);
+      prisma.$from("Post").groupBy([ "authorId" ])
+        // @ts-expect-error — and in HAVING
+        .having(({ over, rowNumber }) => [[ over(rowNumber()), 1n ]]);
+    });
   });
 
   describe("lag() / lead()", () => {

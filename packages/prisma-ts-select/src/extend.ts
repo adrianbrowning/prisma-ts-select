@@ -11,6 +11,7 @@ import { DB } from "./db.ts";
 import { dialect, dialectContextFns } from "./dialects/index.ts";
 import { esc } from "./dialects/shared.ts";
 import type { Dialect } from "./dialects/types.ts";
+import type { WindowFnKey } from "./dialects/window-expr.ts";
 import { lit as _lit, sqlExpr, resolveArg } from "./sql-expr.ts";
 import type { SQLExpr, LitToType, _type } from "./sql-expr.ts";
 import { match, P } from "./ts-pattern-re-export.ts";
@@ -1419,9 +1420,9 @@ class _fHaving<TSources extends TArrSources, TFields extends TFieldsType, TGroup
   }
 
   having<const TCriteria extends HavingCriteria<TSources, TFields, TGroupBy>>(criteria: TCriteria): _fHaving<TSources, TFields, TGroupBy>;
-  having(fn: (ctx: SelectFnContext<TSources, TFields>) => Array<ExprCondPair<TSources, TFields>>): _fHaving<TSources, TFields, TGroupBy>;
+  having(fn: (ctx: PredicateFnContext<TSources, TFields>) => Array<ExprCondPair<TSources, TFields>>): _fHaving<TSources, TFields, TGroupBy>;
   having(
-    criteriaOrFn: HavingCriteria<TSources, TFields, TGroupBy> | ((ctx: SelectFnContext<TSources, TFields>) => Array<ExprCondPair<TSources, TFields>>)
+    criteriaOrFn: HavingCriteria<TSources, TFields, TGroupBy> | ((ctx: PredicateFnContext<TSources, TFields>) => Array<ExprCondPair<TSources, TFields>>)
   ): _fHaving<TSources, TFields, TGroupBy> {
     const existing = this.values.having ?? [];
     if (typeof criteriaOrFn === "function") {
@@ -1446,9 +1447,9 @@ class _fGroupBy<TSources extends TArrSources, TFields extends TFieldsType> exten
 
   // having() method for queries without GROUP BY - allows selectAll()
   having<const TCriteria extends WhereCriteria<TSources, TFields>>(criteria: TCriteria): _fSelectDistinct<TSources, TFields>;
-  having(fn: (ctx: SelectFnContext<TSources, TFields>) => Array<ExprCondPair<TSources>>): _fSelectDistinct<TSources, TFields>;
+  having(fn: (ctx: PredicateFnContext<TSources, TFields>) => Array<ExprCondPair<TSources>>): _fSelectDistinct<TSources, TFields>;
   having(
-    criteriaOrFn: WhereCriteria<TSources, TFields> | ((ctx: SelectFnContext<TSources, TFields>) => Array<ExprCondPair<TSources>>)
+    criteriaOrFn: WhereCriteria<TSources, TFields> | ((ctx: PredicateFnContext<TSources, TFields>) => Array<ExprCondPair<TSources>>)
   ): _fSelectDistinct<TSources, TFields> {
     const existing = this.values.having ?? [];
     if (typeof criteriaOrFn === "function") {
@@ -1746,9 +1747,9 @@ class _fWhere<TSources extends TArrSources, TFields extends TFieldsType> extends
   }
 
   where<const TCriteria extends WhereCriteria<TSources, TFields>>(criteria: TCriteria): _fGroupBy<TSources, TFields>;
-  where(fn: (ctx: SelectFnContext<TSources, TFields>) => Array<ExprCondPair<TSources, TFields>>): _fGroupBy<TSources, TFields>;
+  where(fn: (ctx: PredicateFnContext<TSources, TFields>) => Array<ExprCondPair<TSources, TFields>>): _fGroupBy<TSources, TFields>;
   where(
-    criteriaOrFn: WhereCriteria<TSources, TFields> | ((ctx: SelectFnContext<TSources, TFields>) => Array<ExprCondPair<TSources, TFields>>)
+    criteriaOrFn: WhereCriteria<TSources, TFields> | ((ctx: PredicateFnContext<TSources, TFields>) => Array<ExprCondPair<TSources, TFields>>)
   ): _fGroupBy<TSources, TFields> {
     if (typeof criteriaOrFn === "function") {
       const ctx = buildContext<TSources, TFields>(dialect, this.db);
@@ -2520,6 +2521,10 @@ type BaseSelectFnContext<_TSources extends TArrSources, _TFields extends TFields
 /** Replaced by generator to inject dialect-specific fns via intersection. */
 export type SelectFnContext<_TSources extends TArrSources, _TFields extends TFieldsType> =
   BaseSelectFnContext<_TSources, _TFields>;
+
+/** The `.where()` / `.having()` callback context: `.select()`'s, minus the window functions a predicate cannot hold. */
+export type PredicateFnContext<TSources extends TArrSources, TFields extends TFieldsType> =
+  Omit<SelectFnContext<TSources, TFields>, WindowFnKey>;
 
 /** Starts a subquery from `"Table"` or `"Table alias"`. Only the subquery's own table goes in its FROM; outer tables stay in the enclosing query. */
 function openSubquery(db: PrismaClient, table: string) {

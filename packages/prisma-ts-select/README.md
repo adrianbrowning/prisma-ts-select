@@ -2524,7 +2524,7 @@ Columns are checked against the query's scope the same way `.select()` checks th
 | `firstValue(col)` | `FIRST_VALUE(col)` | the value, `\| null` when the frame can be empty |
 | `lastValue(col)` | `LAST_VALUE(col)` | the value, `\| null` when the frame can be empty |
 
-Each function takes a column or an expression. A window function outside `over()`, such as `select(({ rowNumber }) => rowNumber())`, is a compile error, because SQL rejects a window function without an `OVER` clause. `offset` must be a non-negative integer, and `default` must have the argument's type.
+Each function takes a column or an expression. A window function outside `over()`, such as `select(({ rowNumber }) => rowNumber())`, is a compile error, because SQL rejects a window function without an `OVER` clause. `offset` must be a non-negative integer, and `default` must have the argument's type. The `.where()` and `.having()` callbacks don't offer `over()` or the window functions, because SQL rejects them in both clauses; see [Top-N per group](#top-n-per-group) for filtering on a window result.
 
 ```typescript file=../usage-sqlite-v7/tests/readme/select-window.ts region=window-nav
       prisma.$from("Post")

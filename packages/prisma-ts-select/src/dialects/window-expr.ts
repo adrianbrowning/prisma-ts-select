@@ -203,3 +203,6 @@ export function windowFns<TColEntries extends [string, unknown], D extends Windo
     lastValue:  valueFn("LAST_VALUE"),
   };
 }
+
+/** The context keys `windowFns` adds. SQL rejects a window function in WHERE and HAVING, so their callbacks leave these out. */
+export type WindowFnKey = keyof ReturnType<typeof windowFns<never, WindowDialect>>;
