@@ -4,6 +4,7 @@ import type { SQLExpr } from "../sql-expr.ts";
 export { DISTINCT_BRAND };
 import { mysqlContextFns, mysqlDialect } from "./mysql.ts";
 import type { FilterCols, ColName } from "./shared.ts";
+import { windowFns } from "./window-expr.ts";
 
 export type { IntervalUnit } from "./mysql.ts";
 export { mysqlDialect };
@@ -12,6 +13,7 @@ export { mysqlDialect };
  * MySQL Prisma v6 context fns.
  * Overrides COUNT/LENGTH/ABS/CEIL/FLOOR/MOD/SIGN to return `bigint | number`:
  * node-mysql2 in Prisma v6 returns bigint for SQL INTEGER results.
+ * Window fns are rebound for their result types: v6 can return a window result over an integer column as a string.
  */
 export const mysqlV6ContextFns = <TColEntries extends [string, unknown] = never, TCriteria extends object = object>(
   quoteFn: (ref: string) => string,
@@ -35,6 +37,7 @@ export const mysqlV6ContextFns = <TColEntries extends [string, unknown] = never,
     sqlExpr(`MOD(${resolveArg(col, quoteFn)}, ${divisor})`),
   sign:  (col: FilterCols<TColEntries, number> | SQLExpr<number>): SQLExpr<bigint | number> =>
     sqlExpr(`SIGN(${resolveArg(col, quoteFn)})`),
+  ...windowFns<TColEntries, "mysql-v6">(quoteFn),
 });
 
 export type DialectFns<TColEntries extends [string, unknown] = never, TCriteria extends object = object> = ReturnType<typeof mysqlV6ContextFns<TColEntries, TCriteria>>;

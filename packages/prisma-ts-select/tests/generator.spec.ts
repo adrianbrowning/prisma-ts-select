@@ -97,29 +97,50 @@ void describe("Generator dialect replacement", () => {
   });
 });
 
+/** Providers whose generated dialect bundles the aggregate / window output tests inspect. */
+const dialectPkgs = [ "usage-sqlite-v7", "usage-mysql-v7", "usage-pg-v7" ];
+
+function readDialectFile(pkg: string, file: string) {
+  return fs.readFileSync(
+    path.join(__dirname, `../../${pkg}/generated/prisma-ts-select/dialects/${file}`),
+    "utf-8"
+  );
+}
+
 void describe("Generator aggregate-expr output", () => {
   // Every provider needs dialects/aggregate-expr.{js,d.ts}: the aggregate fluent API
   // (.orderBy()/.filter()) lives there, and the dialect files import createAggExpr from it.
-  const pkgs = [ "usage-sqlite-v7", "usage-mysql-v7", "usage-pg-v7" ];
-
-  function readDialectFile(pkg: string, file: string) {
-    return fs.readFileSync(
-      path.join(__dirname, `../../${pkg}/generated/prisma-ts-select/dialects/${file}`),
-      "utf-8"
-    );
-  }
-
   void test("should emit dialects/aggregate-expr.js for every provider", () => {
-    for (const pkg of pkgs) {
+    for (const pkg of dialectPkgs) {
       assert.strictEqual(readDialectFile(pkg, "aggregate-expr.js").includes("createAggExpr"), true,
         `${pkg} dialects/aggregate-expr.js should export createAggExpr`);
     }
   });
 
   void test("should emit dialects/aggregate-expr.d.ts for every provider", () => {
-    for (const pkg of pkgs) {
+    for (const pkg of dialectPkgs) {
       assert.strictEqual(readDialectFile(pkg, "aggregate-expr.d.ts").includes("AggregateExpr"), true,
         `${pkg} dialects/aggregate-expr.d.ts should declare AggregateExpr`);
+    }
+  });
+});
+
+void describe("Generator window-expr output", () => {
+  // Every provider's dialect file imports windowFns from dialects/window-expr.js, and the dialect
+  // index re-exports its public types.
+  void test("should emit dialects/window-expr.{js,d.ts} for every provider", () => {
+    for (const pkg of dialectPkgs) {
+      assert.ok(readDialectFile(pkg, "window-expr.js").includes("windowFns"), `${pkg} dialects/window-expr.js should export windowFns`);
+      assert.ok(readDialectFile(pkg, "window-expr.d.ts").includes("WindowFn"), `${pkg} dialects/window-expr.d.ts should declare WindowFn`);
+    }
+  });
+
+  void test("should re-export the window types from every dialect index", () => {
+    for (const pkg of dialectPkgs) {
+      for (const file of [ "index.d.ts", "v6.d.ts", "v7.d.ts" ]) {
+        assert.ok(readDialectFile(pkg, file).includes("export type { WindowFn, WindowOptions, WindowFrame } from './window-expr.js';"),
+          `${pkg} dialects/${file} should re-export the window types`);
+      }
     }
   });
 });

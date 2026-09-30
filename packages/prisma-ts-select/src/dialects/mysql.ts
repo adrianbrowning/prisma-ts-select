@@ -7,6 +7,7 @@ import type { AggregateExpr } from "./aggregate-expr.ts";
 import { esc, flattenJsonObjectPairs } from "./shared.ts";
 import type { FilterCols, FilterJsonCols, ColName, ColTypeOf } from "./shared.ts";
 import type { Dialect } from "./types.ts";
+import { windowFns } from "./window-expr.ts";
 
 type MySQLCastTypeMap = { SIGNED: bigint; UNSIGNED: bigint; DECIMAL: Decimal; CHAR: string; BINARY: Buffer; DATE: Date; DATETIME: Date; TIME: string; JSON: JSONValue; FLOAT: number; DOUBLE: number; };
 
@@ -169,6 +170,7 @@ export const mysqlContextFns = <TColEntries extends [string, unknown] = never, T
       if (!MYSQL_CAST_TYPES.has(type)) throw new Error(`cast: invalid cast type '${String(type)}'`);
       return sqlExpr(`CAST(${resolveArg(expr, quoteFn)} AS ${type})`);
     },
+    ...windowFns<TColEntries, "mysql">(quoteFn),
   };
 };
 
