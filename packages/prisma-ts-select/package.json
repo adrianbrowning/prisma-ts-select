@@ -76,7 +76,7 @@
     "@types/node": "24.13.3",
     "esbuild": "^0.28.2",
     "markdown-toc": "^1.2.0",
-    "mdcode-ts": "^0.0.4",
+    "mdcode-ts": "^0.1.0",
     "prisma": "6.19.3",
     "rimraf": "^6.1.3"
   },
