@@ -9,6 +9,7 @@ import type { AggregateExpr } from "./aggregate-expr.ts";
 import { esc, flattenJsonObjectPairs } from "./shared.ts";
 import type { FilterCols, FilterJsonCols, ColName, ColTypeOf } from "./shared.ts";
 import type { Dialect } from "./types.ts";
+import { windowFns } from "./window-expr.ts";
 
 /** SQLite MIN/MAX return bigint for integer columns, unchanged for other types. */
 type SqliteMinMaxResult<TColEntries extends [string, unknown], Col extends string> =
@@ -158,6 +159,7 @@ export const sqliteContextFns = <TColEntries extends [string, unknown] = never, 
       if (!SQLITE_CAST_TYPES.has(type)) throw new Error(`cast: invalid cast type '${String(type)}'`);
       return sqlExpr(`CAST(${resolveArg(expr, quoteFn)} AS ${type})`);
     },
+    ...windowFns<TColEntries, "sqlite">(quoteFn),
   };
 };
 

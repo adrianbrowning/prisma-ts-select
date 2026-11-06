@@ -6,6 +6,7 @@ import type { AggregateExpr } from "./aggregate-expr.ts";
 import { esc, flattenJsonObjectPairs } from "./shared.ts";
 import type { FilterCols, FilterJsonCols, ColName, ColTypeOf } from "./shared.ts";
 import type { Dialect } from "./types.ts";
+import { windowFns } from "./window-expr.ts";
 
 type PgCastTypeMap = { INTEGER: number; TEXT: string; BIGINT: bigint; BOOLEAN: boolean; REAL: number; NUMERIC: number; DATE: Date; TIMESTAMP: Date; JSON: JSONValue; JSONB: JSONValue; };
 
@@ -186,6 +187,7 @@ export const postgresqlContextFns = <TColEntries extends [string, unknown] = nev
       if (!PG_CAST_TYPES.has(type)) throw new Error(`cast: invalid cast type '${String(type)}'`);
       return sqlExpr(`CAST(${resolveArg(expr, quoteFn)} AS ${type})`);
     },
+    ...windowFns<TColEntries, "postgresql">(quoteFn),
   };
 };
 
